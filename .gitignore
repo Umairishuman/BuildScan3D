@@ -1,0 +1,17 @@
+# Virtual Environment
+nerfstudio-env/
+
+# Datasets and Video Files
+dataset/
+*.mp4
+*.jpg
+*.png
+*.ply
+
+# Training Outputs and Models
+outputs/
+nerfstudio_models/
+
+# Python Cache
+__pycache__/
+*.pyc
