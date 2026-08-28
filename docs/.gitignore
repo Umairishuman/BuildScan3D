@@ -1,2 +1,5 @@
 .zip
 ~$idelines.docx
+*.exe
+.vscode/
+*.json
