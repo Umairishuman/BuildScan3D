@@ -41,13 +41,16 @@ The PoC strips out ARCore and the entire Python/COLMAP backend. The goal is a **
 | **Mock Telemetry Overlay** | UI indicators displaying "Spatial Tracking: Stable" and a dummy coordinate ticker to simulate AR data collection |
 | **Workflow Navigation** | A working "Record" button that transitions to a mock "Uploading to Cloud…" confirmation screen, proving the full field-worker journey |
 
-#### 2. Web Dashboard Skeleton (Next.js + Three.js)
+#### 2. Web Dashboard Skeleton (Next.js + Three.js / WebGPU)
 
-| Feature | Description |
-|---|---|
-| **Static 3D Canvas** | A WebGPU/Three.js viewport that loads a pre-rendered sample `.ply` or `.ksplat` file from an open-source dataset |
-| **Fake Processing Queue** | A status panel with hardcoded completed pipeline steps — `[✔] Video Ingested`, `[✔] Poses Aligned`, `[✔] 3DGS Rendered` — showing what the real queue will look like |
-| **Interactive Measurement Mockup** | A UI toggle letting a user click two points on the 3D model and see a hardcoded dimension (e.g. `1.42 m`), demonstrating the metric-extraction feature for construction managers |
+Skip marketing landing pages entirely for the defense build. The web application drops the user directly into the enterprise SaaS workflow across four core screens:
+
+| Screen | Name | Description & Key Features |
+|---|---|---|
+| **Screen 1** | **Authentication (Mock)** | Clean, professional login card centered on a neutral background. Includes email/password fields, company logo placeholder, and a "Sign In" button that pushes directly to `/dashboard` without real auth backend overhead. |
+| **Screen 2** | **Project Dashboard** | Grid/list of active and completed construction site scans. Features a dummy User Profile snippet (Project Manager avatar), project cards (site name e.g. "Sector 4 MEP Room", capture date, thumbnail), color-coded status badges ("Ready for Inspection", "Processing...", "Draft"), and a dummy "New Capture" button. |
+| **Screen 3** | **Active Job Status (Mock Queue)** | Progress tracker modal appearing when clicking a "Processing..." project card. Displays a checklist mimicking backend architecture: `[✔] Video Ingested`, `[✔] ARCore Poses Aligned`, `[Loading Spinner] 3DGS Training`. Explains the cloud pipeline visually to the committee. |
+| **Screen 4** | **3D Viewer Workspace (Core UI)** | Full-screen WebGPU/Three.js 3D viewport surrounded by a tool palette. Features:<br>• **3D Canvas:** Loads pre-rendered sample `.ksplat` or `.ply` file with orbit/pan/zoom controls.<br>• **Dimensional Tool:** Mock "Measure" button; clicking two points draws a 3D line and displays metric distance (e.g. `1.42 m`).<br>• **Semantic Toggles:** Layer panel checkboxes for "Raw Geometry", "Pipes", "HVAC" to demonstrate AI segmentation UI.<br>• **Export Data:** Dummy export button for CSV/BIM format. |
 
 ---
 
