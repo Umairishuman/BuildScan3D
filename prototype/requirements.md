@@ -28,7 +28,7 @@ The PoC strips out ARCore and the entire Python/COLMAP backend. The goal is a **
 - Live camera capture and ARCore/ARKit integration
 - Python pose-prior injection pipeline
 - COLMAP reconstruction and Nerfstudio rendering
-- YOLOv8 semantic labeling  
+- YOLOv8 semantic labeling
 - Redis job queue and real backend processing
 
 ### What the PoC delivers
@@ -43,14 +43,16 @@ The PoC strips out ARCore and the entire Python/COLMAP backend. The goal is a **
 
 #### 2. Web Dashboard Skeleton (Next.js + Three.js / WebGPU)
 
-Skip marketing landing pages entirely for the defense build. The web application drops the user directly into the enterprise SaaS workflow across four core screens:
+Six screens. Light theme. Desktop viewport (1440 × 900). No marketing pages — drops straight into the enterprise SaaS workflow.
 
-| Screen | Name | Description & Key Features |
+| Screen | Name | Key UI Elements |
 |---|---|---|
-| **Screen 1** | **Authentication (Mock)** | Clean, professional login card centered on a neutral background. Includes email/password fields, company logo placeholder, and a "Sign In" button that pushes directly to `/dashboard` without real auth backend overhead. |
-| **Screen 2** | **Project Dashboard** | Grid/list of active and completed construction site scans. Features a dummy User Profile snippet (Project Manager avatar), project cards (site name e.g. "Sector 4 MEP Room", capture date, thumbnail), color-coded status badges ("Ready for Inspection", "Processing...", "Draft"), and a dummy "New Capture" button. |
-| **Screen 3** | **Active Job Status (Mock Queue)** | Progress tracker modal appearing when clicking a "Processing..." project card. Displays a checklist mimicking backend architecture: `[✔] Video Ingested`, `[✔] ARCore Poses Aligned`, `[Loading Spinner] 3DGS Training`. Explains the cloud pipeline visually to the committee. |
-| **Screen 4** | **3D Viewer Workspace (Core UI)** | Full-screen WebGPU/Three.js 3D viewport surrounded by a tool palette. Features:<br>• **3D Canvas:** Loads pre-rendered sample `.ksplat` or `.ply` file with orbit/pan/zoom controls.<br>• **Dimensional Tool:** Mock "Measure" button; clicking two points draws a 3D line and displays metric distance (e.g. `1.42 m`).<br>• **Semantic Toggles:** Layer panel checkboxes for "Raw Geometry", "Pipes", "HVAC" to demonstrate AI segmentation UI.<br>• **Export Data:** Dummy export button for CSV/BIM format. |
+| **S1** | **Authentication** | Centered login card · email + password fields · "Sign In" → `/dashboard` (no real auth) · security badges (256-bit, SOC 2) |
+| **S2** | **Project Dashboard** | Left sidebar nav · global search · project cards in grid (site name, floor, area, scan count, capture date) · status badges: Ready (green), Processing (amber), Draft (grey) · "New Capture" button (disabled, tooltip: "Initiate from BuildScan mobile app") |
+| **S3** | **Active Job Status** | Right slide-over panel (480px) triggered by clicking a Processing card · circular progress ring (e.g. 67%) · vertical step-tracker: ✅ Video Ingested → ✅ ARCore Poses Aligned → ✅ COLMAP SfM → ⏳ 3DGS Training (live progress bar, ETA) → ⬜ Export → ⬜ Semantic Projection → ⬜ Ready · collapsible raw logs panel in monospace |
+| **S4** | **3D Viewer Workspace** | Left layer panel (Raw Geometry, Electrical, Plumbing, HVAC, Structural, Drywall toggles + opacity slider + X-Ray Mode) · central Three.js canvas with orientation widget, scale bar, view-mode pill (Perspective / Orthographic) · floating tool palette (Select, Measure, Annotate, Section Cut, Fullscreen) · Measure tool: click two points → dashed line + floating `2.47 m` badge in monospace · right panel: saved measurements list + Annotations |
+| **S5** | **Scan History / Timeline** | Horizontal film-strip scrubber of all scans for a site · split view: selected scan (mini 3D viewer, left) vs. diff from previous scan (amber = added, red = removed, right) · change log table below (Element, Change Type, Layer, Delta, Flagged) |
+| **S6** | **Notifications Feed** | Right slide-over · chronological system + team events · color-coded left borders by type (green = ready, amber = processing, red = failed) · "Mark all read" |
 
 ---
 
