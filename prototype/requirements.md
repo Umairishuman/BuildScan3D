@@ -28,7 +28,7 @@ The PoC strips out ARCore and the entire Python/COLMAP backend. The goal is a **
 - Live camera capture and ARCore/ARKit integration
 - Python pose-prior injection pipeline
 - COLMAP reconstruction and Nerfstudio rendering
-- YOLOv8 semantic labeling
+- YOLOv8 semantic labeling  
 - Redis job queue and real backend processing
 
 ### What the PoC delivers
