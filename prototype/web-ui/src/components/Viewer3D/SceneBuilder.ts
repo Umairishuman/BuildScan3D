@@ -362,3 +362,4 @@ export class SceneBuilder {
     this.pointCloudGroup.visible = layers.pointcloud;
   }
 }
+

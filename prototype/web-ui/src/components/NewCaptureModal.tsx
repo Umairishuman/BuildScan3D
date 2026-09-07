@@ -171,3 +171,4 @@ export const NewCaptureModal: React.FC<NewCaptureModalProps> = ({
     </div>
   );
 };
+

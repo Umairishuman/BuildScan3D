@@ -149,3 +149,4 @@ export class MeasurementManager {
     this.measurements.forEach((m) => this.renderMeasurementVisuals(m));
   }
 }
+

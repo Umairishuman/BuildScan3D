@@ -183,3 +183,4 @@ export const MOCK_TERMINAL_LOGS = [
   "[00:03:00] [TRAIN] Step 15,000/30,000 | Loss: 0.0049 | PSNR: 27.9 dB | Gaussians: 994,100",
   "[00:04:12] [TRAIN] Step 20,400/30,000 | Loss: 0.0031 | PSNR: 29.4 dB | Gaussians: 1,248,320 [ACTIVE]"
 ];
+

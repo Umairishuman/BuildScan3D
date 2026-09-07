@@ -303,3 +303,4 @@ export const JobStatusModal: React.FC<JobStatusModalProps> = ({
     </div>
   );
 };
+

@@ -256,9 +256,13 @@ export const Canvas3D: React.FC<Canvas3DProps> = ({
       if ((obj as THREE.Mesh).isMesh) {
         const mesh = obj as THREE.Mesh;
         if (Array.isArray(mesh.material)) {
-          mesh.material.forEach((m) => (m.wireframe = wireframeMode));
-        } else if (mesh.material) {
-          mesh.material.wireframe = wireframeMode;
+          mesh.material.forEach((m) => {
+            if ("wireframe" in m) {
+              (m as THREE.MeshStandardMaterial).wireframe = wireframeMode;
+            }
+          });
+        } else if (mesh.material && "wireframe" in mesh.material) {
+          (mesh.material as THREE.MeshStandardMaterial).wireframe = wireframeMode;
         }
       }
     });
@@ -288,3 +292,4 @@ export const Canvas3D: React.FC<Canvas3DProps> = ({
     </div>
   );
 };
+
