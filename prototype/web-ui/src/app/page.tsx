@@ -23,7 +23,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row bg-white">
       {/* LEFT COLUMN: Architectural 3D Graphic Panel */}
-      <div className="relative w-full md:w-[46%] lg:w-[44%] bg-[#edf5fc] min-h-[340px] md:min-h-screen p-8 md:p-12 flex flex-col justify-between overflow-hidden select-none border-r border-[#e2edf8]">
+      <div className="relative w-full md:w-[48%] lg:w-[46%] bg-[#f4f8fd] min-h-[360px] md:min-h-screen p-8 md:p-12 flex flex-col justify-between overflow-hidden select-none border-r border-[#e2edf8]">
         {/* Top Text */}
         <div className="relative z-10 space-y-1">
           <h2 className="text-sm md:text-base font-semibold text-[#1e293b] tracking-tight">
@@ -34,15 +34,16 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Center Blueprint / Point Cloud Illustration */}
-        <div className="relative my-auto py-6 flex items-center justify-center">
-          <div className="relative w-full max-w-[420px] aspect-[4/3] drop-shadow-sm">
+        {/* Center Blueprint / Point Cloud Illustration (High-Res) */}
+        <div className="relative my-auto py-4 flex items-center justify-center w-full">
+          <div className="relative w-full max-w-[560px] aspect-[16/9] drop-shadow-sm">
             <Image
-              src="/images/login-left-panel.png"
+              src="/images/login-left-panel-new.png"
               alt="3D Spatial BIM Scan"
               fill
               className="object-contain"
               priority
+              quality={100}
             />
           </div>
         </div>
@@ -124,7 +125,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="text-[#64748b] hover:text-[#0f172a] ml-2 shrink-0 transition-colors"
+                className="text-[#64748b] hover:text-[#0f172a] ml-2 shrink-0 transition-colors cursor-pointer"
                 title={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
@@ -153,7 +154,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => alert("Password reset link sent to demo email")}
-                className="text-xs text-[#2563eb] hover:text-[#1d4ed8] hover:underline font-medium transition-colors"
+                className="text-xs text-[#2563eb] hover:text-[#1d4ed8] hover:underline font-medium transition-colors cursor-pointer"
               >
                 Forgot password?
               </button>
