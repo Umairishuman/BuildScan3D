@@ -1,101 +1,77 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { Activity, HardHat, Search, ShieldCheck } from "lucide-react";
+import { Search, Bell, ChevronDown } from "lucide-react";
 
 interface NavbarProps {
-  onOpenJobStatus?: () => void;
-  activeProcessingCount?: number;
+  onOpenNewCapture: () => void;
+  searchQuery: string;
+  onSearchChange: (q: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
-  onOpenJobStatus,
-  activeProcessingCount = 1,
+  onOpenNewCapture,
+  searchQuery,
+  onSearchChange,
 }) => {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-[#e2e8f0] bg-white/90 backdrop-blur-md text-[#0f172a]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        {/* Brand & System Tag */}
-        <div className="flex items-center gap-8">
-          <Link href="/dashboard" className="flex items-center gap-2 group">
-            <div className="relative w-36 h-9">
-              <Image
-                src="/images/logo-new-removebg-preview.png"
-                alt="BuildScan 3D"
-                fill
-                className="object-contain group-hover:scale-105 transition-transform"
-                priority
-              />
-            </div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-50 text-[#2563eb] border border-blue-200">
-              Enterprise
-            </span>
-          </Link>
+    <header className="h-16 w-full px-6 flex items-center justify-between border-b border-[#e2e8f0] bg-white/80 backdrop-blur-md text-[#0f172a] sticky top-0 z-20">
+      {/* Left: Project Selector Dropdown */}
+      <div className="flex items-center gap-3">
+        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#e2e8f0] bg-white hover:bg-slate-50 text-xs font-bold text-[#0f172a] transition-all shadow-sm cursor-pointer">
+          <span>All Projects</span>
+          <ChevronDown className="w-3.5 h-3.5 text-[#64748b]" />
+        </button>
 
-          <nav className="hidden md:flex items-center gap-1 text-xs font-semibold text-[#64748b]">
-            <Link
-              href="/dashboard"
-              className="px-3 py-1.5 rounded-lg text-[#2563eb] bg-blue-50 font-bold transition-colors"
-            >
-              Projects & Scans
-            </Link>
-            <Link
-              href="/viewer/sector-4-mep"
-              className="px-3 py-1.5 rounded-lg hover:text-[#0f172a] hover:bg-slate-100 transition-colors"
-            >
-              3D Workspace
-            </Link>
-          </nav>
-        </div>
-
-        {/* Global Search */}
-        <div className="hidden lg:flex items-center flex-1 max-w-xs relative">
-          <Search className="w-3.5 h-3.5 text-[#94a3b8] absolute left-3 pointer-events-none" />
+        {/* Search Pill Input */}
+        <div className="relative w-80">
+          <Search className="w-3.5 h-3.5 text-[#94a3b8] absolute left-3.5 top-2.5 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search scans, sectors, rooms..."
-            className="w-full pl-8 pr-4 py-1.5 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl text-xs text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#2563eb] focus:bg-white transition-all"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Search projects, scans, or sites..."
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-[#e2e8f0] rounded-full text-xs text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#2563eb] focus:bg-white transition-all shadow-inner"
           />
         </div>
+      </div>
 
-        {/* Right Section: Status Indicator & Profile */}
-        <div className="flex items-center gap-3">
-          {/* Active Job Trigger Button */}
-          {activeProcessingCount > 0 && onOpenJobStatus && (
-            <button
-              onClick={onOpenJobStatus}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 text-xs font-semibold transition-all cursor-pointer"
-              title="Click to view live 3DGS training queue"
-            >
-              <Activity className="w-3.5 h-3.5 text-amber-600 animate-spin" />
-              <span>1 Pipeline Active (68%)</span>
-            </button>
-          )}
+      {/* Right: Notifications, Team Avatars, User Profile */}
+      <div className="flex items-center gap-4">
+        {/* Notification Bell with Badge */}
+        <button
+          className="relative p-2 rounded-xl text-[#64748b] hover:text-[#0f172a] hover:bg-slate-100 transition-colors cursor-pointer"
+          title="Notifications"
+        >
+          <Bell className="w-4 h-4" />
+          <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+            3
+          </span>
+        </button>
 
-          {/* Defense Badge */}
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="font-mono text-[11px] font-semibold">FAST-NUCES PoC</span>
+        {/* Team Avatars Overlapping Stack */}
+        <div className="flex items-center -space-x-2 overflow-hidden pl-1">
+          <div className="w-7 h-7 rounded-full bg-slate-300 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-700">
+            JD
           </div>
+          <div className="w-7 h-7 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center text-[10px] font-bold text-white">
+            SK
+          </div>
+          <div className="w-7 h-7 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-[10px] font-bold text-white">
+            MR
+          </div>
+        </div>
 
-          <div className="h-5 w-[1px] bg-[#e2e8f0] hidden sm:block" />
+        <div className="h-5 w-[1px] bg-[#e2e8f0]" />
 
-          {/* User Profile Snippet */}
-          <div className="flex items-center gap-2.5 pl-1">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white font-bold text-xs shadow-sm">
-              SJ
-            </div>
-            <div className="hidden xl:block text-left">
-              <div className="text-xs font-bold text-[#0f172a]">
-                Sarah Jenkins
-              </div>
-              <div className="text-[10px] text-[#64748b] flex items-center gap-1">
-                <HardHat className="w-2.5 h-2.5 text-amber-500" />
-                <span>Lead MEP Manager</span>
-              </div>
-            </div>
+        {/* User Profile Snippet (Ahmad Raza) */}
+        <div className="flex items-center gap-2.5 pl-1">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+            AR
+          </div>
+          <div className="text-left">
+            <div className="text-xs font-bold text-[#0f172a]">Ahmad Raza</div>
+            <div className="text-[10px] text-[#64748b]">Project Manager</div>
           </div>
         </div>
       </div>
