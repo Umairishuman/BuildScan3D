@@ -34,7 +34,7 @@ export default function LoginPage() {
             priority
             quality={100}
           />
-          {/* Subtle top & bottom gradient overlays so text remains crystal clear */}
+          {/* Subtle top & bottom gradient overlays */}
           <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#eff6fd]/90 via-[#eff6fd]/40 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#eff6fd]/90 via-[#eff6fd]/40 to-transparent" />
         </div>
@@ -60,37 +60,16 @@ export default function LoginPage() {
       {/* RIGHT COLUMN: Clean Enterprise Authentication Form */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 md:p-16 bg-white min-h-screen">
         <div className="w-full max-w-[380px] flex flex-col items-center">
-          {/* Logo & Brand Name */}
+          {/* Official New Brand Logo */}
           <div className="flex flex-col items-center text-center mb-8">
-            <div className="flex items-center gap-2.5 mb-2">
-              {/* Isometric 3D Cube Icon */}
-              <svg
-                className="w-9 h-9 text-[#2563eb]"
-                viewBox="0 0 48 48"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M24 4L42 14.3923V35.1769L24 45.5692L6 35.1769V14.3923L24 4Z"
-                  stroke="currentColor"
-                  strokeWidth="3.2"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M24 4V24.5M24 24.5L42 14.5M24 24.5L6 14.5M24 24.5V45.5"
-                  stroke="currentColor"
-                  strokeWidth="2.8"
-                  strokeLinecap="round"
-                />
-                <circle cx="24" cy="24.5" r="3" fill="currentColor" />
-                <circle cx="15" cy="19.5" r="1.5" fill="currentColor" />
-                <circle cx="33" cy="19.5" r="1.5" fill="currentColor" />
-                <circle cx="24" cy="35" r="1.5" fill="currentColor" />
-              </svg>
-
-              <h1 className="text-2xl font-bold tracking-tight text-[#0f172a]">
-                BuildScan <span className="text-[#2563eb]">3D</span>
-              </h1>
+            <div className="relative w-48 h-16 mb-2">
+              <Image
+                src="/images/logo-new-removebg-preview.png"
+                alt="BuildScan 3D"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
             <p className="text-xs text-[#64748b]">
               Construction Spatial Intelligence Platform

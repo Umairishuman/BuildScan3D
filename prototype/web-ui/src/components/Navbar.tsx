@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Activity, HardHat, Search, ShieldCheck } from "lucide-react";
 
 interface NavbarProps {
@@ -18,45 +19,19 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand & System Tag */}
         <div className="flex items-center gap-8">
-          <Link href="/dashboard" className="flex items-center gap-2.5 group">
-            {/* Isometric 3D Cube Icon */}
-            <svg
-              className="w-8 h-8 text-[#2563eb] group-hover:scale-105 transition-transform"
-              viewBox="0 0 48 48"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M24 4L42 14.3923V35.1769L24 45.5692L6 35.1769V14.3923L24 4Z"
-                stroke="currentColor"
-                strokeWidth="3.2"
-                strokeLinejoin="round"
+          <Link href="/dashboard" className="flex items-center gap-2 group">
+            <div className="relative w-36 h-9">
+              <Image
+                src="/images/logo-new-removebg-preview.png"
+                alt="BuildScan 3D"
+                fill
+                className="object-contain group-hover:scale-105 transition-transform"
+                priority
               />
-              <path
-                d="M24 4V24.5M24 24.5L42 14.5M24 24.5L6 14.5M24 24.5V45.5"
-                stroke="currentColor"
-                strokeWidth="2.8"
-                strokeLinecap="round"
-              />
-              <circle cx="24" cy="24.5" r="3" fill="currentColor" />
-              <circle cx="15" cy="19.5" r="1.5" fill="currentColor" />
-              <circle cx="33" cy="19.5" r="1.5" fill="currentColor" />
-              <circle cx="24" cy="35" r="1.5" fill="currentColor" />
-            </svg>
-
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-base tracking-tight text-[#0f172a]">
-                  BuildScan <span className="text-[#2563eb]">3D</span>
-                </span>
-                <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-50 text-[#2563eb] border border-blue-200">
-                  Enterprise
-                </span>
-              </div>
-              <p className="text-[10px] text-[#64748b] leading-none">
-                Spatial Intelligence & 3DGS
-              </p>
             </div>
+            <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-50 text-[#2563eb] border border-blue-200">
+              Enterprise
+            </span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1 text-xs font-semibold text-[#64748b]">
