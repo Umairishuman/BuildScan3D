@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { SemanticLayersState } from "./SceneBuilder";
 import { MeasurementRecord } from "./MeasurementTool";
 import {
@@ -56,7 +57,7 @@ export const ViewerHUD: React.FC<ViewerHUDProps> = ({
     <>
       {/* Top Navigation Bar */}
       <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between p-4 pointer-events-none">
-        {/* Left: Back & Project Title */}
+        {/* Left: Back, Logo, Project Title */}
         <div className="flex items-center gap-3 pointer-events-auto bg-white/95 backdrop-blur-md border border-[#e2e8f0] p-2 pl-3 pr-4 rounded-2xl shadow-md text-[#0f172a]">
           <Link
             href="/dashboard"
@@ -64,6 +65,20 @@ export const ViewerHUD: React.FC<ViewerHUDProps> = ({
             title="Back to Dashboard"
           >
             <ArrowLeft className="w-4 h-4" />
+          </Link>
+
+          <Link href="/dashboard" className="hidden sm:flex items-center gap-1.5 border-r border-[#e2e8f0] pr-3 mr-1">
+            <div className="relative w-6 h-6 shrink-0">
+              <Image
+                src="/images/logo-new-removebg-preview.png"
+                alt="BuildScan 3D"
+                fill
+                className="object-contain"
+              />
+            </div>
+            <span className="font-extrabold text-xs tracking-tight text-[#0f172a]">
+              BuildScan <span className="text-[#2563eb]">3D</span>
+            </span>
           </Link>
 
           <div>
@@ -89,320 +104,172 @@ export const ViewerHUD: React.FC<ViewerHUDProps> = ({
           <div className="text-purple-700 font-semibold">1.24M Gaussians (WebGPU)</div>
         </div>
 
-        {/* Right: Export & Toggle Sidebar */}
-        <div className="flex items-center gap-2 pointer-events-auto">
-          <button
-            onClick={onOpenExportModal}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold shadow-md shadow-blue-500/10 transition-all cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export BIM / Data</span>
-          </button>
-
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2.5 rounded-2xl bg-white/95 backdrop-blur-md border border-[#e2e8f0] text-[#64748b] hover:text-[#0f172a] shadow-md"
-            title="Toggle Inspector Sidebar"
-          >
-            {sidebarOpen ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <ChevronLeft className="w-4 h-4" />
-            )}
-          </button>
-        </div>
+        {/* Right: Export Button */}
+        <button
+          onClick={onOpenExportModal}
+          className="pointer-events-auto px-4 py-2 rounded-2xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+        >
+          <Download className="w-4 h-4" />
+          <span>Export 3D Model</span>
+        </button>
       </div>
 
-      {/* Left Floating Toolbar: Measurement & View Presets */}
-      <div className="absolute left-4 top-24 z-30 flex flex-col gap-2 pointer-events-auto">
-        {/* Measurement Mode Button */}
-        <div className="p-1.5 rounded-2xl bg-white/95 backdrop-blur-md border border-[#e2e8f0] shadow-md flex flex-col gap-1.5">
-          <button
-            onClick={onToggleMeasureMode}
-            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              isMeasureMode
-                ? "bg-[#2563eb] text-white shadow-sm"
-                : "bg-slate-50 text-[#0f172a] hover:bg-slate-100 border border-slate-200"
-            }`}
-            title="Measure real-world metric distance between points"
-          >
-            <Ruler className="w-4 h-4" />
-            <span>{isMeasureMode ? "Measuring Active" : "Measure Distance"}</span>
-          </button>
-        </div>
-
-        {/* View Presets Palette */}
-        <div className="p-2 rounded-2xl bg-white/95 backdrop-blur-md border border-[#e2e8f0] shadow-md flex flex-col gap-1 text-xs">
-          <span className="text-[10px] font-bold text-[#64748b] px-2 py-1 uppercase tracking-wider">
-            View Angle
-          </span>
-          <button
-            onClick={() => onSelectPresetView("perspective")}
-            className={`px-3 py-1.5 rounded-xl text-left font-semibold transition-colors ${
-              activePresetView === "perspective"
-                ? "bg-blue-50 text-[#2563eb]"
-                : "text-[#64748b] hover:text-[#0f172a] hover:bg-slate-50"
-            }`}
-          >
-            Perspective 3D
-          </button>
-          <button
-            onClick={() => onSelectPresetView("top")}
-            className={`px-3 py-1.5 rounded-xl text-left font-semibold transition-colors ${
-              activePresetView === "top"
-                ? "bg-blue-50 text-[#2563eb]"
-                : "text-[#64748b] hover:text-[#0f172a] hover:bg-slate-50"
-            }`}
-          >
-            Top (Plan View)
-          </button>
-          <button
-            onClick={() => onSelectPresetView("front")}
-            className={`px-3 py-1.5 rounded-xl text-left font-semibold transition-colors ${
-              activePresetView === "front"
-                ? "bg-blue-50 text-[#2563eb]"
-                : "text-[#64748b] hover:text-[#0f172a] hover:bg-slate-50"
-            }`}
-          >
-            Front Elevation
-          </button>
-          <button
-            onClick={() => onSelectPresetView("side")}
-            className={`px-3 py-1.5 rounded-xl text-left font-semibold transition-colors ${
-              activePresetView === "side"
-                ? "bg-blue-50 text-[#2563eb]"
-                : "text-[#64748b] hover:text-[#0f172a] hover:bg-slate-50"
-            }`}
-          >
-            Side Section
-          </button>
-
-          <div className="h-[1px] bg-[#e2e8f0] my-1" />
-
-          {/* Wireframe Mode Toggle */}
-          <button
-            onClick={onToggleWireframe}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-semibold transition-colors ${
-              wireframeMode
-                ? "bg-cyan-50 text-cyan-800 border border-cyan-200 font-bold"
-                : "text-[#64748b] hover:text-[#0f172a] hover:bg-slate-50"
-            }`}
-          >
-            <Grid className="w-3.5 h-3.5" />
-            <span>Wireframe Mode</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Right Sidebar: Semantic Layers & Measurements Schedule */}
-      {sidebarOpen && (
-        <div className="absolute right-4 top-20 bottom-6 w-80 z-30 flex flex-col gap-4 pointer-events-auto bg-white/95 backdrop-blur-md border border-[#e2e8f0] rounded-2xl shadow-xl p-4 overflow-y-auto text-[#0f172a] animate-in slide-in-from-right duration-200">
-          {/* Section 1: AI Semantic Segmentation Layers (YOLOv8-Seg) */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
+      {/* Floating Right Semantic AI & Tools Sidebar */}
+      <div
+        className={`absolute top-20 right-4 bottom-4 w-72 z-20 transition-transform duration-300 pointer-events-auto ${
+          sidebarOpen ? "translate-x-0" : "translate-x-[calc(100%+1.5rem)]"
+        }`}
+      >
+        <div className="h-full bg-white/95 backdrop-blur-md border border-[#e2e8f0] rounded-2xl p-4 shadow-xl flex flex-col justify-between overflow-y-auto text-[#0f172a]">
+          {/* Header */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#e2e8f0]">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-purple-600" />
-                <h3 className="text-xs font-bold text-[#0f172a] uppercase tracking-wider">
-                  AI Semantic Layers
-                </h3>
+                <Sparkles className="w-4 h-4 text-[#2563eb]" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-[#0f172a]">
+                  Semantic AI Layers
+                </h2>
               </div>
-              <span className="text-[10px] font-mono text-purple-700 font-semibold px-2 py-0.5 rounded-full bg-purple-50 border border-purple-200">
-                YOLOv8-Seg 3D
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-[#2563eb] font-bold">
+                YOLOv8-Seg
               </span>
             </div>
 
-            <p className="text-[11px] text-[#64748b]">
-              Toggle segmented building systems identified by 3D projection:
-            </p>
-
-            <div className="space-y-1.5">
-              {/* Layer 1: Base Geometry */}
-              <button
-                onClick={() => onToggleLayer("base")}
-                className={`w-full flex items-center justify-between p-2 rounded-xl border text-xs transition-all ${
-                  semanticLayers.base
-                    ? "bg-slate-50 border-slate-300 text-[#0f172a] font-semibold"
-                    : "bg-white border-[#f1f5f9] text-slate-400"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-slate-500" />
-                  <span>Raw Architectural Structure</span>
-                </div>
-                {semanticLayers.base ? (
-                  <Eye className="w-3.5 h-3.5 text-[#0f172a]" />
-                ) : (
-                  <EyeOff className="w-3.5 h-3.5" />
-                )}
-              </button>
-
-              {/* Layer 2: Pipes (Blue) */}
-              <button
-                onClick={() => onToggleLayer("pipes")}
-                className={`w-full flex items-center justify-between p-2 rounded-xl border text-xs transition-all ${
-                  semanticLayers.pipes
-                    ? "bg-blue-50 border-blue-200 text-[#1e40af] font-semibold"
-                    : "bg-white border-[#f1f5f9] text-slate-400"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-[#2563eb]" />
-                  <div>
-                    <div className="font-semibold text-left">Chilled Water & Pipes</div>
-                    <div className="text-[10px] text-[#2563eb]">96.4% confidence</div>
-                  </div>
-                </div>
-                {semanticLayers.pipes ? (
-                  <Eye className="w-3.5 h-3.5 text-[#2563eb]" />
-                ) : (
-                  <EyeOff className="w-3.5 h-3.5" />
-                )}
-              </button>
-
-              {/* Layer 3: Electrical Conduits (Amber) */}
-              <button
-                onClick={() => onToggleLayer("conduits")}
-                className={`w-full flex items-center justify-between p-2 rounded-xl border text-xs transition-all ${
-                  semanticLayers.conduits
-                    ? "bg-amber-50 border-amber-200 text-amber-900 font-semibold"
-                    : "bg-white border-[#f1f5f9] text-slate-400"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-amber-500" />
-                  <div>
-                    <div className="font-semibold text-left">Electrical Conduits</div>
-                    <div className="text-[10px] text-amber-700">91.8% confidence</div>
-                  </div>
-                </div>
-                {semanticLayers.conduits ? (
-                  <Eye className="w-3.5 h-3.5 text-amber-700" />
-                ) : (
-                  <EyeOff className="w-3.5 h-3.5" />
-                )}
-              </button>
-
-              {/* Layer 4: HVAC Ductwork (Emerald) */}
-              <button
-                onClick={() => onToggleLayer("hvac")}
-                className={`w-full flex items-center justify-between p-2 rounded-xl border text-xs transition-all ${
-                  semanticLayers.hvac
-                    ? "bg-emerald-50 border-emerald-200 text-emerald-900 font-semibold"
-                    : "bg-white border-[#f1f5f9] text-slate-400"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-emerald-500" />
-                  <div>
-                    <div className="font-semibold text-left">HVAC Ductwork</div>
-                    <div className="text-[10px] text-emerald-700">94.2% confidence</div>
-                  </div>
-                </div>
-                {semanticLayers.hvac ? (
-                  <Eye className="w-3.5 h-3.5 text-emerald-700" />
-                ) : (
-                  <EyeOff className="w-3.5 h-3.5" />
-                )}
-              </button>
-
-              {/* Layer 5: Fire Sprinklers (Red) */}
-              <button
-                onClick={() => onToggleLayer("fire")}
-                className={`w-full flex items-center justify-between p-2 rounded-xl border text-xs transition-all ${
-                  semanticLayers.fire
-                    ? "bg-red-50 border-red-200 text-red-900 font-semibold"
-                    : "bg-white border-[#f1f5f9] text-slate-400"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-red-500" />
-                  <div>
-                    <div className="font-semibold text-left">Fire Suppression</div>
-                    <div className="text-[10px] text-red-700">98.1% confidence</div>
-                  </div>
-                </div>
-                {semanticLayers.fire ? (
-                  <Eye className="w-3.5 h-3.5 text-red-700" />
-                ) : (
-                  <EyeOff className="w-3.5 h-3.5" />
-                )}
-              </button>
-
-              {/* Layer 6: Gaussian Point Cloud Particles */}
-              <button
-                onClick={() => onToggleLayer("pointcloud")}
-                className={`w-full flex items-center justify-between p-2 rounded-xl border text-xs transition-all ${
-                  semanticLayers.pointcloud
-                    ? "bg-cyan-50 border-cyan-200 text-cyan-900 font-semibold"
-                    : "bg-white border-[#f1f5f9] text-slate-400"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-cyan-500" />
-                  <span>Raw Gaussian Point Cloud</span>
-                </div>
-                {semanticLayers.pointcloud ? (
-                  <Eye className="w-3.5 h-3.5 text-cyan-700" />
-                ) : (
-                  <EyeOff className="w-3.5 h-3.5" />
-                )}
-              </button>
+            {/* Semantic Layer Toggles */}
+            <div className="space-y-2">
+              {[
+                { key: "pipes", label: "Pipes & Plumbing", color: "bg-blue-500", count: "12 Segments" },
+                { key: "conduits", label: "Electrical Conduits", color: "bg-amber-500", count: "18 Runs" },
+                { key: "hvac", label: "HVAC Ductwork", color: "bg-emerald-500", count: "4 Units" },
+                { key: "fire", label: "Fire Protection", color: "bg-red-500", count: "8 Sprinklers" },
+                { key: "base", label: "Structural Base & Walls", color: "bg-slate-400", count: "Architecture" },
+                { key: "pointcloud", label: "Gaussian Splats (Raw)", color: "bg-indigo-500", count: "1.24M Points" },
+              ].map((item) => {
+                const isVisible = semanticLayers[item.key as keyof SemanticLayersState];
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => onToggleLayer(item.key as keyof SemanticLayersState)}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                      isVisible
+                        ? "bg-white border-[#e2e8f0] shadow-sm text-[#0f172a]"
+                        : "bg-slate-50 border-transparent text-[#94a3b8] opacity-60"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
+                      <span className="text-xs">{item.label}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-[#64748b]">{item.count}</span>
+                      {isVisible ? (
+                        <Eye className="w-3.5 h-3.5 text-[#2563eb]" />
+                      ) : (
+                        <EyeOff className="w-3.5 h-3.5 text-[#94a3b8]" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-          </div>
 
-          <div className="h-[1px] bg-[#e2e8f0]" />
-
-          {/* Section 2: Metric Measurements Schedule */}
-          <div className="space-y-3 flex-1 flex flex-col">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Ruler className="w-4 h-4 text-[#2563eb]" />
-                <h3 className="text-xs font-bold text-[#0f172a] uppercase tracking-wider">
-                  Metric Dimensions ({measurements.length})
-                </h3>
+            {/* Measurement Tools Section */}
+            <div className="pt-3 border-t border-[#e2e8f0] space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Ruler className="w-4 h-4 text-[#2563eb]" />
+                  <h3 className="text-xs font-bold text-[#0f172a]">Metric Measurement</h3>
+                </div>
+                {measurements.length > 0 && (
+                  <button
+                    onClick={onClearMeasurements}
+                    className="text-[10px] text-red-600 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 className="w-3 h-3" /> Clear
+                  </button>
+                )}
               </div>
+
+              <button
+                onClick={onToggleMeasureMode}
+                className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  isMeasureMode
+                    ? "bg-red-500 hover:bg-red-600 text-white shadow-md animate-pulse"
+                    : "bg-slate-100 hover:bg-slate-200 text-[#0f172a]"
+                }`}
+              >
+                <Ruler className="w-3.5 h-3.5" />
+                <span>{isMeasureMode ? "Measuring (Click 2 Points)" : "Point-to-Point Ruler"}</span>
+              </button>
+
+              {/* Measurements List */}
               {measurements.length > 0 && (
-                <button
-                  onClick={onClearMeasurements}
-                  className="text-[10px] text-[#64748b] hover:text-red-600 transition-colors font-semibold"
-                >
-                  Clear All
-                </button>
+                <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                  {measurements.map((m, idx) => (
+                    <div
+                      key={m.id}
+                      className="flex items-center justify-between text-[11px] font-mono bg-slate-50 p-1.5 rounded-lg border border-[#e2e8f0]"
+                    >
+                      <span className="font-bold text-[#2563eb]">#{idx + 1}</span>
+                      <span className="font-bold text-[#0f172a]">{m.distanceMeters.toFixed(3)} m</span>
+                      <button
+                        onClick={() => onDeleteMeasurement(m.id)}
+                        className="text-[#94a3b8] hover:text-red-600 cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
 
-            {measurements.length === 0 ? (
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center text-xs text-[#64748b]">
-                No active dimensions. Click &quot;Measure Distance&quot; on the left to snap
-                points in 3D.
-              </div>
-            ) : (
-              <div className="space-y-2 overflow-y-auto max-h-48 pr-1">
-                {measurements.map((m) => (
-                  <div
-                    key={m.id}
-                    className="p-2.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0] flex items-center justify-between gap-2 text-xs"
+            {/* View Camera Presets */}
+            <div className="pt-3 border-t border-[#e2e8f0] space-y-2">
+              <h3 className="text-xs font-bold text-[#0f172a]">Camera Presets</h3>
+              <div className="grid grid-cols-4 gap-1">
+                {(["perspective", "top", "front", "side"] as const).map((view) => (
+                  <button
+                    key={view}
+                    onClick={() => onSelectPresetView(view)}
+                    className={`py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                      activePresetView === view
+                        ? "bg-[#2563eb] text-white"
+                        : "bg-slate-100 text-[#64748b] hover:text-[#0f172a]"
+                    }`}
                   >
-                    <div>
-                      <div className="font-semibold text-[#0f172a]">{m.name}</div>
-                      <div className="font-mono text-[#2563eb] font-bold text-sm">
-                        {m.distanceMeters.toFixed(2)} m
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => onDeleteMeasurement(m.id)}
-                      className="p-1.5 rounded-lg text-[#64748b] hover:text-red-600 hover:bg-slate-100"
-                      title="Delete measurement"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                    {view.slice(0, 4)}
+                  </button>
                 ))}
               </div>
-            )}
+            </div>
+          </div>
+
+          {/* Bottom Wireframe Toggle */}
+          <div className="pt-3 border-t border-[#e2e8f0]">
+            <button
+              onClick={onToggleWireframe}
+              className={`w-full py-2 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                wireframeMode
+                  ? "bg-slate-900 text-white border-slate-900"
+                  : "bg-white text-[#64748b] border-[#e2e8f0] hover:bg-slate-50"
+              }`}
+            >
+              <Grid className="w-3.5 h-3.5" />
+              <span>{wireframeMode ? "BIM Wireframe: ON" : "BIM Wireframe: OFF"}</span>
+            </button>
           </div>
         </div>
-      )}
+
+        {/* Sidebar Collapse Toggle Button */}
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="absolute -left-9 top-1/2 -translate-y-1/2 p-2 rounded-l-xl bg-white/95 backdrop-blur-md border border-r-0 border-[#e2e8f0] text-[#0f172a] shadow-md hover:bg-slate-50 transition-colors cursor-pointer"
+          title={sidebarOpen ? "Collapse Panel" : "Expand Panel"}
+        >
+          {sidebarOpen ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        </button>
+      </div>
     </>
   );
 };

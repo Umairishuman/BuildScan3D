@@ -1016,3 +1016,4 @@ with open(os.path.join(base_dir, "src", "app", "dashboard", "page.tsx"), "w", en
     f.write(dashboard_page_tsx)
 
 print("Successfully wrote mockData.ts, Sidebar.tsx, Navbar.tsx, ProjectCard.tsx, FloorPlanView.tsx, and dashboard/page.tsx.")
+

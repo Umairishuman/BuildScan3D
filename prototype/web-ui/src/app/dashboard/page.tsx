@@ -21,6 +21,7 @@ export default function DashboardPage() {
   const [currentTab, setCurrentTab] = useState<
     "dashboard" | "floorplan" | "projects" | "scans" | "reports" | "team" | "settings"
   >("dashboard");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | "ready" | "processing" | "draft" | "archived">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -50,26 +51,30 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="min-h-screen w-full flex bg-[#f6fafd] text-[#0f172a] relative">
-      {/* High-Definition Isometric CAD Blueprint Grid Background (Image 2 style) */}
+    <div className="min-h-screen w-full flex flex-col bg-[#f6fafd] text-[#0f172a] relative">
+      {/* High-Definition Isometric CAD Blueprint Grid Background */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#e0edf8_1px,transparent_1px),linear-gradient(to_bottom,#e0edf8_1px,transparent_1px)] bg-[size:32px_32px] opacity-45 pointer-events-none" />
 
-      {/* Left Sidebar Navigation */}
+      {/* Top Navbar with 3-Bar Menu Toggle */}
+      <Navbar
+        onOpenNewCapture={() => setIsNewCaptureModalOpen(true)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        isMenuOpen={isMenuOpen}
+        onToggleMenu={() => setIsMenuOpen((prev) => !prev)}
+      />
+
+      {/* Floating Collapsible Menu Box */}
       <Sidebar
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
         onOpenProject={handleOpenProjectFromRecent}
       />
 
-      {/* Main Content Area */}
+      {/* Main Content Area (Full width) */}
       <div className="flex-1 flex flex-col min-w-0 z-10">
-        {/* Top Navbar */}
-        <Navbar
-          onOpenNewCapture={() => setIsNewCaptureModalOpen(true)}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-        />
-
         {/* Dashboard Body */}
         <main className="flex-1 p-6 md:p-8 space-y-6 max-w-7xl w-full mx-auto">
           {currentTab === "floorplan" ? (
@@ -198,7 +203,7 @@ export default function DashboardPage() {
                 </button>
               </div>
 
-              {/* Project Cards Grid (3 columns matching Image 1) */}
+              {/* Project Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
                 {filteredProjects.map((project) => (
                   <ProjectCard

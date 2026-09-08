@@ -294,3 +294,4 @@ with open(os.path.join(base_dir, "src", "lib", "mockData.ts"), "w", encoding="ut
     f.write(mock_data_ts)
 
 print("Updated mockData.ts with location field.")
+

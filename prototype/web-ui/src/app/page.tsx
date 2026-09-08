@@ -32,7 +32,7 @@ export default function LoginPage() {
             fill
             className="object-cover object-center scale-105 md:scale-100"
             priority
-            quality={100}
+            sizes="(max-width: 768px) 100vw, 50vw"
           />
           {/* Subtle top & bottom gradient overlays */}
           <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#eff6fd]/90 via-[#eff6fd]/40 to-transparent" />
@@ -60,18 +60,28 @@ export default function LoginPage() {
       {/* RIGHT COLUMN: Clean Enterprise Authentication Form */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 md:p-16 bg-white min-h-screen">
         <div className="w-full max-w-[380px] flex flex-col items-center">
-          {/* Official New Brand Logo */}
+          {/* Official Brand Logo + Name Lockup */}
           <div className="flex flex-col items-center text-center mb-8">
-            <div className="relative w-48 h-16 mb-2">
-              <Image
-                src="/images/logo-new-removebg-preview.png"
-                alt="BuildScan 3D"
-                fill
-                className="object-contain"
-                priority
-              />
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <div className="relative w-11 h-11 shrink-0">
+                <Image
+                  src="/images/logo-new-removebg-preview.png"
+                  alt="BuildScan 3D Logo"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-black text-[#0f172a] tracking-tight">
+                  BuildScan
+                </span>
+                <span className="text-sm font-black px-2 py-0.5 rounded-lg bg-blue-50 text-[#2563eb] border border-blue-100">
+                  3D
+                </span>
+              </div>
             </div>
-            <p className="text-xs text-[#64748b]">
+            <p className="text-xs text-[#64748b] font-medium">
               Construction Spatial Intelligence Platform
             </p>
           </div>
