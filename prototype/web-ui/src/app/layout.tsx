@@ -15,6 +15,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "BuildScan 3D — Construction Intelligence & 3DGS Workspace",
   description: "Enterprise 3D Gaussian Splatting & AR Spatial Telemetry for Construction Management",
+  title: "BuildScan 3D — Construction Spatial Intelligence Platform",
+  description: "Enterprise 3D Gaussian Splatting & AR Spatial Telemetry for Construction Verification",
 };
 
 export default function RootLayout({
@@ -26,8 +28,10 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-slate-950 text-slate-100">{children}</body>
+      <body className="min-h-full flex flex-col bg-[#f8fafc] text-slate-900">{children}</body>
     </html>
   );
 }

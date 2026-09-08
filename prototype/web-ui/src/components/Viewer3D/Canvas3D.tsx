@@ -270,6 +270,7 @@ export const Canvas3D: React.FC<Canvas3DProps> = ({
 
   return (
     <div className="relative w-full h-full select-none overflow-hidden bg-slate-950">
+    <div className="relative w-full h-full select-none overflow-hidden bg-[#0a0f1d]">
       <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
       {/* Real-time Hovered 3D Coordinate Ticker (AR Metric Anchor) */}
@@ -279,6 +280,11 @@ export const Canvas3D: React.FC<Canvas3DProps> = ({
           <span>{hoveredCoordinate}</span>
           <span className="text-slate-500 font-sans text-[10px]">
             [Metric SE(3) Scale 1:1]
+        <div className="absolute bottom-4 left-4 z-20 px-3.5 py-2 rounded-xl bg-white/95 backdrop-blur-md border border-[#e2e8f0] text-xs font-mono text-[#0f172a] shadow-md pointer-events-none flex items-center gap-2.5">
+          <span className="w-2 h-2 rounded-full bg-[#2563eb] animate-pulse" />
+          <span className="font-bold">{hoveredCoordinate}</span>
+          <span className="text-[#64748b] font-sans text-[11px] font-medium">
+            [Metric SE(3) 1:1 Scale]
           </span>
         </div>
       )}
@@ -286,6 +292,7 @@ export const Canvas3D: React.FC<Canvas3DProps> = ({
       {/* Measurement Mode Helper Callout */}
       {isMeasureMode && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-xl bg-blue-600/90 backdrop-blur text-white shadow-xl shadow-blue-500/20 text-xs font-semibold flex items-center gap-2 animate-bounce">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2.5 rounded-2xl bg-[#2563eb] text-white shadow-xl text-xs font-bold flex items-center gap-2 animate-bounce">
           <span>📐 Click two points on the 3D model to measure metric distance</span>
         </div>
       )}

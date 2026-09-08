@@ -2,12 +2,14 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Lock, Mail, ArrowRight, ShieldCheck, HardHat, Sparkles } from "lucide-react";
+import Image from "next/image";
+import { Mail, Lock, Eye, EyeOff, ShieldCheck } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("pm.jenkins@buildscan3d.ai");
-  const [password, setPassword] = useState("••••••••••••");
+  const [password, setPassword] = useState("password123");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignIn = (e: React.FormEvent) => {
@@ -15,134 +17,162 @@ export default function LoginPage() {
     setIsLoading(true);
     setTimeout(() => {
       router.push("/dashboard");
-    }, 450);
+    }, 400);
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col justify-between relative overflow-hidden">
-      {/* Background Gradients & Grid */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950 pointer-events-none" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:32px_32px] opacity-20 pointer-events-none" />
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-white">
+      {/* LEFT COLUMN: Architectural 3D Graphic Panel */}
+      <div className="relative w-full md:w-[46%] lg:w-[44%] bg-[#edf5fc] min-h-[340px] md:min-h-screen p-8 md:p-12 flex flex-col justify-between overflow-hidden select-none border-r border-[#e2edf8]">
+        {/* Top Text */}
+        <div className="relative z-10 space-y-1">
+          <h2 className="text-sm md:text-base font-semibold text-[#1e293b] tracking-tight">
+            Real sites. 3D truth.
+          </h2>
+          <p className="text-xs md:text-sm text-[#64748b]">
+            Verify. Measure. Build better.
+          </p>
+        </div>
 
-      {/* Top Banner */}
-      <header className="relative z-10 w-full p-6 flex justify-between items-center max-w-7xl mx-auto">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 p-[1px] shadow-lg shadow-blue-500/20">
-            <div className="w-full h-full bg-slate-950 rounded-[11px] flex items-center justify-center">
-              <Box className="w-5 h-5 text-cyan-400" />
-            </div>
-          </div>
-          <div>
-            <span className="font-bold text-lg text-white">
-              BuildScan<span className="text-cyan-400">3D</span>
-            </span>
-            <span className="ml-2 text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
-              Enterprise
-            </span>
+        {/* Center Blueprint / Point Cloud Illustration */}
+        <div className="relative my-auto py-6 flex items-center justify-center">
+          <div className="relative w-full max-w-[420px] aspect-[4/3] drop-shadow-sm">
+            <Image
+              src="/images/login-left-panel.png"
+              alt="3D Spatial BIM Scan"
+              fill
+              className="object-contain"
+              priority
+            />
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg">
-          <ShieldCheck className="w-4 h-4" />
-          <span className="font-mono">FAST-NUCES FYP Defense Build</span>
+        {/* Bottom Text */}
+        <div className="relative z-10">
+          <p className="text-[11px] md:text-xs text-[#64748b] font-normal">
+            Powered by spatial data. Built for construction.
+          </p>
         </div>
-      </header>
+      </div>
 
-      {/* Main Login Card */}
-      <main className="relative z-10 flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-slate-900/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl shadow-2xl p-8 space-y-6">
-          {/* Logo & Headline */}
-          <div className="text-center space-y-2">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 p-[1px] shadow-xl shadow-blue-500/20 mb-2">
-              <div className="w-full h-full bg-slate-950 rounded-[15px] flex items-center justify-center">
-                <HardHat className="w-7 h-7 text-cyan-400" />
-              </div>
+      {/* RIGHT COLUMN: Clean Enterprise Authentication Form */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 md:p-16 bg-white">
+        <div className="w-full max-w-[380px] flex flex-col items-center">
+          {/* Logo & Brand Name */}
+          <div className="flex flex-col items-center text-center mb-8">
+            <div className="flex items-center gap-2.5 mb-2">
+              {/* Isometric 3D Cube Icon */}
+              <svg
+                className="w-9 h-9 text-[#2563eb]"
+                viewBox="0 0 48 48"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M24 4L42 14.3923V35.1769L24 45.5692L6 35.1769V14.3923L24 4Z"
+                  stroke="currentColor"
+                  strokeWidth="3.2"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M24 4V24.5M24 24.5L42 14.5M24 24.5L6 14.5M24 24.5V45.5"
+                  stroke="currentColor"
+                  strokeWidth="2.8"
+                  strokeLinecap="round"
+                />
+                <circle cx="24" cy="24.5" r="3" fill="currentColor" />
+                <circle cx="15" cy="19.5" r="1.5" fill="currentColor" />
+                <circle cx="33" cy="19.5" r="1.5" fill="currentColor" />
+                <circle cx="24" cy="35" r="1.5" fill="currentColor" />
+              </svg>
+
+              <h1 className="text-2xl font-bold tracking-tight text-[#0f172a]">
+                BuildScan <span className="text-[#2563eb]">3D</span>
+              </h1>
             </div>
-            <h1 className="text-xl font-bold text-white tracking-tight">
-              Construction Intelligence Portal
-            </h1>
-            <p className="text-xs text-slate-400">
-              Sign in to inspect millimeter-accurate 3D scans & telemetry
+            <p className="text-xs text-[#64748b]">
+              Construction Spatial Intelligence Platform
             </p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSignIn} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">
-                Enterprise Email
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
-                  required
-                />
-              </div>
+          <form onSubmit={handleSignIn} className="w-full space-y-4">
+            {/* Email Field */}
+            <div className="relative flex items-center border border-[#e2e8f0] rounded-xl px-3.5 py-3 bg-white focus-within:border-[#2563eb] focus-within:ring-2 focus-within:ring-[#2563eb]/10 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+              <Mail className="w-4 h-4 text-[#64748b] mr-3 shrink-0" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                className="w-full text-xs sm:text-sm text-[#0f172a] placeholder-[#94a3b8] bg-transparent focus:outline-none"
+                required
+              />
             </div>
 
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-semibold text-slate-300">
-                  Password
-                </label>
-                <span className="text-[11px] text-cyan-400 font-mono">
-                  [Demo Pass]
-                </span>
-              </div>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors font-mono"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Quick Demo Pre-filled Callout */}
-            <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/20 text-xs text-slate-300 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-                <span className="text-[11px]">Logged as: <strong>Sarah Jenkins (Lead MEP)</strong></span>
-              </div>
+            {/* Password Field */}
+            <div className="relative flex items-center border border-[#e2e8f0] rounded-xl px-3.5 py-3 bg-white focus-within:border-[#2563eb] focus-within:ring-2 focus-within:ring-[#2563eb]/10 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+              <Lock className="w-4 h-4 text-[#64748b] mr-3 shrink-0" />
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="w-full text-xs sm:text-sm text-[#0f172a] placeholder-[#94a3b8] bg-transparent focus:outline-none font-mono"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-[#64748b] hover:text-[#0f172a] ml-2 shrink-0 transition-colors"
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs tracking-wide shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 group"
+              className="w-full py-3 px-4 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:bg-[#1e40af] text-white font-medium text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer mt-5"
             >
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                <>
-                  <span>Sign In as Project Manager</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </>
+                "Sign In"
               )}
             </button>
+
+            {/* Forgot password link */}
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={() => alert("Password reset link sent to demo email")}
+                className="text-xs text-[#2563eb] hover:text-[#1d4ed8] hover:underline font-medium transition-colors"
+              >
+                Forgot password?
+              </button>
+            </div>
           </form>
 
-          {/* Defense Context Badge */}
-          <div className="pt-2 border-t border-slate-800/80 text-center">
-            <p className="text-[11px] text-slate-400">
-              Architecture: <strong className="text-slate-300">ARCore 120Hz VIO + 3DGS + YOLOv8-Seg</strong>
-            </p>
+          {/* Security & Compliance Badges */}
+          <div className="w-full flex items-center justify-center gap-3 mt-12 pt-4">
+            <div className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-[#e2e8f0] bg-white text-[11px] font-medium text-[#64748b] shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+              <Lock className="w-3.5 h-3.5 text-[#64748b]" />
+              <span>256-bit encrypted</span>
+            </div>
+            <div className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-[#e2e8f0] bg-white text-[11px] font-medium text-[#64748b] shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#64748b]" />
+              <span>SOC 2 compliant</span>
+            </div>
           </div>
         </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="relative z-10 w-full p-6 text-center text-xs text-slate-400">
-        BuildScan 3D • Final Year Project • FAST National University of Computer and Emerging Sciences
-      </footer>
+      </div>
     </div>
   );
 }
