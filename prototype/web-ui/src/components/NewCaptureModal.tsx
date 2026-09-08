@@ -8,8 +8,6 @@ import {
   CheckCircle2,
   QrCode,
   Sparkles,
-  ArrowRight,
-  ShieldAlert,
 } from "lucide-react";
 
 interface NewCaptureModalProps {
@@ -38,27 +36,21 @@ export const NewCaptureModal: React.FC<NewCaptureModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div
-        className="relative w-full max-w-lg bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl shadow-blue-500/10 overflow-hidden text-slate-100"
         className="relative w-full max-w-lg bg-white border border-[#e2e8f0] rounded-2xl shadow-2xl overflow-hidden text-[#0f172a]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/60">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#e2e8f0] bg-[#f8fafc]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
             <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-[#2563eb]">
               <Smartphone className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">
               <h2 className="text-base font-bold text-[#0f172a]">
                 Initiate New Site Capture
               </h2>
-              <p className="text-xs text-slate-400">
               <p className="text-xs text-[#64748b]">
                 Sync Mobile AR Telemetry or Direct Upload
               </p>
@@ -66,7 +58,6 @@ export const NewCaptureModal: React.FC<NewCaptureModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
             className="p-1.5 rounded-lg text-[#64748b] hover:text-[#0f172a] hover:bg-slate-100"
           >
             <X className="w-5 h-5" />
@@ -75,18 +66,14 @@ export const NewCaptureModal: React.FC<NewCaptureModalProps> = ({
 
         {/* Content */}
         <div className="p-6 space-y-4">
-          <div className="flex rounded-lg bg-slate-900 p-1 border border-slate-800">
           <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200">
             <button
               onClick={() => {
                 setActiveTab("mobile_qr");
                 setUploadComplete(false);
               }}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 activeTab === "mobile_qr"
-                  ? "bg-blue-600 text-white shadow"
-                  : "text-slate-400 hover:text-white"
                   ? "bg-white text-[#2563eb] shadow-sm font-bold"
                   : "text-[#64748b] hover:text-[#0f172a]"
               }`}
@@ -98,11 +85,8 @@ export const NewCaptureModal: React.FC<NewCaptureModalProps> = ({
                 setActiveTab("direct_upload");
                 setUploadComplete(false);
               }}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                 activeTab === "direct_upload"
-                  ? "bg-blue-600 text-white shadow"
-                  : "text-slate-400 hover:text-white"
                   ? "bg-white text-[#2563eb] shadow-sm font-bold"
                   : "text-[#64748b] hover:text-[#0f172a]"
               }`}
@@ -112,24 +96,13 @@ export const NewCaptureModal: React.FC<NewCaptureModalProps> = ({
           </div>
 
           {activeTab === "mobile_qr" ? (
-            <div className="flex flex-col items-center text-center p-4 rounded-xl bg-slate-900/50 border border-slate-800 space-y-3">
-              <div className="p-4 bg-white rounded-xl shadow-inner">
-                {/* Visual QR Placeholder */}
-                <div className="w-32 h-32 border-4 border-slate-900 p-1 flex items-center justify-center">
-                  <QrCode className="w-28 h-28 text-slate-900" />
-                </div>
             <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0] space-y-3">
               <div className="p-4 bg-white rounded-2xl shadow-sm border border-slate-200">
                 <QrCode className="w-28 h-28 text-[#0f172a]" />
               </div>
-              <p className="text-xs font-mono text-cyan-400">
               <p className="text-xs font-mono text-[#2563eb] font-bold">
                 PAIR CODE: #BST-8842-NUCES
               </p>
-              <p className="text-xs text-slate-400 max-w-xs">
-                Open the <strong>BuildScan Mobile App</strong> on an ARCore/ARKit
-                supported phone and scan this code to link telemetry directly to
-                this project.
               <p className="text-xs text-[#64748b] max-w-xs">
                 Open the <strong>BuildScan Mobile App</strong> on your phone and
                 scan this code to stream 120Hz AR telemetry directly to this
@@ -138,18 +111,11 @@ export const NewCaptureModal: React.FC<NewCaptureModalProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="border-2 border-dashed border-slate-800 hover:border-blue-500/50 rounded-xl p-6 text-center space-y-2 transition-colors">
-                <UploadCloud className="w-8 h-8 text-blue-400 mx-auto animate-bounce" />
-                <div className="text-xs text-slate-200 font-semibold">
               <div className="border-2 border-dashed border-[#cbd5e1] hover:border-[#2563eb] rounded-2xl p-6 text-center space-y-2 bg-[#f8fafc] transition-colors">
                 <UploadCloud className="w-8 h-8 text-[#2563eb] mx-auto animate-bounce" />
                 <div className="text-xs text-[#0f172a] font-bold">
                   Drag & drop raw scan bundle
                 </div>
-                <p className="text-[11px] text-slate-400">
-                  Accepts <code className="text-cyan-400">video.mp4</code>,{" "}
-                  <code className="text-cyan-400">poses.csv</code>, and{" "}
-                  <code className="text-cyan-400">points.csv</code>
                 <p className="text-[11px] text-[#64748b]">
                   Accepts <code className="text-[#2563eb] font-semibold">video.mp4</code>,{" "}
                   <code className="text-[#2563eb] font-semibold">poses.csv</code>, and{" "}
@@ -161,13 +127,11 @@ export const NewCaptureModal: React.FC<NewCaptureModalProps> = ({
                 <button
                   onClick={handleSimulateUpload}
                   disabled={isSimulatingUpload}
-                  className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors flex items-center justify-center gap-2"
-                  className="w-full py-2.5 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  className="w-full py-2.5 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                 >
                   {isSimulatingUpload ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Packaging & Dispatching to RunPod...</span>
                       <span>Packaging & Dispatching to GPU Worker...</span>
                     </>
                   ) : (
@@ -178,8 +142,6 @@ export const NewCaptureModal: React.FC<NewCaptureModalProps> = ({
                   )}
                 </button>
               ) : (
-                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2 font-medium">
                   <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
                   <span>
@@ -192,12 +154,10 @@ export const NewCaptureModal: React.FC<NewCaptureModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-slate-800 bg-slate-900/60 flex justify-end">
         <div className="px-6 py-3 border-t border-[#e2e8f0] bg-[#f8fafc] flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white"
-            className="px-4 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-[#0f172a]"
+            className="px-4 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-[#0f172a] cursor-pointer"
           >
             Close
           </button>
@@ -206,4 +166,3 @@ export const NewCaptureModal: React.FC<NewCaptureModalProps> = ({
     </div>
   );
 };
-
