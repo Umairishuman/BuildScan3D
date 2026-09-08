@@ -21,43 +21,44 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col md:flex-row bg-white">
-      {/* LEFT COLUMN: Architectural 3D Graphic Panel */}
-      <div className="relative w-full md:w-[48%] lg:w-[46%] bg-[#f4f8fd] min-h-[360px] md:min-h-screen p-8 md:p-12 flex flex-col justify-between overflow-hidden select-none border-r border-[#e2edf8]">
-        {/* Top Text */}
-        <div className="relative z-10 space-y-1">
-          <h2 className="text-sm md:text-base font-semibold text-[#1e293b] tracking-tight">
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-white overflow-hidden">
+      {/* LEFT COLUMN: Full-Bleed Architectural 3D Graphic Panel */}
+      <div className="relative w-full md:w-[48%] lg:w-[46%] bg-[#eff6fd] min-h-[380px] md:min-h-screen flex flex-col justify-between overflow-hidden select-none border-r border-[#e2edf8]">
+        {/* Full-bleed Background 3D BIM Graphic */}
+        <div className="absolute inset-0 w-full h-full pointer-events-none">
+          <Image
+            src="/images/login-left-panel-new.png"
+            alt="3D Spatial BIM Scan"
+            fill
+            className="object-cover object-center scale-105 md:scale-100"
+            priority
+            quality={100}
+          />
+          {/* Subtle top & bottom gradient overlays so text remains crystal clear */}
+          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#eff6fd]/90 via-[#eff6fd]/40 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#eff6fd]/90 via-[#eff6fd]/40 to-transparent" />
+        </div>
+
+        {/* Top Text Overlay */}
+        <div className="relative z-10 p-8 md:p-12 space-y-1">
+          <h2 className="text-base md:text-lg font-bold text-[#1e293b] tracking-tight">
             Real sites. 3D truth.
           </h2>
-          <p className="text-xs md:text-sm text-[#64748b]">
+          <p className="text-xs md:text-sm text-[#64748b] font-medium">
             Verify. Measure. Build better.
           </p>
         </div>
 
-        {/* Center Blueprint / Point Cloud Illustration (High-Res) */}
-        <div className="relative my-auto py-4 flex items-center justify-center w-full">
-          <div className="relative w-full max-w-[560px] aspect-[16/9] drop-shadow-sm">
-            <Image
-              src="/images/login-left-panel-new.png"
-              alt="3D Spatial BIM Scan"
-              fill
-              className="object-contain"
-              priority
-              quality={100}
-            />
-          </div>
-        </div>
-
-        {/* Bottom Text */}
-        <div className="relative z-10">
-          <p className="text-[11px] md:text-xs text-[#64748b] font-normal">
+        {/* Bottom Text Overlay */}
+        <div className="relative z-10 p-8 md:p-12">
+          <p className="text-xs text-[#64748b] font-medium">
             Powered by spatial data. Built for construction.
           </p>
         </div>
       </div>
 
       {/* RIGHT COLUMN: Clean Enterprise Authentication Form */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 md:p-16 bg-white">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 md:p-16 bg-white min-h-screen">
         <div className="w-full max-w-[380px] flex flex-col items-center">
           {/* Logo & Brand Name */}
           <div className="flex flex-col items-center text-center mb-8">
