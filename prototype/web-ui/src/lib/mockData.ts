@@ -270,6 +270,65 @@ export const MOCK_PIPELINE_STEPS: PipelineStep[] = [
   }
 ];
 
+export type SavedMeasurementKind =
+  | "length"
+  | "height"
+  | "pipe"
+  | "width"
+  | "beam";
+
+export interface SavedMeasurement {
+  id: string;
+  kind: SavedMeasurementKind;
+  value: string;
+  label: string;
+  timestamp: string;
+  projectId: string;
+}
+
+export const MOCK_SAVED_MEASUREMENTS: SavedMeasurement[] = [
+  {
+    id: "sm-1",
+    kind: "length",
+    value: "12.48 m",
+    label: "Main Supply Duct Length",
+    timestamp: "Apr 28, 10:42 AM",
+    projectId: "sector-4-mep",
+  },
+  {
+    id: "sm-2",
+    kind: "height",
+    value: "3.20 m",
+    label: "Slab-to-Ceiling Clear Height",
+    timestamp: "Apr 28, 10:36 AM",
+    projectId: "sector-4-mep",
+  },
+  {
+    id: "sm-3",
+    kind: "pipe",
+    value: "168 mm",
+    label: "Chilled Water Pipe OD",
+    timestamp: "Apr 27, 4:18 PM",
+    projectId: "sector-4-mep",
+  },
+  {
+    id: "sm-4",
+    kind: "width",
+    value: "1.42 m",
+    label: "HVAC Duct Width",
+    timestamp: "Apr 27, 2:05 PM",
+    projectId: "sector-4-mep",
+  },
+  {
+    id: "sm-5",
+    kind: "beam",
+    value: "6.75 m",
+    label: "Structural Beam Span",
+    timestamp: "Apr 26, 11:22 AM",
+    projectId: "sector-4-mep",
+  },
+];
+
 export const MOCK_TERMINAL_LOGS = [
   "[00:00:01] [INFO] Connection established with BuildScan Edge Worker (NVIDIA RTX 4090 24GB)",
   "[00:00:03] [INGEST] Received payload scan_sector4_mep.tar.gz",

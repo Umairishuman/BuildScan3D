@@ -19,6 +19,8 @@ export interface Canvas3DHandle {
   zoomOut: () => void;
   resetView: () => void;
   fitToScreen: () => void;
+  deleteMeasurement: (id: string) => void;
+  clearMeasurements: () => void;
 }
 
 interface Canvas3DProps {
@@ -225,6 +227,18 @@ export const Canvas3D = forwardRef<Canvas3DHandle, Canvas3DProps>(
           updateActiveCamera();
         },
         resetView: () => applyViewPreset(viewModeRef.current),
+        deleteMeasurement: (id: string) => {
+          const manager = measurementManagerRef.current;
+          if (!manager) return;
+          manager.deleteMeasurement(id);
+          onMeasurementsChangeRef.current([...manager.measurements]);
+        },
+        clearMeasurements: () => {
+          const manager = measurementManagerRef.current;
+          if (!manager) return;
+          manager.clearAll();
+          onMeasurementsChangeRef.current([]);
+        },
         fitToScreen: () => {
           const sceneBuilder = sceneBuilderRef.current;
           if (!sceneBuilder) return;
