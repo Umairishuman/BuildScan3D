@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-09-09 (Project thumbnails refreshed) · Branch: `prototype`
+Last updated: 2026-09-09 (Step 7) · Branch: `prototype`
 
 ---
 
@@ -147,6 +147,37 @@ button, New Capture modal, job-status modal. See §6 for the unfinished list-vie
 `dashboard/page.tsx` (consumes AppShell).
 **Fixed:** clicking a Ready/Complete site in Recent Sites previously did nothing.
 **Verified:** tsc clean · build ok · eslint 0 errors.
+
+### Step 7 — S7 & S8 Overview / Files / Report tabs ✅
+**Created:** `ProjectDetail/OverviewTab.tsx` (4 stat cards + 3D preview card using the hero PNG
++ Layer Summary with per-layer progress bars + Recent Activity feed reusing
+`MOCK_NOTIFICATIONS`), `ProjectDetail/FilesTab.tsx` (drag-drop upload zone accepting real
+`onDrop` events + file list with per-kind tinted icons, monospace filename, size, upload date,
+per-row hover-revealed Download / Delete actions), `ProjectDetail/ReportTab.tsx` (sticky
+sub-toolbar with Generate/Export buttons + PDF-style A4-ish preview page with header, site
+info stats row, 3D snapshot, executive summary paragraph, flagged-issues register table with
+color-coded Change pills).
+**Modified:** `lib/mockData.ts` (added `ProjectFile` type + `MOCK_PROJECT_FILES` — 7 seeded
+rows spanning PLY, KSPLAT, OBJ, PDF, CSV, PNG, JSON), `ProjectDetail/DetailSidebar.tsx`
+(flipped `overview`, `files`, `report` tabs to `ready: true`),
+`app/viewer/[id]/page.tsx` (dispatches Overview/Files/Report in the centre pane and hides the
+RightDock via a new `isFullWidthTab` flag covering History + these three).
+
+Delivered:
+- **Overview:** stats are real (`project.area`, `project.scansCount`, `project.dateCaptured`,
+  flagged-issue count from `MOCK_CHANGE_LOG`); Layer Summary shows Plumbing/Electrical/HVAC/
+  Fire/Structural with counts + proportional bars.
+- **Files:** dropzone highlights on drag-over (`bg-blue-50/60` + solid blue border) and
+  accepts native file drops — a dropped file infers its kind from the extension, formats bytes
+  into KB/MB/GB, and prepends to the list. Delete removes rows locally. All 7 seeded rows are
+  disciplined (real Nerfstudio artefacts + human-authored PDFs/CSVs).
+- **Report:** Generate button spins for 900ms then updates the "Last generated" timestamp;
+  Export as PDF is a stub button. The preview page is centered in a 820px card with a proper
+  header (`Report #BS-2025-04-<id>`), site-info stats row, snapshot with caption, exec summary
+  paragraph, and a flagged-issues register table showing all `MOCK_CHANGE_LOG` rows.
+
+**Verified:** `npx tsc --noEmit` silent · `npx next build` compiles 6 routes · `npx eslint src`
+0 errors + 4 known warnings.
 
 ### Dashboard → Operations Overview ✅ (out-of-order — user brief)
 **Follow-up to the workspace-hero pivot.** The hero landing showed one project prettily but
@@ -328,13 +359,7 @@ contains real project name, detail nav and layer panel.
 
 Ordered per `POC_requirements.md` §4. **Do one per session/turn.**
 
-### Step 7 — S7 & S8: Overview / Files / Report tabs ◀ NEXT
-**Spec:** Prompt 8.
-Fills the remaining `DetailSidebar` placeholders. Overview = stat cards + 3D thumbnail +
-recent-activity feed + Layer Summary. Files = drag-drop zone + file list. Report = Generate
-Report button + PDF-style preview + Export as PDF.
-
-### Step 8 — S9: Empty & error states
+### Step 8 — S9: Empty & error states ◀ NEXT
 Empty search results, empty measurements, failed-scan state, offline. Lowest priority.
 
 ---
@@ -347,7 +372,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | **List view does nothing** | `dashboard/page.tsx` | `viewMode` state drives only button styling; the grid is always 3-col. Either implement the list layout or remove the toggle. |
 | **`globals.css` conflicts** | `src/app/globals.css` | Duplicate `--background` declaration, plus a `prefers-color-scheme: dark` block setting `#0a0a0a`. Currently inert because `layout.tsx` hardcodes `bg-[#f8fafc]` on `<body>` — but it is a live trap. |
 | 4 pre-existing lint warnings | `ExportModal.tsx:29`, `FloorPlanView.tsx:6` | Unused `filename`, `Layers`, `Eye`, `Activity`. Harmless; clean up when touching those files. |
-| Non-functional controls | dashboard date-range button, `View all activity →` footer link in the notifications panel | Bell is now wired (Step 5); date-range button and `View all` link stay stubs until later steps. |
+| Non-functional controls | dashboard date-range button, `View all activity →` footer link in the notifications panel, "Export as PDF" in `ReportTab.tsx` | Bell is now wired (Step 5); the rest stay stubs. `Generate Report` in ReportTab shows a spinner + updates the timestamp but doesn't produce a file. |
 | Search is shallow | `dashboard/page.tsx` | Filters name/block/floor only. |
 | **Dashboard floor-plan tab still live** | `projects/page.tsx` + `components/FloorPlanView.tsx` | The old project-grid page (now at `/projects`) keeps its "Floor Plan" tab rendering abstract rectangles from `MOCK_FLOOR_PLAN_SECTORS`. Superseded by the new `/floorplan/[id]` route; retire the tab and delete `FloorPlanView.tsx` next time `/projects` is touched. |
 | Dashboard KPI deltas are static strings | `components/DashboardHome/Overview.tsx` | Each KPI card shows a helper caption ("+2 this month", "Training on RTX 4090", …). The number itself is real (derived from fixtures) but the caption is fixed text — swap in real trend data when there is any. |
@@ -369,14 +394,20 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | S4a | Measurements panel | ✅ Done |
 | S4b | Comparison View | ✅ Done |
 | S6 | Notifications | ✅ Done |
-| S7 | Overview tab | ⬜ Step 7 |
-| S8 | Files / Report tabs | ⬜ Step 7 |
+| S7 | Overview tab | ✅ Done |
+| S8 | Files / Report tabs | ✅ Done |
 | S9 | Empty / error states | ⬜ Step 8 |
 
 ---
 
 ## 8. Changelog
 
+- **2026-09-09** — Step 7: S7 & S8 tabs — Overview (4 real-data stat cards + 3D preview +
+  Layer Summary with proportional bars + Recent Activity feed), Files (native drag-drop that
+  infers kind from extension + 7-row list with per-kind tinted icons and hover Download /
+  Delete), Report (PDF-style preview card with header/stats/snapshot/summary/flagged-issues
+  register + Generate Report spinner + Export as PDF stub). All three centre-pane tabs hide
+  the RightDock via a new `isFullWidthTab` flag.
 - **2026-09-09** — Project thumbnails swapped for real photos from Unsplash (free license, no
   attribution required). Six 1200-wide JPEGs downloaded to `public/thumbnails/` via the
   Unsplash download endpoint and referenced from `MOCK_PROJECTS` (paths flipped from `.png`
