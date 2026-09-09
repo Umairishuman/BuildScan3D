@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-09-09 (Plenum-hidden MEP; X-Ray reveals) · Branch: `prototype`
+Last updated: 2026-09-09 (Minimal top strip + idle-hide) · Branch: `prototype`
 
 ---
 
@@ -147,6 +147,24 @@ button, New Capture modal, job-status modal. See §6 for the unfinished list-vie
 `dashboard/page.tsx` (consumes AppShell).
 **Fixed:** clicking a Ready/Complete site in Recent Sites previously did nothing.
 **Verified:** tsc clean · build ok · eslint 0 errors.
+
+### Minimal top strip + idle-hide (user ask) ✅
+- **`ProjectDetailTopBar` slimmed:** dropped the gradient icon block; padding
+  cut from `py-3` to `py-1.5`; tab pills tightened (`px-3 py-1.5` → `px-2 py-1`,
+  radius `xl` → `lg`); provenance section replaced with two compact mono chips
+  (Accuracy + Gaussians, xl+ only). Bar height dropped from ~64 px to ~40 px.
+- **Idle-hide behaviour:** `viewer/[id]/page.tsx` now tracks `isChromeVisible`
+  and a `chromeTimeoutRef`. A `bumpChrome()` callback wired to the section's
+  `onMouseMove` primes a 2500 ms `setTimeout` that flips visibility off. Any
+  new mouse movement or `onMouseLeave` restores it. Visibility is *derived* as
+  `isTopBarVisible = detailTab !== "viewer" || isChromeVisible` so
+  Overview/Files/Report/History tabs always keep the strip up. The strip
+  animates via `max-h-16 opacity-100` ↔ `max-h-0 opacity-0` with
+  `transition-[max-height,opacity] duration-300` — collapses inline so the
+  canvas grows to fill the reclaimed space (no absolute overlap with the
+  floating viewport overlays).
+
+**Verified:** typecheck silent · build 6/6 · lint 0 errors + 1 known warning.
 
 ### Plenum-hidden MEP + X-Ray reveal ✅
 The earlier X-Ray change dialed the shell translucent, but the systems were still
@@ -521,6 +539,12 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-09-09** — Minimal top strip + idle-hide: `ProjectDetailTopBar` slimmed
+  from ~64 px to ~40 px (icon block removed, tighter tab pills, provenance
+  compressed to two mono chips). Auto-hides after 2500 ms of no mouse movement
+  while in the 3D viewer tab; any mousemove or leave restores it. Uses a
+  `max-height` collapse so the canvas fills the reclaimed space without
+  overlapping the floating viewport overlays.
 - **2026-09-09** — Plenum-hidden MEP + X-Ray reveal: dropped the ceiling from
   y=4 to y=2.7 (added tile grid), lifted the pipe headers into the plenum
   (supply 2.85→3.4, return 2.4→2.95), removed the exposed risers/valves/elbows

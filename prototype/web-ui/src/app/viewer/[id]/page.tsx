@@ -94,6 +94,8 @@ function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] 
   const [orbit, setOrbit] = useState({ theta: Math.PI / 4, phi: Math.PI / 3 });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isChromeVisible, setIsChromeVisible] = useState(true);
+  const chromeTimeoutRef = useRef<number | null>(null);
 
   const handleToggleLayer = (layer: keyof SemanticLayersState) => {
     setSemanticLayers((prev) => ({ ...prev, [layer]: !prev[layer] }));
@@ -117,6 +119,31 @@ function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] 
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
+
+  // Auto-hide the top strip after 2.5s of no cursor movement while the 3D
+  // viewer is open. Any mousemove (or leaving the viewport) restores it. Other
+  // tabs always show the strip regardless of `isChromeVisible`.
+  const bumpChrome = useCallback(() => {
+    setIsChromeVisible(true);
+    if (chromeTimeoutRef.current !== null) {
+      window.clearTimeout(chromeTimeoutRef.current);
+    }
+    chromeTimeoutRef.current = window.setTimeout(() => {
+      setIsChromeVisible(false);
+    }, 2500);
+  }, []);
+
+  // Cancel any pending hide when the tab changes; the derived visibility below
+  // handles making non-viewer tabs always show the strip.
+  useEffect(() => {
+    if (detailTab === "viewer") return;
+    if (chromeTimeoutRef.current !== null) {
+      window.clearTimeout(chromeTimeoutRef.current);
+      chromeTimeoutRef.current = null;
+    }
+  }, [detailTab]);
+
+  const isTopBarVisible = detailTab !== "viewer" || isChromeVisible;
 
   // "Measurements" tab in the top bar now opens the floating measurements
   // panel over the 3D viewport rather than swapping the centre content.
@@ -159,13 +186,31 @@ function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] 
       ]}
     >
       <div className="flex-1 min-h-0 flex flex-col">
-        <ProjectDetailTopBar
-          project={project}
-          activeTab={detailTab}
-          onSelectTab={handleSelectDetailTab}
-        />
+        {/* Top strip — collapses to zero height when the mouse is idle in the
+            3D viewer so the canvas grows to fill the reclaimed space. Uses
+            `max-height` instead of absolute positioning so it never covers the
+            floating viewport overlays. */}
+        <div
+          className={`shrink-0 overflow-hidden transition-[max-height,opacity] duration-300 ease-out ${
+            isTopBarVisible
+              ? "max-h-16 opacity-100"
+              : "max-h-0 opacity-0 pointer-events-none"
+          }`}
+        >
+          <ProjectDetailTopBar
+            project={project}
+            activeTab={detailTab}
+            onSelectTab={handleSelectDetailTab}
+          />
+        </div>
 
-        <section className="flex-1 min-h-0 flex flex-col bg-[#eef3f9]">
+        <section
+          className="flex-1 min-h-0 flex flex-col bg-[#eef3f9]"
+          onMouseMove={detailTab === "viewer" ? bumpChrome : undefined}
+          onMouseLeave={
+            detailTab === "viewer" ? () => setIsChromeVisible(true) : undefined
+          }
+        >
           {detailTab === "history" ? (
             <ComparisonView onBack={() => setDetailTab("viewer")} />
           ) : detailTab === "overview" ? (
