@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-09-09 · Branch: `prototype`
+Last updated: 2026-09-09 (Step 3) · Branch: `prototype`
 
 ---
 
@@ -146,6 +146,30 @@ button, New Capture modal, job-status modal. See §6 for the unfinished list-vie
 **Fixed:** clicking a Ready/Complete site in Recent Sites previously did nothing.
 **Verified:** tsc clean · build ok · eslint 0 errors.
 
+### Step 3 — S4a Measurements panel ✅
+**Created:** `ProjectDetail/MeasurementsPanel.tsx` (Saved / Current / Tools sub-views + pinned
+`+ New Measurement` primary button).
+**Modified:** `lib/mockData.ts` (added `SavedMeasurement` type and `MOCK_SAVED_MEASUREMENTS`
+fixture — 5 rows: length, height, pipe, width, beam), `Viewer3D/Canvas3D.tsx` (extended
+`Canvas3DHandle` with `deleteMeasurement(id)` and `clearMeasurements()` — both re-emit
+`onMeasurementsChange` so the panel stays in sync), `ProjectDetail/RightDock.tsx` (delegates
+the three measurement tabs to `MeasurementsPanel`; the Layers branch is unchanged), and
+`app/viewer/[id]/page.tsx` (lifted `isMeasureMode` out of a hardcoded `false` into React state;
+toggling it auto-focuses the Current tab; delete/clear route through the canvas handle so 3D
+markers and rows tear down together).
+
+Delivered:
+- **Saved tab:** search input + 5 seeded rows, each with a tinted type icon, monospace-bold
+  value, label, right-aligned timestamp, and a hover-revealed overflow menu.
+- **Current tab:** live rows from the canvas session; per-row `Trash2` (delete a single
+  measurement) plus a `Clear all` header action.
+- **Tools tab:** measure-mode toggle switch, five-type chip grid (only `length` wired — the
+  rest are documented as Stage 5), and a session `Clear` button.
+- Monospace font only on numeric values (`{value} m`), per acceptance criterion.
+
+**Verified:** `npx tsc --noEmit` silent · `npx next build` compiles (5/5 static pages) ·
+`npx eslint src --max-warnings=100` reports 0 errors + the 4 known warnings from §6.
+
 ### Step 2 — S3/S4 Project Detail Shell + 3D Viewer ✅
 **Created:** `ProjectDetail/DetailSidebar.tsx` (260px, 6 tabs, capture provenance),
 `ProjectDetail/ViewportOverlays.tsx` (view toggle, 6-icon tool rail, axis gizmo, bottom bar),
@@ -170,31 +194,7 @@ contains real project name, detail nav and layer panel.
 
 Ordered per `POC_requirements.md` §4. **Do one per session/turn.**
 
-### Step 3 — S4a: Measurements panel ◀ NEXT
-**Spec:** `POC_requirements.md` Prompt 5.
-**Scope:** Fill the Saved / Current / Tools tabs in `ProjectDetail/RightDock.tsx`. The dock,
-its tab bar, and the Layers tab already exist — **only the three measurement tabs are missing.**
-
-Instructions:
-1. Replace the placeholder branch in `RightDock.tsx` (currently a dashed "built in the next
-   step" card).
-2. **Saved tab:** search input (placeholder `Search measurements...`), then a scrollable list.
-   Each row: type icon (ruler/height/pipe/width/beam — vary), value in **monospace bold**
-   (e.g. `12.48 m`), label beneath, right-aligned timestamp, `...` overflow menu.
-   Seed 5 rows — add them to `src/lib/mockData.ts`, not inline.
-3. **Current tab:** live `MeasurementRecord[]` from the canvas session. `MeasurementTool.ts`
-   already seeds two real measurements and produces more on click.
-4. **Tools tab:** measurement mode controls. Wire the existing `isMeasureMode` prop on
-   `Canvas3D` — `viewer/[id]/page.tsx` currently hardcodes `isMeasureMode={false}`; lift it to
-   state and drive it from here.
-5. Full-width primary `+ New Measurement` button pinned at the panel bottom.
-6. Restore delete / clear — `MeasurementManager` already has `deleteMeasurement(id)` and
-   `clearAll()`, but nothing calls them since the dark HUD was retired.
-
-**Acceptance:** measuring in the canvas adds a row to Current; delete removes both the row and
-its 3D markers; monospace only on the numeric values.
-
-### Step 4 — S2.5: Floor Plan route
+### Step 4 — S2.5: Floor Plan route ◀ NEXT
 **Spec:** Prompt 3.
 **Note:** `FloorPlanView.tsx` currently exists as a *tab inside the dashboard* rendering
 abstract rectangles. The spec wants a standalone screen.
@@ -246,7 +246,8 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | 4 pre-existing lint warnings | `ExportModal.tsx:29`, `FloorPlanView.tsx:6` | Unused `filename`, `Layers`, `Eye`, `Activity`. Harmless; clean up when touching those files. |
 | Non-functional controls | `Navbar.tsx` bell, dashboard date-range button | Wired in Steps 5 / later. |
 | Search is shallow | `dashboard/page.tsx` | Filters name/block/floor only. |
-| `isMeasureMode` hardcoded | `viewer/[id]/page.tsx` | Pinned to `false`; Step 3 lifts it to state. |
+| Non-length measurement types are inert | `ProjectDetail/MeasurementsPanel.tsx` (Tools tab) | The five-chip grid shows length/height/pipe/width/beam but only `length` maps to a canvas mode — the others render for demo completeness and ship in Stage 5. |
+| Saved-measurement overflow menu is inert | `ProjectDetail/MeasurementsPanel.tsx` (Saved tab) | The `…` button on saved rows is present but not wired (no rename/export/delete actions yet). |
 | Nav items are inert | `lib/navigation.ts` | Projects/Scans/Reports/Team/Settings have `href: null` by design until built. |
 
 ---
@@ -259,7 +260,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | S2 | All Projects dashboard | ✅ Done (list view outstanding) |
 | S2.5 | Floor Plan | ⬜ Step 4 |
 | S3/S4 | Project Detail Shell + 3D Viewer | ✅ Done |
-| S4a | Measurements panel | 🔄 **Step 3 — next** |
+| S4a | Measurements panel | ✅ Done |
 | S4b | Comparison View | ⬜ Step 6 |
 | S6 | Notifications | ⬜ Step 5 |
 | S7 | Overview tab | ⬜ Step 7 |
@@ -270,6 +271,10 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-09-09** — Step 3: S4a Measurements panel wired into RightDock — Saved (5 seeded rows),
+  Current (live session rows w/ per-row delete + Clear all), Tools (measure-mode toggle, type
+  chips, session clear). Lifted `isMeasureMode` into state; extended `Canvas3DHandle` with
+  `deleteMeasurement`/`clearMeasurements`.
 - **2026-09-09** — Step 2: S3/S4 Project Detail Shell + light 3D viewer; orthographic 2D; render
   modes; axis gizmo; fixed bad-id fallback and drag-as-click bugs. Decisions D2–D7 recorded.
 - **2026-09-09** — Step 1: `AppShell` + centralised navigation config; Sidebar/Navbar refactor;

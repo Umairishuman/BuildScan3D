@@ -252,7 +252,11 @@ function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] 
           onSelectTab={setDockTab}
           semanticLayers={semanticLayers}
           onToggleLayer={handleToggleLayer}
-          measurementCount={measurements.length}
+          measurements={measurements}
+          isMeasureMode={isMeasureMode}
+          onToggleMeasureMode={handleToggleMeasureMode}
+          onDeleteMeasurement={handleDeleteMeasurement}
+          onClearMeasurements={handleClearMeasurements}
         />
       </div>
 
