@@ -312,8 +312,9 @@ export const Canvas3D = forwardRef<Canvas3DHandle, Canvas3DProps>(
       renderer.setSize(width, height);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.0;
+      renderer.toneMappingExposure = 1.05;
       container.innerHTML = "";
       container.appendChild(renderer.domElement);
       rendererRef.current = renderer;

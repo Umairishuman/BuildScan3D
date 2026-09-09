@@ -4,11 +4,10 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { ProjectCard } from "@/components/ProjectCard";
-import { FloorPlanView } from "@/components/FloorPlanView";
 import { JobStatusModal } from "@/components/JobStatusModal";
 import { NewCaptureModal } from "@/components/NewCaptureModal";
+import { ProjectsBackdrop } from "@/components/ProjectsBackdrop";
 import { MOCK_PROJECTS, Project } from "@/lib/mockData";
-import { NavId } from "@/lib/navigation";
 import {
   Plus,
   LayoutGrid,
@@ -17,11 +16,33 @@ import {
   ChevronDown,
 } from "lucide-react";
 
+type StatusFilter = "all" | "ready" | "processing" | "complete" | "draft" | "archived";
+
+const FILTER_STYLES: Record<
+  StatusFilter,
+  { dot: string; activeBg: string }
+> = {
+  all: { dot: "", activeBg: "bg-[#2563eb]" },
+  ready: { dot: "bg-[#10b981]", activeBg: "bg-[#10b981]" },
+  processing: { dot: "bg-[#f59e0b]", activeBg: "bg-[#f59e0b]" },
+  complete: { dot: "bg-[#14b8a6]", activeBg: "bg-[#14b8a6]" },
+  draft: { dot: "bg-[#94a3b8]", activeBg: "bg-[#64748b]" },
+  archived: { dot: "bg-slate-400", activeBg: "bg-slate-700" },
+};
+
+const FILTERS: { id: StatusFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "ready", label: "Ready" },
+  { id: "processing", label: "Processing" },
+  { id: "complete", label: "Signed Off" },
+  { id: "draft", label: "Draft" },
+  { id: "archived", label: "Archived" },
+];
+
 export default function ProjectsPage() {
   const router = useRouter();
   const [projects] = useState<Project[]>(MOCK_PROJECTS);
-  const [currentTab, setCurrentTab] = useState<NavId>("projects");
-  const [filter, setFilter] = useState<"all" | "ready" | "processing" | "draft" | "archived">("all");
+  const [filter, setFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
@@ -52,25 +73,36 @@ export default function ProjectsPage() {
     return matchesFilter && matchesSearch;
   });
 
+  const counts = {
+    ready: projects.filter((p) => p.status === "ready").length,
+    processing: projects.filter((p) => p.status === "processing").length,
+    complete: projects.filter((p) => p.status === "complete").length,
+  };
+
   return (
     <AppShell
-      activeNav={currentTab}
-      onSelectNav={(item) => setCurrentTab(item.id)}
+      activeNav="projects"
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
       onOpenRecentSite={handleOpenProjectFromRecent}
     >
-      {currentTab === "floorplan" ? (
-        <FloorPlanView />
-      ) : (
-        <>
+      <div className="relative">
+        <ProjectsBackdrop />
+
+        <div className="relative z-10 space-y-6">
+          {/* Header row */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-extrabold text-[#0f172a] tracking-tight">
-                All Projects
+                Projects Portfolio
               </h1>
               <p className="text-xs text-[#64748b] mt-0.5">
-                Manage and view your construction sites and scans.
+                {projects.length} sites captured ·{" "}
+                <span className="font-bold text-[#059669]">{counts.ready} ready to review</span>
+                {" · "}
+                <span className="font-bold text-[#d97706]">{counts.processing} in training</span>
+                {" · "}
+                <span className="font-bold text-[#0f766e]">{counts.complete} signed off</span>
               </p>
             </div>
 
@@ -83,7 +115,7 @@ export default function ProjectsPage() {
                       ? "bg-slate-100 text-[#2563eb]"
                       : "text-[#94a3b8] hover:text-[#0f172a]"
                   }`}
-                  title="Grid View"
+                  title="Grid view"
                 >
                   <LayoutGrid className="w-4 h-4" />
                 </button>
@@ -94,7 +126,7 @@ export default function ProjectsPage() {
                       ? "bg-slate-100 text-[#2563eb]"
                       : "text-[#94a3b8] hover:text-[#0f172a]"
                   }`}
-                  title="List View"
+                  title="List view"
                 >
                   <List className="w-4 h-4" />
                 </button>
@@ -115,62 +147,27 @@ export default function ProjectsPage() {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-1">
+          {/* Filter pills + date */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-              <button
-                onClick={() => setFilter("all")}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  filter === "all"
-                    ? "bg-[#2563eb] text-white shadow-sm"
-                    : "bg-white text-[#64748b] border border-[#e2e8f0] hover:text-[#0f172a]"
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setFilter("ready")}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  filter === "ready"
-                    ? "bg-[#10b981] text-white shadow-sm"
-                    : "bg-white text-[#64748b] border border-[#e2e8f0] hover:text-[#0f172a]"
-                }`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                <span>Ready</span>
-              </button>
-              <button
-                onClick={() => setFilter("processing")}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  filter === "processing"
-                    ? "bg-[#f59e0b] text-white shadow-sm"
-                    : "bg-white text-[#64748b] border border-[#e2e8f0] hover:text-[#0f172a]"
-                }`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
-                <span>Processing</span>
-              </button>
-              <button
-                onClick={() => setFilter("draft")}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  filter === "draft"
-                    ? "bg-[#64748b] text-white shadow-sm"
-                    : "bg-white text-[#64748b] border border-[#e2e8f0] hover:text-[#0f172a]"
-                }`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#94a3b8]" />
-                <span>Draft</span>
-              </button>
-              <button
-                onClick={() => setFilter("archived")}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  filter === "archived"
-                    ? "bg-slate-700 text-white shadow-sm"
-                    : "bg-white text-[#64748b] border border-[#e2e8f0] hover:text-[#0f172a]"
-                }`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                <span>Archived</span>
-              </button>
+              {FILTERS.map((f) => {
+                const isActive = filter === f.id;
+                const s = FILTER_STYLES[f.id];
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => setFilter(f.id)}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      isActive
+                        ? `${s.activeBg} text-white shadow-sm`
+                        : "bg-white text-[#64748b] border border-[#e2e8f0] hover:text-[#0f172a]"
+                    }`}
+                  >
+                    {s.dot && <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />}
+                    <span>{f.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
             <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[#e2e8f0] text-xs font-semibold text-[#0f172a] shadow-sm hover:bg-slate-50 cursor-pointer">
@@ -180,6 +177,7 @@ export default function ProjectsPage() {
             </button>
           </div>
 
+          {/* Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
             {filteredProjects.map((project) => (
               <ProjectCard
@@ -189,8 +187,19 @@ export default function ProjectsPage() {
               />
             ))}
           </div>
-        </>
-      )}
+
+          {filteredProjects.length === 0 && (
+            <div className="py-16 text-center rounded-2xl border border-dashed border-[#cbd5e1] bg-white/60">
+              <p className="text-sm font-bold text-[#0f172a]">
+                No projects match this filter
+              </p>
+              <p className="text-xs text-[#64748b] mt-1">
+                Try clearing the search or switching status filter to All.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
 
       <JobStatusModal
         isOpen={isJobModalOpen}

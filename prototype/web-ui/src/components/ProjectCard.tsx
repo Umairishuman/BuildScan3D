@@ -33,29 +33,32 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           />
 
           {/* Status Badge Overlay */}
-          <div className="absolute bottom-2.5 left-2.5">
+          <div className="absolute bottom-2.5 left-2.5 max-w-[calc(100%-1.25rem)]">
             {isProcessing && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-[#fef3c7]/95 backdrop-blur text-[#b45309] border border-amber-300 shadow-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] animate-ping" />
-                Processing
+                <span className="relative flex w-1.5 h-1.5 shrink-0">
+                  <span className="absolute inline-flex w-full h-full rounded-full bg-[#f59e0b] animate-ping opacity-75" />
+                  <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+                </span>
+                <span className="truncate">{project.statusLabel}</span>
               </span>
             )}
             {isReady && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-[#d1fae5]/95 backdrop-blur text-[#065f46] border border-emerald-300 shadow-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                Ready
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shrink-0" />
+                <span className="truncate">{project.statusLabel}</span>
               </span>
             )}
             {isComplete && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-[#ccfbf1]/95 backdrop-blur text-[#115e59] border border-teal-300 shadow-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#14b8a6]" />
-                Complete
+                <span className="w-1.5 h-1.5 rounded-full bg-[#14b8a6] shrink-0" />
+                <span className="truncate">{project.statusLabel}</span>
               </span>
             )}
             {isDraft && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-[#f1f5f9]/95 backdrop-blur text-[#475569] border border-slate-300 shadow-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#94a3b8]" />
-                Draft
+                <span className="w-1.5 h-1.5 rounded-full bg-[#94a3b8] shrink-0" />
+                <span className="truncate">{project.statusLabel}</span>
               </span>
             )}
           </div>

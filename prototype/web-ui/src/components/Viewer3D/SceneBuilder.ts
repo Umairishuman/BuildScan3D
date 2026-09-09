@@ -81,33 +81,48 @@ export class SceneBuilder {
   private setupLighting() {
     // Sky/ground bounce does most of the work on a light ground plane and keeps
     // the architectural surfaces from going flat grey.
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xc8d4e3, 1.05);
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xc8d4e3, 1.0);
     this.scene.add(hemiLight);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.32);
     this.scene.add(ambientLight);
 
     const keyLight = new THREE.DirectionalLight(0xffffff, 1.35);
     keyLight.position.set(6, 12, 8);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.camera.near = 0.5;
+    keyLight.shadow.camera.far = 40;
+    keyLight.shadow.camera.left = -10;
+    keyLight.shadow.camera.right = 10;
+    keyLight.shadow.camera.top = 10;
+    keyLight.shadow.camera.bottom = -10;
+    keyLight.shadow.bias = -0.0004;
+    keyLight.shadow.normalBias = 0.02;
     this.scene.add(keyLight);
 
     // Cool fill from the opposite side to keep shadowed pipe undersides legible.
-    const fillLight = new THREE.DirectionalLight(0xdbeafe, 0.5);
+    const fillLight = new THREE.DirectionalLight(0xdbeafe, 0.55);
     fillLight.position.set(-7, 4, -6);
     this.scene.add(fillLight);
+
+    // Warm rim from the floor lifts the pipe undersides.
+    const rimLight = new THREE.DirectionalLight(0xfff1d6, 0.22);
+    rimLight.position.set(0, -4, 5);
+    this.scene.add(rimLight);
   }
 
   private buildBaseRoom() {
     // Floor Grid — blueprint lines, echoing the app's CAD grid background
     const gridHelper = new THREE.GridHelper(12, 24, 0x94a3b8, 0xd3dde9);
-    gridHelper.position.y = 0;
+    gridHelper.position.y = 0.001;
     this.baseGroup.add(gridHelper);
 
-    // Floor slab
+    // Floor slab (receives shadows for the pipe/duct under-shadow story)
     const floorGeo = new THREE.PlaneGeometry(12, 12);
     const floorMat = this.register(
       new THREE.MeshStandardMaterial({
-        color: 0xe2e8f0,
+        color: 0xe6ecf3,
         roughness: 0.95,
         metalness: 0.02,
       })
@@ -115,11 +130,30 @@ export class SceneBuilder {
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.01;
+    floor.receiveShadow = true;
     this.baseGroup.add(floor);
     this.interactiveMeshes.push(floor);
 
-    // Back Wall
-    const wallGeo = new THREE.PlaneGeometry(12, 4);
+    // Floor tile scribe lines (2m grid painted into the slab)
+    const tileMat = new THREE.LineBasicMaterial({
+      color: 0xb6c1cf,
+      transparent: true,
+      opacity: 0.5,
+    });
+    for (let i = -6; i <= 6; i += 2) {
+      const g1 = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-6, 0.002, i),
+        new THREE.Vector3(6, 0.002, i),
+      ]);
+      const g2 = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(i, 0.002, -6),
+        new THREE.Vector3(i, 0.002, 6),
+      ]);
+      this.baseGroup.add(new THREE.Line(g1, tileMat));
+      this.baseGroup.add(new THREE.Line(g2, tileMat));
+    }
+
+    // Wall material
     const wallMat = this.register(
       new THREE.MeshStandardMaterial({
         color: 0xeef2f7,
@@ -128,19 +162,48 @@ export class SceneBuilder {
         side: THREE.DoubleSide,
       })
     );
-    const backWall = new THREE.Mesh(wallGeo, wallMat);
+
+    // Back Wall
+    const backWall = new THREE.Mesh(new THREE.PlaneGeometry(12, 4), wallMat);
     backWall.position.set(0, 2, -6);
+    backWall.receiveShadow = true;
     this.baseGroup.add(backWall);
     this.interactiveMeshes.push(backWall);
 
     // Side Wall (Left)
-    const sideWall = new THREE.Mesh(wallGeo, wallMat);
-    sideWall.rotation.y = Math.PI / 2;
-    sideWall.position.set(-6, 2, 0);
-    this.baseGroup.add(sideWall);
-    this.interactiveMeshes.push(sideWall);
+    const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(12, 4), wallMat);
+    leftWall.rotation.y = Math.PI / 2;
+    leftWall.position.set(-6, 2, 0);
+    leftWall.receiveShadow = true;
+    this.baseGroup.add(leftWall);
+    this.interactiveMeshes.push(leftWall);
 
-    // Concrete Ceiling Beams (I-Beams)
+    // Side Wall (Right) — a symmetrical enclosure reads more like a real room.
+    const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(12, 4), wallMat);
+    rightWall.rotation.y = -Math.PI / 2;
+    rightWall.position.set(6, 2, 0);
+    rightWall.receiveShadow = true;
+    this.baseGroup.add(rightWall);
+    this.interactiveMeshes.push(rightWall);
+
+    // Skirting on all three walls
+    const skirtingMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0x94a3b8,
+        roughness: 0.85,
+      })
+    );
+    const backSkirt = new THREE.Mesh(new THREE.BoxGeometry(12, 0.12, 0.06), skirtingMat);
+    backSkirt.position.set(0, 0.06, -5.97);
+    this.baseGroup.add(backSkirt);
+    const leftSkirt = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 12), skirtingMat);
+    leftSkirt.position.set(-5.97, 0.06, 0);
+    this.baseGroup.add(leftSkirt);
+    const rightSkirt = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 12), skirtingMat);
+    rightSkirt.position.set(5.97, 0.06, 0);
+    this.baseGroup.add(rightSkirt);
+
+    // Concrete Ceiling Beams
     const beamGeo = new THREE.BoxGeometry(12, 0.3, 0.3);
     const beamMat = this.register(
       new THREE.MeshStandardMaterial({
@@ -153,12 +216,24 @@ export class SceneBuilder {
     for (let z = -4; z <= 4; z += 2.5) {
       const beam = new THREE.Mesh(beamGeo, beamMat);
       beam.position.set(0, 3.8, z);
+      beam.castShadow = true;
+      beam.receiveShadow = true;
       this.baseGroup.add(beam);
       this.interactiveMeshes.push(beam);
     }
 
-    // Concrete Columns
-    const colGeo = new THREE.CylinderGeometry(0.25, 0.25, 4, 16);
+    // Perpendicular tie beams
+    const tieGeo = new THREE.BoxGeometry(0.22, 0.22, 12);
+    for (const x of [-3.5, 3.5]) {
+      const tie = new THREE.Mesh(tieGeo, beamMat);
+      tie.position.set(x, 3.95, 0);
+      tie.castShadow = true;
+      this.baseGroup.add(tie);
+      this.interactiveMeshes.push(tie);
+    }
+
+    // Concrete Columns — four corners, not two.
+    const colGeo = new THREE.CylinderGeometry(0.25, 0.25, 4, 20);
     const colMat = this.register(
       new THREE.MeshStandardMaterial({
         color: 0xc2ccd9,
@@ -166,15 +241,93 @@ export class SceneBuilder {
       })
     );
 
-    const col1 = new THREE.Mesh(colGeo, colMat);
-    col1.position.set(-4, 2, -3);
-    this.baseGroup.add(col1);
-    this.interactiveMeshes.push(col1);
+    for (const [x, z] of [
+      [-4, -3],
+      [4, -3],
+      [-4, 3],
+      [4, 3],
+    ] as [number, number][]) {
+      const col = new THREE.Mesh(colGeo, colMat);
+      col.position.set(x, 2, z);
+      col.castShadow = true;
+      col.receiveShadow = true;
+      this.baseGroup.add(col);
+      this.interactiveMeshes.push(col);
 
-    const col2 = new THREE.Mesh(colGeo, colMat);
-    col2.position.set(4, 2, -3);
-    this.baseGroup.add(col2);
-    this.interactiveMeshes.push(col2);
+      // Column base plinth
+      const plinth = new THREE.Mesh(
+        new THREE.BoxGeometry(0.7, 0.14, 0.7),
+        colMat
+      );
+      plinth.position.set(x, 0.07, z);
+      plinth.receiveShadow = true;
+      this.baseGroup.add(plinth);
+    }
+
+    // Ceiling grid — hairline drafting lines painted at ceiling height
+    const ceilingLineMat = new THREE.LineBasicMaterial({
+      color: 0x94a3b8,
+      transparent: true,
+      opacity: 0.35,
+    });
+    for (let i = -6; i <= 6; i += 1) {
+      const gx = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-6, 3.98, i),
+        new THREE.Vector3(6, 3.98, i),
+      ]);
+      const gz = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(i, 3.98, -6),
+        new THREE.Vector3(i, 3.98, 6),
+      ]);
+      this.baseGroup.add(new THREE.Line(gx, ceilingLineMat));
+      this.baseGroup.add(new THREE.Line(gz, ceilingLineMat));
+    }
+
+    // Wall-mounted control panel — visual anchor on the back wall
+    const panelMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0x1e293b,
+        roughness: 0.55,
+        metalness: 0.35,
+      })
+    );
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 0.08), panelMat);
+    panel.position.set(-4.4, 1.7, -5.94);
+    panel.castShadow = true;
+    this.baseGroup.add(panel);
+    this.interactiveMeshes.push(panel);
+
+    // Indicator LEDs
+    const ledColors = [0x22c55e, 0xf59e0b, 0xdc2626];
+    ledColors.forEach((c, i) => {
+      const led = new THREE.Mesh(
+        new THREE.SphereGeometry(0.035, 12, 12),
+        new THREE.MeshStandardMaterial({
+          color: c,
+          emissive: c,
+          emissiveIntensity: 0.6,
+        })
+      );
+      led.position.set(-4.4 + (i - 1) * 0.2, 2.1, -5.9);
+      this.baseGroup.add(led);
+    });
+
+    // Door frame in the right wall — reads as an entry
+    const frameMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0x475569,
+        roughness: 0.7,
+      })
+    );
+    const doorTop = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.4), frameMat);
+    doorTop.position.set(5.96, 2.1, 3);
+    this.baseGroup.add(doorTop);
+    const doorLeft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.1, 0.08), frameMat);
+    doorLeft.position.set(5.96, 1.05, 3.7);
+    this.baseGroup.add(doorLeft);
+    const doorRight = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.1, 0.08), frameMat);
+    doorRight.position.set(5.96, 1.05, 2.3);
+    this.baseGroup.add(doorRight);
   }
 
   private buildPipes() {
@@ -186,6 +339,14 @@ export class SceneBuilder {
       })
     );
 
+    const insulationMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0xbfdbfe, // Pale blue pipe insulation sleeves
+        roughness: 0.85,
+        metalness: 0.05,
+      })
+    );
+
     const valveMat = this.register(
       new THREE.MeshStandardMaterial({
         color: 0xbe123c, // Red Valve handles
@@ -194,44 +355,133 @@ export class SceneBuilder {
       })
     );
 
-    // Main horizontal pipe header
+    const flangeMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0x475569,
+        roughness: 0.5,
+        metalness: 0.7,
+      })
+    );
+
+    // Main horizontal pipe header (supply)
     const mainPipeGeo = new THREE.CylinderGeometry(0.12, 0.12, 10, 24);
     const mainPipe = new THREE.Mesh(mainPipeGeo, pipeMat);
     mainPipe.rotation.z = Math.PI / 2;
     mainPipe.position.set(0, 2.85, -2.5);
+    mainPipe.castShadow = true;
     this.pipesGroup.add(mainPipe);
     this.interactiveMeshes.push(mainPipe);
 
-    // Return Pipe header (lower)
+    // Return pipe header (lower)
     const returnPipe = new THREE.Mesh(mainPipeGeo, pipeMat);
     returnPipe.rotation.z = Math.PI / 2;
     returnPipe.position.set(0, 2.4, -2.5);
+    returnPipe.castShadow = true;
     this.pipesGroup.add(returnPipe);
     this.interactiveMeshes.push(returnPipe);
 
-    // Vertical riser drops
-    const riserGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.4, 16);
-    const riser1 = new THREE.Mesh(riserGeo, pipeMat);
-    riser1.position.set(-2.5, 1.2, -2.5);
-    this.pipesGroup.add(riser1);
-    this.interactiveMeshes.push(riser1);
+    // Insulation sleeves at intervals along the supply header
+    for (const x of [-3.2, -1.4, 1.4, 3.2]) {
+      const sleeve = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.16, 0.16, 0.6, 20),
+        insulationMat
+      );
+      sleeve.rotation.z = Math.PI / 2;
+      sleeve.position.set(x, 2.85, -2.5);
+      sleeve.castShadow = true;
+      this.pipesGroup.add(sleeve);
+      this.interactiveMeshes.push(sleeve);
+    }
 
-    const riser2 = new THREE.Mesh(riserGeo, pipeMat);
-    riser2.position.set(2.5, 1.2, -2.5);
-    this.pipesGroup.add(riser2);
-    this.interactiveMeshes.push(riser2);
+    // Flanges where risers meet the header (paired collars for a real fitting look)
+    for (const x of [-2.5, 2.5]) {
+      const flange = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.16, 0.16, 0.05, 20),
+        flangeMat
+      );
+      flange.position.set(x, 2.72, -2.5);
+      this.pipesGroup.add(flange);
+    }
 
-    // Valve wheels
+    // Vertical riser drops with elbow bends into the header
+    const riserGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.4, 18);
+    const elbowGeo = new THREE.TorusGeometry(0.14, 0.08, 12, 20, Math.PI / 2);
+    for (const x of [-2.5, 2.5]) {
+      const riser = new THREE.Mesh(riserGeo, pipeMat);
+      riser.position.set(x, 1.2, -2.5);
+      riser.castShadow = true;
+      this.pipesGroup.add(riser);
+      this.interactiveMeshes.push(riser);
+
+      // Elbow bending the vertical riser into the horizontal header
+      const elbow = new THREE.Mesh(elbowGeo, pipeMat);
+      elbow.position.set(x + (x < 0 ? 0.14 : -0.14), 2.4, -2.5);
+      elbow.rotation.z = x < 0 ? Math.PI / 2 : 0;
+      elbow.castShadow = true;
+      this.pipesGroup.add(elbow);
+      this.interactiveMeshes.push(elbow);
+    }
+
+    // Valve wheels on the risers
     const valveGeo = new THREE.TorusGeometry(0.12, 0.025, 8, 24);
-    const v1 = new THREE.Mesh(valveGeo, valveMat);
-    v1.position.set(-2.5, 1.8, -2.35);
-    this.pipesGroup.add(v1);
-    this.interactiveMeshes.push(v1);
+    for (const x of [-2.5, 2.5]) {
+      const wheel = new THREE.Mesh(valveGeo, valveMat);
+      wheel.position.set(x, 1.8, -2.35);
+      wheel.castShadow = true;
+      this.pipesGroup.add(wheel);
+      this.interactiveMeshes.push(wheel);
 
-    const v2 = new THREE.Mesh(valveGeo, valveMat);
-    v2.position.set(2.5, 1.8, -2.35);
-    this.pipesGroup.add(v2);
-    this.interactiveMeshes.push(v2);
+      // Valve stem
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.02, 0.02, 0.15, 12),
+        valveMat
+      );
+      stem.rotation.x = Math.PI / 2;
+      stem.position.set(x, 1.8, -2.42);
+      this.pipesGroup.add(stem);
+    }
+
+    // Pipe hangers strapping the header to the ceiling beam above
+    const hangerMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0x64748b,
+        metalness: 0.7,
+        roughness: 0.35,
+      })
+    );
+    for (const x of [-4, -1.2, 1.2, 4]) {
+      const rod = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.015, 0.015, 1.05, 8),
+        hangerMat
+      );
+      rod.position.set(x, 3.35, -2.5);
+      this.pipesGroup.add(rod);
+
+      const clamp = new THREE.Mesh(
+        new THREE.TorusGeometry(0.135, 0.02, 8, 20),
+        hangerMat
+      );
+      clamp.rotation.x = Math.PI / 2;
+      clamp.rotation.z = Math.PI / 2;
+      clamp.position.set(x, 2.85, -2.5);
+      this.pipesGroup.add(clamp);
+    }
+
+    // A branch pipe taking off toward the door side
+    const branch = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.06, 4.5, 16),
+      pipeMat
+    );
+    branch.rotation.x = Math.PI / 2;
+    branch.position.set(3.6, 2.85, 0);
+    branch.castShadow = true;
+    this.pipesGroup.add(branch);
+    this.interactiveMeshes.push(branch);
+
+    const branchElbow = new THREE.Mesh(elbowGeo, pipeMat);
+    branchElbow.position.set(3.6, 2.85, -2.36);
+    branchElbow.rotation.x = -Math.PI / 2;
+    this.pipesGroup.add(branchElbow);
   }
 
   private buildConduits() {
@@ -251,30 +501,97 @@ export class SceneBuilder {
       })
     );
 
-    // Multi-run electrical conduit pipes along back wall
+    const trayMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0x334155,
+        roughness: 0.7,
+        metalness: 0.45,
+      })
+    );
+
+    // Cable tray channel running along the back wall — the conduits sit inside it
+    const tray = new THREE.Mesh(
+      new THREE.BoxGeometry(11, 0.05, 0.4),
+      trayMat
+    );
+    tray.position.set(0, 3.16, -5.7);
+    tray.castShadow = true;
+    this.conduitsGroup.add(tray);
+    this.interactiveMeshes.push(tray);
+
+    // Tray side rails
+    for (const zOff of [-0.18, 0.18]) {
+      const rail = new THREE.Mesh(
+        new THREE.BoxGeometry(11, 0.14, 0.03),
+        trayMat
+      );
+      rail.position.set(0, 3.23, -5.7 + zOff);
+      this.conduitsGroup.add(rail);
+    }
+
+    // Tray rung ladders
+    for (let i = -5; i <= 5; i += 0.5) {
+      const rung = new THREE.Mesh(
+        new THREE.BoxGeometry(0.03, 0.02, 0.34),
+        trayMat
+      );
+      rung.position.set(i, 3.19, -5.7);
+      this.conduitsGroup.add(rung);
+    }
+
+    // Multi-run electrical conduit pipes riding on top of the cable tray
     for (let i = 0; i < 4; i++) {
-      const yPos = 3.2 + i * 0.08;
-      const conduitGeo = new THREE.CylinderGeometry(0.025, 0.025, 11, 12);
-      const conduit = new THREE.Mesh(conduitGeo, conduitMat);
+      const yPos = 3.28 + i * 0.06;
+      const conduit = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.025, 0.025, 11, 12),
+        conduitMat
+      );
       conduit.rotation.z = Math.PI / 2;
-      conduit.position.set(0, yPos, -5.85);
+      conduit.position.set(0, yPos, -5.7);
+      conduit.castShadow = true;
       this.conduitsGroup.add(conduit);
       this.interactiveMeshes.push(conduit);
     }
 
-    // Junction Box
-    const jBoxGeo = new THREE.BoxGeometry(0.35, 0.45, 0.15);
-    const jBox = new THREE.Mesh(jBoxGeo, boxMat);
-    jBox.position.set(1.5, 3.3, -5.8);
+    // Junction Box on the wall
+    const jBox = new THREE.Mesh(
+      new THREE.BoxGeometry(0.35, 0.45, 0.15),
+      boxMat
+    );
+    jBox.position.set(1.5, 3.3, -5.87);
+    jBox.castShadow = true;
     this.conduitsGroup.add(jBox);
     this.interactiveMeshes.push(jBox);
 
-    // Conduit vertical drop
-    const dropGeo = new THREE.CylinderGeometry(0.025, 0.025, 2.5, 12);
-    const drop = new THREE.Mesh(dropGeo, conduitMat);
-    drop.position.set(1.5, 2.0, -5.85);
-    this.conduitsGroup.add(drop);
-    this.interactiveMeshes.push(drop);
+    // Vertical conduit drops from the tray down to sockets on the floor
+    for (const x of [-3, 1.5, 3.5]) {
+      const drop = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.025, 0.025, 2.5, 12),
+        conduitMat
+      );
+      drop.position.set(x, 2.0, -5.85);
+      drop.castShadow = true;
+      this.conduitsGroup.add(drop);
+      this.interactiveMeshes.push(drop);
+
+      // Elbow at the top of each drop
+      const elbow = new THREE.Mesh(
+        new THREE.TorusGeometry(0.08, 0.025, 8, 16, Math.PI / 2),
+        conduitMat
+      );
+      elbow.position.set(x, 3.25, -5.79);
+      elbow.rotation.z = Math.PI / 2;
+      elbow.rotation.y = Math.PI / 2;
+      this.conduitsGroup.add(elbow);
+
+      // Socket box at the bottom of each drop
+      const socket = new THREE.Mesh(
+        new THREE.BoxGeometry(0.14, 0.18, 0.08),
+        boxMat
+      );
+      socket.position.set(x, 0.75, -5.87);
+      this.conduitsGroup.add(socket);
+    }
   }
 
   private buildHVAC() {
@@ -285,33 +602,102 @@ export class SceneBuilder {
         metalness: 0.7,
       })
     );
-
-    // Primary Rectangular Supply Duct
-    const ductGeo = new THREE.BoxGeometry(10, 0.65, 1.42); // 1.42m width!
-    const duct = new THREE.Mesh(ductGeo, hvacMat);
-    duct.position.set(0, 3.4, 0.8);
-    this.hvacGroup.add(duct);
-    this.interactiveMeshes.push(duct);
-
-    // Branch takeoff duct
-    const branchGeo = new THREE.BoxGeometry(0.5, 0.45, 3);
-    const branch = new THREE.Mesh(branchGeo, hvacMat);
-    branch.position.set(2, 3.4, 2.5);
-    this.hvacGroup.add(branch);
-    this.interactiveMeshes.push(branch);
-
-    // Supply Diffuser / Vent
-    const ventGeo = new THREE.BoxGeometry(0.6, 0.05, 0.6);
     const ventMat = this.register(
       new THREE.MeshStandardMaterial({
         color: 0x065f46,
         metalness: 0.5,
+        roughness: 0.55,
       })
     );
-    const vent = new THREE.Mesh(ventGeo, ventMat);
-    vent.position.set(2, 3.15, 3.8);
-    this.hvacGroup.add(vent);
-    this.interactiveMeshes.push(vent);
+    const bandMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0x0f766e,
+        metalness: 0.55,
+        roughness: 0.5,
+      })
+    );
+
+    // Primary Rectangular Supply Duct (1.42 m wide — matches the measurement fixtures)
+    const duct = new THREE.Mesh(
+      new THREE.BoxGeometry(10, 0.65, 1.42),
+      hvacMat
+    );
+    duct.position.set(0, 3.4, 0.8);
+    duct.castShadow = true;
+    this.hvacGroup.add(duct);
+    this.interactiveMeshes.push(duct);
+
+    // Flange bands at ~2 m intervals along the main duct
+    for (const x of [-4, -2, 0, 2, 4]) {
+      const band = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.72, 1.5), bandMat);
+      band.position.set(x, 3.4, 0.8);
+      this.hvacGroup.add(band);
+    }
+
+    // Trapezoid transition piece stepping down to the branch
+    const transition = new THREE.Mesh(
+      new THREE.BoxGeometry(0.6, 0.55, 1.0),
+      hvacMat
+    );
+    transition.position.set(2, 3.4, 1.9);
+    transition.castShadow = true;
+    this.hvacGroup.add(transition);
+
+    // Branch takeoff duct
+    const branch = new THREE.Mesh(
+      new THREE.BoxGeometry(0.55, 0.5, 3),
+      hvacMat
+    );
+    branch.position.set(2, 3.4, 3.5);
+    branch.castShadow = true;
+    this.hvacGroup.add(branch);
+    this.interactiveMeshes.push(branch);
+
+    // Three diffusers along the branch — proper diffuser plates + collars
+    for (const z of [2.5, 3.5, 4.5]) {
+      const collar = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.15, 0.15, 0.12, 20),
+        hvacMat
+      );
+      collar.position.set(2, 3.12, z);
+      collar.castShadow = true;
+      this.hvacGroup.add(collar);
+
+      const plate = new THREE.Mesh(
+        new THREE.BoxGeometry(0.55, 0.04, 0.55),
+        ventMat
+      );
+      plate.position.set(2, 3.03, z);
+      plate.castShadow = true;
+      this.hvacGroup.add(plate);
+      this.interactiveMeshes.push(plate);
+
+      // Louvered fins on the diffuser plate
+      for (let i = -2; i <= 2; i++) {
+        const fin = new THREE.Mesh(
+          new THREE.BoxGeometry(0.5, 0.008, 0.04),
+          bandMat
+        );
+        fin.position.set(2, 3.03, z + i * 0.09);
+        this.hvacGroup.add(fin);
+      }
+    }
+
+    // Return grille on the left of the main duct
+    const returnGrille = new THREE.Mesh(
+      new THREE.BoxGeometry(0.8, 0.04, 0.8),
+      ventMat
+    );
+    returnGrille.position.set(-3.5, 3.05, 0.8);
+    this.hvacGroup.add(returnGrille);
+    for (let i = -3; i <= 3; i++) {
+      const fin = new THREE.Mesh(
+        new THREE.BoxGeometry(0.72, 0.008, 0.05),
+        bandMat
+      );
+      fin.position.set(-3.5, 3.05, 0.8 + i * 0.11);
+      this.hvacGroup.add(fin);
+    }
   }
 
   private buildFireSprinklers() {
@@ -323,22 +709,62 @@ export class SceneBuilder {
       })
     );
 
+    const brassMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0xf59e0b,
+        roughness: 0.35,
+        metalness: 0.8,
+      })
+    );
+
     // Main line
-    const fireGeo = new THREE.CylinderGeometry(0.04, 0.04, 10, 16);
-    const firePipe = new THREE.Mesh(fireGeo, fireMat);
+    const firePipe = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.05, 0.05, 10, 20),
+      fireMat
+    );
     firePipe.rotation.x = Math.PI / 2;
     firePipe.position.set(-3.5, 3.65, 0);
+    firePipe.castShadow = true;
     this.fireGroup.add(firePipe);
     this.interactiveMeshes.push(firePipe);
 
-    // Sprinkler drop heads
-    const headGeo = new THREE.ConeGeometry(0.04, 0.08, 8);
-    for (let z = -4; z <= 4; z += 2) {
-      const head = new THREE.Mesh(headGeo, fireMat);
-      head.rotation.x = Math.PI;
-      head.position.set(-3.5, 3.55, z);
-      this.fireGroup.add(head);
-      this.interactiveMeshes.push(head);
+    // Support brackets clamping the line up to a tie beam
+    for (const z of [-3.5, -0.5, 2.5]) {
+      const rod = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.012, 0.012, 0.25, 8),
+        new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.6 })
+      );
+      rod.position.set(-3.5, 3.85, z);
+      this.fireGroup.add(rod);
+    }
+
+    // Sprinkler drop-heads — cylinder body + deflector plate
+    for (let z = -4; z <= 4; z += 1.6) {
+      // Threaded body drops from the main line
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03, 0.028, 0.14, 12),
+        brassMat
+      );
+      body.position.set(-3.5, 3.53, z);
+      body.castShadow = true;
+      this.fireGroup.add(body);
+      this.interactiveMeshes.push(body);
+
+      // Deflector plate (the little red disc under the head)
+      const deflector = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.06, 0.06, 0.008, 16),
+        fireMat
+      );
+      deflector.position.set(-3.5, 3.45, z);
+      this.fireGroup.add(deflector);
+
+      // Fusible link nub
+      const bulb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.018, 10, 10),
+        fireMat
+      );
+      bulb.position.set(-3.5, 3.47, z);
+      this.fireGroup.add(bulb);
     }
   }
 
