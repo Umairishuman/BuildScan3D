@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-09-09 (Dashboard → Operations Overview) · Branch: `prototype`
+Last updated: 2026-09-09 (Project thumbnails refreshed) · Branch: `prototype`
 
 ---
 
@@ -377,6 +377,17 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-09-09** — Project thumbnails swapped for real photos from Unsplash (free license, no
+  attribution required). Six 1200-wide JPEGs downloaded to `public/thumbnails/` via the
+  Unsplash download endpoint and referenced from `MOCK_PROJECTS` (paths flipped from `.png`
+  to `.jpg`). Old placeholder PNGs deleted. Photo IDs recorded below (D7 is unchanged — that
+  decision covers floor-plan blueprints, not project photos).
+  - `card1_mep.jpg` — Unsplash photo `2nsQWyPU6tw` (Sector 4 MEP Room)
+  - `card2_tower_a.jpg` — Unsplash photo `fNILto8puuU` (Tower A - Floors 5-8)
+  - `card3_west_wing.jpg` — Unsplash photo `IB0VA6VdqBw` (West Wing)
+  - `card4_parking.jpg` — Unsplash photo `HfSJz23_BOM` (Parking Garage)
+  - `card5_north_tower.jpg` — Unsplash photo `NMrUtSA7094` (North Tower)
+  - `card6_east_wing.jpg` — Unsplash photo `kK7uPfb2YWU` (East Wing)
 - **2026-09-09** — Dashboard → Operations Overview: reverted the workspace-hero landing to a
   real portfolio dashboard (KPIs · Featured Active · Quick Actions · Recent Projects · Recent
   Activity · Worker Status), all derived from existing fixtures. Kept the bespoke top bar with
