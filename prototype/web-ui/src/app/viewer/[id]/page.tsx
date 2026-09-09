@@ -62,6 +62,7 @@ function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] 
   const [interactionMode, setInteractionMode] = useState<InteractionMode>("orbit");
   const [renderMode, setRenderMode] = useState<RenderMode>("textured");
   const [measurements, setMeasurements] = useState<MeasurementRecord[]>([]);
+  const [isMeasureMode, setIsMeasureMode] = useState(false);
   const [hoveredCoordinate, setHoveredCoordinate] = useState<string | null>(null);
   const [orbit, setOrbit] = useState({ theta: Math.PI / 4, phi: Math.PI / 3 });
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -106,6 +107,23 @@ function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] 
     setDetailTab(tab);
   };
 
+  const handleToggleMeasureMode = () => {
+    setIsMeasureMode((prev) => {
+      const next = !prev;
+      // Jump to the Current tab so the freshly captured row is visible.
+      if (next) setDockTab("current");
+      return next;
+    });
+  };
+
+  const handleDeleteMeasurement = (id: string) => {
+    canvasRef.current?.deleteMeasurement(id);
+  };
+
+  const handleClearMeasurements = () => {
+    canvasRef.current?.clearMeasurements();
+  };
+
   const isPlanView = viewMode === "2d";
   const activeDetailTab = DETAIL_TABS.find((t) => t.id === detailTab);
 
@@ -135,7 +153,7 @@ function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] 
                 renderMode={renderMode}
                 viewMode={viewMode}
                 interactionMode={interactionMode}
-                isMeasureMode={false}
+                isMeasureMode={isMeasureMode}
                 onMeasurementsChange={setMeasurements}
                 onHoverCoordinate={setHoveredCoordinate}
                 onOrbitChange={handleOrbitChange}

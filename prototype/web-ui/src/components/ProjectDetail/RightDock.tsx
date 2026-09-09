@@ -3,6 +3,11 @@
 import React from "react";
 import { Eye, EyeOff, LayoutGrid, Sparkles, Ruler } from "lucide-react";
 import { SemanticLayersState } from "@/components/Viewer3D/SceneBuilder";
+import { MeasurementRecord } from "@/components/Viewer3D/MeasurementTool";
+import {
+  MeasurementsPanel,
+  MeasurementSubTab,
+} from "@/components/ProjectDetail/MeasurementsPanel";
 
 export type DockTab = "saved" | "current" | "tools" | "layers";
 
@@ -35,7 +40,11 @@ interface RightDockProps {
   onSelectTab: (tab: DockTab) => void;
   semanticLayers: SemanticLayersState;
   onToggleLayer: (layer: keyof SemanticLayersState) => void;
-  measurementCount: number;
+  measurements: MeasurementRecord[];
+  isMeasureMode: boolean;
+  onToggleMeasureMode: () => void;
+  onDeleteMeasurement: (id: string) => void;
+  onClearMeasurements: () => void;
 }
 
 export const RightDock: React.FC<RightDockProps> = ({
@@ -43,7 +52,11 @@ export const RightDock: React.FC<RightDockProps> = ({
   onSelectTab,
   semanticLayers,
   onToggleLayer,
-  measurementCount,
+  measurements,
+  isMeasureMode,
+  onToggleMeasureMode,
+  onDeleteMeasurement,
+  onClearMeasurements,
 }) => {
   const isLayers = activeTab === "layers";
 
@@ -106,8 +119,8 @@ export const RightDock: React.FC<RightDockProps> = ({
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-4">
-        {isLayers ? (
+      {isLayers ? (
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-4">
           <div className="space-y-2">
             {LAYERS.map((layer) => {
               const isVisible = semanticLayers[layer.key];
@@ -142,25 +155,17 @@ export const RightDock: React.FC<RightDockProps> = ({
               );
             })}
           </div>
-        ) : (
-          /* Saved / Current / Tools land in the next component (spec S4a). */
-          <div className="h-full min-h-[220px] flex flex-col items-center justify-center text-center gap-2 px-4 rounded-xl border border-dashed border-[#e2e8f0] bg-[#f8fafc]">
-            <Ruler className="w-5 h-5 text-[#cbd5e1]" />
-            <p className="text-xs font-bold text-[#64748b]">
-              Measurements panel
-            </p>
-            <p className="text-[11px] text-[#94a3b8] leading-relaxed">
-              {measurementCount > 0
-                ? `${measurementCount} measurement${
-                    measurementCount === 1 ? "" : "s"
-                  } captured in this session.`
-                : "No measurements captured yet."}
-              <br />
-              This tab is built in the next step.
-            </p>
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <MeasurementsPanel
+          subTab={activeTab as MeasurementSubTab}
+          measurements={measurements}
+          isMeasureMode={isMeasureMode}
+          onToggleMeasureMode={onToggleMeasureMode}
+          onDeleteMeasurement={onDeleteMeasurement}
+          onClearAll={onClearMeasurements}
+        />
+      )}
     </aside>
   );
 };
