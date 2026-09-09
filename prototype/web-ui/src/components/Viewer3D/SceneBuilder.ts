@@ -9,6 +9,17 @@ export interface SemanticLayersState {
   pointcloud: boolean;
 }
 
+/**
+ * How the reconstruction is drawn.
+ * - `textured`  solid shaded surfaces (default)
+ * - `mesh`      BIM wireframe over the same geometry
+ * - `pointcloud` raw Gaussian splats only, solids hidden
+ */
+export type RenderMode = "textured" | "mesh" | "pointcloud";
+
+/** Viewport background, matched to the light app canvas. */
+export const SCENE_BACKGROUND = 0xeef3f9;
+
 export class SceneBuilder {
   public scene: THREE.Scene;
   public baseGroup: THREE.Group;
@@ -19,10 +30,24 @@ export class SceneBuilder {
   public pointCloudGroup: THREE.Group;
   public interactiveMeshes: THREE.Object3D[] = [];
 
+  /** Every solid material, so wireframe can be toggled without a scene walk. */
+  private solidMaterials: THREE.MeshStandardMaterial[] = [];
+
+  private layers: SemanticLayersState = {
+    base: true,
+    pipes: true,
+    conduits: true,
+    hvac: true,
+    fire: true,
+    pointcloud: true,
+  };
+  private renderMode: RenderMode = "textured";
+
   constructor() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a0d14);
-    this.scene.fog = new THREE.FogExp2(0x0a0d14, 0.04);
+    this.scene.background = new THREE.Color(SCENE_BACKGROUND);
+    // Light haze only — a dense fog on a light ground flattens the MEP colours.
+    this.scene.fog = new THREE.FogExp2(SCENE_BACKGROUND, 0.018);
 
     this.baseGroup = new THREE.Group();
     this.pipesGroup = new THREE.Group();
@@ -47,36 +72,46 @@ export class SceneBuilder {
     this.buildGaussianPointCloud();
   }
 
+  /** Track a material so render-mode switches can reach it later. */
+  private register<T extends THREE.MeshStandardMaterial>(material: T): T {
+    this.solidMaterials.push(material);
+    return material;
+  }
+
   private setupLighting() {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    // Sky/ground bounce does most of the work on a light ground plane and keeps
+    // the architectural surfaces from going flat grey.
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xc8d4e3, 1.05);
+    this.scene.add(hemiLight);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
     this.scene.add(ambientLight);
 
-    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.2);
-    dirLight1.position.set(5, 10, 7);
-    this.scene.add(dirLight1);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.35);
+    keyLight.position.set(6, 12, 8);
+    this.scene.add(keyLight);
 
-    const dirLight2 = new THREE.DirectionalLight(0x60a5fa, 0.6);
-    dirLight2.position.set(-5, -2, -5);
-    this.scene.add(dirLight2);
-
-    const pointLight = new THREE.PointLight(0x38bdf8, 1.5, 15);
-    pointLight.position.set(0, 2.5, 0);
-    this.scene.add(pointLight);
+    // Cool fill from the opposite side to keep shadowed pipe undersides legible.
+    const fillLight = new THREE.DirectionalLight(0xdbeafe, 0.5);
+    fillLight.position.set(-7, 4, -6);
+    this.scene.add(fillLight);
   }
 
   private buildBaseRoom() {
-    // Floor Grid
-    const gridHelper = new THREE.GridHelper(12, 24, 0x0284c7, 0x1e293b);
+    // Floor Grid — blueprint lines, echoing the app's CAD grid background
+    const gridHelper = new THREE.GridHelper(12, 24, 0x94a3b8, 0xd3dde9);
     gridHelper.position.y = 0;
     this.baseGroup.add(gridHelper);
 
     // Floor slab
     const floorGeo = new THREE.PlaneGeometry(12, 12);
-    const floorMat = new THREE.MeshStandardMaterial({
-      color: 0x111827,
-      roughness: 0.8,
-      metalness: 0.2,
-    });
+    const floorMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0xe2e8f0,
+        roughness: 0.95,
+        metalness: 0.02,
+      })
+    );
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.01;
@@ -85,11 +120,14 @@ export class SceneBuilder {
 
     // Back Wall
     const wallGeo = new THREE.PlaneGeometry(12, 4);
-    const wallMat = new THREE.MeshStandardMaterial({
-      color: 0x1e293b,
-      roughness: 0.9,
-      side: THREE.DoubleSide,
-    });
+    const wallMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0xeef2f7,
+        roughness: 0.95,
+        metalness: 0.0,
+        side: THREE.DoubleSide,
+      })
+    );
     const backWall = new THREE.Mesh(wallGeo, wallMat);
     backWall.position.set(0, 2, -6);
     this.baseGroup.add(backWall);
@@ -104,11 +142,13 @@ export class SceneBuilder {
 
     // Concrete Ceiling Beams (I-Beams)
     const beamGeo = new THREE.BoxGeometry(12, 0.3, 0.3);
-    const beamMat = new THREE.MeshStandardMaterial({
-      color: 0x334155,
-      metalness: 0.6,
-      roughness: 0.4,
-    });
+    const beamMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0xaab7c7,
+        metalness: 0.35,
+        roughness: 0.55,
+      })
+    );
 
     for (let z = -4; z <= 4; z += 2.5) {
       const beam = new THREE.Mesh(beamGeo, beamMat);
@@ -119,10 +159,12 @@ export class SceneBuilder {
 
     // Concrete Columns
     const colGeo = new THREE.CylinderGeometry(0.25, 0.25, 4, 16);
-    const colMat = new THREE.MeshStandardMaterial({
-      color: 0x475569,
-      roughness: 0.9,
-    });
+    const colMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0xc2ccd9,
+        roughness: 0.9,
+      })
+    );
 
     const col1 = new THREE.Mesh(colGeo, colMat);
     col1.position.set(-4, 2, -3);
@@ -136,17 +178,21 @@ export class SceneBuilder {
   }
 
   private buildPipes() {
-    const pipeMat = new THREE.MeshStandardMaterial({
-      color: 0x0284c7, // Vibrant Blue (Hydronic / Chilled Water)
-      roughness: 0.3,
-      metalness: 0.7,
-    });
+    const pipeMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0x0369a1, // Deep Blue (Hydronic / Chilled Water)
+        roughness: 0.35,
+        metalness: 0.65,
+      })
+    );
 
-    const valveMat = new THREE.MeshStandardMaterial({
-      color: 0xe11d48, // Red Valve handles
-      roughness: 0.4,
-      metalness: 0.5,
-    });
+    const valveMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0xbe123c, // Red Valve handles
+        roughness: 0.4,
+        metalness: 0.5,
+      })
+    );
 
     // Main horizontal pipe header
     const mainPipeGeo = new THREE.CylinderGeometry(0.12, 0.12, 10, 24);
@@ -189,17 +235,21 @@ export class SceneBuilder {
   }
 
   private buildConduits() {
-    const conduitMat = new THREE.MeshStandardMaterial({
-      color: 0xf59e0b, // Amber / Yellow (Electrical)
-      roughness: 0.4,
-      metalness: 0.6,
-    });
+    const conduitMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0xd97706, // Amber (Electrical)
+        roughness: 0.4,
+        metalness: 0.6,
+      })
+    );
 
-    const boxMat = new THREE.MeshStandardMaterial({
-      color: 0x78350f,
-      roughness: 0.5,
-      metalness: 0.5,
-    });
+    const boxMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0x92400e,
+        roughness: 0.5,
+        metalness: 0.5,
+      })
+    );
 
     // Multi-run electrical conduit pipes along back wall
     for (let i = 0; i < 4; i++) {
@@ -228,11 +278,13 @@ export class SceneBuilder {
   }
 
   private buildHVAC() {
-    const hvacMat = new THREE.MeshStandardMaterial({
-      color: 0x10b981, // Emerald Metallic (HVAC Ductwork)
-      roughness: 0.35,
-      metalness: 0.8,
-    });
+    const hvacMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0x059669, // Emerald Metallic (HVAC Ductwork)
+        roughness: 0.35,
+        metalness: 0.7,
+      })
+    );
 
     // Primary Rectangular Supply Duct
     const ductGeo = new THREE.BoxGeometry(10, 0.65, 1.42); // 1.42m width!
@@ -250,10 +302,12 @@ export class SceneBuilder {
 
     // Supply Diffuser / Vent
     const ventGeo = new THREE.BoxGeometry(0.6, 0.05, 0.6);
-    const ventMat = new THREE.MeshStandardMaterial({
-      color: 0x064e3b,
-      metalness: 0.5,
-    });
+    const ventMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0x065f46,
+        metalness: 0.5,
+      })
+    );
     const vent = new THREE.Mesh(ventGeo, ventMat);
     vent.position.set(2, 3.15, 3.8);
     this.hvacGroup.add(vent);
@@ -261,11 +315,13 @@ export class SceneBuilder {
   }
 
   private buildFireSprinklers() {
-    const fireMat = new THREE.MeshStandardMaterial({
-      color: 0xef4444, // Red
-      roughness: 0.3,
-      metalness: 0.7,
-    });
+    const fireMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0xdc2626, // Red
+        roughness: 0.3,
+        metalness: 0.6,
+      })
+    );
 
     // Main line
     const fireGeo = new THREE.CylinderGeometry(0.04, 0.04, 10, 16);
@@ -292,10 +348,11 @@ export class SceneBuilder {
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
 
-    const c1 = new THREE.Color(0x38bdf8); // Sky blue
-    const c2 = new THREE.Color(0x10b981); // Emerald
-    const c3 = new THREE.Color(0xf59e0b); // Amber
-    const c4 = new THREE.Color(0x94a3b8); // Concrete gray
+    // Deepened against the light viewport so splats stay legible on #eef3f9.
+    const c1 = new THREE.Color(0x0284c7); // Sky blue
+    const c2 = new THREE.Color(0x059669); // Emerald
+    const c3 = new THREE.Color(0xd97706); // Amber
+    const c4 = new THREE.Color(0x64748b); // Concrete gray
 
     for (let i = 0; i < count; i++) {
       // Cluster points around MEP elements
@@ -346,7 +403,9 @@ export class SceneBuilder {
       size: 0.035,
       vertexColors: true,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.9,
+      // Splats are the raw reconstruction — never hide them behind the fog.
+      fog: false,
     });
 
     const pointCloud = new THREE.Points(geometry, material);
@@ -354,12 +413,34 @@ export class SceneBuilder {
   }
 
   public updateSemanticLayers(layers: SemanticLayersState) {
-    this.baseGroup.visible = layers.base;
-    this.pipesGroup.visible = layers.pipes;
-    this.conduitsGroup.visible = layers.conduits;
-    this.hvacGroup.visible = layers.hvac;
-    this.fireGroup.visible = layers.fire;
-    this.pointCloudGroup.visible = layers.pointcloud;
+    this.layers = layers;
+    this.applyState();
+  }
+
+  public setRenderMode(mode: RenderMode) {
+    this.renderMode = mode;
+    this.applyState();
+  }
+
+  /**
+   * Single place where layer toggles and render mode resolve into visibility.
+   * Keeping them combined stops the two controls fighting over the same groups
+   * (notably the point cloud, which both can address).
+   */
+  private applyState() {
+    const solidsVisible = this.renderMode !== "pointcloud";
+
+    this.baseGroup.visible = this.layers.base && solidsVisible;
+    this.pipesGroup.visible = this.layers.pipes && solidsVisible;
+    this.conduitsGroup.visible = this.layers.conduits && solidsVisible;
+    this.hvacGroup.visible = this.layers.hvac && solidsVisible;
+    this.fireGroup.visible = this.layers.fire && solidsVisible;
+    this.pointCloudGroup.visible = this.layers.pointcloud;
+
+    const wireframe = this.renderMode === "mesh";
+    this.solidMaterials.forEach((material) => {
+      material.wireframe = wireframe;
+    });
   }
 }
 
