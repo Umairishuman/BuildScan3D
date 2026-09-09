@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-09-09 (Step 5) · Branch: `prototype`
+Last updated: 2026-09-09 (Step 6) · Branch: `prototype`
 
 ---
 
@@ -146,6 +146,34 @@ button, New Capture modal, job-status modal. See §6 for the unfinished list-vie
 **Fixed:** clicking a Ready/Complete site in Recent Sites previously did nothing.
 **Verified:** tsc clean · build ok · eslint 0 errors.
 
+### Step 6 — S4b Comparison View ✅
+**Created:** `src/components/ProjectDetail/ComparisonView.tsx` — full-width workspace shown
+when the History tab is active. Sub-header with back button + Overlay/Split segmented toggle,
+legend row with two dated scan chips, canvas with hand-authored dual-tinted SVG scenes, change-
+log table below.
+**Modified:** `lib/mockData.ts` (added `ComparisonScan` / `ComparisonPair` /
+`MOCK_COMPARISON_PAIR` + `ChangeType` / `ChangeLogEntry` / `MOCK_CHANGE_LOG` — 5 seeded rows),
+`ProjectDetail/DetailSidebar.tsx` (flipped `history` tab `ready: true`),
+`app/viewer/[id]/page.tsx` (renders `<ComparisonView onBack={…} />` when `detailTab === "history"`
+and hides the RightDock while it's active since the comparison is a full-width workspace).
+
+Delivered:
+- **Overlay mode:** older scan (blue) painted underneath; newer scan (green) drawn on top and
+  clipped with `clip-path: inset(0 0 0 X%)`. Draggable wipe handle with a 36px pill and ↔ arrow
+  icon, keyboard-accessible (`role="slider"`, arrow keys nudge 2%), clamped 2–98%.
+- **Split mode:** two panes side-by-side, divider between, each labelled with scan name + date.
+- Both scans share an isometric MEP schematic. Real differences reveal at the wipe: HVAC duct
+  shifted up 12px in the newer scan (the +0.24 m delta), a chilled-water pipe drawn thicker in
+  the newer scan (+12 mm OD), a conduit run present in the older scan only (Removed), and a
+  sprinkler head + support bracket present in the newer scan only (Added).
+- Legend chip stays pinned bottom-left; Fullscreen button bottom-right; top-left/right labels
+  in each scan's tint.
+- **Change-log table:** Element / Change Type (Added/Removed/Modified with icon + tinted pill) /
+  Layer / Delta (monospace) / Flagged (toggleable button, seeded initial state from fixtures).
+
+**Verified:** `npx tsc --noEmit` silent · `npx next build` compiles 5 routes · `npx eslint src`
+reports 0 errors + 4 known warnings.
+
 ### Step 5 — S6 Notifications panel ✅
 **Created:** `src/components/NotificationsPanel.tsx` (380px dropdown, tab bar
 All/Scans/Projects/System, list of typed rows with tinted circular icons, footer link).
@@ -247,13 +275,7 @@ contains real project name, detail nav and layer panel.
 
 Ordered per `POC_requirements.md` §4. **Do one per session/turn.**
 
-### Step 6 — S4b: Comparison View ◀ NEXT
-**Spec:** Prompt 6.
-Reached from the **History** tab in `DetailSidebar.tsx` (currently a placeholder). Overlay /
-Split View segmented toggle, Scan A (blue) vs Scan B (green) legend, draggable wipe slider,
-change-log table (Element / Change Type / Layer / Delta / Flagged), 5 seeded rows.
-
-### Step 7 — S7 & S8: Overview / Files / Report tabs
+### Step 7 — S7 & S8: Overview / Files / Report tabs ◀ NEXT
 **Spec:** Prompt 8.
 Fills the remaining `DetailSidebar` placeholders. Overview = stat cards + 3D thumbnail +
 recent-activity feed + Layer Summary. Files = drag-drop zone + file list. Report = Generate
@@ -291,7 +313,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | S2.5 | Floor Plan | ✅ Done (POC: all rooms route to the parent project's viewer) |
 | S3/S4 | Project Detail Shell + 3D Viewer | ✅ Done |
 | S4a | Measurements panel | ✅ Done |
-| S4b | Comparison View | ⬜ Step 6 |
+| S4b | Comparison View | ✅ Done |
 | S6 | Notifications | ✅ Done |
 | S7 | Overview tab | ⬜ Step 7 |
 | S8 | Files / Report tabs | ⬜ Step 7 |
@@ -301,6 +323,11 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-09-09** — Step 6: S4b Comparison View — Overlay wipe + Split View toggle, draggable
+  keyboard-accessible wipe handle, hand-drawn isometric MEP scenes tinted per scan showing real
+  differences (shifted duct, thicker pipe, removed conduit, added sprinkler/bracket), change-log
+  table with Added/Removed/Modified pills and per-row Flag toggle. Reached from the History
+  tab; hides the RightDock while active.
 - **2026-09-09** — Step 5: S6 Notifications panel — 380px dropdown from the bell with
   All/Scans/Projects/System tabs, 6 typed seeded items, unread badge derived from fixtures,
   `Mark all read`, click-outside/Escape dismissal. Bell no longer hardcodes `3`.

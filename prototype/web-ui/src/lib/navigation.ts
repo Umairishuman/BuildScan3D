@@ -33,7 +33,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-  { id: "projects", label: "Projects", icon: FolderKanban, href: null },
+  { id: "projects", label: "Projects", icon: FolderKanban, href: "/projects" },
   { id: "scans", label: "Scans", icon: ScanLine, href: null },
   { id: "floorplan", label: "Floor Plan", icon: Map, href: "/floorplan/tower-a-floors-5-8" },
   { id: "reports", label: "Reports", icon: FileText, href: null },

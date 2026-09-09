@@ -16,6 +16,7 @@ import {
   ViewportBottomBar,
 } from "@/components/ProjectDetail/ViewportOverlays";
 import { RightDock, DockTab } from "@/components/ProjectDetail/RightDock";
+import { ComparisonView } from "@/components/ProjectDetail/ComparisonView";
 import {
   Canvas3D,
   Canvas3DHandle,
@@ -126,6 +127,7 @@ function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] 
 
   const isPlanView = viewMode === "2d";
   const activeDetailTab = DETAIL_TABS.find((t) => t.id === detailTab);
+  const isComparisonView = detailTab === "history";
 
   return (
     <AppShell
@@ -145,7 +147,9 @@ function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] 
 
         {/* Centre viewport */}
         <section className="flex-1 min-w-0 flex flex-col bg-[#eef3f9]">
-          {detailTab === "viewer" ? (
+          {isComparisonView ? (
+            <ComparisonView onBack={() => setDetailTab("viewer")} />
+          ) : detailTab === "viewer" ? (
             <div ref={viewportRef} className="relative flex-1 min-h-0 bg-[#eef3f9]">
               <Canvas3D
                 ref={canvasRef}
@@ -247,17 +251,19 @@ function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] 
           )}
         </section>
 
-        <RightDock
-          activeTab={dockTab}
-          onSelectTab={setDockTab}
-          semanticLayers={semanticLayers}
-          onToggleLayer={handleToggleLayer}
-          measurements={measurements}
-          isMeasureMode={isMeasureMode}
-          onToggleMeasureMode={handleToggleMeasureMode}
-          onDeleteMeasurement={handleDeleteMeasurement}
-          onClearMeasurements={handleClearMeasurements}
-        />
+        {!isComparisonView && (
+          <RightDock
+            activeTab={dockTab}
+            onSelectTab={setDockTab}
+            semanticLayers={semanticLayers}
+            onToggleLayer={handleToggleLayer}
+            measurements={measurements}
+            isMeasureMode={isMeasureMode}
+            onToggleMeasureMode={handleToggleMeasureMode}
+            onDeleteMeasurement={handleDeleteMeasurement}
+            onClearMeasurements={handleClearMeasurements}
+          />
+        )}
       </div>
 
       <ExportModal
