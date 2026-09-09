@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Project } from "@/lib/mockData";
+import { hasBuildingPlan, Project } from "@/lib/mockData";
 import { Calendar, Shield, MoreHorizontal } from "lucide-react";
 
 interface ProjectCardProps {
@@ -100,8 +100,13 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   );
 
   if (isReady || isComplete) {
+    // Multi-floor projects drill into a floor-plan overview first; single-room
+    // projects jump straight to the 3D workspace.
+    const href = hasBuildingPlan(project.id)
+      ? `/floorplan/${project.id}`
+      : `/viewer/${project.id}`;
     return (
-      <Link href={`/viewer/${project.id}`} className="group block cursor-pointer">
+      <Link href={href} className="group block cursor-pointer">
         {CardBody}
       </Link>
     );

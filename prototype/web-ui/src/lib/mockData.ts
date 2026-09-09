@@ -270,6 +270,157 @@ export const MOCK_PIPELINE_STEPS: PipelineStep[] = [
   }
 ];
 
+/* -------------------------------------------------------------------------- */
+/* Building floor plans (S2.5)                                                */
+/* -------------------------------------------------------------------------- */
+
+export type FloorPlanRoomKind =
+  | "mep"
+  | "office"
+  | "conference"
+  | "utility"
+  | "lobby"
+  | "corridor";
+
+export type FloorPlanRoomStatus = "ready" | "processing" | "complete";
+
+export interface FloorPlanRoom {
+  id: string;
+  name: string;
+  kind: FloorPlanRoomKind;
+  status: FloorPlanRoomStatus;
+  scanCount: number;
+  /** Rectangle in the plan's 1000×620 viewBox. */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Door swing arc — small ¼ circle rendered on top of walls. */
+export interface FloorPlanDoor {
+  cx: number;
+  cy: number;
+  radius: number;
+  /** Quadrant of the arc: "tr" | "tl" | "br" | "bl". */
+  quadrant: "tr" | "tl" | "br" | "bl";
+}
+
+export interface BuildingFloor {
+  id: string;
+  label: string;
+  discipline: string;
+  totalArea: string;
+  rooms: FloorPlanRoom[];
+  doors: FloorPlanDoor[];
+}
+
+export interface BuildingPlan {
+  projectId: string;
+  buildingName: string;
+  floors: BuildingFloor[];
+}
+
+export const MOCK_BUILDING_PLANS: BuildingPlan[] = [
+  {
+    projectId: "tower-a-floors-5-8",
+    buildingName: "Tower A",
+    floors: [
+      {
+        id: "floor-5",
+        label: "Floor 5",
+        discipline: "Mechanical Plant",
+        totalArea: "1,240 m²",
+        rooms: [
+          { id: "f5-chiller", name: "Chiller Plant", kind: "mep", status: "ready", scanCount: 6, x: 60, y: 60, w: 340, h: 220 },
+          { id: "f5-boiler", name: "Boiler Room", kind: "mep", status: "processing", scanCount: 3, x: 60, y: 300, w: 220, h: 260 },
+          { id: "f5-pump", name: "Pump Skid Room", kind: "utility", status: "ready", scanCount: 4, x: 300, y: 320, w: 220, h: 240 },
+          { id: "f5-corridor", name: "Service Corridor", kind: "corridor", status: "complete", scanCount: 2, x: 540, y: 60, w: 400, h: 90 },
+          { id: "f5-electrical", name: "Main Electrical", kind: "mep", status: "ready", scanCount: 5, x: 540, y: 170, w: 400, h: 190 },
+          { id: "f5-tank", name: "Water Tank Room", kind: "utility", status: "processing", scanCount: 2, x: 540, y: 380, w: 400, h: 180 },
+        ],
+        doors: [
+          { cx: 400, cy: 200, radius: 22, quadrant: "tr" },
+          { cx: 300, cy: 400, radius: 22, quadrant: "tl" },
+          { cx: 540, cy: 240, radius: 22, quadrant: "tl" },
+          { cx: 540, cy: 460, radius: 22, quadrant: "tl" },
+        ],
+      },
+      {
+        id: "floor-6",
+        label: "Floor 6",
+        discipline: "Open Office",
+        totalArea: "1,340 m²",
+        rooms: [
+          { id: "f6-lobby", name: "Lobby & Reception", kind: "lobby", status: "complete", scanCount: 4, x: 60, y: 60, w: 260, h: 180 },
+          { id: "f6-conf-a", name: "Conference Room A", kind: "conference", status: "ready", scanCount: 3, x: 60, y: 260, w: 260, h: 160 },
+          { id: "f6-conf-b", name: "Conference Room B", kind: "conference", status: "processing", scanCount: 2, x: 60, y: 440, w: 260, h: 120 },
+          { id: "f6-open-office", name: "Open Office Bay", kind: "office", status: "ready", scanCount: 8, x: 340, y: 60, w: 460, h: 360 },
+          { id: "f6-huddle", name: "Huddle Zone", kind: "office", status: "ready", scanCount: 3, x: 340, y: 440, w: 220, h: 120 },
+          { id: "f6-break", name: "Break Room", kind: "utility", status: "complete", scanCount: 2, x: 580, y: 440, w: 360, h: 120 },
+          { id: "f6-corridor", name: "West Corridor", kind: "corridor", status: "complete", scanCount: 1, x: 820, y: 60, w: 120, h: 360 },
+        ],
+        doors: [
+          { cx: 320, cy: 130, radius: 22, quadrant: "tl" },
+          { cx: 320, cy: 340, radius: 22, quadrant: "tl" },
+          { cx: 320, cy: 500, radius: 22, quadrant: "tl" },
+          { cx: 820, cy: 240, radius: 22, quadrant: "tr" },
+          { cx: 580, cy: 500, radius: 22, quadrant: "tr" },
+        ],
+      },
+      {
+        id: "floor-7",
+        label: "Floor 7",
+        discipline: "Executive Suites",
+        totalArea: "1,280 m²",
+        rooms: [
+          { id: "f7-reception", name: "Executive Reception", kind: "lobby", status: "ready", scanCount: 3, x: 60, y: 60, w: 380, h: 160 },
+          { id: "f7-ceo", name: "CEO Office", kind: "office", status: "complete", scanCount: 4, x: 60, y: 240, w: 240, h: 200 },
+          { id: "f7-boardroom", name: "Boardroom", kind: "conference", status: "ready", scanCount: 6, x: 320, y: 240, w: 320, h: 200 },
+          { id: "f7-vp-1", name: "VP Office 1", kind: "office", status: "processing", scanCount: 2, x: 460, y: 60, w: 220, h: 160 },
+          { id: "f7-vp-2", name: "VP Office 2", kind: "office", status: "processing", scanCount: 2, x: 700, y: 60, w: 240, h: 160 },
+          { id: "f7-lounge", name: "Executive Lounge", kind: "office", status: "ready", scanCount: 3, x: 660, y: 240, w: 280, h: 200 },
+          { id: "f7-corridor", name: "South Corridor", kind: "corridor", status: "complete", scanCount: 1, x: 60, y: 460, w: 880, h: 100 },
+        ],
+        doors: [
+          { cx: 300, cy: 300, radius: 22, quadrant: "tr" },
+          { cx: 320, cy: 320, radius: 22, quadrant: "tl" },
+          { cx: 700, cy: 320, radius: 22, quadrant: "tr" },
+          { cx: 460, cy: 140, radius: 22, quadrant: "tr" },
+          { cx: 700, cy: 140, radius: 22, quadrant: "tr" },
+          { cx: 500, cy: 460, radius: 22, quadrant: "bl" },
+        ],
+      },
+      {
+        id: "floor-8",
+        label: "Floor 8",
+        discipline: "Rooftop Utilities",
+        totalArea: "980 m²",
+        rooms: [
+          { id: "f8-hvac", name: "Rooftop HVAC", kind: "mep", status: "ready", scanCount: 5, x: 60, y: 60, w: 460, h: 260 },
+          { id: "f8-elevator", name: "Elevator Overrun", kind: "utility", status: "complete", scanCount: 2, x: 540, y: 60, w: 200, h: 260 },
+          { id: "f8-solar", name: "Solar Array Shed", kind: "utility", status: "processing", scanCount: 3, x: 760, y: 60, w: 180, h: 260 },
+          { id: "f8-mech-corridor", name: "Rooftop Walkway", kind: "corridor", status: "complete", scanCount: 1, x: 60, y: 340, w: 880, h: 100 },
+          { id: "f8-storage", name: "Maintenance Store", kind: "utility", status: "ready", scanCount: 2, x: 60, y: 460, w: 340, h: 100 },
+          { id: "f8-antenna", name: "Antenna Deck", kind: "utility", status: "ready", scanCount: 3, x: 420, y: 460, w: 520, h: 100 },
+        ],
+        doors: [
+          { cx: 540, cy: 180, radius: 22, quadrant: "tl" },
+          { cx: 760, cy: 180, radius: 22, quadrant: "tl" },
+          { cx: 200, cy: 340, radius: 22, quadrant: "tr" },
+          { cx: 400, cy: 460, radius: 22, quadrant: "tr" },
+        ],
+      },
+    ],
+  },
+];
+
+export const findBuildingPlan = (projectId: string): BuildingPlan | undefined =>
+  MOCK_BUILDING_PLANS.find((plan) => plan.projectId === projectId);
+
+export const hasBuildingPlan = (projectId: string): boolean =>
+  MOCK_BUILDING_PLANS.some((plan) => plan.projectId === projectId);
+
 export type SavedMeasurementKind =
   | "length"
   | "height"
@@ -326,6 +477,87 @@ export const MOCK_SAVED_MEASUREMENTS: SavedMeasurement[] = [
     label: "Structural Beam Span",
     timestamp: "Apr 26, 11:22 AM",
     projectId: "sector-4-mep",
+  },
+];
+
+/* -------------------------------------------------------------------------- */
+/* Notifications (S6)                                                         */
+/* -------------------------------------------------------------------------- */
+
+export type NotificationKind =
+  | "scan_processing"
+  | "scan_completed"
+  | "scan_failed"
+  | "measurement_added"
+  | "comment"
+  | "project_archived";
+
+export type NotificationCategory = "scans" | "projects" | "system";
+
+export interface NotificationItem {
+  id: string;
+  kind: NotificationKind;
+  category: NotificationCategory;
+  title: string;
+  description: string;
+  timeAgo: string;
+  unread: boolean;
+}
+
+export const MOCK_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: "n-1",
+    kind: "scan_processing",
+    category: "scans",
+    title: "Scan Processing",
+    description: "Sector 4 MEP Room is training on RTX 4090 (20,400 / 30,000 iters).",
+    timeAgo: "12m ago",
+    unread: true,
+  },
+  {
+    id: "n-2",
+    kind: "scan_completed",
+    category: "scans",
+    title: "Scan Ready",
+    description: "Tower A — Floor 6 finished capture with 1.45M active Gaussians.",
+    timeAgo: "1h ago",
+    unread: true,
+  },
+  {
+    id: "n-3",
+    kind: "measurement_added",
+    category: "projects",
+    title: "New Measurement",
+    description: "Sarah Khan added “Duct Length — 12.48 m” to West Wing.",
+    timeAgo: "3h ago",
+    unread: true,
+  },
+  {
+    id: "n-4",
+    kind: "comment",
+    category: "projects",
+    title: "New Comment",
+    description: "Ahmad Raza commented on the North Tower coordination report.",
+    timeAgo: "5h ago",
+    unread: false,
+  },
+  {
+    id: "n-5",
+    kind: "project_archived",
+    category: "system",
+    title: "Project Archived",
+    description: "Basement Level 1 was archived by the workspace admin.",
+    timeAgo: "Yesterday",
+    unread: false,
+  },
+  {
+    id: "n-6",
+    kind: "scan_failed",
+    category: "scans",
+    title: "Scan Failed",
+    description: "East Wing Corridor capture rejected — motion blur above threshold.",
+    timeAgo: "2d ago",
+    unread: false,
   },
 ];
 

@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-09-09 (Step 3) · Branch: `prototype`
+Last updated: 2026-09-09 (Step 5) · Branch: `prototype`
 
 ---
 
@@ -146,6 +146,59 @@ button, New Capture modal, job-status modal. See §6 for the unfinished list-vie
 **Fixed:** clicking a Ready/Complete site in Recent Sites previously did nothing.
 **Verified:** tsc clean · build ok · eslint 0 errors.
 
+### Step 5 — S6 Notifications panel ✅
+**Created:** `src/components/NotificationsPanel.tsx` (380px dropdown, tab bar
+All/Scans/Projects/System, list of typed rows with tinted circular icons, footer link).
+**Modified:** `lib/mockData.ts` (added `NotificationItem` type + `MOCK_NOTIFICATIONS` — 6
+seeded rows spanning scan_processing, scan_completed, measurement_added, comment,
+project_archived, scan_failed), `components/Navbar.tsx` (bell button now toggles the panel;
+badge count derives from unread items instead of a hardcoded `3`; escape key + click-outside
+dismiss).
+
+Delivered:
+- Panel opens anchored to the bell (`absolute top-full right-0 mt-2`), max-height capped to
+  fit the viewport, tab bar reusing the segmented pill style.
+- Rows: tinted circular icon (amber clock / green check / blue ruler / grey message / grey
+  archive / red warning), bold title, two-line description, right-aligned relative timestamp
+  (e.g. `12m ago`), blue unread dot on the right edge.
+- Empty-state message when a bucket has no items.
+- `Mark all read` action zeroes the badge and clears the unread dots.
+- Bell icon flips to `bg-blue-50 text-[#2563eb]` while the panel is open; a
+  `data-notifications-toggle` attribute lets the panel's outside-click listener ignore the
+  bell so it doesn't race the toggle.
+
+**Verified:** `npx tsc --noEmit` silent · `npx next build` compiles 5 routes · `npx eslint src`
+reports 0 errors + 4 known warnings.
+
+### Step 4 — S2.5 Floor Plan route ✅
+**Created:** `src/app/floorplan/[id]/page.tsx` (AppShell fluid, breadcrumb, header strip with
+building title + floor tabs + disabled `+ New Capture`, floating legend), plus
+`components/FloorPlan/FloorPlanCanvas.tsx` (hand-authored inline SVG blueprint) and
+`components/FloorPlan/FloorTabStrip.tsx` (segmented control matching `ViewportOverlays`).
+**Modified:** `lib/mockData.ts` (added `BuildingPlan`/`BuildingFloor`/`FloorPlanRoom` types
+plus `MOCK_BUILDING_PLANS` — Tower A with 4 floors × 6-7 rooms each, real x/y/w/h geometry in
+a 1000×620 viewBox), `lib/navigation.ts` (flipped `floorplan` href to
+`/floorplan/tower-a-floors-5-8`), `components/ProjectCard.tsx` (Ready/Complete cards route via
+`hasBuildingPlan(id)`: multi-floor → `/floorplan/[id]`, single-room → `/viewer/[id]`).
+
+Delivered:
+- Hand-authored SVG plan per floor: outer wall, dashed corridor outlines, per-room fills keyed
+  to discipline (MEP / office / conference / utility / lobby / corridor), door swing arcs,
+  metric dimension ruler, north-arrow compass, room labels + scan counts.
+- Status nodes anchored to each room's centre — green (Ready), teal (Complete), amber
+  (Processing with a pulsing SVG ring animation). Hover → white tooltip card with status pill
+  + scan count + call-to-action; only Ready/Complete rooms are clickable, Processing rooms show
+  a `not-allowed` cursor.
+- Every clickable room routes to the parent project's own `/viewer/[id]` — one 3D model stands
+  in for all rooms this pass (POC scope).
+- Floor tab strip shows floor label + discipline sub-label; active tab surfaces in white.
+- Floating legend top-right counts Ready / Processing / Complete for the active floor and
+  restates the click-to-open hint. `+ New Capture` is disabled with a mobile-app tooltip.
+
+**Verified:** `npx tsc --noEmit` silent · `npx next build` compiles 5 routes (adds
+`ƒ /floorplan/[id]`) · `npx eslint src` reports 0 errors + 4 known warnings · dev-server smoke
+test: `/floorplan/tower-a-floors-5-8` → 200, `/floorplan/does-not-exist` → 404.
+
 ### Step 3 — S4a Measurements panel ✅
 **Created:** `ProjectDetail/MeasurementsPanel.tsx` (Saved / Current / Tools sub-views + pinned
 `+ New Measurement` primary button).
@@ -194,32 +247,7 @@ contains real project name, detail nav and layer panel.
 
 Ordered per `POC_requirements.md` §4. **Do one per session/turn.**
 
-### Step 4 — S2.5: Floor Plan route ◀ NEXT
-**Spec:** Prompt 3.
-**Note:** `FloorPlanView.tsx` currently exists as a *tab inside the dashboard* rendering
-abstract rectangles. The spec wants a standalone screen.
-
-1. New route `src/app/floorplan/[id]/page.tsx` using `AppShell variant="fluid"`.
-2. Breadcrumb `All Projects > Tower A - Floors 5-8`.
-3. Floor tab strip (Floor 5–8) using the segmented-control pattern from `ViewportOverlays.tsx`.
-4. **Hand-author the blueprint as inline SVG** (see D7) — walls, door swings, room labels,
-   dimension lines. Anchor circular status nodes to real room geometry.
-5. Hover node → tooltip (room name + scan count). Amber "Processing" node pulses. Clicking a
-   green "Ready" node routes to `/viewer/<id>`.
-6. Legend card floats top-right; disabled `+ New Capture` with the mobile-app tooltip.
-7. Route multi-floor cards here from `ProjectCard.tsx`; single-room cards keep going straight
-   to `/viewer/<id>`.
-8. **Flip `NAV_ITEMS` floorplan `href`** and retire the dashboard tab branch.
-
-### Step 5 — S6: Notifications panel
-**Spec:** Prompt 7.
-Slide-over / dropdown ~380px from the **bell icon in `Navbar.tsx`** (currently renders a
-hardcoded `3` badge and does nothing). Tabs All/Scans/Projects/System. 6 seeded items —
-processing, completed, measurement added, comment, archived, failed(red) — each with a coloured
-circular icon, title, grey description, relative timestamp. Footer `View all activity →`.
-Add fixtures to `mockData.ts`. Reuse the row rhythm from the Measurements list.
-
-### Step 6 — S4b: Comparison View
+### Step 6 — S4b: Comparison View ◀ NEXT
 **Spec:** Prompt 6.
 Reached from the **History** tab in `DetailSidebar.tsx` (currently a placeholder). Overlay /
 Split View segmented toggle, Scan A (blue) vs Scan B (green) legend, draggable wipe slider,
@@ -244,8 +272,10 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | **List view does nothing** | `dashboard/page.tsx` | `viewMode` state drives only button styling; the grid is always 3-col. Either implement the list layout or remove the toggle. |
 | **`globals.css` conflicts** | `src/app/globals.css` | Duplicate `--background` declaration, plus a `prefers-color-scheme: dark` block setting `#0a0a0a`. Currently inert because `layout.tsx` hardcodes `bg-[#f8fafc]` on `<body>` — but it is a live trap. |
 | 4 pre-existing lint warnings | `ExportModal.tsx:29`, `FloorPlanView.tsx:6` | Unused `filename`, `Layers`, `Eye`, `Activity`. Harmless; clean up when touching those files. |
-| Non-functional controls | `Navbar.tsx` bell, dashboard date-range button | Wired in Steps 5 / later. |
+| Non-functional controls | dashboard date-range button, `View all activity →` footer link in the notifications panel | Bell is now wired (Step 5); date-range button and `View all` link stay stubs until later steps. |
 | Search is shallow | `dashboard/page.tsx` | Filters name/block/floor only. |
+| **Dashboard floor-plan tab still live** | `dashboard/page.tsx` + `components/FloorPlanView.tsx` | The old dashboard "Floor Plan" tab renders abstract rectangles from `MOCK_FLOOR_PLAN_SECTORS`. Superseded by the new `/floorplan/[id]` route; retire the tab and delete `FloorPlanView.tsx` next time the dashboard is touched. |
+| Every floor-plan room opens the same 3D model | `components/FloorPlan/FloorPlanCanvas.tsx` (`openRoom`) | POC scope — clicking any room routes to the parent project's own `/viewer/[id]` rather than a per-room scan. Wire per-room `targetProjectId` on `FloorPlanRoom` when real per-room captures land. |
 | Non-length measurement types are inert | `ProjectDetail/MeasurementsPanel.tsx` (Tools tab) | The five-chip grid shows length/height/pipe/width/beam but only `length` maps to a canvas mode — the others render for demo completeness and ship in Stage 5. |
 | Saved-measurement overflow menu is inert | `ProjectDetail/MeasurementsPanel.tsx` (Saved tab) | The `…` button on saved rows is present but not wired (no rename/export/delete actions yet). |
 | Nav items are inert | `lib/navigation.ts` | Projects/Scans/Reports/Team/Settings have `href: null` by design until built. |
@@ -258,11 +288,11 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 |---|---|---|
 | S1 | Sign In | ✅ Done |
 | S2 | All Projects dashboard | ✅ Done (list view outstanding) |
-| S2.5 | Floor Plan | ⬜ Step 4 |
+| S2.5 | Floor Plan | ✅ Done (POC: all rooms route to the parent project's viewer) |
 | S3/S4 | Project Detail Shell + 3D Viewer | ✅ Done |
 | S4a | Measurements panel | ✅ Done |
 | S4b | Comparison View | ⬜ Step 6 |
-| S6 | Notifications | ⬜ Step 5 |
+| S6 | Notifications | ✅ Done |
 | S7 | Overview tab | ⬜ Step 7 |
 | S8 | Files / Report tabs | ⬜ Step 7 |
 | S9 | Empty / error states | ⬜ Step 8 |
@@ -271,6 +301,14 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-09-09** — Step 5: S6 Notifications panel — 380px dropdown from the bell with
+  All/Scans/Projects/System tabs, 6 typed seeded items, unread badge derived from fixtures,
+  `Mark all read`, click-outside/Escape dismissal. Bell no longer hardcodes `3`.
+- **2026-09-09** — Step 4: S2.5 Floor Plan route (`/floorplan/[id]`) with hand-authored SVG
+  blueprint (walls, doors, dimensions, north arrow), 4-floor Tower A fixture, floor tab strip,
+  clickable status nodes with hover tooltips, floating legend, disabled New Capture. All rooms
+  currently open the parent project's own viewer (POC scope). `hasBuildingPlan` decides whether
+  a project card routes to the plan or straight to the 3D viewer.
 - **2026-09-09** — Step 3: S4a Measurements panel wired into RightDock — Saved (5 seeded rows),
   Current (live session rows w/ per-row delete + Clear all), Tools (measure-mode toggle, type
   chips, session clear). Lifted `isMeasureMode` into state; extended `Canvas3DHandle` with

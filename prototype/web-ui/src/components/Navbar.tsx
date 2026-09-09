@@ -1,9 +1,15 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Search, Bell, ChevronDown, Menu, X } from "lucide-react";
+import { NotificationsPanel } from "@/components/NotificationsPanel";
+import {
+  MOCK_NOTIFICATIONS,
+  NotificationCategory,
+  NotificationItem,
+} from "@/lib/mockData";
 
 interface NavbarProps {
   /** Omit on screens that have no searchable list; the field renders read-only. */
@@ -19,6 +25,19 @@ export const Navbar: React.FC<NavbarProps> = ({
   isMenuOpen = false,
   onToggleMenu,
 }) => {
+  const [notifications, setNotifications] = useState<NotificationItem[]>(
+    () => MOCK_NOTIFICATIONS.map((n) => ({ ...n }))
+  );
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notificationsTab, setNotificationsTab] = useState<
+    NotificationCategory | "all"
+  >("all");
+
+  const unreadCount = notifications.filter((n) => n.unread).length;
+
+  const handleMarkAllRead = () =>
+    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+
   return (
     <header className="h-16 w-full px-4 sm:px-6 flex items-center justify-between border-b border-[#e2e8f0] bg-white/90 backdrop-blur-md text-[#0f172a] sticky top-0 z-30">
       {/* Left: 3-Bar Menu Toggle + Brand Logo & Name + Project Selector */}
@@ -87,15 +106,36 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Right: Notifications, Team Avatars, User Profile */}
       <div className="flex items-center gap-3 sm:gap-4">
         {/* Notification Bell with Badge */}
-        <button
-          className="relative p-2 rounded-xl text-[#64748b] hover:text-[#0f172a] hover:bg-slate-100 transition-colors cursor-pointer"
-          title="Notifications"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
-            3
-          </span>
-        </button>
+        <div className="relative">
+          <button
+            data-notifications-toggle
+            onClick={() => setIsNotificationsOpen((prev) => !prev)}
+            aria-haspopup="dialog"
+            aria-expanded={isNotificationsOpen}
+            className={`relative p-2 rounded-xl transition-colors cursor-pointer ${
+              isNotificationsOpen
+                ? "bg-blue-50 text-[#2563eb]"
+                : "text-[#64748b] hover:text-[#0f172a] hover:bg-slate-100"
+            }`}
+            title="Notifications"
+          >
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+
+          <NotificationsPanel
+            isOpen={isNotificationsOpen}
+            onClose={() => setIsNotificationsOpen(false)}
+            activeTab={notificationsTab}
+            onSelectTab={setNotificationsTab}
+            onMarkAllRead={handleMarkAllRead}
+            notifications={notifications}
+          />
+        </div>
 
         {/* Team Avatars Overlapping Stack */}
         <div className="hidden lg:flex items-center -space-x-2 overflow-hidden pl-1">

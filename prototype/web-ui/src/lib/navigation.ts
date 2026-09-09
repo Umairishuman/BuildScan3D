@@ -35,7 +35,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { id: "projects", label: "Projects", icon: FolderKanban, href: null },
   { id: "scans", label: "Scans", icon: ScanLine, href: null },
-  { id: "floorplan", label: "Floor Plan", icon: Map, href: null },
+  { id: "floorplan", label: "Floor Plan", icon: Map, href: "/floorplan/tower-a-floors-5-8" },
   { id: "reports", label: "Reports", icon: FileText, href: null },
   { id: "team", label: "Team", icon: Users, href: null },
   { id: "settings", label: "Settings", icon: Settings, href: null },
