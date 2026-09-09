@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-09-09 (Step 7) · Branch: `prototype`
+Last updated: 2026-09-09 (Polish pass: nav, backdrop, labels, 3D) · Branch: `prototype`
 
 ---
 
@@ -147,6 +147,46 @@ button, New Capture modal, job-status modal. See §6 for the unfinished list-vie
 `dashboard/page.tsx` (consumes AppShell).
 **Fixed:** clicking a Ready/Complete site in Recent Sites previously did nothing.
 **Verified:** tsc clean · build ok · eslint 0 errors.
+
+### Polish pass — nav fix, status labels, projects backdrop, 3D scene ✅
+**User asks (four):** (1) clicking Dashboard from /projects didn't navigate; (2) status
+pills read too generic; (3) /projects needed a construction-themed background; (4) the 3D
+scene needed to look better.
+
+**Fixes:**
+- **Nav:** `app/projects/page.tsx` rewrote — removed the local `onSelectNav` handler that
+  was swallowing menu clicks (it only mutated a local tab state), removed the in-page
+  Floor Plan tab (already tech-debt in §6, superseded by `/floorplan/[id]`), and deleted
+  `components/FloorPlanView.tsx`. Menu clicks now flow through `AppShell` → `router.push`.
+  Cleared 3 of the 4 known lint warnings in the process.
+- **Status labels:** `MOCK_PROJECTS.statusLabel` updated per project to something discipline-
+  specific (e.g. `Training · RTX 4090`, `3DGS Ready · 1.45M splats`, `Signed Off · Handed to
+  Coordinator`, `Draft · Awaiting Capture`, `Queued · 2 of 6 workers`). `ProjectCard.tsx` now
+  renders `project.statusLabel` instead of hardcoded single words, with `truncate` on the
+  text and shrink-safe dot markers. Filter pill labels on `/projects` also relabelled
+  (Complete → "Signed Off").
+- **Projects backdrop:** new `components/ProjectsBackdrop.tsx` — isometric building
+  silhouette with a tower crane (lattice mast, cabin, jib, hook + cable), 54.00 m dimension
+  arrow, drafting compass arc, radial gradient bloom, all at ~10% opacity so content stays
+  readable. Sits `-z-0` behind the `/projects` content. Page header rewritten from
+  "All Projects · Manage and view your construction sites and scans" (generic) to
+  "Projects Portfolio · <n> sites captured · <ready> ready to review · <processing> in
+  training · <complete> signed off" (real counts).
+- **3D scene:** `Viewer3D/SceneBuilder.ts` substantially expanded — right wall + skirting
+  boards; four corner columns with base plinths (was two); perpendicular tie beams;
+  ceiling grid drafting lines; painted floor-tile scribe lines; wall-mounted control panel
+  with three emissive indicator LEDs; door frame in the right wall; pipe elbows connecting
+  risers to header; insulation sleeves on the supply header; hangers rodded to the ceiling;
+  branch pipe running perpendicular to the header; HVAC flange bands, trapezoid transition,
+  three louvered diffusers on the branch + a return grille; electrical cable tray with
+  rails and rungs carrying the conduit runs; sprinkler heads rebuilt as brass bodies with
+  deflector plates + fusible bulbs. `Canvas3D.tsx` switched to `PCFSoftShadowMap`, added
+  soft-shadow bias config on the key light, exposure bumped to 1.05, and every major solid
+  now casts / receives shadows.
+
+**Verified:** `npx tsc --noEmit` silent · `npx next build` compiles 6 routes · `npx eslint
+src` now reports 0 errors + **1** known warning (down from 4 — the FloorPlanView unused
+imports are gone with the file).
 
 ### Step 7 — S7 & S8 Overview / Files / Report tabs ✅
 **Created:** `ProjectDetail/OverviewTab.tsx` (4 stat cards + 3D preview card using the hero PNG
@@ -371,10 +411,9 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | **Orphaned dead code** | `Viewer3D/ViewerHUD.tsx` | The retired dark HUD. Nothing imports it. User declined deletion once — **ask before removing.** |
 | **List view does nothing** | `dashboard/page.tsx` | `viewMode` state drives only button styling; the grid is always 3-col. Either implement the list layout or remove the toggle. |
 | **`globals.css` conflicts** | `src/app/globals.css` | Duplicate `--background` declaration, plus a `prefers-color-scheme: dark` block setting `#0a0a0a`. Currently inert because `layout.tsx` hardcodes `bg-[#f8fafc]` on `<body>` — but it is a live trap. |
-| 4 pre-existing lint warnings | `ExportModal.tsx:29`, `FloorPlanView.tsx:6` | Unused `filename`, `Layers`, `Eye`, `Activity`. Harmless; clean up when touching those files. |
+| 1 pre-existing lint warning | `ExportModal.tsx:29` | Unused `filename` param. Harmless; clean up when touching the file. (FloorPlanView deleted — its 3 warnings gone with it.) |
 | Non-functional controls | dashboard date-range button, `View all activity →` footer link in the notifications panel, "Export as PDF" in `ReportTab.tsx` | Bell is now wired (Step 5); the rest stay stubs. `Generate Report` in ReportTab shows a spinner + updates the timestamp but doesn't produce a file. |
 | Search is shallow | `dashboard/page.tsx` | Filters name/block/floor only. |
-| **Dashboard floor-plan tab still live** | `projects/page.tsx` + `components/FloorPlanView.tsx` | The old project-grid page (now at `/projects`) keeps its "Floor Plan" tab rendering abstract rectangles from `MOCK_FLOOR_PLAN_SECTORS`. Superseded by the new `/floorplan/[id]` route; retire the tab and delete `FloorPlanView.tsx` next time `/projects` is touched. |
 | Dashboard KPI deltas are static strings | `components/DashboardHome/Overview.tsx` | Each KPI card shows a helper caption ("+2 this month", "Training on RTX 4090", …). The number itself is real (derived from fixtures) but the caption is fixed text — swap in real trend data when there is any. |
 | Every floor-plan room opens the same 3D model | `components/FloorPlan/FloorPlanCanvas.tsx` (`openRoom`) | POC scope — clicking any room routes to the parent project's own `/viewer/[id]` rather than a per-room scan. Wire per-room `targetProjectId` on `FloorPlanRoom` when real per-room captures land. |
 | Non-length measurement types are inert | `ProjectDetail/MeasurementsPanel.tsx` (Tools tab) | The five-chip grid shows length/height/pipe/width/beam but only `length` maps to a canvas mode — the others render for demo completeness and ship in Stage 5. |
@@ -402,6 +441,18 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-09-09** — Polish pass (user asks): fixed Dashboard nav from /projects (removed the
+  local `onSelectNav` that intercepted menu clicks; retired the in-page FloorPlan tab and
+  deleted `FloorPlanView.tsx`); replaced generic one-word status labels with discipline-
+  specific phrasing (`Training · RTX 4090`, `3DGS Ready · 1.45M splats`, etc.) and wired
+  `ProjectCard` to render `project.statusLabel` instead of hardcoded text; added
+  `ProjectsBackdrop` (isometric building silhouette + tower crane + drafting arc behind
+  /projects); rewrote the /projects header to show real counts. Enriched the 3D scene
+  substantially (right wall + skirtings, four corner columns with plinths, tie beams,
+  ceiling grid, floor tile scribes, control panel with LEDs, door frame, pipe elbows +
+  hangers + insulation sleeves, HVAC bands + transition + three louvered diffusers + return
+  grille, electrical cable tray + drops + sockets, proper brass sprinkler heads with
+  deflectors) and switched to `PCFSoftShadowMap` with a tuned shadow bias.
 - **2026-09-09** — Step 7: S7 & S8 tabs — Overview (4 real-data stat cards + 3D preview +
   Layer Summary with proportional bars + Recent Activity feed), Files (native drag-drop that
   infers kind from extension + 7-row list with per-kind tinted icons and hover Download /
