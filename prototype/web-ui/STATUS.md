@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-09-09 (Wiring + X-Ray toggle) · Branch: `prototype`
+Last updated: 2026-09-09 (Viewer restructure + real X-Ray) · Branch: `prototype`
 
 ---
 
@@ -148,7 +148,31 @@ button, New Capture modal, job-status modal. See §6 for the unfinished list-vie
 **Fixed:** clicking a Ready/Complete site in Recent Sites previously did nothing.
 **Verified:** tsc clean · build ok · eslint 0 errors.
 
-### Wiring + Systems X-Ray toggle ✅
+### Viewer restructure + real X-Ray (user asks) ✅
+- **3D shell:** `SceneBuilder.buildBaseRoom()` now closes the room off with a **front
+  wall** and a **ceiling** at y=4. Shell materials (floor / all 4 walls / ceiling) are
+  tracked in a new `shellMaterials[]` via a `registerShell()` helper. Removed the branch
+  pipe I added to `buildPipes` last round — it was reading as "a pipe in the middle of the
+  room."
+- **Real X-Ray:** new `SceneBuilder.setXrayMode(enabled)` dials `opacity: 0.18`,
+  `transparent: true`, and `depthWrite: false` on every shell material only. Interior
+  systems (pipes / ducts / conduits / wires / sprinklers) are drawn either way, so the
+  toggle actually *reveals* the plenum instead of hiding it. Wired through as a new
+  `xrayMode` prop on `Canvas3D` with its own `useEffect`. The bottom-bar toggle relabelled
+  from `Systems On/Off` to `X-Ray` / `X-Ray On`.
+- **Viewer layout:** left `DetailSidebar` (260px) and right `RightDock` (320px) both
+  gone. Content moves to a new **horizontal `ProjectDetailTopBar`** with identity + status
+  pill + tabs + capture-provenance chips. `RightDock.tsx` deleted (fully replaced).
+  Layers and Measurements now live in a new **`FloatingSidePanel`** popover (320px, top-
+  right of the viewport, `max-h-[calc(100vh-9rem)]`), toggled from two new pill buttons
+  next to `Export`. The Measurements top-bar tab and the "New Measurement" toggle both
+  auto-open the panel to the right sub-tab. The whole viewport is now edge-to-edge for the
+  3D canvas.
+
+**Verified:** `npx tsc --noEmit` silent · `npx next build` compiles 6 routes · `npx eslint
+src` 0 errors + 1 known warning.
+
+### Wiring + Systems X-Ray toggle ✅ (superseded — see above)
 - **Wiring:** `SceneBuilder.buildConduits()` now draws five colored wire bundles (red /
   black / blue / yellow / green) running through the cable tray using
   `THREE.CatmullRomCurve3` + `TubeGeometry` — each wire dips slightly at every drop
@@ -458,6 +482,15 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-09-09** — Viewer restructure (user brief): closed the 3D room off with a front
+  wall + ceiling; removed the mis-placed branch pipe; rewrote the X-Ray toggle so it now
+  dials only the *shell* to translucent (`opacity 0.18`, `depthWrite: false`) via a new
+  `SceneBuilder.setXrayMode` and a matching `xrayMode` prop on `Canvas3D`, keeping every
+  MEP system drawn either way. Rebuilt the viewer layout: dropped the left `DetailSidebar`
+  and right `RightDock` in favour of a horizontal `ProjectDetailTopBar` (identity + tabs +
+  capture provenance) and two floating popovers (`FloatingSidePanel` for Layers and
+  Measurements) triggered from pills next to Export. Bottom-bar toggle relabelled to
+  `X-Ray`. `RightDock.tsx` deleted.
 - **2026-09-09** — Added electrical wiring to the 3D scene (5 colored wire bundles in the
   cable tray as `TubeGeometry` along a Catmull-Rom curve with per-drop dips + 2-wire
   drops to socket boxes + torus straps) and a **Systems On/Off** X-Ray toggle in the

@@ -29,6 +29,8 @@ interface Canvas3DProps {
   viewMode: ViewMode;
   interactionMode: InteractionMode;
   isMeasureMode: boolean;
+  /** Dials the room shell translucent so the plenum reads through it. */
+  xrayMode?: boolean;
   onMeasurementsChange: (measurements: MeasurementRecord[]) => void;
   /** Live XYZ readout under the cursor, surfaced so the shell can place it. */
   onHoverCoordinate?: (coordinate: string | null) => void;
@@ -82,6 +84,7 @@ export const Canvas3D = forwardRef<Canvas3DHandle, Canvas3DProps>(
       viewMode,
       interactionMode,
       isMeasureMode,
+      xrayMode = false,
       onMeasurementsChange,
       onHoverCoordinate,
       onOrbitChange,
@@ -522,6 +525,11 @@ export const Canvas3D = forwardRef<Canvas3DHandle, Canvas3DProps>(
     useEffect(() => {
       sceneBuilderRef.current?.setRenderMode(renderMode);
     }, [renderMode]);
+
+    // X-Ray shell — walls + ceiling go translucent so the plenum reads through.
+    useEffect(() => {
+      sceneBuilderRef.current?.setXrayMode(xrayMode);
+    }, [xrayMode]);
 
     // View mode — reframes the camera and swaps projection for 2D
     useEffect(() => {

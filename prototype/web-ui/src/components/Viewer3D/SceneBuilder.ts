@@ -33,6 +33,13 @@ export class SceneBuilder {
   /** Every solid material, so wireframe can be toggled without a scene walk. */
   private solidMaterials: THREE.MeshStandardMaterial[] = [];
 
+  /**
+   * Shell (walls / ceiling / floor / doors / skirtings) materials — separated so
+   * X-Ray mode can dial them to translucent without touching the MEP colours.
+   */
+  private shellMaterials: THREE.MeshStandardMaterial[] = [];
+  private xrayEnabled = false;
+
   private layers: SemanticLayersState = {
     base: true,
     pipes: true,
@@ -78,6 +85,16 @@ export class SceneBuilder {
     return material;
   }
 
+  /**
+   * Same as `register` but also tags the material as part of the room shell so
+   * X-Ray mode can dial its opacity independently of the MEP systems.
+   */
+  private registerShell<T extends THREE.MeshStandardMaterial>(material: T): T {
+    this.solidMaterials.push(material);
+    this.shellMaterials.push(material);
+    return material;
+  }
+
   private setupLighting() {
     // Sky/ground bounce does most of the work on a light ground plane and keeps
     // the architectural surfaces from going flat grey.
@@ -120,7 +137,7 @@ export class SceneBuilder {
 
     // Floor slab (receives shadows for the pipe/duct under-shadow story)
     const floorGeo = new THREE.PlaneGeometry(12, 12);
-    const floorMat = this.register(
+    const floorMat = this.registerShell(
       new THREE.MeshStandardMaterial({
         color: 0xe6ecf3,
         roughness: 0.95,
@@ -153,8 +170,8 @@ export class SceneBuilder {
       this.baseGroup.add(new THREE.Line(g2, tileMat));
     }
 
-    // Wall material
-    const wallMat = this.register(
+    // Wall material — registered as shell so X-Ray can dial its opacity.
+    const wallMat = this.registerShell(
       new THREE.MeshStandardMaterial({
         color: 0xeef2f7,
         roughness: 0.95,
@@ -185,6 +202,32 @@ export class SceneBuilder {
     rightWall.receiveShadow = true;
     this.baseGroup.add(rightWall);
     this.interactiveMeshes.push(rightWall);
+
+    // Front Wall — closes the room off. Turns transparent in X-Ray mode.
+    const frontWall = new THREE.Mesh(new THREE.PlaneGeometry(12, 4), wallMat);
+    frontWall.rotation.y = Math.PI;
+    frontWall.position.set(0, 2, 6);
+    frontWall.receiveShadow = true;
+    this.baseGroup.add(frontWall);
+    this.interactiveMeshes.push(frontWall);
+
+    // Ceiling — sits just above the beams so the MEP plenum lives between the
+    // slab and the ceiling in the traditional way. Solid in normal view, dialed
+    // to translucent in X-Ray so you can see the pipes/ducts/cables above it.
+    const ceilingMat = this.registerShell(
+      new THREE.MeshStandardMaterial({
+        color: 0xf3f5f9,
+        roughness: 0.9,
+        metalness: 0.0,
+        side: THREE.DoubleSide,
+      })
+    );
+    const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), ceilingMat);
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.set(0, 4, 0);
+    ceiling.receiveShadow = true;
+    this.baseGroup.add(ceiling);
+    this.interactiveMeshes.push(ceiling);
 
     // Skirting on all three walls
     const skirtingMat = this.register(
@@ -467,21 +510,6 @@ export class SceneBuilder {
       this.pipesGroup.add(clamp);
     }
 
-    // A branch pipe taking off toward the door side
-    const branch = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.06, 0.06, 4.5, 16),
-      pipeMat
-    );
-    branch.rotation.x = Math.PI / 2;
-    branch.position.set(3.6, 2.85, 0);
-    branch.castShadow = true;
-    this.pipesGroup.add(branch);
-    this.interactiveMeshes.push(branch);
-
-    const branchElbow = new THREE.Mesh(elbowGeo, pipeMat);
-    branchElbow.position.set(3.6, 2.85, -2.36);
-    branchElbow.rotation.x = -Math.PI / 2;
-    this.pipesGroup.add(branchElbow);
   }
 
   private buildConduits() {
@@ -919,6 +947,28 @@ export class SceneBuilder {
   public setRenderMode(mode: RenderMode) {
     this.renderMode = mode;
     this.applyState();
+  }
+
+  /**
+   * X-Ray mode dials the room shell (floor / walls / ceiling) down to a
+   * translucent pass-through, so the pipes, ducts, conduits, wires and
+   * sprinklers hidden in the plenum stay visible without deleting the room
+   * around them.
+   */
+  public setXrayMode(enabled: boolean) {
+    this.xrayEnabled = enabled;
+    const opacity = enabled ? 0.18 : 1.0;
+    for (const mat of this.shellMaterials) {
+      mat.transparent = enabled;
+      mat.opacity = opacity;
+      // Depth writes off in x-ray so ceiling/walls don't clip the pipes behind.
+      mat.depthWrite = !enabled;
+      mat.needsUpdate = true;
+    }
+  }
+
+  public isXrayEnabled(): boolean {
+    return this.xrayEnabled;
   }
 
   /**

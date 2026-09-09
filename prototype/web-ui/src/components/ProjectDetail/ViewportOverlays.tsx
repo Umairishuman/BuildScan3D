@@ -309,13 +309,14 @@ export const ViewportBottomBar: React.FC<ViewportBottomBarProps> = ({
 
   return (
     <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/95 backdrop-blur-md border border-[#e2e8f0] shadow-md">
-      {/* Systems (X-ray) toggle — flips every MEP layer on/off at once. */}
+      {/* X-Ray toggle — dials the room shell translucent so the plenum reads
+          through it. Pipes / ducts / conduits stay drawn either way. */}
       <button
         onClick={onToggleSystems}
         title={
           systemsVisible
-            ? "Hide interior systems (pipes, ducts, conduits, sprinklers)"
-            : "Show interior systems (pipes, ducts, conduits, sprinklers)"
+            ? "Restore opaque walls & ceiling"
+            : "See through walls & ceiling to reveal pipes, ducts and wiring"
         }
         aria-pressed={systemsVisible}
         className={`flex items-center gap-1.5 pl-2 pr-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
@@ -326,7 +327,7 @@ export const ViewportBottomBar: React.FC<ViewportBottomBarProps> = ({
       >
         <Boxes className="w-4 h-4" />
         <span className="text-[11px] font-bold">
-          {systemsVisible ? "Systems On" : "Systems Off"}
+          {systemsVisible ? "X-Ray On" : "X-Ray"}
         </span>
       </button>
 
