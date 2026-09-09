@@ -481,6 +481,97 @@ export const MOCK_SAVED_MEASUREMENTS: SavedMeasurement[] = [
 ];
 
 /* -------------------------------------------------------------------------- */
+/* Comparison view (S4b)                                                      */
+/* -------------------------------------------------------------------------- */
+
+export interface ComparisonScan {
+  id: string;
+  label: string;
+  date: string;
+  hexColor: string;   // tint for the render + legend swatch
+  gaussians: string;
+  captureDevice: string;
+}
+
+export interface ComparisonPair {
+  older: ComparisonScan;
+  newer: ComparisonScan;
+}
+
+export const MOCK_COMPARISON_PAIR: ComparisonPair = {
+  older: {
+    id: "scan-a",
+    label: "Scan A",
+    date: "Apr 12, 2025",
+    hexColor: "#2563eb",
+    gaussians: "1,180,320",
+    captureDevice: "Pixel 9 Pro (ARCore 120Hz)",
+  },
+  newer: {
+    id: "scan-b",
+    label: "Scan B",
+    date: "Apr 28, 2025",
+    hexColor: "#059669",
+    gaussians: "1,248,320",
+    captureDevice: "Pixel 9 Pro (ARCore 120Hz)",
+  },
+};
+
+export type ChangeType = "added" | "removed" | "modified";
+
+export interface ChangeLogEntry {
+  id: string;
+  element: string;
+  changeType: ChangeType;
+  layer: string;
+  delta: string;
+  flagged: boolean;
+}
+
+export const MOCK_CHANGE_LOG: ChangeLogEntry[] = [
+  {
+    id: "cl-1",
+    element: "HVAC Duct Run 3B",
+    changeType: "modified",
+    layer: "HVAC",
+    delta: "+0.24 m offset",
+    flagged: true,
+  },
+  {
+    id: "cl-2",
+    element: "Sprinkler Head SP-042",
+    changeType: "added",
+    layer: "Fire Protection",
+    delta: "+1 element",
+    flagged: false,
+  },
+  {
+    id: "cl-3",
+    element: "Conduit Run E-14",
+    changeType: "removed",
+    layer: "Electrical",
+    delta: "-3.20 m routing",
+    flagged: true,
+  },
+  {
+    id: "cl-4",
+    element: "Chilled Water Pipe P-08",
+    changeType: "modified",
+    layer: "Plumbing",
+    delta: "+12 mm OD",
+    flagged: false,
+  },
+  {
+    id: "cl-5",
+    element: "Support Bracket B-201",
+    changeType: "added",
+    layer: "Structural",
+    delta: "+1 element",
+    flagged: false,
+  },
+];
+
+/* -------------------------------------------------------------------------- */
 /* Notifications (S6)                                                         */
 /* -------------------------------------------------------------------------- */
 
