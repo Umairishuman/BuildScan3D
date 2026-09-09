@@ -6,15 +6,14 @@ import Image from "next/image";
 import { Search, Bell, ChevronDown, Menu, X } from "lucide-react";
 
 interface NavbarProps {
-  onOpenNewCapture: () => void;
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
+  /** Omit on screens that have no searchable list; the field renders read-only. */
+  searchQuery?: string;
+  onSearchChange?: (q: string) => void;
   isMenuOpen?: boolean;
   onToggleMenu?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
-  onOpenNewCapture,
   searchQuery,
   onSearchChange,
   isMenuOpen = false,
@@ -76,8 +75,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Search className="w-3.5 h-3.5 text-[#94a3b8] absolute left-3.5 top-2.5 pointer-events-none" />
           <input
             type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={searchQuery ?? ""}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+            readOnly={!onSearchChange}
             placeholder="Search projects, scans, or sites..."
             className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-[#e2e8f0] rounded-full text-xs text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#2563eb] focus:bg-white transition-all shadow-inner"
           />
