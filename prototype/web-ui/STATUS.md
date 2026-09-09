@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-09-09 (Step 6) · Branch: `prototype`
+Last updated: 2026-09-09 (Dashboard hero redesign) · Branch: `prototype`
 
 ---
 
@@ -83,6 +83,8 @@ purpose.** Do not "fix" them back.
 | D5 | **"2D" view mode is a true orthographic top-down plan**, distinct from "Top" (which stays perspective). | |
 | D6 | **Keep Geist + Geist Mono.** Do **not** switch to Inter / JetBrains Mono. | The spec §1 asks for Inter + JetBrains Mono. The user explicitly declined. |
 | D7 | **Floor-plan artwork is hand-authored inline SVG.** Do not scrape or download a blueprint image. | Licensing risk on an FYP submission, and SVG lets status nodes anchor to real room geometry. |
+| D8 | **`/dashboard` is a project-workspace hero** for the featured project (`sector-4-mep`), not a project list. The old project-grid dashboard now lives at `/projects`. | User redesign brief (dashboard ultimate redesign.png). The new dashboard uses its own top bar with search + four status pills (Metric Verified · 3DGS Rendering Active · AR Spatial Syncing · Awaiting Point Cloud) rather than the shared `AppShell`. Hamburger still opens the drawer `Sidebar` so nav is preserved. |
+| D9 | **Hero canvas uses a static PNG** (`/images/dashboard background.png`) rather than the live Three.js scene. | The reference render is a marketing-grade isometric that the WebGL scene can't match yet; the real 3D viewer stays at `/viewer/[id]`. |
 
 ---
 
@@ -145,6 +147,30 @@ button, New Capture modal, job-status modal. See §6 for the unfinished list-vie
 `dashboard/page.tsx` (consumes AppShell).
 **Fixed:** clicking a Ready/Complete site in Recent Sites previously did nothing.
 **Verified:** tsc clean · build ok · eslint 0 errors.
+
+### Dashboard hero redesign ✅ (out-of-order — user brief)
+**Brief:** `public/images/dashbaord ultimate redesign.png` — a workspace-style dashboard
+featuring one project (Sector 4 MEP Room) with a big hero render, floating tool overlays, a
+right column of project stats, and a scans strip along the bottom. Uses
+`public/images/dashboard background.png` as the render.
+
+**Created:** `components/DashboardHome/TopBar.tsx` (bespoke top bar: hamburger + logo +
+search-with-⌘K + 4 status pills + notifications + user block), `HeroCanvas.tsx` (background
+image + project identity card + Orbit/Pan/Measure/Section/Compare tool pill + 2D/3D switch +
+vertical icon rail + 3 measurement badges + compass rose + floor selector F5–B1 with mini
+plan), `ProjectSidebar.tsx` (date button + Export + Project Overview card with 74% progress
+bar + Total/Processed/Pending trio + Computer Vision Pipeline list with per-step status +
+Quick Stats 2×2 grid), `ScansStrip.tsx` (Scans/Floor Plans/Reports tab strip + 6-thumb grid).
+**Created:** `app/projects/page.tsx` — the previous project-grid dashboard, moved verbatim
+except for `activeNav="projects"` and a new title component-of-record.
+**Rewrote:** `app/dashboard/page.tsx` — composes the new hero layout, keeps the drawer
+`Sidebar` for hamburger nav.
+**Modified:** `lib/navigation.ts` — `projects` `href` flipped from `null` to `/projects` so the
+menu item works.
+
+**Verified:** `npx tsc --noEmit` silent · `npx next build` compiles 6 routes (adds
+`○ /projects`) · `npx eslint src` reports 0 errors + 4 known warnings · dev-server smoke:
+`/dashboard`, `/projects`, `/viewer/*`, `/floorplan/*` all 200, bad id → 404.
 
 ### Step 6 — S4b Comparison View ✅
 **Created:** `src/components/ProjectDetail/ComparisonView.tsx` — full-width workspace shown
@@ -296,7 +322,8 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | 4 pre-existing lint warnings | `ExportModal.tsx:29`, `FloorPlanView.tsx:6` | Unused `filename`, `Layers`, `Eye`, `Activity`. Harmless; clean up when touching those files. |
 | Non-functional controls | dashboard date-range button, `View all activity →` footer link in the notifications panel | Bell is now wired (Step 5); date-range button and `View all` link stay stubs until later steps. |
 | Search is shallow | `dashboard/page.tsx` | Filters name/block/floor only. |
-| **Dashboard floor-plan tab still live** | `dashboard/page.tsx` + `components/FloorPlanView.tsx` | The old dashboard "Floor Plan" tab renders abstract rectangles from `MOCK_FLOOR_PLAN_SECTORS`. Superseded by the new `/floorplan/[id]` route; retire the tab and delete `FloorPlanView.tsx` next time the dashboard is touched. |
+| **Dashboard floor-plan tab still live** | `projects/page.tsx` + `components/FloorPlanView.tsx` | The old project-grid page (now at `/projects`) keeps its "Floor Plan" tab rendering abstract rectangles from `MOCK_FLOOR_PLAN_SECTORS`. Superseded by the new `/floorplan/[id]` route; retire the tab and delete `FloorPlanView.tsx` next time `/projects` is touched. |
+| Dashboard hero controls are decorative | `components/DashboardHome/*` | The tool pill (Orbit/Pan/Measure/…), 2D/3D toggle, floor selector, icon rail, and Export button all update local state or route to `/viewer/[id]`, but they don't drive a live scene — the hero is a static PNG (D9). Wire them to real logic if the hero ever gets a real canvas. |
 | Every floor-plan room opens the same 3D model | `components/FloorPlan/FloorPlanCanvas.tsx` (`openRoom`) | POC scope — clicking any room routes to the parent project's own `/viewer/[id]` rather than a per-room scan. Wire per-room `targetProjectId` on `FloorPlanRoom` when real per-room captures land. |
 | Non-length measurement types are inert | `ProjectDetail/MeasurementsPanel.tsx` (Tools tab) | The five-chip grid shows length/height/pipe/width/beam but only `length` maps to a canvas mode — the others render for demo completeness and ship in Stage 5. |
 | Saved-measurement overflow menu is inert | `ProjectDetail/MeasurementsPanel.tsx` (Saved tab) | The `…` button on saved rows is present but not wired (no rename/export/delete actions yet). |
@@ -309,7 +336,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | # | Screen | Status |
 |---|---|---|
 | S1 | Sign In | ✅ Done |
-| S2 | All Projects dashboard | ✅ Done (list view outstanding) |
+| S2 | All Projects dashboard | ✅ Done — **moved to `/projects`**. `/dashboard` is now the redesigned hero (see D8). |
 | S2.5 | Floor Plan | ✅ Done (POC: all rooms route to the parent project's viewer) |
 | S3/S4 | Project Detail Shell + 3D Viewer | ✅ Done |
 | S4a | Measurements panel | ✅ Done |
