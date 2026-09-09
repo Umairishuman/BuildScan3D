@@ -3,29 +3,17 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
+import { NewCaptureModal } from "@/components/NewCaptureModal";
 import { DashboardTopBar } from "@/components/DashboardHome/TopBar";
-import { HeroCanvas } from "@/components/DashboardHome/HeroCanvas";
-import { ProjectSidebar } from "@/components/DashboardHome/ProjectSidebar";
-import { ScansStrip } from "@/components/DashboardHome/ScansStrip";
+import { DashboardOverview } from "@/components/DashboardHome/Overview";
+import { ActivityColumn } from "@/components/DashboardHome/ActivityColumn";
 import { NavItem } from "@/lib/navigation";
-import { MOCK_PROJECTS } from "@/lib/mockData";
-
-type CanvasTool = "orbit" | "pan" | "measure" | "section" | "compare";
-
-/** The featured project this dashboard is a workspace for. */
-const FEATURED_PROJECT_ID = "sector-4-mep";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTool, setActiveTool] = useState<CanvasTool>("orbit");
-  const [viewMode, setViewMode] = useState<"2d" | "3d">("3d");
-  const [activeFloor, setActiveFloor] = useState("F3");
-
-  const featured =
-    MOCK_PROJECTS.find((p) => p.id === FEATURED_PROJECT_ID) ?? MOCK_PROJECTS[0];
-  const projectHref = `/viewer/${featured.id}`;
+  const [isNewCaptureOpen, setIsNewCaptureOpen] = useState(false);
 
   const handleSelectNav = (item: NavItem) => {
     setIsMenuOpen(false);
@@ -35,10 +23,6 @@ export default function DashboardPage() {
   const handleOpenRecentSite = (projectId: string) => {
     setIsMenuOpen(false);
     router.push(`/viewer/${projectId}`);
-  };
-
-  const handleExport = () => {
-    router.push(projectHref);
   };
 
   return (
@@ -58,32 +42,21 @@ export default function DashboardPage() {
         onOpenRecentSite={handleOpenRecentSite}
       />
 
-      {/* Body */}
-      <main className="flex-1 min-h-0 px-4 sm:px-6 py-4 flex flex-col gap-3 overflow-hidden">
-        {/* Top: hero + right sidebar */}
-        <div className="flex-1 min-h-0 flex gap-3">
-          <div className="flex-1 min-w-0 min-h-[520px]">
-            <HeroCanvas
-              activeTool={activeTool}
-              onSelectTool={setActiveTool}
-              viewMode={viewMode}
-              onSelectViewMode={setViewMode}
-              activeFloor={activeFloor}
-              onSelectFloor={setActiveFloor}
-              projectHref={projectHref}
+      <main className="flex-1 px-4 sm:px-6 py-5">
+        <div className="max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-4">
+          <div className="flex-1 min-w-0">
+            <DashboardOverview
+              onQuickCapture={() => setIsNewCaptureOpen(true)}
             />
           </div>
-          <ProjectSidebar
-            projectHref={projectHref}
-            onExport={handleExport}
-          />
-        </div>
-
-        {/* Bottom scans strip */}
-        <div className="shrink-0">
-          <ScansStrip />
+          <ActivityColumn />
         </div>
       </main>
+
+      <NewCaptureModal
+        isOpen={isNewCaptureOpen}
+        onClose={() => setIsNewCaptureOpen(false)}
+      />
     </div>
   );
 }

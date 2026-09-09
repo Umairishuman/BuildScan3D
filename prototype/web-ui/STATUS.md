@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-09-09 (Dashboard hero redesign) · Branch: `prototype`
+Last updated: 2026-09-09 (Dashboard → Operations Overview) · Branch: `prototype`
 
 ---
 
@@ -83,8 +83,8 @@ purpose.** Do not "fix" them back.
 | D5 | **"2D" view mode is a true orthographic top-down plan**, distinct from "Top" (which stays perspective). | |
 | D6 | **Keep Geist + Geist Mono.** Do **not** switch to Inter / JetBrains Mono. | The spec §1 asks for Inter + JetBrains Mono. The user explicitly declined. |
 | D7 | **Floor-plan artwork is hand-authored inline SVG.** Do not scrape or download a blueprint image. | Licensing risk on an FYP submission, and SVG lets status nodes anchor to real room geometry. |
-| D8 | **`/dashboard` is a project-workspace hero** for the featured project (`sector-4-mep`), not a project list. The old project-grid dashboard now lives at `/projects`. | User redesign brief (dashboard ultimate redesign.png). The new dashboard uses its own top bar with search + four status pills (Metric Verified · 3DGS Rendering Active · AR Spatial Syncing · Awaiting Point Cloud) rather than the shared `AppShell`. Hamburger still opens the drawer `Sidebar` so nav is preserved. |
-| D9 | **Hero canvas uses a static PNG** (`/images/dashboard background.png`) rather than the live Three.js scene. | The reference render is a marketing-grade isometric that the WebGL scene can't match yet; the real 3D viewer stays at `/viewer/[id]`. |
+| D8 | **`/dashboard` is an Operations Overview**, not a project-workspace hero and not a project list. It shows portfolio KPIs, a featured active scan, quick actions, recent projects, an activity feed, and worker status. The full project grid lives at `/projects` (Projects nav item). | The initial "workspace hero" redesign duplicated the flow already covered by `/projects → /viewer/[id]`, leaving the landing page without genuine dashboard value. Keeps the bespoke top bar (search + four status pills) built in the previous iteration. Hamburger still opens the drawer `Sidebar` so nav is preserved. |
+| D9 | **The featured project card on `/dashboard` uses the static hero PNG** (`/images/dashboard background.png`) as its render, small. | The reference render is a marketing-grade isometric that the WebGL scene can't match yet; the real 3D viewer stays at `/viewer/[id]`. |
 
 ---
 
@@ -148,7 +148,34 @@ button, New Capture modal, job-status modal. See §6 for the unfinished list-vie
 **Fixed:** clicking a Ready/Complete site in Recent Sites previously did nothing.
 **Verified:** tsc clean · build ok · eslint 0 errors.
 
-### Dashboard hero redesign ✅ (out-of-order — user brief)
+### Dashboard → Operations Overview ✅ (out-of-order — user brief)
+**Follow-up to the workspace-hero pivot.** The hero landing showed one project prettily but
+duplicated `/projects → /viewer/[id]`, so `/dashboard` was rebuilt as a real portfolio landing
+page. Kept the bespoke top bar (search + four status pills) from the previous iteration.
+
+**Deleted:** `components/DashboardHome/HeroCanvas.tsx`, `ProjectSidebar.tsx`, `ScansStrip.tsx`
+(the single-project-focused pieces from the earlier version).
+**Created:** `components/DashboardHome/Overview.tsx` (page title bar + KPI row × 4 +
+FeaturedActiveCard + QuickActionsCard + Recent Projects 3-mini-card strip) and
+`ActivityColumn.tsx` (Recent Activity feed reusing `MOCK_NOTIFICATIONS` + WorkerStatusCard
+reusing `MOCK_PIPELINE_STEPS` — worker identity, current-step progress bar, queue list).
+**Rewrote:** `app/dashboard/page.tsx` — composes `DashboardOverview` in the left column and
+`ActivityColumn` (360px) on the right; wires `NewCaptureModal`.
+
+Everything is derived from real fixtures:
+- KPIs count `MOCK_PROJECTS.length` (Total), `.filter(status==="processing")` (Active),
+  ready+complete (Ready Models), and `MOCK_CHANGE_LOG.filter(flagged)` (Flagged Issues).
+- Featured Active picks the first processing project, falls back to the first project.
+- Recent Projects excludes the featured project and shows the next 3 — clicking a
+  ready/complete card opens `/viewer/[id]`, others link back to `/projects`.
+- Activity feed reuses the 5 most-recent notification fixtures.
+- Worker Status reuses the pipeline steps: current in-progress step shows its progress bar +
+  detail line; the queue list strikes through completed steps and pulses the active one.
+
+**Verified:** `npx tsc --noEmit` silent · `npx next build` compiles 6 routes · `npx eslint src`
+0 errors + 4 known warnings.
+
+### Dashboard hero redesign ✅ (superseded — see above)
 **Brief:** `public/images/dashbaord ultimate redesign.png` — a workspace-style dashboard
 featuring one project (Sector 4 MEP Room) with a big hero render, floating tool overlays, a
 right column of project stats, and a scans strip along the bottom. Uses
@@ -323,7 +350,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | Non-functional controls | dashboard date-range button, `View all activity →` footer link in the notifications panel | Bell is now wired (Step 5); date-range button and `View all` link stay stubs until later steps. |
 | Search is shallow | `dashboard/page.tsx` | Filters name/block/floor only. |
 | **Dashboard floor-plan tab still live** | `projects/page.tsx` + `components/FloorPlanView.tsx` | The old project-grid page (now at `/projects`) keeps its "Floor Plan" tab rendering abstract rectangles from `MOCK_FLOOR_PLAN_SECTORS`. Superseded by the new `/floorplan/[id]` route; retire the tab and delete `FloorPlanView.tsx` next time `/projects` is touched. |
-| Dashboard hero controls are decorative | `components/DashboardHome/*` | The tool pill (Orbit/Pan/Measure/…), 2D/3D toggle, floor selector, icon rail, and Export button all update local state or route to `/viewer/[id]`, but they don't drive a live scene — the hero is a static PNG (D9). Wire them to real logic if the hero ever gets a real canvas. |
+| Dashboard KPI deltas are static strings | `components/DashboardHome/Overview.tsx` | Each KPI card shows a helper caption ("+2 this month", "Training on RTX 4090", …). The number itself is real (derived from fixtures) but the caption is fixed text — swap in real trend data when there is any. |
 | Every floor-plan room opens the same 3D model | `components/FloorPlan/FloorPlanCanvas.tsx` (`openRoom`) | POC scope — clicking any room routes to the parent project's own `/viewer/[id]` rather than a per-room scan. Wire per-room `targetProjectId` on `FloorPlanRoom` when real per-room captures land. |
 | Non-length measurement types are inert | `ProjectDetail/MeasurementsPanel.tsx` (Tools tab) | The five-chip grid shows length/height/pipe/width/beam but only `length` maps to a canvas mode — the others render for demo completeness and ship in Stage 5. |
 | Saved-measurement overflow menu is inert | `ProjectDetail/MeasurementsPanel.tsx` (Saved tab) | The `…` button on saved rows is present but not wired (no rename/export/delete actions yet). |
@@ -350,6 +377,16 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-09-09** — Dashboard → Operations Overview: reverted the workspace-hero landing to a
+  real portfolio dashboard (KPIs · Featured Active · Quick Actions · Recent Projects · Recent
+  Activity · Worker Status), all derived from existing fixtures. Kept the bespoke top bar with
+  search + four status pills. Decision D8 replaced.
+- **2026-09-09** — Dashboard hero redesign (out-of-order, user brief): `/dashboard` becomes a
+  project-workspace hero for Sector 4 MEP Room built from
+  `public/images/dashboard background.png`, with tool pill, 2D/3D toggle, icon rail,
+  measurement callouts, compass, floor selector, right column of project stats + pipeline +
+  quick stats, and bottom Scans/Plans/Reports strip. Old project-grid moves to `/projects`;
+  Projects nav item finally has a real href. Decisions D8 + D9 recorded.
 - **2026-09-09** — Step 6: S4b Comparison View — Overlay wipe + Split View toggle, draggable
   keyboard-accessible wipe handle, hand-drawn isometric MEP scenes tinted per scan showing real
   differences (shifted duct, thicker pipe, removed conduit, added sprinkler/bracket), change-log
