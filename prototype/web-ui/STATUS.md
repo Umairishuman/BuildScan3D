@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-09-09 (Viewer restructure + real X-Ray) · Branch: `prototype`
+Last updated: 2026-09-09 (Plenum-hidden MEP; X-Ray reveals) · Branch: `prototype`
 
 ---
 
@@ -148,7 +148,46 @@ button, New Capture modal, job-status modal. See §6 for the unfinished list-vie
 **Fixed:** clicking a Ready/Complete site in Recent Sites previously did nothing.
 **Verified:** tsc clean · build ok · eslint 0 errors.
 
-### Viewer restructure + real X-Ray (user asks) ✅
+### Plenum-hidden MEP + X-Ray reveal ✅
+The earlier X-Ray change dialed the shell translucent, but the systems were still
+below the ceiling — visible in either mode. Confirmed with user via
+`AskUserQuestion` that they wanted a **drop ceiling at 3m with systems lifted
+into the plenum above**, and **sprinkler / diffuser plates poking through the
+ceiling** in normal view.
+
+**`SceneBuilder` changes:**
+- **Drop ceiling lowered from y=4 to y=2.7** with a faint 2×2 ft tile grid
+  painted on top. Structural walls still 4m tall so the plenum stays enclosed
+  from every outside angle. Beams (y=3.8), tie beams (y=3.95), ceiling grid
+  (y=3.98) all sit above the drop ceiling now — hidden in normal view.
+- **Pipes lifted into the plenum:** supply header 2.85 → 3.4, return 2.4 →
+  2.95. Insulation sleeves, flanges, hangers repositioned accordingly. The
+  exposed risers, valve wheels + stems, and connecting elbows are **removed**
+  — in a finished room those live inside a chase.
+- **HVAC diffusers rebuilt** so the collar bridges from the duct bottom
+  (y=3.075) down through the ceiling to a plate at y=2.62. Plates + fins
+  visible below the ceiling in normal view. Return grille got the same
+  collar-through-ceiling treatment.
+- **Sprinkler drop-heads extended** — brass body now 1.05m long, spanning
+  y=2.575 to y=3.625, so the deflector plate (y=2.55) and fusible bulb
+  (y=2.57) hang visibly below the ceiling.
+- Electrical cable tray + conduits + wires already sat at y≥3.16, so no
+  vertical change needed — all naturally hidden by the drop ceiling.
+
+**Result in normal view:** clean 2.7m finished room — walls, floor, door
+frame, wall-mounted control panel with LEDs, three diffuser plates in the
+ceiling, five sprinkler heads hanging from the ceiling, one return grille.
+Everything else is hidden.
+
+**Result in X-Ray view:** shell dials to opacity 0.18, revealing the full
+plenum: chilled-water supply + return headers with insulation and hangers,
+HVAC main duct + branch + transition + diffuser collars, electrical cable
+tray with 5 colored wire bundles, sprinkler pipe, beams, and columns
+passing through.
+
+**Verified:** typecheck silent · build 6/6 · lint 0 errors + 1 known warning.
+
+### Viewer restructure + real X-Ray (user asks) ✅ (superseded — see above)
 - **3D shell:** `SceneBuilder.buildBaseRoom()` now closes the room off with a **front
   wall** and a **ceiling** at y=4. Shell materials (floor / all 4 walls / ceiling) are
   tracked in a new `shellMaterials[]` via a `registerShell()` helper. Removed the branch
@@ -482,6 +521,13 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-09-09** — Plenum-hidden MEP + X-Ray reveal: dropped the ceiling from
+  y=4 to y=2.7 (added tile grid), lifted the pipe headers into the plenum
+  (supply 2.85→3.4, return 2.4→2.95), removed the exposed risers/valves/elbows
+  that don't belong in a finished room, extended HVAC diffuser collars and
+  sprinkler drop bodies so their plates/deflectors poke visibly below the
+  ceiling. Normal view = clean finished room; X-Ray reveals the full MEP
+  plenum above.
 - **2026-09-09** — Viewer restructure (user brief): closed the 3D room off with a front
   wall + ceiling; removed the mis-placed branch pipe; rewrote the X-Ray toggle so it now
   dials only the *shell* to translucent (`opacity 0.18`, `depthWrite: false`) via a new

@@ -222,12 +222,34 @@ export class SceneBuilder {
         side: THREE.DoubleSide,
       })
     );
+    // Drop ceiling at 2.7m — real finished-room height. Everything above lives
+    // in the 1.3m plenum between this ceiling and the structural slab (walls
+    // still tall to 4m so the plenum stays enclosed from any outside angle).
     const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), ceilingMat);
     ceiling.rotation.x = Math.PI / 2;
-    ceiling.position.set(0, 4, 0);
+    ceiling.position.set(0, 2.7, 0);
     ceiling.receiveShadow = true;
     this.baseGroup.add(ceiling);
     this.interactiveMeshes.push(ceiling);
+
+    // Faint ceiling-tile grid painted onto the drop ceiling (2×2 ft tiles)
+    const tileLineMat = new THREE.LineBasicMaterial({
+      color: 0xcbd5e1,
+      transparent: true,
+      opacity: 0.55,
+    });
+    for (let i = -6; i <= 6; i += 0.6) {
+      const gx = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-6, 2.702, i),
+        new THREE.Vector3(6, 2.702, i),
+      ]);
+      const gz = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(i, 2.702, -6),
+        new THREE.Vector3(i, 2.702, 6),
+      ]);
+      this.baseGroup.add(new THREE.Line(gx, tileLineMat));
+      this.baseGroup.add(new THREE.Line(gz, tileLineMat));
+    }
 
     // Skirting on all three walls
     const skirtingMat = this.register(
@@ -406,85 +428,59 @@ export class SceneBuilder {
       })
     );
 
-    // Main horizontal pipe header (supply)
+    // Both headers now live entirely in the ceiling plenum (above y=2.7). The
+    // exposed risers/valves have been removed — in a finished room they'd sit
+    // hidden inside a chase, not on the wall.
     const mainPipeGeo = new THREE.CylinderGeometry(0.12, 0.12, 10, 24);
+
+    // Supply header (chilled water flow)
     const mainPipe = new THREE.Mesh(mainPipeGeo, pipeMat);
     mainPipe.rotation.z = Math.PI / 2;
-    mainPipe.position.set(0, 2.85, -2.5);
+    mainPipe.position.set(0, 3.4, -2.5);
     mainPipe.castShadow = true;
     this.pipesGroup.add(mainPipe);
     this.interactiveMeshes.push(mainPipe);
 
-    // Return pipe header (lower)
+    // Return header (below supply, still above ceiling)
     const returnPipe = new THREE.Mesh(mainPipeGeo, pipeMat);
     returnPipe.rotation.z = Math.PI / 2;
-    returnPipe.position.set(0, 2.4, -2.5);
+    returnPipe.position.set(0, 2.95, -2.5);
     returnPipe.castShadow = true;
     this.pipesGroup.add(returnPipe);
     this.interactiveMeshes.push(returnPipe);
 
-    // Insulation sleeves at intervals along the supply header
+    // Insulation sleeves along the supply header
     for (const x of [-3.2, -1.4, 1.4, 3.2]) {
       const sleeve = new THREE.Mesh(
         new THREE.CylinderGeometry(0.16, 0.16, 0.6, 20),
         insulationMat
       );
       sleeve.rotation.z = Math.PI / 2;
-      sleeve.position.set(x, 2.85, -2.5);
+      sleeve.position.set(x, 3.4, -2.5);
       sleeve.castShadow = true;
       this.pipesGroup.add(sleeve);
       this.interactiveMeshes.push(sleeve);
     }
 
-    // Flanges where risers meet the header (paired collars for a real fitting look)
-    for (const x of [-2.5, 2.5]) {
+    // Short vertical jumpers linking supply to return, each with a flange
+    const jumperGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.45, 12);
+    for (const x of [-3.6, 3.6]) {
+      const jumper = new THREE.Mesh(jumperGeo, pipeMat);
+      jumper.position.set(x, 3.175, -2.5);
+      jumper.castShadow = true;
+      this.pipesGroup.add(jumper);
+      this.interactiveMeshes.push(jumper);
+
       const flange = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.16, 0.16, 0.05, 20),
+        new THREE.CylinderGeometry(0.11, 0.11, 0.04, 20),
         flangeMat
       );
-      flange.position.set(x, 2.72, -2.5);
+      flange.rotation.z = Math.PI / 2;
+      flange.position.set(x, 3.175, -2.5);
       this.pipesGroup.add(flange);
     }
 
-    // Vertical riser drops with elbow bends into the header
-    const riserGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.4, 18);
-    const elbowGeo = new THREE.TorusGeometry(0.14, 0.08, 12, 20, Math.PI / 2);
-    for (const x of [-2.5, 2.5]) {
-      const riser = new THREE.Mesh(riserGeo, pipeMat);
-      riser.position.set(x, 1.2, -2.5);
-      riser.castShadow = true;
-      this.pipesGroup.add(riser);
-      this.interactiveMeshes.push(riser);
-
-      // Elbow bending the vertical riser into the horizontal header
-      const elbow = new THREE.Mesh(elbowGeo, pipeMat);
-      elbow.position.set(x + (x < 0 ? 0.14 : -0.14), 2.4, -2.5);
-      elbow.rotation.z = x < 0 ? Math.PI / 2 : 0;
-      elbow.castShadow = true;
-      this.pipesGroup.add(elbow);
-      this.interactiveMeshes.push(elbow);
-    }
-
-    // Valve wheels on the risers
-    const valveGeo = new THREE.TorusGeometry(0.12, 0.025, 8, 24);
-    for (const x of [-2.5, 2.5]) {
-      const wheel = new THREE.Mesh(valveGeo, valveMat);
-      wheel.position.set(x, 1.8, -2.35);
-      wheel.castShadow = true;
-      this.pipesGroup.add(wheel);
-      this.interactiveMeshes.push(wheel);
-
-      // Valve stem
-      const stem = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.02, 0.02, 0.15, 12),
-        valveMat
-      );
-      stem.rotation.x = Math.PI / 2;
-      stem.position.set(x, 1.8, -2.42);
-      this.pipesGroup.add(stem);
-    }
-
-    // Pipe hangers strapping the header to the ceiling beam above
+    // Pipe hangers rodded up to the beam above
     const hangerMat = this.register(
       new THREE.MeshStandardMaterial({
         color: 0x64748b,
@@ -494,10 +490,10 @@ export class SceneBuilder {
     );
     for (const x of [-4, -1.2, 1.2, 4]) {
       const rod = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.015, 0.015, 1.05, 8),
+        new THREE.CylinderGeometry(0.015, 0.015, 0.5, 8),
         hangerMat
       );
-      rod.position.set(x, 3.35, -2.5);
+      rod.position.set(x, 3.65, -2.5);
       this.pipesGroup.add(rod);
 
       const clamp = new THREE.Mesh(
@@ -506,10 +502,12 @@ export class SceneBuilder {
       );
       clamp.rotation.x = Math.PI / 2;
       clamp.rotation.z = Math.PI / 2;
-      clamp.position.set(x, 2.85, -2.5);
+      clamp.position.set(x, 3.4, -2.5);
       this.pipesGroup.add(clamp);
     }
 
+    // Kept for palette consistency even though visible valves are omitted.
+    void valveMat;
   }
 
   private buildConduits() {
@@ -754,21 +752,25 @@ export class SceneBuilder {
     this.hvacGroup.add(branch);
     this.interactiveMeshes.push(branch);
 
-    // Three diffusers along the branch — proper diffuser plates + collars
+    // Three diffusers — collar bridges from the duct bottom down THROUGH the
+    // 2.7m ceiling, so the louvered plate sits just below the ceiling (visible
+    // in normal view, like a real supply diffuser).
     for (const z of [2.5, 3.5, 4.5]) {
+      // Long collar from duct bottom (y=3.075) down to just below ceiling.
       const collar = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.15, 0.15, 0.12, 20),
+        new THREE.CylinderGeometry(0.15, 0.15, 0.5, 20),
         hvacMat
       );
-      collar.position.set(2, 3.12, z);
+      collar.position.set(2, 2.85, z);
       collar.castShadow = true;
       this.hvacGroup.add(collar);
 
+      // Plate pokes below the ceiling
       const plate = new THREE.Mesh(
         new THREE.BoxGeometry(0.55, 0.04, 0.55),
         ventMat
       );
-      plate.position.set(2, 3.03, z);
+      plate.position.set(2, 2.62, z);
       plate.castShadow = true;
       this.hvacGroup.add(plate);
       this.interactiveMeshes.push(plate);
@@ -779,24 +781,33 @@ export class SceneBuilder {
           new THREE.BoxGeometry(0.5, 0.008, 0.04),
           bandMat
         );
-        fin.position.set(2, 3.03, z + i * 0.09);
+        fin.position.set(2, 2.62, z + i * 0.09);
         this.hvacGroup.add(fin);
       }
     }
 
-    // Return grille on the left of the main duct
+    // Return grille — collar + plate pattern, also pokes below the ceiling
+    const returnCollar = new THREE.Mesh(
+      new THREE.BoxGeometry(0.8, 0.5, 0.8),
+      hvacMat
+    );
+    returnCollar.position.set(-3.5, 2.85, 0.8);
+    returnCollar.castShadow = true;
+    this.hvacGroup.add(returnCollar);
+
     const returnGrille = new THREE.Mesh(
       new THREE.BoxGeometry(0.8, 0.04, 0.8),
       ventMat
     );
-    returnGrille.position.set(-3.5, 3.05, 0.8);
+    returnGrille.position.set(-3.5, 2.62, 0.8);
     this.hvacGroup.add(returnGrille);
+    this.interactiveMeshes.push(returnGrille);
     for (let i = -3; i <= 3; i++) {
       const fin = new THREE.Mesh(
         new THREE.BoxGeometry(0.72, 0.008, 0.05),
         bandMat
       );
-      fin.position.set(-3.5, 3.05, 0.8 + i * 0.11);
+      fin.position.set(-3.5, 2.62, 0.8 + i * 0.11);
       this.hvacGroup.add(fin);
     }
   }
@@ -839,32 +850,33 @@ export class SceneBuilder {
       this.fireGroup.add(rod);
     }
 
-    // Sprinkler drop-heads — cylinder body + deflector plate
+    // Sprinkler drop-heads — long brass drop from the pipe (y=3.65) down
+    // through the 2.7m ceiling so the deflector + bulb are visible below the
+    // ceiling in normal view (just like a real ceiling-mount sprinkler).
     for (let z = -4; z <= 4; z += 1.6) {
-      // Threaded body drops from the main line
       const body = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.03, 0.028, 0.14, 12),
+        new THREE.CylinderGeometry(0.03, 0.028, 1.05, 12),
         brassMat
       );
-      body.position.set(-3.5, 3.53, z);
+      body.position.set(-3.5, 3.1, z); // center; spans y=2.575 to y=3.625
       body.castShadow = true;
       this.fireGroup.add(body);
       this.interactiveMeshes.push(body);
 
-      // Deflector plate (the little red disc under the head)
+      // Deflector plate (the little red disc under the head) — below ceiling
       const deflector = new THREE.Mesh(
         new THREE.CylinderGeometry(0.06, 0.06, 0.008, 16),
         fireMat
       );
-      deflector.position.set(-3.5, 3.45, z);
+      deflector.position.set(-3.5, 2.55, z);
       this.fireGroup.add(deflector);
 
-      // Fusible link nub
+      // Fusible link nub — below ceiling
       const bulb = new THREE.Mesh(
         new THREE.SphereGeometry(0.018, 10, 10),
         fireMat
       );
-      bulb.position.set(-3.5, 3.47, z);
+      bulb.position.set(-3.5, 2.57, z);
       this.fireGroup.add(bulb);
     }
   }
