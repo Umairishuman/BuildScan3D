@@ -30,12 +30,12 @@ interface DetailTabItem {
 }
 
 export const DETAIL_TABS: readonly DetailTabItem[] = [
-  { id: "overview", label: "Overview", icon: LayoutPanelLeft, ready: false },
+  { id: "overview", label: "Overview", icon: LayoutPanelLeft, ready: true },
   { id: "viewer", label: "3D Viewer", icon: Box, ready: true },
   { id: "measurements", label: "Measurements", icon: Ruler, ready: false },
   { id: "history", label: "History", icon: History, ready: true },
-  { id: "files", label: "Files", icon: Files, ready: false },
-  { id: "report", label: "Report", icon: FileText, ready: false },
+  { id: "files", label: "Files", icon: Files, ready: true },
+  { id: "report", label: "Report", icon: FileText, ready: true },
 ] as const;
 
 interface DetailSidebarProps {

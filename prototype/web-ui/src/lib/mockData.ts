@@ -481,6 +481,80 @@ export const MOCK_SAVED_MEASUREMENTS: SavedMeasurement[] = [
 ];
 
 /* -------------------------------------------------------------------------- */
+/* Project files (S8)                                                         */
+/* -------------------------------------------------------------------------- */
+
+export type ProjectFileKind = "ply" | "ksplat" | "obj" | "pdf" | "csv" | "png" | "json";
+
+export interface ProjectFile {
+  id: string;
+  name: string;
+  kind: ProjectFileKind;
+  sizeLabel: string;
+  uploadedAt: string;
+  author: string;
+}
+
+export const MOCK_PROJECT_FILES: ProjectFile[] = [
+  {
+    id: "pf-1",
+    name: "sector4_mep_raw.ply",
+    kind: "ply",
+    sizeLabel: "412 MB",
+    uploadedAt: "Apr 22, 2025",
+    author: "BuildScan Edge Worker",
+  },
+  {
+    id: "pf-2",
+    name: "sector4_mep.ksplat",
+    kind: "ksplat",
+    sizeLabel: "84.3 MB",
+    uploadedAt: "Apr 22, 2025",
+    author: "BuildScan Edge Worker",
+  },
+  {
+    id: "pf-3",
+    name: "sector4_mep_mesh.obj",
+    kind: "obj",
+    sizeLabel: "126 MB",
+    uploadedAt: "Apr 22, 2025",
+    author: "Nerfstudio Export",
+  },
+  {
+    id: "pf-4",
+    name: "coordination_report_v3.pdf",
+    kind: "pdf",
+    sizeLabel: "2.8 MB",
+    uploadedAt: "Apr 24, 2025",
+    author: "Ahmad Raza",
+  },
+  {
+    id: "pf-5",
+    name: "duct_measurements.csv",
+    kind: "csv",
+    sizeLabel: "18 KB",
+    uploadedAt: "Apr 28, 2025",
+    author: "Sarah Khan",
+  },
+  {
+    id: "pf-6",
+    name: "clash_snapshot.png",
+    kind: "png",
+    sizeLabel: "1.4 MB",
+    uploadedAt: "Apr 28, 2025",
+    author: "Sarah Khan",
+  },
+  {
+    id: "pf-7",
+    name: "transforms.json",
+    kind: "json",
+    sizeLabel: "42 KB",
+    uploadedAt: "Apr 22, 2025",
+    author: "build_transforms.py",
+  },
+];
+
+/* -------------------------------------------------------------------------- */
 /* Comparison view (S4b)                                                      */
 /* -------------------------------------------------------------------------- */
 

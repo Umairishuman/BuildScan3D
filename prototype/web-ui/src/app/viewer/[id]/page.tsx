@@ -17,6 +17,9 @@ import {
 } from "@/components/ProjectDetail/ViewportOverlays";
 import { RightDock, DockTab } from "@/components/ProjectDetail/RightDock";
 import { ComparisonView } from "@/components/ProjectDetail/ComparisonView";
+import { OverviewTab } from "@/components/ProjectDetail/OverviewTab";
+import { FilesTab } from "@/components/ProjectDetail/FilesTab";
+import { ReportTab } from "@/components/ProjectDetail/ReportTab";
 import {
   Canvas3D,
   Canvas3DHandle,
@@ -128,6 +131,12 @@ function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] 
   const isPlanView = viewMode === "2d";
   const activeDetailTab = DETAIL_TABS.find((t) => t.id === detailTab);
   const isComparisonView = detailTab === "history";
+  // Tabs that own the whole centre pane (no RightDock beside them).
+  const isFullWidthTab =
+    detailTab === "history" ||
+    detailTab === "overview" ||
+    detailTab === "files" ||
+    detailTab === "report";
 
   return (
     <AppShell
@@ -149,6 +158,12 @@ function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] 
         <section className="flex-1 min-w-0 flex flex-col bg-[#eef3f9]">
           {isComparisonView ? (
             <ComparisonView onBack={() => setDetailTab("viewer")} />
+          ) : detailTab === "overview" ? (
+            <OverviewTab project={project} />
+          ) : detailTab === "files" ? (
+            <FilesTab />
+          ) : detailTab === "report" ? (
+            <ReportTab project={project} />
           ) : detailTab === "viewer" ? (
             <div ref={viewportRef} className="relative flex-1 min-h-0 bg-[#eef3f9]">
               <Canvas3D
@@ -251,7 +266,7 @@ function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] 
           )}
         </section>
 
-        {!isComparisonView && (
+        {!isFullWidthTab && (
           <RightDock
             activeTab={dockTab}
             onSelectTab={setDockTab}
