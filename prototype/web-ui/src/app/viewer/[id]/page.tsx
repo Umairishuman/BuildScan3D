@@ -76,6 +76,29 @@ function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] 
     setSemanticLayers((prev) => ({ ...prev, [layer]: !prev[layer] }));
   };
 
+  // X-Ray toggle — flip every non-base MEP layer at once so the room reads as
+  // empty (base only) or fully instrumented in a single click.
+  const areSystemsVisible =
+    semanticLayers.pipes ||
+    semanticLayers.conduits ||
+    semanticLayers.hvac ||
+    semanticLayers.fire ||
+    semanticLayers.pointcloud;
+
+  const handleToggleSystems = () => {
+    setSemanticLayers((prev) => {
+      const next = !(prev.pipes || prev.conduits || prev.hvac || prev.fire || prev.pointcloud);
+      return {
+        ...prev,
+        pipes: next,
+        conduits: next,
+        hvac: next,
+        fire: next,
+        pointcloud: next,
+      };
+    });
+  };
+
   // The canvas reports orbit on every pointer move; only re-render the gizmo
   // once the camera has actually moved a visible amount.
   const handleOrbitChange = useCallback((theta: number, phi: number) => {
@@ -219,6 +242,8 @@ function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] 
                   onChangeRenderMode={setRenderMode}
                   splatsVisible={semanticLayers.pointcloud}
                   onToggleSplats={() => handleToggleLayer("pointcloud")}
+                  systemsVisible={areSystemsVisible}
+                  onToggleSystems={handleToggleSystems}
                   onToggleFullscreen={handleToggleFullscreen}
                   isFullscreen={isFullscreen}
                 />

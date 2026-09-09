@@ -11,6 +11,7 @@ import {
   Expand,
   Diamond,
   ChevronDown,
+  Boxes,
 } from "lucide-react";
 import { ViewMode, InteractionMode } from "@/components/Viewer3D/Canvas3D";
 import { RenderMode } from "@/components/Viewer3D/SceneBuilder";
@@ -288,6 +289,8 @@ interface ViewportBottomBarProps {
   onChangeRenderMode: (mode: RenderMode) => void;
   splatsVisible: boolean;
   onToggleSplats: () => void;
+  systemsVisible: boolean;
+  onToggleSystems: () => void;
   onToggleFullscreen: () => void;
   isFullscreen: boolean;
 }
@@ -297,6 +300,8 @@ export const ViewportBottomBar: React.FC<ViewportBottomBarProps> = ({
   onChangeRenderMode,
   splatsVisible,
   onToggleSplats,
+  systemsVisible,
+  onToggleSystems,
   onToggleFullscreen,
   isFullscreen,
 }) => {
@@ -304,6 +309,29 @@ export const ViewportBottomBar: React.FC<ViewportBottomBarProps> = ({
 
   return (
     <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/95 backdrop-blur-md border border-[#e2e8f0] shadow-md">
+      {/* Systems (X-ray) toggle — flips every MEP layer on/off at once. */}
+      <button
+        onClick={onToggleSystems}
+        title={
+          systemsVisible
+            ? "Hide interior systems (pipes, ducts, conduits, sprinklers)"
+            : "Show interior systems (pipes, ducts, conduits, sprinklers)"
+        }
+        aria-pressed={systemsVisible}
+        className={`flex items-center gap-1.5 pl-2 pr-2.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
+          systemsVisible
+            ? "bg-blue-50 text-[#2563eb]"
+            : "text-[#64748b] hover:text-[#0f172a] hover:bg-slate-100"
+        }`}
+      >
+        <Boxes className="w-4 h-4" />
+        <span className="text-[11px] font-bold">
+          {systemsVisible ? "Systems On" : "Systems Off"}
+        </span>
+      </button>
+
+      <div className="w-px h-5 bg-[#e2e8f0] mx-0.5" />
+
       <button
         onClick={onToggleSplats}
         title={splatsVisible ? "Hide raw Gaussian splats" : "Show raw Gaussian splats"}

@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-09-09 (Polish pass: nav, backdrop, labels, 3D) · Branch: `prototype`
+Last updated: 2026-09-09 (Wiring + X-Ray toggle) · Branch: `prototype`
 
 ---
 
@@ -147,6 +147,23 @@ button, New Capture modal, job-status modal. See §6 for the unfinished list-vie
 `dashboard/page.tsx` (consumes AppShell).
 **Fixed:** clicking a Ready/Complete site in Recent Sites previously did nothing.
 **Verified:** tsc clean · build ok · eslint 0 errors.
+
+### Wiring + Systems X-Ray toggle ✅
+- **Wiring:** `SceneBuilder.buildConduits()` now draws five colored wire bundles (red /
+  black / blue / yellow / green) running through the cable tray using
+  `THREE.CatmullRomCurve3` + `TubeGeometry` — each wire dips slightly at every drop
+  point so the bundle reads as slack cable rather than a straight rod. Small dark
+  bundle straps (torus rings) sit at ~2 m intervals. At each drop, two flexible wires
+  (red + black) bend down through the elbow to the socket boxes on the floor.
+- **X-Ray toggle:** new `Systems On` / `Systems Off` button in `ViewportBottomBar`
+  (leftmost, before Splats), backed by a `handleToggleSystems` on the viewer page
+  that flips `pipes`, `conduits`, `hvac`, `fire`, and `pointcloud` in one setState
+  call. `areSystemsVisible` is derived — the button's state matches whether *any* of
+  those layers is currently on. One click empties the room to the base shell; another
+  restores every MEP layer.
+
+**Verified:** `npx tsc --noEmit` silent · `npx next build` compiles 6 routes · `npx eslint
+src` 0 errors + 1 known warning.
 
 ### Polish pass — nav fix, status labels, projects backdrop, 3D scene ✅
 **User asks (four):** (1) clicking Dashboard from /projects didn't navigate; (2) status
@@ -441,6 +458,11 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-09-09** — Added electrical wiring to the 3D scene (5 colored wire bundles in the
+  cable tray as `TubeGeometry` along a Catmull-Rom curve with per-drop dips + 2-wire
+  drops to socket boxes + torus straps) and a **Systems On/Off** X-Ray toggle in the
+  viewport bottom bar that flips every MEP layer (pipes, conduits, HVAC, fire, point
+  cloud) in a single click.
 - **2026-09-09** — Polish pass (user asks): fixed Dashboard nav from /projects (removed the
   local `onSelectNav` that intercepted menu clicks; retired the in-page FloorPlan tab and
   deleted `FloorPlanView.tsx`); replaced generic one-word status labels with discipline-

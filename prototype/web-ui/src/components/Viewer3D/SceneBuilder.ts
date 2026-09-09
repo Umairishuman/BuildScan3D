@@ -539,6 +539,79 @@ export class SceneBuilder {
       this.conduitsGroup.add(rung);
     }
 
+    // Colored wire bundles running in the tray — each wire is a Tube along a
+    // Catmull-Rom curve so it bends down through the tray at each drop point
+    // instead of just being a straight cylinder.
+    const wireColors = [0xdc2626, 0x0f172a, 0x2563eb, 0xfacc15, 0x059669];
+    const dropXs = [-3, 1.5, 3.5];
+    wireColors.forEach((colour, i) => {
+      const yOffset = 3.19 + i * 0.008; // stacked bundle in the tray
+      const zOffset = -5.82 + (i - 2) * 0.03;
+      const pts: THREE.Vector3[] = [
+        new THREE.Vector3(-5.4, yOffset, zOffset),
+      ];
+      // Slight dip at each drop so the bundle sags into the tray realistically
+      for (const x of dropXs) {
+        pts.push(new THREE.Vector3(x - 0.4, yOffset, zOffset));
+        pts.push(new THREE.Vector3(x, yOffset - 0.015, zOffset));
+        pts.push(new THREE.Vector3(x + 0.4, yOffset, zOffset));
+      }
+      pts.push(new THREE.Vector3(5.4, yOffset, zOffset));
+
+      const curve = new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.2);
+      const tube = new THREE.Mesh(
+        new THREE.TubeGeometry(curve, 96, 0.014, 8, false),
+        new THREE.MeshStandardMaterial({
+          color: colour,
+          roughness: 0.55,
+          metalness: 0.15,
+        })
+      );
+      tube.castShadow = true;
+      this.conduitsGroup.add(tube);
+    });
+
+    // Bundle strapping — small dark rings clamping the wire bundle at intervals
+    const strapMat = this.register(
+      new THREE.MeshStandardMaterial({
+        color: 0x0f172a,
+        roughness: 0.9,
+      })
+    );
+    for (const x of [-4.5, -1.5, 0.5, 2.5, 4.5]) {
+      const strap = new THREE.Mesh(
+        new THREE.TorusGeometry(0.06, 0.008, 8, 20),
+        strapMat
+      );
+      strap.rotation.y = Math.PI / 2;
+      strap.position.set(x, 3.21, -5.82);
+      this.conduitsGroup.add(strap);
+    }
+
+    // Wire drop bundles — colored wires bending down through each drop elbow
+    // toward the socket boxes on the floor. Draws two flexible wires per drop.
+    const dropColors = [0xdc2626, 0x0f172a];
+    dropXs.forEach((x) => {
+      dropColors.forEach((c, i) => {
+        const pts: THREE.Vector3[] = [
+          new THREE.Vector3(x + (i === 0 ? 0.01 : -0.01), 3.2, -5.79),
+          new THREE.Vector3(x + (i === 0 ? 0.01 : -0.01), 3.05, -5.83),
+          new THREE.Vector3(x + (i === 0 ? 0.01 : -0.01), 0.9, -5.87),
+        ];
+        const curve = new THREE.CatmullRomCurve3(pts);
+        const wire = new THREE.Mesh(
+          new THREE.TubeGeometry(curve, 32, 0.012, 6, false),
+          new THREE.MeshStandardMaterial({
+            color: c,
+            roughness: 0.55,
+            metalness: 0.15,
+          })
+        );
+        wire.castShadow = true;
+        this.conduitsGroup.add(wire);
+      });
+    });
+
     // Multi-run electrical conduit pipes riding on top of the cable tray
     for (let i = 0; i < 4; i++) {
       const yPos = 3.28 + i * 0.06;
