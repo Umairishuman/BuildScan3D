@@ -1,37 +1,90 @@
 "use client";
 
-import React, { use, useState } from "react";
-import { notFound } from "next/navigation";
-import { Info, Plus, Smartphone } from "lucide-react";
+import React, { use, useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, Info, Loader2, Plus, Smartphone } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { FloorPlanCanvas } from "@/components/FloorPlan/FloorPlanCanvas";
 import { FloorTabStrip } from "@/components/FloorPlan/FloorTabStrip";
-import { findBuildingPlan, MOCK_PROJECTS } from "@/lib/mockData";
+import { BuildingPlan, MOCK_PROJECTS } from "@/lib/mockData";
+import { findAnyBuildingPlan } from "@/lib/userPlans";
 
 interface FloorPlanPageProps {
   params: Promise<{ id: string }>;
 }
 
+/**
+ * The plan lookup consults `localStorage` for user-created plans, which is
+ * only available in the browser. So we defer resolution to a `useEffect` on
+ * the client: `undefined` = still loading (SSR + first render), `null` = the
+ * lookup finished and there's nothing, `BuildingPlan` = ready to render.
+ */
+type PlanState = BuildingPlan | null | undefined;
+
 export default function FloorPlanPage({ params }: FloorPlanPageProps) {
   const { id: projectId } = use(params);
-  const project = MOCK_PROJECTS.find((p) => p.id === projectId);
-  const plan = findBuildingPlan(projectId);
+  const [plan, setPlan] = useState<PlanState>(undefined);
 
-  if (!project || !plan) notFound();
+  useEffect(() => {
+    // Sync from localStorage (external system) into React state — the setState
+    // is intentional here; suppress the effect-purity rule for this line.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPlan(findAnyBuildingPlan(projectId) ?? null);
+  }, [projectId]);
 
-  return <FloorPlanWorkspace project={project} plan={plan} />;
+  if (plan === undefined) return <FloorPlanLoading />;
+  if (plan === null) return <FloorPlanNotFound projectId={projectId} />;
+  return <FloorPlanWorkspace plan={plan} />;
 }
 
-function FloorPlanWorkspace({
-  project,
-  plan,
-}: {
-  project: (typeof MOCK_PROJECTS)[number];
-  plan: NonNullable<ReturnType<typeof findBuildingPlan>>;
-}) {
+/* --------------------------- Loading + Not-Found --------------------------- */
+
+const FloorPlanLoading: React.FC = () => (
+  <AppShell activeNav="floorplan">
+    <div className="flex-1 min-h-0 flex items-center justify-center p-8">
+      <div className="flex items-center gap-2 text-[#64748b]">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        <span className="text-xs font-bold">Loading floor plan…</span>
+      </div>
+    </div>
+  </AppShell>
+);
+
+const FloorPlanNotFound: React.FC<{ projectId: string }> = ({ projectId }) => (
+  <AppShell activeNav="floorplan">
+    <div className="flex-1 min-h-0 flex items-center justify-center p-8">
+      <div className="max-w-md text-center space-y-3 p-8 rounded-2xl bg-white border border-dashed border-[#e2e8f0] shadow-sm">
+        <h2 className="text-sm font-bold text-[#0f172a]">
+          Floor plan not found
+        </h2>
+        <p className="text-xs text-[#64748b] leading-relaxed">
+          No plan matches <span className="font-mono">{projectId}</span>. User-
+          uploaded plans live in the browser they were created in — if you saved
+          it in another browser, it won&apos;t be visible here.
+        </p>
+        <Link
+          href="/projects"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold shadow-sm cursor-pointer"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back to Projects
+        </Link>
+      </div>
+    </div>
+  </AppShell>
+);
+
+/* --------------------------- Workspace --------------------------- */
+
+function FloorPlanWorkspace({ plan }: { plan: BuildingPlan }) {
   const [activeFloorId, setActiveFloorId] = useState(plan.floors[0].id);
   const activeFloor =
     plan.floors.find((f) => f.id === activeFloorId) ?? plan.floors[0];
+
+  // For mock plans the URL id matches a MOCK_PROJECTS row; user plans don't
+  // have one, so fall back to the building name.
+  const mockProject = MOCK_PROJECTS.find((p) => p.id === plan.projectId);
+  const displayName = mockProject?.name ?? plan.buildingName;
 
   const readyCount = activeFloor.rooms.filter((r) => r.status === "ready").length;
   const processingCount = activeFloor.rooms.filter((r) => r.status === "processing").length;
@@ -42,8 +95,8 @@ function FloorPlanWorkspace({
       variant="fluid"
       activeNav="floorplan"
       breadcrumbs={[
-        { label: "All Projects", href: "/dashboard" },
-        { label: project.name },
+        { label: "All Projects", href: "/projects" },
+        { label: displayName },
       ]}
     >
       <div className="flex-1 min-h-0 flex flex-col bg-[#eef3f9]">
@@ -57,6 +110,11 @@ function FloorPlanWorkspace({
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-[#2563eb] font-bold border border-blue-100">
                 {plan.floors.length} floors
               </span>
+              {plan.isUserCreated && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-[#059669] font-bold border border-emerald-100">
+                  User-created
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-[#64748b]">
               {activeFloor.label} · {activeFloor.discipline} ·{" "}
@@ -83,7 +141,7 @@ function FloorPlanWorkspace({
           <FloorPlanCanvas
             floor={activeFloor}
             buildingName={plan.buildingName}
-            targetProjectId={project.id}
+            targetProjectId={plan.projectId}
           />
 
           {/* Floating legend, top-right of the plan */}

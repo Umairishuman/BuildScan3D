@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { ProjectCard } from "@/components/ProjectCard";
 import { JobStatusModal } from "@/components/JobStatusModal";
 import { NewCaptureModal } from "@/components/NewCaptureModal";
+import { CreateProjectModal } from "@/components/CreateProjectModal";
 import { ProjectsBackdrop } from "@/components/ProjectsBackdrop";
 import { MOCK_PROJECTS, Project } from "@/lib/mockData";
 import {
@@ -14,6 +15,7 @@ import {
   List,
   Calendar,
   ChevronDown,
+  UploadCloud,
 } from "lucide-react";
 
 type StatusFilter = "all" | "ready" | "processing" | "complete" | "draft" | "archived";
@@ -48,6 +50,7 @@ export default function ProjectsPage() {
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
   const [selectedJobProject, setSelectedJobProject] = useState<Project | null>(null);
   const [isNewCaptureModalOpen, setIsNewCaptureModalOpen] = useState(false);
+  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
 
   const handleOpenProcessing = (project: Project) => {
     setSelectedJobProject(project);
@@ -132,6 +135,14 @@ export default function ProjectsPage() {
                 </button>
               </div>
 
+              <button
+                onClick={() => setIsCreateProjectModalOpen(true)}
+                className="px-3.5 py-2 rounded-xl bg-white border border-[#e2e8f0] hover:bg-slate-50 hover:border-blue-200 text-xs font-bold text-[#0f172a] shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <UploadCloud className="w-4 h-4 text-[#2563eb]" />
+                <span>Upload Floor Plan</span>
+              </button>
+
               <div className="relative group">
                 <button
                   onClick={() => setIsNewCaptureModalOpen(true)}
@@ -210,6 +221,11 @@ export default function ProjectsPage() {
       <NewCaptureModal
         isOpen={isNewCaptureModalOpen}
         onClose={() => setIsNewCaptureModalOpen(false)}
+      />
+
+      <CreateProjectModal
+        isOpen={isCreateProjectModalOpen}
+        onClose={() => setIsCreateProjectModalOpen(false)}
       />
     </AppShell>
   );

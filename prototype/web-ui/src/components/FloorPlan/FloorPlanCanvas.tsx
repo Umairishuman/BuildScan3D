@@ -57,6 +57,8 @@ export const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
   const router = useRouter();
   const [hovered, setHovered] = useState<FloorPlanRoom | null>(null);
 
+  const isImageMode = Boolean(floor.planImageDataUrl);
+
   // Every clickable room routes to the same viewer for now — one 3D model
   // stands in for all of them (per the POC scope).
   const openRoom = () => {
@@ -85,42 +87,79 @@ export const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
           role="img"
           aria-label={`${buildingName} — ${floor.label} floor plan`}
         >
-          {/* Outer wall */}
-          <rect
-            x={MARGIN}
-            y={MARGIN}
-            width={VIEW_W - MARGIN * 2}
-            height={VIEW_H - MARGIN * 2}
-            fill="none"
-            stroke="#0f172a"
-            strokeWidth={4}
-            rx={4}
-          />
+          {isImageMode ? (
+            <>
+              {/* Uploaded plan as the base layer. Stretched to fill the viewBox
+                  so room coords (0-1000 × 0-620) map 1:1 to image pixels. */}
+              <image
+                href={floor.planImageDataUrl}
+                x={0}
+                y={0}
+                width={VIEW_W}
+                height={VIEW_H}
+                preserveAspectRatio="none"
+              />
 
-          {/* Dimension ticks along the top edge */}
-          <DimensionRuler />
+              {/* Invisible hover / click hit-boxes so the whole room area,
+                  not just the small node dot, responds to the pointer. */}
+              {floor.rooms.map((room) => (
+                <rect
+                  key={`hit-${room.id}`}
+                  x={room.x}
+                  y={room.y}
+                  width={room.w}
+                  height={room.h}
+                  fill="transparent"
+                  onMouseEnter={() => setHovered(room)}
+                  onMouseLeave={() => setHovered(null)}
+                  onClick={room.status === "processing" ? undefined : openRoom}
+                  style={{
+                    cursor:
+                      room.status === "processing" ? "not-allowed" : "pointer",
+                  }}
+                />
+              ))}
+            </>
+          ) : (
+            <>
+              {/* Outer wall */}
+              <rect
+                x={MARGIN}
+                y={MARGIN}
+                width={VIEW_W - MARGIN * 2}
+                height={VIEW_H - MARGIN * 2}
+                fill="none"
+                stroke="#0f172a"
+                strokeWidth={4}
+                rx={4}
+              />
 
-          {/* Compass rose (top-right, inside the plan) */}
-          <CompassRose x={VIEW_W - MARGIN - 60} y={MARGIN + 60} />
+              {/* Dimension ticks along the top edge */}
+              <DimensionRuler />
 
-          {/* Rooms */}
-          {floor.rooms.map((room) => (
-            <RoomShape
-              key={room.id}
-              room={room}
-              isHovered={hovered?.id === room.id}
-              onEnter={() => setHovered(room)}
-              onLeave={() => setHovered(null)}
-              onOpen={openRoom}
-            />
-          ))}
+              {/* Compass rose (top-right, inside the plan) */}
+              <CompassRose x={VIEW_W - MARGIN - 60} y={MARGIN + 60} />
 
-          {/* Doors — small quarter-circle swings */}
-          {floor.doors.map((door, i) => (
-            <DoorSwing key={i} door={door} />
-          ))}
+              {/* Rooms */}
+              {floor.rooms.map((room) => (
+                <RoomShape
+                  key={room.id}
+                  room={room}
+                  isHovered={hovered?.id === room.id}
+                  onEnter={() => setHovered(room)}
+                  onLeave={() => setHovered(null)}
+                  onOpen={openRoom}
+                />
+              ))}
 
-          {/* Status nodes anchored to room centres */}
+              {/* Doors — small quarter-circle swings */}
+              {floor.doors.map((door, i) => (
+                <DoorSwing key={i} door={door} />
+              ))}
+            </>
+          )}
+
+          {/* Status nodes anchored to room centres (shared across both modes) */}
           {floor.rooms.map((room) => (
             <StatusNode
               key={`node-${room.id}`}
@@ -129,6 +168,7 @@ export const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
               onEnter={() => setHovered(room)}
               onLeave={() => setHovered(null)}
               onOpen={openRoom}
+              stroked={isImageMode}
             />
           ))}
         </svg>
@@ -231,6 +271,8 @@ interface StatusNodeProps {
   onEnter: () => void;
   onLeave: () => void;
   onOpen: () => void;
+  /** True when the base layer is a photograph — add a white halo for contrast. */
+  stroked?: boolean;
 }
 
 const StatusNode: React.FC<StatusNodeProps> = ({
@@ -239,6 +281,7 @@ const StatusNode: React.FC<StatusNodeProps> = ({
   onEnter,
   onLeave,
   onOpen,
+  stroked = false,
 }) => {
   const canOpen = room.status !== "processing";
   const cx = room.x + room.w / 2;
@@ -277,6 +320,16 @@ const StatusNode: React.FC<StatusNodeProps> = ({
             repeatCount="indefinite"
           />
         </circle>
+      )}
+      {/* Contrast halo when the node sits on an uploaded photograph */}
+      {stroked && (
+        <circle
+          cx={cx}
+          cy={cy}
+          r={isHovered ? 14 : 12}
+          fill="white"
+          opacity={0.9}
+        />
       )}
       <circle
         cx={cx}

@@ -313,12 +313,30 @@ export interface BuildingFloor {
   totalArea: string;
   rooms: FloorPlanRoom[];
   doors: FloorPlanDoor[];
+
+  /**
+   * Optional user-uploaded background. When set, `FloorPlanCanvas` renders
+   * this image inside the 1000×620 viewBox instead of the hand-authored walls
+   * / dimensions / compass. Nodes still position by absolute viewBox coords
+   * so they don't care which base layer is drawn beneath them. Stored as a
+   * base64 data URL because uploaded plans live in `localStorage`, not on
+   * disk.
+   */
+  planImageDataUrl?: string;
+  /** Natural pixel dimensions of the uploaded image, for aspect preservation. */
+  planImageWidth?: number;
+  planImageHeight?: number;
 }
 
 export interface BuildingPlan {
   projectId: string;
   buildingName: string;
   floors: BuildingFloor[];
+
+  /** True for plans uploaded through the Create Project flow. */
+  isUserCreated?: boolean;
+  /** ISO timestamp of first save. Only set on user-created plans. */
+  createdAt?: string;
 }
 
 export const MOCK_BUILDING_PLANS: BuildingPlan[] = [
