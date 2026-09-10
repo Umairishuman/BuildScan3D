@@ -656,9 +656,9 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
   `MOCK_BUILDING_PLANS[0].floors[0]` via `FloorPlanCanvas` with a new
   `hideStatusNodes` prop (skips the coloured dots + disables room click
   routing). Cohesive with the rest of the app — same walls, doors, dimension
-  ruler, compass, room labels as `/floorplan/[id]`. The Unsplash image at
-  `/floorplans/site-plans-level-01.jpg` is kept on disk for the moment but
-  no longer referenced.
+  ruler, compass, room labels as `/floorplan/[id]`. The unused Unsplash
+  image at `/public/floorplans/site-plans-level-01.jpg` was deleted (folder
+  kept for future assets).
 - **2026-09-10** — New Project pipeline shipped: `/projects/new` empty-state
   dropzone → `OcrSimulationModal` with the three spec'd terminal log lines →
   `ReadyForCaptureViewport` with a real Unsplash blueprint at
