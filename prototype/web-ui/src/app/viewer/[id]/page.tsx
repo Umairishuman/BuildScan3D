@@ -66,7 +66,7 @@ const LAYERS: LayerMeta[] = [
 
 /* --------------------------- Workspace --------------------------- */
 
-function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] }) {
+export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[number] }) {
   const canvasRef = useRef<Canvas3DHandle>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
 

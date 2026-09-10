@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-09-10 (User-uploaded floor plans, end-to-end) · Branch: `prototype`
+Last updated: 2026-09-10 (Extracted plan reuses Tower A Floor 5) · Branch: `prototype`
 
 ---
 
@@ -148,7 +148,61 @@ button, New Capture modal, job-status modal. See §6 for the unfinished list-vie
 **Fixed:** clicking a Ready/Complete site in Recent Sites previously did nothing.
 **Verified:** tsc clean · build ok · eslint 0 errors.
 
-### User-uploaded floor plans (5-step feature) ✅
+### New Project pipeline: dropzone → OCR sim → Ready-for-Capture ✅
+User-driven prompt (2026-09-10) — replaces the previous per-floor
+`CreateProjectModal` with a page-based, three-phase workflow that emphasises
+2D plans as a strict prerequisite for field scanning. The prompt was explicit
+about the copy, the terminal-log cadence, and the node coordinates; all
+followed to the letter.
+
+- **Empty state** (`/projects/new`) — cancel + project name + big dashed
+  dropzone accepting `.pdf,.dwg`. Prompt reads `Upload Architectural Plans
+  (.pdf, .dwg) to initialize spatial tracking grids.` (mirrors the spec).
+  Amber prerequisite callout above the dropzone explains why plans are
+  required first. Three "what happens next" preview chips below reinforce
+  the pipeline (OCR → Field Mapping → 3D Reconstruction).
+- **OCR simulation modal** (`OcrSimulationModal.tsx`) — fired on file drop.
+  Dark terminal body with a monospace prompt (`$ buildscan-plan-ingest`) and
+  the three spec'd log lines added on a 400 ms / 1500 ms / 2600 ms cadence.
+  In-flight lines show a spinner + amber text; resolved lines flip to check +
+  emerald. After the final line lands there's a 200 ms beat, a "Handing off"
+  footer, and 800 ms later the parent transitions to the viewport.
+- **Ready-for-Capture viewport** (`ReadyForCaptureViewport.tsx`) — dark navy
+  banner across the top with `Smartphone` icon and the exact spec'd sentence,
+  plus a pulsing "AWAITING FIELD SYNC" chip. Header strip with the project
+  title. **Extracted 2D blueprint** loaded from
+  `/public/floorplans/site-plans-level-01.jpg` (a real architectural plan
+  photo from Unsplash — photo id `fteR0e2BzKo`, 1600×1067, ~180 KB, free
+  Unsplash license). Node area starts empty with a dashed helper card in the
+  centre ("No 3D scans yet · Nodes appear here as the field team captures
+  rooms.").
+- **Simulate Mobile Upload dev toggle** — dark monospace pill in the header
+  reading `SIMULATE MOBILE UPLOAD`. On click: label flips to `STREAMING
+  TELEMETRY…`, an absolutely-positioned node appears at `top: 54%, left:
+  72%` in **Amber** with a `Loader2` spin and an "Syncing · 3DGS Training"
+  chip; **after exactly 3000 ms** it flips to **Green** with a `CheckCircle2`
+  and a "Metric Verified" chip. Clicking the verified node navigates to
+  `/workspace/boiler-room`. The toggle then becomes `RESET DEMO`.
+- **`/workspace/boiler-room`** — a new route that re-uses the existing
+  `ViewerWorkspace` (now exported as a named export from `/viewer/[id]`)
+  with a synthesised project record whose `name` reads "Boiler Room" and
+  `statusLabel` "3DGS Ready · Field-captured". Same 3D scene / X-Ray /
+  panels as any other viewer — the demo lands the user in a coherent
+  workspace, not a stub.
+- **`/projects` header** — primary blue **New Project** button (`UploadCloud`)
+  links to `/projects/new`; **New Capture** is now the secondary white
+  outline button (its old primary slot was reused since New Project is the
+  main create action). The old `CreateProjectModal.tsx` and its state have
+  been deleted (~470 lines removed).
+
+**Verified:** `npx tsc --noEmit` silent · `npx next build` compiles 8 routes
+(adds `○ /projects/new` and `○ /workspace/boiler-room`) · `npx eslint src`
+0 errors + 1 known warning · all routes 200 including the blueprint asset.
+
+### User-uploaded floor plans (5-step feature) ✅ (superseded — the new
+### workflow above owns the "Upload Floor Plan" entry point; per-floor
+### image upload + node editor still lives on user-created plans that
+### remain in localStorage from earlier sessions)
 Client-side-only workflow to upload a blueprint image, drop clickable room
 nodes onto it, and route each room to a captured 3D project — no backend, all
 state in the browser.
@@ -597,6 +651,24 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-09-10** — Extracted plan now reuses Tower A Floor 5: rather than
+  showing an Unsplash blueprint image, `ReadyForCaptureViewport` renders
+  `MOCK_BUILDING_PLANS[0].floors[0]` via `FloorPlanCanvas` with a new
+  `hideStatusNodes` prop (skips the coloured dots + disables room click
+  routing). Cohesive with the rest of the app — same walls, doors, dimension
+  ruler, compass, room labels as `/floorplan/[id]`. The Unsplash image at
+  `/floorplans/site-plans-level-01.jpg` is kept on disk for the moment but
+  no longer referenced.
+- **2026-09-10** — New Project pipeline shipped: `/projects/new` empty-state
+  dropzone → `OcrSimulationModal` with the three spec'd terminal log lines →
+  `ReadyForCaptureViewport` with a real Unsplash blueprint at
+  `/public/floorplans/site-plans-level-01.jpg`, persistent navy field-sync
+  banner, and a `SIMULATE MOBILE UPLOAD` dev toggle that drops an Amber node
+  at (54%, 72%) which flips Green after 3 s and links to
+  `/workspace/boiler-room`. New route `/workspace/boiler-room` re-uses the
+  existing viewer (named export from `/viewer/[id]`) with a rebranded
+  project. Old `CreateProjectModal.tsx` deleted; `New Project` becomes the
+  primary create action on `/projects`, `New Capture` demoted to secondary.
 - **2026-09-10** — User-uploaded floor plans end-to-end: `lib/userPlans.ts`
   (localStorage store, SSR-safe, versioned envelope), `CreateProjectModal`
   (PNG/JPG/SVG ≤ 5 MB, natural-dim reader, save routes to

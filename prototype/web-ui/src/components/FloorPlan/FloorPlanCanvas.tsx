@@ -47,12 +47,19 @@ interface FloorPlanCanvasProps {
   buildingName: string;
   /** Where every clickable room should navigate. */
   targetProjectId: string;
+  /**
+   * When true, skip rendering the coloured status nodes and disable room
+   * click routing. Used by the "Ready for Capture" viewport, where the plan
+   * has been ingested but no scans have been taken yet.
+   */
+  hideStatusNodes?: boolean;
 }
 
 export const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
   floor,
   buildingName,
   targetProjectId,
+  hideStatusNodes = false,
 }) => {
   const router = useRouter();
   const [hovered, setHovered] = useState<FloorPlanRoom | null>(null);
@@ -62,6 +69,7 @@ export const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
   // Rooms opt in to a specific viewer via `room.targetProjectId`; unset rooms
   // fall back to the plan-level default supplied by the caller.
   const openRoom = (room: FloorPlanRoom) => {
+    if (hideStatusNodes) return;
     router.push(`/viewer/${room.targetProjectId ?? targetProjectId}`);
   };
 
@@ -161,18 +169,21 @@ export const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
             </>
           )}
 
-          {/* Status nodes anchored to room centres (shared across both modes) */}
-          {floor.rooms.map((room) => (
-            <StatusNode
-              key={`node-${room.id}`}
-              room={room}
-              isHovered={hovered?.id === room.id}
-              onEnter={() => setHovered(room)}
-              onLeave={() => setHovered(null)}
-              onOpen={() => openRoom(room)}
-              stroked={isImageMode}
-            />
-          ))}
+          {/* Status nodes anchored to room centres (shared across both modes).
+              Suppressed by `hideStatusNodes` for the pre-scan "Ready for
+              Capture" state where the plan is ingested but empty of scans. */}
+          {!hideStatusNodes &&
+            floor.rooms.map((room) => (
+              <StatusNode
+                key={`node-${room.id}`}
+                room={room}
+                isHovered={hovered?.id === room.id}
+                onEnter={() => setHovered(room)}
+                onLeave={() => setHovered(null)}
+                onOpen={() => openRoom(room)}
+                stroked={isImageMode}
+              />
+            ))}
         </svg>
 
         {/* Hover tooltip (HTML, positioned in room-coord space via CSS %) */}

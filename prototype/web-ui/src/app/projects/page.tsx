@@ -7,8 +7,8 @@ import { ProjectCard } from "@/components/ProjectCard";
 import { UserPlanCard } from "@/components/UserPlanCard";
 import { JobStatusModal } from "@/components/JobStatusModal";
 import { NewCaptureModal } from "@/components/NewCaptureModal";
-import { CreateProjectModal } from "@/components/CreateProjectModal";
 import { ProjectsBackdrop } from "@/components/ProjectsBackdrop";
+import Link from "next/link";
 import { BuildingPlan, MOCK_PROJECTS, Project } from "@/lib/mockData";
 import { deleteUserPlan, loadUserPlans } from "@/lib/userPlans";
 import {
@@ -52,17 +52,14 @@ export default function ProjectsPage() {
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
   const [selectedJobProject, setSelectedJobProject] = useState<Project | null>(null);
   const [isNewCaptureModalOpen, setIsNewCaptureModalOpen] = useState(false);
-  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
   const [userPlans, setUserPlans] = useState<BuildingPlan[]>([]);
 
   const refreshUserPlans = useCallback(() => {
     setUserPlans(loadUserPlans());
   }, []);
 
-  // Rehydrate from localStorage on mount and whenever the create modal closes
-  // (so newly-created plans appear without a full page reload). Syncing from
-  // an external system (localStorage) is one of the legitimate uses of
-  // setState in an effect.
+  // Rehydrate from localStorage on mount. Syncing from an external system
+  // (localStorage) is one of the legitimate uses of setState in an effect.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshUserPlans();
@@ -70,11 +67,6 @@ export default function ProjectsPage() {
 
   const handleDeleteUserPlan = (projectId: string) => {
     deleteUserPlan(projectId);
-    refreshUserPlans();
-  };
-
-  const handleCloseCreateModal = () => {
-    setIsCreateProjectModalOpen(false);
     refreshUserPlans();
   };
 
@@ -170,20 +162,20 @@ export default function ProjectsPage() {
                 </button>
               </div>
 
-              <button
-                onClick={() => setIsCreateProjectModalOpen(true)}
-                className="px-3.5 py-2 rounded-xl bg-white border border-[#e2e8f0] hover:bg-slate-50 hover:border-blue-200 text-xs font-bold text-[#0f172a] shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+              <Link
+                href="/projects/new"
+                className="px-3.5 py-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
               >
-                <UploadCloud className="w-4 h-4 text-[#2563eb]" />
-                <span>Upload Floor Plan</span>
-              </button>
+                <UploadCloud className="w-4 h-4" />
+                <span>New Project</span>
+              </Link>
 
               <div className="relative group">
                 <button
                   onClick={() => setIsNewCaptureModalOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-white border border-[#e2e8f0] hover:bg-slate-50 text-xs font-bold text-[#0f172a] shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4 text-[#64748b]" />
                   <span>New Capture</span>
                 </button>
                 <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-20 px-2.5 py-1 bg-slate-900 text-white text-[10px] rounded-lg whitespace-nowrap shadow-lg">
@@ -267,11 +259,6 @@ export default function ProjectsPage() {
       <NewCaptureModal
         isOpen={isNewCaptureModalOpen}
         onClose={() => setIsNewCaptureModalOpen(false)}
-      />
-
-      <CreateProjectModal
-        isOpen={isCreateProjectModalOpen}
-        onClose={handleCloseCreateModal}
       />
     </AppShell>
   );
