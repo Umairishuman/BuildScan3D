@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-09-09 (Minimal top strip + idle-hide) · Branch: `prototype`
+Last updated: 2026-09-10 (User-uploaded floor plans, end-to-end) · Branch: `prototype`
 
 ---
 
@@ -147,6 +147,64 @@ button, New Capture modal, job-status modal. See §6 for the unfinished list-vie
 `dashboard/page.tsx` (consumes AppShell).
 **Fixed:** clicking a Ready/Complete site in Recent Sites previously did nothing.
 **Verified:** tsc clean · build ok · eslint 0 errors.
+
+### User-uploaded floor plans (5-step feature) ✅
+Client-side-only workflow to upload a blueprint image, drop clickable room
+nodes onto it, and route each room to a captured 3D project — no backend, all
+state in the browser.
+
+**Data model additions (`mockData.ts`):**
+- `BuildingFloor` grew three optional fields: `planImageDataUrl` (base64),
+  `planImageWidth`, `planImageHeight`.
+- `BuildingPlan` grew `isUserCreated?: boolean` + `createdAt?: string`.
+- `FloorPlanRoom` grew `targetProjectId?: string` so each room can route to
+  its own captured scan; `FloorPlanCanvas.openRoom` falls back to the
+  plan-level default when unset.
+
+**New `lib/userPlans.ts`:**
+- `loadUserPlans()`, `saveUserPlan()`, `deleteUserPlan()`, `newUserPlanId()`,
+  and merged lookups `findAnyBuildingPlan()` / `hasAnyBuildingPlan()` /
+  `getAllBuildingPlans()`. SSR-safe (guards on `typeof window`), envelope
+  is versioned so the schema can evolve later.
+
+**New `CreateProjectModal.tsx`:**
+- Building-name input + dynamic list of floors (Label / Discipline / Total
+  area / file picker). PNG / JPG / SVG up to 5 MB, `FileReader` +
+  `new Image()` to read natural dimensions (with an SVG fallback to 1000×620
+  when the browser can't extract them). Preview thumbnail once a file is
+  chosen. Handles quota-exceeded on save.
+
+**`FloorPlanCanvas` image-mode branch:**
+- When `floor.planImageDataUrl` is set, renders `<image>` stretched to fill
+  the 1000×620 viewBox, drops the hand-drawn walls / dimension ruler /
+  compass, and switches rooms to invisible hit-boxes. `StatusNode.stroked`
+  adds a white halo when the node sits on a photograph so it stays legible.
+
+**New `FloorPlanEditor.tsx` + Edit Rooms toggle:**
+- Only surfaces on `plan.isUserCreated`. Click empty space → add room at
+  clicked viewBox coord (via `svg.createSVGPoint()` + inverse CTM). Rooms
+  are draggable via pointer capture; delta converted from client px to
+  viewBox units via CTM scale factors, positions clamped to bounds. A 4 px
+  click-vs-drag threshold. Selected room shows a red × handle + a
+  bottom-right details panel (Name / Status / Discipline / Scan count /
+  **Opens viewer for** picking any `MOCK_PROJECTS` row). Save wraps
+  `saveUserPlan()`; failure surfaces via `alert()`.
+
+**New `UserPlanCard.tsx` + `/projects` integration:**
+- User plans render first in the grid (only when the status filter is
+  `all`, since they don't carry a scan status), using the first floor's
+  uploaded image as the thumbnail and an emerald `User-created` badge.
+  Overflow menu → `Delete plan` with a confirmation overlay. Page subtitle
+  now counts uploaded plans alongside ready/processing/signed-off. Modal
+  close triggers a `loadUserPlans()` refresh so new plans appear without a
+  reload.
+
+**`/floorplan/[id]` rewritten** to be async-friendly (localStorage read
+after hydration), with three states — loading / not-found card / render —
+and support for both mock and user plans via `findAnyBuildingPlan()`.
+
+**Verified:** typecheck silent · build compiles 6 routes · lint 0 errors
++ 1 known warning.
 
 ### Minimal top strip + idle-hide (user ask) ✅
 - **`ProjectDetailTopBar` slimmed:** dropped the gradient icon block; padding
@@ -539,6 +597,18 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-09-10** — User-uploaded floor plans end-to-end: `lib/userPlans.ts`
+  (localStorage store, SSR-safe, versioned envelope), `CreateProjectModal`
+  (PNG/JPG/SVG ≤ 5 MB, natural-dim reader, save routes to
+  `/floorplan/<new-id>`), image-mode branch in `FloorPlanCanvas` (stretched
+  `<image>` + invisible hit-boxes + haloed nodes), `FloorPlanEditor`
+  (click-to-add rooms via inverse-CTM, pointer-captured drag with 4 px
+  threshold, per-room details panel including a `MOCK_PROJECTS` target
+  picker), `UserPlanCard` (grid tile with plan-image thumbnail + delete
+  confirmation), `/projects` now surfaces user plans first when filter is
+  `all` and refreshes on modal close, `/floorplan/[id]` rewritten async +
+  `Edit Rooms` toggle for `plan.isUserCreated`. Per-room `targetProjectId`
+  added to `FloorPlanRoom`.
 - **2026-09-09** — Minimal top strip + idle-hide: `ProjectDetailTopBar` slimmed
   from ~64 px to ~40 px (icon block removed, tighter tab pills, provenance
   compressed to two mono chips). Auto-hides after 2500 ms of no mouse movement

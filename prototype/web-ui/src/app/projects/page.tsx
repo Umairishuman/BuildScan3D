@@ -60,8 +60,11 @@ export default function ProjectsPage() {
   }, []);
 
   // Rehydrate from localStorage on mount and whenever the create modal closes
-  // (so newly-created plans appear without a full page reload).
+  // (so newly-created plans appear without a full page reload). Syncing from
+  // an external system (localStorage) is one of the legitimate uses of
+  // setState in an effect.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshUserPlans();
   }, [refreshUserPlans]);
 
@@ -129,6 +132,15 @@ export default function ProjectsPage() {
                 <span className="font-bold text-[#d97706]">{counts.processing} in training</span>
                 {" · "}
                 <span className="font-bold text-[#0f766e]">{counts.complete} signed off</span>
+                {userPlans.length > 0 && (
+                  <>
+                    {" · "}
+                    <span className="font-bold text-[#2563eb]">
+                      {userPlans.length} uploaded plan
+                      {userPlans.length === 1 ? "" : "s"}
+                    </span>
+                  </>
+                )}
               </p>
             </div>
 
@@ -211,8 +223,18 @@ export default function ProjectsPage() {
             </button>
           </div>
 
-          {/* Cards */}
+          {/* Cards — user-uploaded plans first (only when no status filter is
+              active, since they don't carry a scan status), then captured
+              projects. */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+            {filter === "all" &&
+              userPlans.map((plan) => (
+                <UserPlanCard
+                  key={plan.projectId}
+                  plan={plan}
+                  onDelete={handleDeleteUserPlan}
+                />
+              ))}
             {filteredProjects.map((project) => (
               <ProjectCard
                 key={project.id}
@@ -222,16 +244,17 @@ export default function ProjectsPage() {
             ))}
           </div>
 
-          {filteredProjects.length === 0 && (
-            <div className="py-16 text-center rounded-2xl border border-dashed border-[#cbd5e1] bg-white/60">
-              <p className="text-sm font-bold text-[#0f172a]">
-                No projects match this filter
-              </p>
-              <p className="text-xs text-[#64748b] mt-1">
-                Try clearing the search or switching status filter to All.
-              </p>
-            </div>
-          )}
+          {filteredProjects.length === 0 &&
+            (filter !== "all" || userPlans.length === 0) && (
+              <div className="py-16 text-center rounded-2xl border border-dashed border-[#cbd5e1] bg-white/60">
+                <p className="text-sm font-bold text-[#0f172a]">
+                  No projects match this filter
+                </p>
+                <p className="text-xs text-[#64748b] mt-1">
+                  Try clearing the search or switching status filter to All.
+                </p>
+              </div>
+            )}
         </div>
       </div>
 
@@ -248,7 +271,7 @@ export default function ProjectsPage() {
 
       <CreateProjectModal
         isOpen={isCreateProjectModalOpen}
-        onClose={() => setIsCreateProjectModalOpen(false)}
+        onClose={handleCloseCreateModal}
       />
     </AppShell>
   );
