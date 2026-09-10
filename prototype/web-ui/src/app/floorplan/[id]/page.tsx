@@ -2,12 +2,13 @@
 
 import React, { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Info, Loader2, Plus, Smartphone } from "lucide-react";
+import { ArrowLeft, Info, Loader2, Pencil, Plus, Smartphone } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { FloorPlanCanvas } from "@/components/FloorPlan/FloorPlanCanvas";
+import { FloorPlanEditor } from "@/components/FloorPlan/FloorPlanEditor";
 import { FloorTabStrip } from "@/components/FloorPlan/FloorTabStrip";
-import { BuildingPlan, MOCK_PROJECTS } from "@/lib/mockData";
-import { findAnyBuildingPlan } from "@/lib/userPlans";
+import { BuildingFloor, BuildingPlan, MOCK_PROJECTS } from "@/lib/mockData";
+import { findAnyBuildingPlan, saveUserPlan } from "@/lib/userPlans";
 
 interface FloorPlanPageProps {
   params: Promise<{ id: string }>;
@@ -76,8 +77,12 @@ const FloorPlanNotFound: React.FC<{ projectId: string }> = ({ projectId }) => (
 
 /* --------------------------- Workspace --------------------------- */
 
-function FloorPlanWorkspace({ plan }: { plan: BuildingPlan }) {
+function FloorPlanWorkspace({ plan: initialPlan }: { plan: BuildingPlan }) {
+  // Local copy so the editor can persist through the same state slot and the
+  // canvas re-renders immediately after Save.
+  const [plan, setPlan] = useState<BuildingPlan>(initialPlan);
   const [activeFloorId, setActiveFloorId] = useState(plan.floors[0].id);
+  const [isEditing, setIsEditing] = useState(false);
   const activeFloor =
     plan.floors.find((f) => f.id === activeFloorId) ?? plan.floors[0];
 
@@ -89,6 +94,28 @@ function FloorPlanWorkspace({ plan }: { plan: BuildingPlan }) {
   const readyCount = activeFloor.rooms.filter((r) => r.status === "ready").length;
   const processingCount = activeFloor.rooms.filter((r) => r.status === "processing").length;
   const completeCount = activeFloor.rooms.filter((r) => r.status === "complete").length;
+
+  const handleSaveFloor = (updatedFloor: BuildingFloor) => {
+    const updatedPlan: BuildingPlan = {
+      ...plan,
+      floors: plan.floors.map((f) =>
+        f.id === updatedFloor.id ? updatedFloor : f
+      ),
+    };
+    // Persist to localStorage first, then update local state so the canvas
+    // reflects the saved layout. Failed writes leave the editor open.
+    if (plan.isUserCreated) {
+      const ok = saveUserPlan(updatedPlan);
+      if (!ok) {
+        window.alert(
+          "Could not save — browser storage is full. Try deleting an existing user-uploaded plan first."
+        );
+        return;
+      }
+    }
+    setPlan(updatedPlan);
+    setIsEditing(false);
+  };
 
   return (
     <AppShell
@@ -132,26 +159,47 @@ function FloorPlanWorkspace({ plan }: { plan: BuildingPlan }) {
               onSelect={setActiveFloorId}
             />
 
+            {plan.isUserCreated && !isEditing && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#e2e8f0] hover:bg-slate-50 hover:border-blue-200 text-[11px] font-bold text-[#0f172a] shadow-sm cursor-pointer"
+              >
+                <Pencil className="w-3.5 h-3.5 text-[#2563eb]" />
+                Edit Rooms
+              </button>
+            )}
+
             <NewCaptureButton />
           </div>
         </div>
 
-        {/* Canvas */}
+        {/* Canvas — swap in the editor when editing this floor */}
         <div className="relative flex-1 min-h-0">
-          <FloorPlanCanvas
-            floor={activeFloor}
-            buildingName={plan.buildingName}
-            targetProjectId={plan.projectId}
-          />
-
-          {/* Floating legend, top-right of the plan */}
-          <div className="absolute top-4 right-4 z-10">
-            <LegendCard
-              readyCount={readyCount}
-              processingCount={processingCount}
-              completeCount={completeCount}
+          {isEditing ? (
+            <FloorPlanEditor
+              floor={activeFloor}
+              buildingName={plan.buildingName}
+              onSave={handleSaveFloor}
+              onCancel={() => setIsEditing(false)}
             />
-          </div>
+          ) : (
+            <>
+              <FloorPlanCanvas
+                floor={activeFloor}
+                buildingName={plan.buildingName}
+                targetProjectId={plan.projectId}
+              />
+
+              {/* Floating legend, top-right of the plan */}
+              <div className="absolute top-4 right-4 z-10">
+                <LegendCard
+                  readyCount={readyCount}
+                  processingCount={processingCount}
+                  completeCount={completeCount}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </AppShell>

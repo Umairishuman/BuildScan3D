@@ -295,6 +295,14 @@ export interface FloorPlanRoom {
   y: number;
   w: number;
   h: number;
+
+  /**
+   * Where clicking this room's node should navigate. Optional — set through
+   * the Room Editor to map an uploaded plan's rooms onto existing captured
+   * projects. When unset, `FloorPlanCanvas` falls back to the plan-level
+   * `targetProjectId` prop.
+   */
+  targetProjectId?: string;
 }
 
 /** Door swing arc — small ¼ circle rendered on top of walls. */

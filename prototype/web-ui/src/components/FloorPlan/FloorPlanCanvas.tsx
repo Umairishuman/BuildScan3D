@@ -59,10 +59,10 @@ export const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
 
   const isImageMode = Boolean(floor.planImageDataUrl);
 
-  // Every clickable room routes to the same viewer for now — one 3D model
-  // stands in for all of them (per the POC scope).
-  const openRoom = () => {
-    router.push(`/viewer/${targetProjectId}`);
+  // Rooms opt in to a specific viewer via `room.targetProjectId`; unset rooms
+  // fall back to the plan-level default supplied by the caller.
+  const openRoom = (room: FloorPlanRoom) => {
+    router.push(`/viewer/${room.targetProjectId ?? targetProjectId}`);
   };
 
   return (
@@ -112,7 +112,9 @@ export const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                   fill="transparent"
                   onMouseEnter={() => setHovered(room)}
                   onMouseLeave={() => setHovered(null)}
-                  onClick={room.status === "processing" ? undefined : openRoom}
+                  onClick={
+                    room.status === "processing" ? undefined : () => openRoom(room)
+                  }
                   style={{
                     cursor:
                       room.status === "processing" ? "not-allowed" : "pointer",
@@ -148,7 +150,7 @@ export const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
                   isHovered={hovered?.id === room.id}
                   onEnter={() => setHovered(room)}
                   onLeave={() => setHovered(null)}
-                  onOpen={openRoom}
+                  onOpen={() => openRoom(room)}
                 />
               ))}
 
@@ -167,7 +169,7 @@ export const FloorPlanCanvas: React.FC<FloorPlanCanvasProps> = ({
               isHovered={hovered?.id === room.id}
               onEnter={() => setHovered(room)}
               onLeave={() => setHovered(null)}
-              onOpen={openRoom}
+              onOpen={() => openRoom(room)}
               stroked={isImageMode}
             />
           ))}

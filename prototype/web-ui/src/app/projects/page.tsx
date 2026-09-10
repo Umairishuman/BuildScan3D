@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { ProjectCard } from "@/components/ProjectCard";
+import { UserPlanCard } from "@/components/UserPlanCard";
 import { JobStatusModal } from "@/components/JobStatusModal";
 import { NewCaptureModal } from "@/components/NewCaptureModal";
 import { CreateProjectModal } from "@/components/CreateProjectModal";
 import { ProjectsBackdrop } from "@/components/ProjectsBackdrop";
-import { MOCK_PROJECTS, Project } from "@/lib/mockData";
+import { BuildingPlan, MOCK_PROJECTS, Project } from "@/lib/mockData";
+import { deleteUserPlan, loadUserPlans } from "@/lib/userPlans";
 import {
   Plus,
   LayoutGrid,
@@ -51,6 +53,27 @@ export default function ProjectsPage() {
   const [selectedJobProject, setSelectedJobProject] = useState<Project | null>(null);
   const [isNewCaptureModalOpen, setIsNewCaptureModalOpen] = useState(false);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
+  const [userPlans, setUserPlans] = useState<BuildingPlan[]>([]);
+
+  const refreshUserPlans = useCallback(() => {
+    setUserPlans(loadUserPlans());
+  }, []);
+
+  // Rehydrate from localStorage on mount and whenever the create modal closes
+  // (so newly-created plans appear without a full page reload).
+  useEffect(() => {
+    refreshUserPlans();
+  }, [refreshUserPlans]);
+
+  const handleDeleteUserPlan = (projectId: string) => {
+    deleteUserPlan(projectId);
+    refreshUserPlans();
+  };
+
+  const handleCloseCreateModal = () => {
+    setIsCreateProjectModalOpen(false);
+    refreshUserPlans();
+  };
 
   const handleOpenProcessing = (project: Project) => {
     setSelectedJobProject(project);
