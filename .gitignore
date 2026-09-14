@@ -15,3 +15,6 @@ nerfstudio_models/
 # Python Cache
 __pycache__/
 *.pyc
+
+~*.docx
+*.exe
