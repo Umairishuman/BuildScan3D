@@ -26,6 +26,18 @@
       android:layout_gravity="top"/>
 
   <ImageButton
+      android:id="@+id/btn_gallery"
+      android:layout_width="48dp"
+      android:layout_height="48dp"
+      android:layout_alignParentStart="true"
+      android:layout_alignParentTop="true"
+      android:layout_margin="25dp"
+      android:src="@android:drawable/ic_menu_gallery"
+      android:tint="#FFFFFF"
+      android:background="@android:color/transparent"
+      android:contentDescription="Gallery"/>
+
+  <ImageButton
       android:id="@+id/settings_button"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
@@ -35,27 +47,36 @@
       android:src="@drawable/ic_settings"
       android:background="@android:color/transparent"/>
 
-  <!--Code Injection - BLAZING-->
   <LinearLayout
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
-      android:layout_gravity="bottom|center_horizontal"
-      android:layout_marginBottom="50dp"
-      android:orientation="horizontal">
+      android:orientation="vertical"
+      android:gravity="center"
+      android:layout_alignParentBottom="true"
+      android:layout_centerHorizontal="true"
+      android:layout_marginBottom="32dp">
 
-    <Button
-        android:id="@+id/btn_start_record"
+    <TextView
+        android:id="@+id/tv_record_timer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="10dp"
-        android:text="Start Record" />
+        android:text="00:00"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:visibility="invisible"
+        android:layout_marginBottom="8dp"
+        android:shadowColor="#000000"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="2" />
 
-    <Button
-        android:id="@+id/btn_stop_record"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Stop Record"
-        android:enabled="false" />
+    <View
+        android:id="@+id/btn_record_toggle"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:background="@drawable/bg_record_ready"
+        android:elevation="4dp" />
   </LinearLayout>
 
 </RelativeLayout>

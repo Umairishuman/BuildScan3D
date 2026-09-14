@@ -17,6 +17,7 @@
 package com.google.ar.core.examples.java.helloar;
 
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.res.Resources;
 import android.media.Image;
 import android.opengl.GLES30;
@@ -36,6 +37,8 @@ import com.google.ar.core.Anchor;
 import com.google.ar.core.ArCoreApk;
 import com.google.ar.core.ArCoreApk.Availability;
 import com.google.ar.core.Camera;
+import com.google.ar.core.CameraConfig;
+import com.google.ar.core.CameraConfigFilter;
 import com.google.ar.core.Config;
 import com.google.ar.core.Config.InstantPlacementMode;
 import com.google.ar.core.DepthPoint;
@@ -93,8 +96,23 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
   // --- Recording State Variables - BLAZING ---
   private boolean isRecording = false;
-  private android.widget.Button startRecordButton;
-  private android.widget.Button stopRecordButton;
+  private View recordToggleButton;
+  private android.widget.TextView recordTimerText;
+
+  // ADD THE TIMER VARIABLES HERE
+  private android.os.Handler timerHandler = new android.os.Handler();
+  private long startTime = 0;
+  private Runnable timerRunnable = new Runnable() {
+    @Override
+    public void run() {
+      long seconds = (System.currentTimeMillis() - startTime) / 1000;
+      String timeStr = String.format("%02d:%02d", seconds / 60, seconds % 60);
+      if (recordTimerText != null) {
+        recordTimerText.setText(timeStr);
+      }
+      timerHandler.postDelayed(this, 500);
+    }
+  };
 
   private static final String TAG = HelloArActivity.class.getSimpleName();
 
@@ -213,12 +231,25 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
           }
         });
 
-    // Initialize recording buttons - BLAZING
-    startRecordButton = findViewById(R.id.btn_start_record);
-    stopRecordButton = findViewById(R.id.btn_stop_record);
+    recordTimerText = findViewById(R.id.tv_record_timer);
+    recordToggleButton = findViewById(R.id.btn_record_toggle);
 
-    startRecordButton.setOnClickListener(v -> startRecording());
-    stopRecordButton.setOnClickListener(v -> stopRecording());
+    recordToggleButton.setOnClickListener(
+        v -> {
+          if (isRecording) {
+            stopRecording();
+          } else {
+            startRecording();
+          }
+        });
+
+    ImageButton galleryButton = findViewById(R.id.btn_gallery);
+    if (galleryButton != null) {
+      galleryButton.setOnClickListener(v -> {
+        Intent intent = new Intent(HelloArActivity.this, GalleryActivity.class);
+        startActivity(intent);
+      });
+    }
   }
 
   /** Menu button to launch feature specific settings. */
@@ -245,6 +276,23 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     }
 
     super.onDestroy();
+  }
+
+  // CODE INJECTION - Blazing
+  private void applyCameraSettings(Session session, boolean prefer60Fps) {
+    CameraConfigFilter filter = new CameraConfigFilter(session);
+    if (prefer60Fps) {
+      // Force 60 FPS if the device supports it
+      filter.setTargetFps(java.util.EnumSet.of(CameraConfig.TargetFps.TARGET_FPS_60));
+    } else {
+      filter.setTargetFps(java.util.EnumSet.of(CameraConfig.TargetFps.TARGET_FPS_30));
+    }
+
+    List<CameraConfig> supportedConfigs = session.getSupportedCameraConfigs(filter);
+    if (!supportedConfigs.isEmpty()) {
+      // Index 0 is typically the highest resolution CPU/GPU config
+      session.setCameraConfig(supportedConfigs.get(0));
+    }
   }
 
   @Override
@@ -309,6 +357,9 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
       // Recording and playback logic has been safely moved to the Start/Stop buttons!
 
+      // Code Injection - Blazing
+      applyCameraSettings(session, true);
+
       session.resume();
     } catch (CameraNotAvailableException e) {
       messageSnackbarHelper.showError(this, "Camera not available. Try restarting the app.");
@@ -325,6 +376,11 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     if (session == null) return;
     try {
       java.io.File dest = new java.io.File(getExternalFilesDir(null), "dataset.mp4");
+      java.io.File poseFile = new java.io.File(getExternalFilesDir(null), "poses.csv");
+      if (poseFile.exists()) poseFile.delete();
+      java.io.File pointFile = new java.io.File(getExternalFilesDir(null), "points.csv");
+      if (pointFile.exists()) pointFile.delete();
+
       com.google.ar.core.RecordingConfig recordingConfig = new com.google.ar.core.RecordingConfig(session)
               .setMp4DatasetUri(android.net.Uri.fromFile(dest))
               .setAutoStopOnPause(true);
@@ -332,9 +388,18 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       session.startRecording(recordingConfig);
       isRecording = true;
 
+      // START THE TIMER
+      startTime = System.currentTimeMillis();
+      timerHandler.postDelayed(timerRunnable, 0);
+
       // Update UI
-      startRecordButton.setEnabled(false);
-      stopRecordButton.setEnabled(true);
+      if (recordTimerText != null) {
+        recordTimerText.setVisibility(View.VISIBLE);
+      }
+      if (recordToggleButton != null) {
+        recordToggleButton.animate().scaleX(0.7f).scaleY(0.7f).setDuration(200).start();
+        recordToggleButton.setBackgroundResource(R.drawable.bg_record_active);
+      }
       Toast.makeText(this, "Recording Started", Toast.LENGTH_SHORT).show();
     } catch (com.google.ar.core.exceptions.RecordingFailedException e) {
       Log.e(TAG, "Failed to start recording", e);
@@ -348,9 +413,18 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       session.stopRecording();
       isRecording = false;
 
+      // STOP THE TIMER AND RESET TEXT
+      timerHandler.removeCallbacks(timerRunnable);
+      if (recordTimerText != null) {
+        recordTimerText.setVisibility(View.INVISIBLE);
+        recordTimerText.setText("00:00");
+      }
+
       // Update UI
-      startRecordButton.setEnabled(true);
-      stopRecordButton.setEnabled(false);
+      if (recordToggleButton != null) {
+        recordToggleButton.animate().scaleX(1.0f).scaleY(1.0f).setDuration(200).start();
+        recordToggleButton.setBackgroundResource(R.drawable.bg_record_ready);
+      }
       Toast.makeText(this, "Recording Saved to Storage", Toast.LENGTH_LONG).show();
     } catch (Exception e) {
       Log.e(TAG, "Failed to stop recording", e);
@@ -538,14 +612,27 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
     // Code Injection - BLAZING
     // --- START POSE DUMP ---
-    // ADDED isRecording CHECK HERE
     if (isRecording && camera.getTrackingState() == TrackingState.TRACKING) {
-      Pose pose = camera.getDisplayOrientedPose();
+
+      // 1. MUST use raw hardware pose, NOT getDisplayOrientedPose()!
+      Pose pose = camera.getPose();
       long timestamp = frame.getTimestamp();
       float[] t = pose.getTranslation();
       float[] q = pose.getRotationQuaternion();
 
-      String poseLine = timestamp + "," + t[0] + "," + t[1] + "," + t[2] + "," + q[0] + "," + q[1] + "," + q[2] + "," + q[3] + "\n";
+      // 2. Extract true hardware camera intrinsics
+      com.google.ar.core.CameraIntrinsics intrinsics = camera.getImageIntrinsics();
+      float[] focalLength = intrinsics.getFocalLength();
+      float[] principalPoint = intrinsics.getPrincipalPoint();
+
+      // 3. Format: timestamp, tx, ty, tz, qx, qy, qz, qw, fl_x, fl_y, cx, cy
+      String poseLine = String.format("%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
+              timestamp,
+              t[0], t[1], t[2],
+              q[0], q[1], q[2], q[3],
+              focalLength[0], focalLength[1],
+              principalPoint[0], principalPoint[1]
+      );
 
       try {
         java.io.File file = new java.io.File(getExternalFilesDir(null), "poses.csv");
@@ -646,6 +733,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
         if (isRecording) {
           java.nio.FloatBuffer points = pointCloud.getPoints();
           StringBuilder sb = new StringBuilder();
+          long ptTimestamp = pointCloud.getTimestamp();
 
           // ARCore points are packed in groups of 4 floats: [X, Y, Z, Confidence]
           for (int i = 0; i < points.limit(); i += 4) {
@@ -656,7 +744,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
             // Only save high-confidence points to prevent noisy floaters
             if (confidence > 0.5f) {
-              sb.append(x).append(",").append(y).append(",").append(z).append("\n");
+              sb.append(ptTimestamp).append(",").append(x).append(",").append(y).append(",").append(z).append("\n");
             }
           }
 
