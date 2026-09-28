@@ -77,9 +77,18 @@ public class GalleryActivity extends AppCompatActivity {
     sbTrimEnd = findViewById(R.id.sb_trim_end);
     btnTrimSave = findViewById(R.id.btn_trim_save);
 
-    datasetFile = new File(getExternalFilesDir(null), "dataset.mp4");
-    posesFile = new File(getExternalFilesDir(null), "poses.csv");
-    pointsFile = new File(getExternalFilesDir(null), "points.csv");
+    File rootDir = getExternalFilesDir(null);
+    File targetDir = rootDir;
+    if (rootDir != null) {
+      File[] scanDirs = rootDir.listFiles((dir, name) -> name.startsWith("Scan_") && new File(dir, name).isDirectory());
+      if (scanDirs != null && scanDirs.length > 0) {
+        java.util.Arrays.sort(scanDirs, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
+        targetDir = scanDirs[0];
+      }
+    }
+    datasetFile = new File(targetDir, "dataset.mp4");
+    posesFile = new File(targetDir, "poses.csv");
+    pointsFile = new File(targetDir, "points.csv");
 
     loadDataset();
 

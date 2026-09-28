@@ -96,8 +96,12 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
   // --- Recording State Variables - BLAZING ---
   private boolean isRecording = false;
+  private java.io.File currentDatasetDir;
   private View recordToggleButton;
   private android.widget.TextView recordTimerText;
+  private android.widget.TextView cameraInfoText;
+  private com.google.ar.core.CameraConfig selectedCameraConfig = null;
+  private boolean userSelectedCameraConfig = false;
 
   // ADD THE TIMER VARIABLES HERE
   private android.os.Handler timerHandler = new android.os.Handler();
@@ -155,6 +159,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   private BackgroundRenderer backgroundRenderer;
   private Framebuffer virtualSceneFramebuffer;
   private boolean hasSetTextureNames = false;
+  private boolean hasUpdatedCameraInfo = false;
 
   private final DepthSettings depthSettings = new DepthSettings();
   private boolean[] depthSettingsMenuDialogCheckboxes = new boolean[2];
@@ -233,6 +238,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
     recordTimerText = findViewById(R.id.tv_record_timer);
     recordToggleButton = findViewById(R.id.btn_record_toggle);
+    cameraInfoText = findViewById(R.id.tv_camera_info);
 
     recordToggleButton.setOnClickListener(
         v -> {
@@ -254,7 +260,10 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
   /** Menu button to launch feature specific settings. */
   protected boolean settingsMenuClick(MenuItem item) {
-    if (item.getItemId() == R.id.depth_settings) {
+    if (item.getItemId() == R.id.camera_settings) {
+      launchCameraSettingsMenuDialog();
+      return true;
+    } else if (item.getItemId() == R.id.depth_settings) {
       launchDepthSettingsMenuDialog();
       return true;
     } else if (item.getItemId() == R.id.instant_placement_settings) {
@@ -278,20 +287,164 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     super.onDestroy();
   }
 
-  // CODE INJECTION - Blazing
+  // CODE INJECTION - Blazing (Corrected for High-Res & 60 FPS Selection)
   private void applyCameraSettings(Session session, boolean prefer60Fps) {
+    if (userSelectedCameraConfig && selectedCameraConfig != null) {
+      try {
+        session.setCameraConfig(selectedCameraConfig);
+        android.util.Size size = selectedCameraConfig.getImageSize();
+        int fps = selectedCameraConfig.getFpsRange().getUpper();
+        String cameraInfoStr = String.format(java.util.Locale.US, "%dx%d @ %d FPS", size.getWidth(), size.getHeight(), fps);
+        runOnUiThread(() -> {
+          if (cameraInfoText != null) {
+            cameraInfoText.setText(cameraInfoStr);
+          }
+        });
+      } catch (Exception e) {
+        Log.e(TAG, "Error applying user selected camera config", e);
+      }
+      return;
+    }
+
     CameraConfigFilter filter = new CameraConfigFilter(session);
     if (prefer60Fps) {
-      // Force 60 FPS if the device supports it
-      filter.setTargetFps(java.util.EnumSet.of(CameraConfig.TargetFps.TARGET_FPS_60));
+      filter.setTargetFps(java.util.EnumSet.of(CameraConfig.TargetFps.TARGET_FPS_60, CameraConfig.TargetFps.TARGET_FPS_30));
     } else {
       filter.setTargetFps(java.util.EnumSet.of(CameraConfig.TargetFps.TARGET_FPS_30));
     }
 
     List<CameraConfig> supportedConfigs = session.getSupportedCameraConfigs(filter);
+
+    if (supportedConfigs.isEmpty()) {
+      // Fallback to all supported configs without TargetFps filter
+      supportedConfigs = session.getSupportedCameraConfigs(new CameraConfigFilter(session));
+    }
+
     if (!supportedConfigs.isEmpty()) {
-      // Index 0 is typically the highest resolution CPU/GPU config
-      session.setCameraConfig(supportedConfigs.get(0));
+      CameraConfig bestConfig = supportedConfigs.get(0);
+      int maxPixels = 0;
+      int maxFps = 0;
+
+      // Iterate through all supported configs to find highest resolution AND highest FPS
+      for (CameraConfig config : supportedConfigs) {
+        android.util.Size imageSize = config.getImageSize();
+        int pixels = imageSize.getWidth() * imageSize.getHeight();
+        int fps = config.getFpsRange().getUpper();
+
+        Log.i(TAG, "Available CameraConfig: " + imageSize.getWidth() + "x" + imageSize.getHeight() + " FPS range: " + config.getFpsRange());
+
+        if (pixels > maxPixels || (pixels == maxPixels && fps > maxFps)) {
+          maxPixels = pixels;
+          maxFps = fps;
+          bestConfig = config;
+        }
+      }
+
+      selectedCameraConfig = bestConfig;
+      session.setCameraConfig(bestConfig);
+      android.util.Size finalSize = bestConfig.getImageSize();
+      android.util.Range<Integer> fpsRange = bestConfig.getFpsRange();
+      int fps = fpsRange.getUpper();
+      String cameraInfoStr = String.format(java.util.Locale.US, "%dx%d @ %d FPS", finalSize.getWidth(), finalSize.getHeight(), fps);
+      Log.i(TAG, "Selected Camera Config: " + cameraInfoStr);
+
+      runOnUiThread(() -> {
+        if (cameraInfoText != null) {
+          cameraInfoText.setText(cameraInfoStr);
+        }
+      });
+    }
+  }
+
+  private void launchCameraSettingsMenuDialog() {
+    if (session == null) return;
+
+    List<CameraConfig> rawConfigs = session.getSupportedCameraConfigs(new CameraConfigFilter(session));
+    if (rawConfigs.isEmpty()) {
+      Toast.makeText(this, "No camera configs available", Toast.LENGTH_SHORT).show();
+      return;
+    }
+
+    // Copy to mutable list because ARCore returns an unmodifiable list
+    List<CameraConfig> configs = new ArrayList<>(rawConfigs);
+
+    // Sort by Resolution descending, then FPS descending
+    configs.sort((c1, c2) -> {
+      int p1 = c1.getImageSize().getWidth() * c1.getImageSize().getHeight();
+      int p2 = c2.getImageSize().getWidth() * c2.getImageSize().getHeight();
+      if (p1 != p2) {
+        return Integer.compare(p2, p1);
+      }
+      return Integer.compare(c2.getFpsRange().getUpper(), c1.getFpsRange().getUpper());
+    });
+
+    String[] displayNames = new String[configs.size()];
+    int currentSelectedIndex = 0;
+
+    CameraConfig currentActive = selectedCameraConfig;
+    if (currentActive == null) {
+      try {
+        currentActive = session.getCameraConfig();
+      } catch (Exception ignored) {}
+    }
+
+    for (int i = 0; i < configs.size(); i++) {
+      CameraConfig c = configs.get(i);
+      android.util.Size size = c.getImageSize();
+      int fps = c.getFpsRange().getUpper();
+      displayNames[i] = String.format(java.util.Locale.US, "%dx%d @ %d FPS (FPS range: %d-%d)",
+          size.getWidth(), size.getHeight(), fps, c.getFpsRange().getLower(), c.getFpsRange().getUpper());
+
+      if (currentActive != null &&
+          c.getImageSize().equals(currentActive.getImageSize()) &&
+          c.getFpsRange().equals(currentActive.getFpsRange())) {
+        currentSelectedIndex = i;
+      }
+    }
+
+    final int[] choice = new int[] { currentSelectedIndex };
+
+    new AlertDialog.Builder(this)
+        .setTitle("Select Camera Resolution & FPS")
+        .setSingleChoiceItems(displayNames, currentSelectedIndex, (dialog, which) -> choice[0] = which)
+        .setPositiveButton("Apply", (dialog, which) -> {
+          int selected = choice[0];
+          if (selected >= 0 && selected < configs.size()) {
+            selectedCameraConfig = configs.get(selected);
+            userSelectedCameraConfig = true;
+            applySelectedCameraConfig();
+          }
+        })
+        .setNegativeButton("Cancel", null)
+        .show();
+  }
+
+
+
+  private void applySelectedCameraConfig() {
+    if (session == null || selectedCameraConfig == null) return;
+    try {
+      displayRotationHelper.onPause();
+      surfaceView.onPause();
+      session.pause();
+
+      session.setCameraConfig(selectedCameraConfig);
+
+      configureSession();
+      session.resume();
+      surfaceView.onResume();
+      displayRotationHelper.onResume();
+
+      android.util.Size size = selectedCameraConfig.getImageSize();
+      int fps = selectedCameraConfig.getFpsRange().getUpper();
+      String cameraInfoStr = String.format(java.util.Locale.US, "%dx%d @ %d FPS", size.getWidth(), size.getHeight(), fps);
+      if (cameraInfoText != null) {
+        cameraInfoText.setText(cameraInfoStr);
+      }
+      Toast.makeText(this, "Applied Camera Config: " + cameraInfoStr, Toast.LENGTH_SHORT).show();
+    } catch (Exception e) {
+      Log.e(TAG, "Failed to apply selected camera config", e);
+      Toast.makeText(this, "Failed to apply camera config: " + e.getMessage(), Toast.LENGTH_SHORT).show();
     }
   }
 
@@ -360,6 +513,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       // Code Injection - Blazing
       applyCameraSettings(session, true);
 
+      hasUpdatedCameraInfo = false;
       session.resume();
     } catch (CameraNotAvailableException e) {
       messageSnackbarHelper.showError(this, "Camera not available. Try restarting the app.");
@@ -375,11 +529,13 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   private void startRecording() {
     if (session == null) return;
     try {
-      java.io.File dest = new java.io.File(getExternalFilesDir(null), "dataset.mp4");
-      java.io.File poseFile = new java.io.File(getExternalFilesDir(null), "poses.csv");
-      if (poseFile.exists()) poseFile.delete();
-      java.io.File pointFile = new java.io.File(getExternalFilesDir(null), "points.csv");
-      if (pointFile.exists()) pointFile.delete();
+      String timestamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault()).format(new java.util.Date());
+      currentDatasetDir = new java.io.File(getExternalFilesDir(null), "Scan_" + timestamp);
+      if (!currentDatasetDir.exists()) {
+          currentDatasetDir.mkdirs();
+      }
+
+      java.io.File dest = new java.io.File(currentDatasetDir, "dataset.mp4");
 
       com.google.ar.core.RecordingConfig recordingConfig = new com.google.ar.core.RecordingConfig(session)
               .setMp4DatasetUri(android.net.Uri.fromFile(dest))
@@ -591,6 +747,26 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       hasSetTextureNames = true;
     }
 
+    if (!hasUpdatedCameraInfo) {
+      try {
+        CameraConfig activeConfig = session.getCameraConfig();
+        if (activeConfig != null) {
+          android.util.Size size = activeConfig.getImageSize();
+          android.util.Range<Integer> fpsRange = activeConfig.getFpsRange();
+          int fps = fpsRange.getUpper();
+          String infoStr = String.format(java.util.Locale.US, "%dx%d @ %d FPS", size.getWidth(), size.getHeight(), fps);
+          runOnUiThread(() -> {
+            if (cameraInfoText != null) {
+              cameraInfoText.setText(infoStr);
+            }
+          });
+          hasUpdatedCameraInfo = true;
+        }
+      } catch (Exception e) {
+        Log.e(TAG, "Error updating camera info text", e);
+      }
+    }
+
     // -- Update per-frame state
 
     // Notify ARCore session that the view size changed so that the perspective matrix and
@@ -606,6 +782,9 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     } catch (CameraNotAvailableException e) {
       Log.e(TAG, "Camera not available during onDrawFrame", e);
       messageSnackbarHelper.showError(this, "Camera not available. Try restarting the app.");
+      return;
+    } catch (Exception e) {
+      Log.e(TAG, "Exception during session.update()", e);
       return;
     }
     Camera camera = frame.getCamera();
@@ -635,7 +814,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       );
 
       try {
-        java.io.File file = new java.io.File(getExternalFilesDir(null), "poses.csv");
+        java.io.File file = new java.io.File(currentDatasetDir, "poses.csv");
         java.io.FileWriter writer = new java.io.FileWriter(file, true); // true = append mode
         writer.write(poseLine);
         writer.flush();
@@ -749,7 +928,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
           }
 
           try {
-            java.io.File ptFile = new java.io.File(getExternalFilesDir(null), "points.csv");
+            java.io.File ptFile = new java.io.File(currentDatasetDir, "points.csv");
             java.io.FileWriter ptWriter = new java.io.FileWriter(ptFile, true); // Append mode
             ptWriter.write(sb.toString());
             ptWriter.flush();
