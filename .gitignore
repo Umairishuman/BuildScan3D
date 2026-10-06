@@ -18,3 +18,5 @@ __pycache__/
 
 ~*.docx
 *.exe
+.next/
+node_modules/
