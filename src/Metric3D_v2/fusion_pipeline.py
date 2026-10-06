@@ -5,7 +5,8 @@ import cv2
 import torch
 import numpy as np
 import pandas as pd
-from scipy.spatial.transform import Rotation as R
+import subprocess
+from scipy.spatial.transform import Rotation as R, Slerp
 import open3d as o3d
 
 # 1. Fake the mmcv module to bypass Windows C++ compilation
@@ -25,6 +26,8 @@ BLUR_THRESHOLD = 100.0  # Increase if you want stricter sharpness filtering
 FRAME_SKIP = 10         # Process 1 frame every X frames (e.g., 6 fps from a 60fps video)
 DEPTH_MIN = 0.2         # Ignore pixels closer than 20cm
 DEPTH_MAX = 5.0         # Ignore pixels further than 5 meters (prevents sky/window artifacts)
+POSE_OFFSET = 0.0       # seconds: pose_time = video_pts + POSE_OFFSET (measured ~0.0 +/- 0.05s for roomAttemptSadness)
+MAX_POSE_GAP = 0.12     # skip frames that fall inside a longer hole in poses.csv (tracking lost)
 PIXEL_STRIDE = 4        # Sample every 4th pixel to prevent RAM explosion (16GB safe)
 # ---------------------
 
@@ -34,19 +37,39 @@ model = torch.hub.load('yvanyin/metric3d', 'metric3d_vit_large', pretrain=True)
 model = model.to(device).eval()
 
 print(f"Loading ARCore poses from {POSES_PATH}...")
-poses_df = pd.read_csv(POSES_PATH, header=None)
-poses = poses_df.values
+poses = pd.read_csv(POSES_PATH, header=None).values
+# ARCore can log out-of-order / duplicate timestamps: sort and drop duplicates.
+poses = poses[np.argsort(poses[:, 0], kind="stable")]
+poses = poses[np.unique(poses[:, 0], return_index=True)[1]]
+t_poses = (poses[:, 0] - poses[0, 0]) / 1e9          # seconds, 0 = first logged pose
+slerp = Slerp(t_poses, R.from_quat(poses[:, 4:8]))
+print(f"{len(poses)} poses spanning {t_poses[-1]:.1f}s")
+
+def pose_at(t):
+    """Interpolated (position, quaternion xyzw, intrinsics) at time t, or None if t is in a tracking hole."""
+    if t < t_poses[0] or t > t_poses[-1]:
+        return None
+    i = np.searchsorted(t_poses, t, side="right")
+    i0, i1 = max(i - 1, 0), min(i, len(t_poses) - 1)
+    if t_poses[i1] - t_poses[i0] > MAX_POSE_GAP:
+        return None
+    a = 0.0 if i0 == i1 else (t - t_poses[i0]) / (t_poses[i1] - t_poses[i0])
+    pos = (1 - a) * poses[i0, 1:4] + a * poses[i1, 1:4]
+    quat = slerp([t]).as_quat()[0]
+    return pos, quat, poses[i0, 8:12]
+
+# Per-frame presentation timestamps of the 1080p video track (frame index != pose row index!)
+pts = np.sort(np.array(subprocess.check_output(
+    ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "packet=pts_time",
+     "-of", "csv=p=0", VIDEO_PATH]).split(), dtype=np.float64))
 
 cap = cv2.VideoCapture(VIDEO_PATH)
 if not cap.isOpened():
     print(f"Error: Could not open video at {VIDEO_PATH}")
     sys.exit()
 
-total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-total_poses = len(poses)
-
-if total_frames != total_poses:
-    print(f"Warning: Video frames ({total_frames}) and Poses ({total_poses}) mismatch. Truncating to shortest.")
+total_frames = min(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), len(pts))
+print(f"Video frames: {total_frames}, poses: {len(poses)} (matched by timestamp, not index)")
 
 global_points = []
 global_colors = []
@@ -54,7 +77,7 @@ global_colors = []
 frame_idx = 0
 processed_count = 0
 
-while cap.isOpened() and frame_idx < min(total_frames, total_poses):
+while cap.isOpened() and frame_idx < total_frames:
     ret, raw_frame = cap.read()
     if not ret:
         break
@@ -76,10 +99,12 @@ while cap.isOpened() and frame_idx < min(total_frames, total_poses):
     print(f"Frame {frame_idx:04d} | Processing (Sharpness: {sharpness:.1f})...")
     
     # Extract ARCore Telemetry for this exact frame
-    pose_row = poses[frame_idx]
-    tx, ty, tz = pose_row[1:4]
-    qx, qy, qz, qw = pose_row[4:8]
-    fx, fy, cx, cy = pose_row[8:12]
+    interp = pose_at(pts[frame_idx] + POSE_OFFSET)
+    if interp is None:
+        print(f"Frame {frame_idx:04d} | SKIPPED (no pose at t={pts[frame_idx]:.2f}s)")
+        frame_idx += 1
+        continue
+    (tx, ty, tz), (qx, qy, qz, qw), (fx, fy, cx, cy) = interp
     
     # 1. Rotate CW to make the image upright for Metric3D
     rgb_upright = cv2.rotate(raw_frame, cv2.ROTATE_90_CLOCKWISE)

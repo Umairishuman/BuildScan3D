@@ -97,6 +97,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   // --- Recording State Variables - BLAZING ---
   private boolean isRecording = false;
   private java.io.File currentDatasetDir;
+  private CaptureLogger captureLogger;
   private View recordToggleButton;
   private android.widget.TextView recordTimerText;
   private android.widget.TextView cameraInfoText;
@@ -536,6 +537,12 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       }
 
       java.io.File dest = new java.io.File(currentDatasetDir, "dataset.mp4");
+      try {
+        captureLogger = new CaptureLogger(currentDatasetDir);
+      } catch (java.io.IOException e) {
+        Log.e(TAG, "Failed to open capture logs", e);
+        return;
+      }
 
       com.google.ar.core.RecordingConfig recordingConfig = new com.google.ar.core.RecordingConfig(session)
               .setMp4DatasetUri(android.net.Uri.fromFile(dest))
@@ -566,8 +573,12 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   private void stopRecording() {
     if (session == null) return;
     try {
-      session.stopRecording();
       isRecording = false;
+      session.stopRecording();
+      if (captureLogger != null) {
+        captureLogger.close();
+        captureLogger = null;
+      }
 
       // STOP THE TIMER AND RESET TEXT
       timerHandler.removeCallbacks(timerRunnable);
@@ -790,38 +801,9 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     Camera camera = frame.getCamera();
 
     // Code Injection - BLAZING
-    // --- START POSE DUMP ---
-    if (isRecording && camera.getTrackingState() == TrackingState.TRACKING) {
-
-      // 1. MUST use raw hardware pose, NOT getDisplayOrientedPose()!
-      Pose pose = camera.getPose();
-      long timestamp = frame.getTimestamp();
-      float[] t = pose.getTranslation();
-      float[] q = pose.getRotationQuaternion();
-
-      // 2. Extract true hardware camera intrinsics
-      com.google.ar.core.CameraIntrinsics intrinsics = camera.getImageIntrinsics();
-      float[] focalLength = intrinsics.getFocalLength();
-      float[] principalPoint = intrinsics.getPrincipalPoint();
-
-      // 3. Format: timestamp, tx, ty, tz, qx, qy, qz, qw, fl_x, fl_y, cx, cy
-      String poseLine = String.format("%d,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n",
-              timestamp,
-              t[0], t[1], t[2],
-              q[0], q[1], q[2], q[3],
-              focalLength[0], focalLength[1],
-              principalPoint[0], principalPoint[1]
-      );
-
-      try {
-        java.io.File file = new java.io.File(currentDatasetDir, "poses.csv");
-        java.io.FileWriter writer = new java.io.FileWriter(file, true); // true = append mode
-        writer.write(poseLine);
-        writer.flush();
-        writer.close();
-      } catch (java.io.IOException e) {
-        Log.e(TAG, "Failed writing pose to CSV", e);
-      }
+    // --- START POSE DUMP --- (buffered, written off the GL thread by CaptureLogger)
+    if (isRecording && captureLogger != null) {
+      captureLogger.onFrame(session, frame, camera);
     }
     // --- END POSE DUMP ---
 
@@ -908,34 +890,8 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
         lastPointCloudTimestamp = pointCloud.getTimestamp();
 
         // --- START POINT CLOUD DUMP ---
-        // ADDED isRecording CHECK HERE
-        if (isRecording) {
-          java.nio.FloatBuffer points = pointCloud.getPoints();
-          StringBuilder sb = new StringBuilder();
-          long ptTimestamp = pointCloud.getTimestamp();
-
-          // ARCore points are packed in groups of 4 floats: [X, Y, Z, Confidence]
-          for (int i = 0; i < points.limit(); i += 4) {
-            float x = points.get(i);
-            float y = points.get(i + 1);
-            float z = points.get(i + 2);
-            float confidence = points.get(i + 3);
-
-            // Only save high-confidence points to prevent noisy floaters
-            if (confidence > 0.5f) {
-              sb.append(ptTimestamp).append(",").append(x).append(",").append(y).append(",").append(z).append("\n");
-            }
-          }
-
-          try {
-            java.io.File ptFile = new java.io.File(currentDatasetDir, "points.csv");
-            java.io.FileWriter ptWriter = new java.io.FileWriter(ptFile, true); // Append mode
-            ptWriter.write(sb.toString());
-            ptWriter.flush();
-            ptWriter.close();
-          } catch (java.io.IOException e) {
-            Log.e(TAG, "Failed writing points to CSV", e);
-          }
+        if (isRecording && captureLogger != null) {
+          captureLogger.onPointCloud(pointCloud);
         }
         // --- END POINT CLOUD DUMP ---
       }

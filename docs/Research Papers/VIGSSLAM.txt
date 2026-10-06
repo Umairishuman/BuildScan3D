@@ -1,0 +1,4826 @@
+VIGS-SLAM:
+Visual Inertial Gaussian Splatting SLAM
+Zihan Zhu1, Wei Zhang2, Moyang Li1, Norbert Haala2,
+Marc Pollefeys1,3, and Daniel Barath1
+1 ETH Zurich, Zurich, Switzerland
+2 University of Stuttgart, Stuttgart, Germany
+3 Microsoft
+Abstract. We present VIGS-SLAM, a visual-inertial 3D Gaussian Splat-
+ting SLAM system that achieves robust real-time tracking and high-
+fidelity reconstruction. Although recent 3DGS-based SLAM methods
+achieve dense and photorealistic mapping, their purely visual design de-
+grades under challenging conditions such as motion blur, low texture,
+and exposure variations. Our method tightly couples visual and inertial
+cues within a unified optimization framework, jointly optimizing cam-
+era poses, depths, and IMU states. It features robust IMU initialization,
+time-varying bias modeling, and loop closure with consistent Gaussian
+updates. Experiments on five challenging datasets demonstrate our su-
+periority over state-of-the-art methods. The code will be made public.
+Keywords: SLAM · IMU · Gaussian Splatting
+Input: RGB Stream + IMU Readings
+Text
+VIGS-SLAM
+Output: Gaussian Map + Camera Trajectory
+Fig. 1: VIGS-SLAM. Given a sequence of RGB frames and IMU readings, our
+method robustly tracks the camera trajectory while reconstructing a high-quality Gaus-
+sian map. Above is the visualization of Retail sequence in FAST-LIVO2 [68] dataset.
+1
+Introduction
+Simultaneous Localization and Mapping (SLAM) is a key problem in robotics
+and computer vision, enabling autonomous navigation, augmented (AR) and
+mixed reality (VR) applications. Recent advances in neural implicit represen-
+tations [42] and 3D Gaussian Splatting (3DGS) [27] have transformed SLAM
+arXiv:2512.02293v2  [cs.RO]  13 Mar 2026
+2
+Zihan Zhu et al.
+mapping from sparse point clouds to dense, photorealistic scene reconstructions.
+In particular, 3DGS SLAM methods [53,65] demonstrate that 3D Gaussian prim-
+itives provide a compact yet expressive scene representation, enabling real-time
+dense mapping and photorealistic novel view synthesis. However, most existing
+3DGS-based SLAM systems remain purely visual: they rely on visual correspon-
+dences for tracking and often degrade under motion blur, textureless regions, low
+frame rate, or transient occlusions – conditions common in real-world scenarios.
+Meanwhile, inertial measurement units (IMUs) have become ubiquitous –
+integrated in virtually every modern smartphone [37, 52], AR headset [20, 41],
+and consumer camera [21–23]. These sensors are low-cost (MEMS often under $1
+per chip) yet provide high-frequency measurements of acceleration and angular
+velocity, complementing vision by stabilizing tracking, recovering metric scale,
+and maintaining robustness under visually degraded conditions.
+Traditional visual-inertial odometry (VIO) and SLAM such as OKVIS [30],
+MSCKF [43], VINS-Mono [48], and ORB-SLAM3 [4] are typically formulated
+as either filtering-based or optimization-based frameworks, that fuse visual ob-
+servations with inertial measurements. Most systems rely on sparse geometric
+features such as BRISK [29] or ORB [51], while others adopt direct photometric
+alignment such as VI-DSO [58] to jointly optimize image intensities. Despite their
+accuracy, these representations produce only sparse or semi-dense point maps.
+The recent state-of-the-art visual SLAM system DROID-SLAM [57] reformu-
+lates dense correspondence estimation and bundle adjustment within a learned,
+differentiable framework, enabling iterative refinement of correspondences and
+joint optimization over camera poses and per-pixel disparities. This formulation
+is particularly well-suited for Gaussian initialization, as the 3D Gaussians can be
+directly initialized from the unprojected point cloud derived from the estimated
+disparities. However, DROID-SLAM [57] and subsequent Gaussian-Splatting ex-
+tensions [53,65] remain purely visual, without exploiting inertial measurements
+that could further enhance robustness.
+The very few existing VIO 3DGS-SLAM approaches [44,56,61] exhibit several
+limitations, such as reliance on depth sensors, naive fusion of IMU data through
+pairwise (non-windowed) constraints, fixed IMU bias, or decoupled alternating
+optimization. Therefore, they suffer from reduced accuracy, limited robustness,
+and blurry renderings. In contrast, we develop VIGS-SLAM, a highly robust
+SLAM system that achieves both real-time accurate tracking and high-fidelity
+Gaussian reconstruction. Our method tightly couples visual and inertial energy
+terms into a unified optimization framework, incorporates robust multi-stage
+IMU initialization and efficient loop closure with consistent Gaussian updates.
+This design improves tracking accuracy, reduces drift, enhances robustness under
+challenging conditions (e.g., motion blur, low texture, exposure variations, dy-
+namic objects), and yields higher-fidelity renderings. Extensive experiments on
+five diverse datasets, including a challenging self-captured visual-inertial dataset,
+demonstrate consistent improvements over state-of-the-art methods.
+VIGS-SLAM
+3
+2
+Related Work
+Visual-Inertial Odometry and SLAM. An early and seminal visual-inertial
+odometry approach is MSCKF [43], which introduced a feature-marginalizing
+EKF that maintains a sliding window of cloned states, achieving real-time op-
+eration with a bounded state size. Follow-ups [18,34] improved consistency, ob-
+servability, and robustness, and inspired open implementations [2,14].
+In parallel, optimization-based methods jointly minimize reprojection and
+preintegrated IMU residuals via a sliding-window nonlinear least-squares formu-
+lation. OKVIS [30] tightly couples reprojection and IMU residuals in a keyframe
+bundle-adjustment backend. VINS-Mono [48] adds robust initialization, loop clo-
+sure, and relocalization. ICE-BA [35] streamlines efficient incremental BA. ORB-
+SLAM3 [4] unifies visual and visual-inertial modes with multi-map management
+and loop closing. Despite strong accuracy, these pipelines typically rely on sparse
+features or direct pixel intensities, which makes them brittle under low texture,
+motion blur, repetitive patterns, strong illumination/exposure changes. They
+also produce sparse (or semi-dense) maps that limit downstream tasks such as
+dense reconstruction, semantics, and photorealistic rendering.
+DBA-Fusion [70] is the first to leverage dense correspondences from DROID-
+SLAM [57] for visual-inertial SLAM. Our VIGS-SLAM also utilizes the same
+dense correspondences, but incorporates and optimizes visual-inertial constraints
+in a fundamentally different manner. DBA-Fusion [70] employs a cascaded two-
+stage framework: visual bundle adjustment is first solved independently, and
+the resulting Schur-complement Hessian is injected as a linearized factor into
+GTSAM [9] inertial optimizer. This separation introduces a linearization gap
+that can only be partially mitigated through outer re-linearization iterations,
+resulting in limited robustness due to the lack of coherent visual-inertial fusion.
+In contrast, VIGS-SLAM implements custom CUDA kernels for inertial bundle
+adjustment that directly fuse visual and inertial Hessian contributions within a
+single normal-equation solve per iteration. This formulation enables true tightly
+coupled joint optimization over poses, velocities, and biases, leading to improved
+numerical consistency and robustness.
+Furthermore, beyond tightly coupled optimization, our system integrates ro-
+bust staged IMU initialization, efficient loop closure and Gaussian Splatting-
+based dense mapping, resulting in a unified visual-inertial Gaussian Splatting
+SLAM framework that improves tracking accuracy and robustness while en-
+abling high-fidelity dense reconstruction and novel view synthesis.
+Neural Implicit and 3DGS SLAM. Neural implicit representations and 3D
+Gaussian Splatting (3DGS) have gained significant attention in SLAM for accu-
+rate dense reconstruction and realistic novel view synthesis. Early systems such
+as iMAP [55] and NICE-SLAM [74] established unified pipelines that jointly
+perform mapping and tracking with neural fields. Subsequent work improves ef-
+ficiency and scalability through compact encodings [24,28,59], extends to monoc-
+ular settings [1,8,50,66,73], and integrates semantics [31,64,72]. 3DGS [27] pro-
+vides an explicit and efficient alternative, which sparked a wave of SLAM sys-
+4
+Zihan Zhu et al.
+Input: RGB Stream
+Keyframe Pose
+Frontend Tracking
+ConvGRU
+Pose 
+, Disp. 
+Bias  , Vel 
+Refined Visual
+Correspondences
+ Joint Visual-
+inertial BA
+GS Mapping
+Loop Closure
+Pose
+Graph
+BA
+Pose Update δ
+ 
+Scale Update δ  
+Frozen Network
+Attributes
+Optimization Layer
+Decision
+Loss Function
+Gradient Flow
+No
+Loop 
+Found?
+Diff. Rendering
+Control Flow
+Yes
+Operations
+Pointcloud 
+Initial GS
+Input: IMU Readings
+Loop 
+Closure 
+Detection
+Pose Graph
+Keyframe 
+Selection & Init.
+IMU 
+Preintegration
+Rendered RGB + Depth
+L1 RGB
+L1 Depth
+Rendering Loss
+Relative Pose 
+ 
+Loop Closure 
+ 
+Fig. 2: System Overview. VIGS-SLAM takes a sequence of RGB frames and IMU
+readings as input, and simultaneously estimates camera poses while building a 3D
+Gaussian map G. Keyframes are selected based on optical flow, and each new keyframe
+is initialized using the IMU pre-integration from the previous keyframe. This keyframe
+is then added to the local frame graph, where visual-inertial bundle adjustment jointly
+optimizes camera poses, depths, and IMU parameters. Visual correspondences are it-
+eratively refined using a recurrent ConvGRU module. In parallel, a global pose graph
+is maintained using relative pose constraints from the frontend tracking. For Gaussian
+mapping, the depth of each new keyframe is unprojected into 3D using the estimated
+pose, converted into initial Gaussians, and fused into the global map. Both color and
+depth re-rendering losses are used to refine the Gaussians. Loop closure detection is
+performed based on optical flow differences between the new keyframe and all previous
+ones. When a loop is detected, pose graph bundle adjustment is performed, followed
+by an efficient Gaussian update to maintain global consistency.
+tems [5,10,16,17,19,26,32,33,40,47,53,62,65,69,71]. Among them, MonoGS [40]
+is the first to achieve near real-time monocular SLAM using 3DGS as the sole
+map representation, while Splat-SLAM [53] and HI-SLAM2 [65] further improve
+pose accuracy and map fidelity.
+Integrating IMU sensor with monocular or RGB-D neural-implicit/3DGS
+SLAM remains underexplored. NeRF-VINS [25] and NeRF-VIO [67] address
+map-based visual-inertial localization on a prior NeRF representation, rather
+than performing full SLAM. MM3DGS-SLAM [56] and VIGS-Fusion [44] primar-
+ily target RGB-D+IMU settings. Only MM3DGS-SLAM supports RGB input by
+treating monocular depth as sensor depth. GI-SLAM [36] reports stereo+IMU re-
+sults on EuRoC [3] and a monocular+IMU variant on TUM [54] using accelerom-
+eter measurements only, without considering the gyroscope. VINGS-Mono [61]
+adopts the interleaved tracking scheme of DBA-Fusion [70], and thus suffers from
+similar robustness limitations and severe drift under challenging environments.
+For mapping, while it enables Gaussian reconstruction at kilometer-scale scenes,
+the resulting maps often miss fine details.
+VIGS-SLAM
+5
+In contrast to prior work, we jointly optimize visual and inertial terms, in-
+corporate robust IMU initialization, and perform efficient loop closure with con-
+sistent Gaussian map updates, resulting in improved accuracy and robustness.
+3
+Method
+We provide an overview of our pipeline in Fig. 2. Our system takes as input a se-
+quence of RGB frames {Ii}N
+i=1 and raw IMU measurements {ak, ωk}M
+k=1, where
+ak and ωk denote the angular velocity and linear acceleration. It simultaneously
+performs camera tracking and Gaussian Splatting Mapping. In detail, we first
+perform a staged IMU initialization to recover the metric scale, gravity direc-
+tion, and IMU parameters. After initialization, incoming frames are processed
+by the frontend tracking module, which selects keyframes and forms a local
+frame graph E. Camera motion as well as IMU parameters are then optimized
+within this graph by jointly minimizing both visual and inertial residuals. Paral-
+lel to tracking, we incrementally build and refine a 3D Gaussian Splatting Map
+for high-quality rendering. Loop closures are detected and performed efficiently,
+with corresponding Gaussian updates to ensure global consistency.
+3.1
+Tracking
+The tracking module processes sequential images online, creating a new keyframe
+when the optical-flow magnitude to the last keyframe exceeds a threshold. To
+limit drift from IMU pre-integration over long time intervals, we also force a new
+keyframe at least every tkf seconds. We formalize our tracking as an optimiza-
+tion problem where, for each keyframe i, we optimize camera pose Ti = (Ri, pi),
+disparity di, velocity vi, and IMU bias bi = [bT
+gi, bT
+ai]T (gyroscope bgi and ac-
+celerometer bias bai). In the following, we first introduce the visual and inertial
+residuals, followed by the optimization modules that build upon these residuals.
+Vision Residual. Following DROID-SLAM [57], we utilize a learned GRU-
+based update operator to predict and iteratively update the correspondence
+u∗
+ij and its associated confidence map wij between a keyframe pair (i, j). We
+jointly optimize per-keyframe camera pose T and disparity d by minimizing a
+reprojection error between the refined correspondence u∗
+ij and that computed
+from the current pose and disparity. The vision residuals are formulated as:
+  \foo t no t
+e
+size \b
+egin
+ { a ligned} \lab el {
+eq:
+vis ion} E_{\mathrm {vis}} (\bm {T}, \bm {d}) = \sum _{(i,j) \in \mathcal E} \left \| \bm {u^{*}}_{ij} - \Pi (\bm {T}_{ij} \Pi ^{-1}(\bm {u}_i, \bm {d}_i)) \right \|^2_{\bm {\Sigma }_{ij}}, \end {aligned} 
+(1)
+where Σij = diag(wvis
+ij ). Here, we loop over edges (i, j) within a frame graph
+E connecting co-visible keyframes, and Tij represents the relative transform be-
+tween frames i and j. We denote the projection and back-projection functions
+as Π and Π−1. Parameter ui is the 2D image coordinate in frame i. Function
+∥· ∥Σ denotes the Mahalanobis distance, weighting the residuals according to
+the confidence wvis
+ij .
+6
+Zihan Zhu et al.
+Inertial Residual. For each consecutive keyframe pair (i, j), we first perform
+IMU pre-integration [12] between timestamps ti and tj to efficiently fuse the
+high-frequency IMU data. The pre-integration yields relative rotation ∆Rij,
+position ∆pij, and velocity ∆vij, together with the corresponding Jacobians
+(Jrot
+ij , Jpos
+ij , Jvel
+ij ) and covariance Σiner
+ij
+.
+In the inertial residual, we jointly optimize camera pose Ti, velocity vi and
+IMU bias bi by minimizing the discrepancy between the current relative camera
+motion and the corresponding preintegrated IMU measurements. Additionally,
+we include a temporal bias smoothness term. The inertial residuals are formu-
+lated as follows:
+  \foot n ot es i
+z
+e \label {e
+q:i
+n
+ertia
+l} E_{ \math
+rm {in er}}(
+\bm {T }, \bm
+ {v }, \bm 
+{
+b}) =
+ \
+sum _{(i, j=i+1) \in \mathcal {E}} \left \| \begin {bmatrix} (\bm {r}^{\mathrm {rot}}_{i,j})^{\top }, (\bm {r}^{\mathrm {pos}}_{i,j})^{\top }, (\bm {r}^{\mathrm {vel}}_{i,j})^{\top }, (\bm {r}^{\mathrm {bias}}_{i,j})^{\top } \end {bmatrix}^{\!\top } \right \|^2_{\bm {\Sigma }_{ij}^{\mathrm {iner}}}. 
+(2)
+Here, the residual terms are defined as:
+  \ f
+o
+otnotesi
+ze \
+bm 
+r_{i
+j} 
+= \b
+egi
+n {bm
+atr
+i
+x} \bm {
+r
+}
+^{\mathr
+m {
+r
+ot}}_ {i,j} \\
+[9 pt] \ bm {r}^{\m
+a th
+r
+m 
+{
+p
+os } }_ { i,j} \ \ [
+9pt] 
+\b
+m
+ 
+{
+r}^{ \ m ath
+rm {v e l}}_
+{
+i,
+j } \ \ [9 p t] \bm 
+{
+r}^{ \ m ath
+rm {bi a s}}_{
+i
+,j } \
+e
+nd {bmat
+rix} = \begin {bmatrix} \operatorname {Log} \!\left ( (\Delta \bm {R}_{ij} \operatorname {Exp}(\bm {J}_{ij}^{\mathrm {rot}} (\bm {b}_{g_i} - \hat {\bm {b}}_{g_i})))^{\!\top } \bm {R}_i^{\top } \bm {R}_j \right ) \\[6pt] \bm {R}_i^{\top } \!\left ( \bm {p}_j - \bm {p}_i - \bm {v}_i \Delta t_{ij} - \tfrac {1}{2} \bm {g} \Delta t_{ij}^2 \right ) - \left ( \Delta \bm {p}_{ij} + \bm {J}_{ij}^{\mathrm {pos}} (\bm {b}_i - \hat {\bm {b}}_i) \right ) \\[6pt] \bm {R}_i^{\top } \!\left ( \bm {v}_j - \bm {v}_i - \bm {g} \Delta t_{ij} \right ) - \left ( \Delta \bm {v}_{ij} + \bm {J}_{ij}^{\mathrm {vel}} (\bm {b}_{g_i} - \hat {\bm {b}}_{g_i}) \right ) \\[6pt] \bm {b}_{j} - \bm {b}_{i} \end {bmatrix}, 
+(3)
+where Log(·) and Exp(·) are the Lie algebra logarithm and exponential maps.
+Parameter ˆb denotes the initial IMU bias and \ p rotect \bm  {g} = \bm {R}_{\mathrm {wg}}\bm {g}_{\mathrm {I}} is the gravity direction
+in the world frame, where \p r ote ct \bm  {g}_{\mathrm {I}} = (0,0,G)^{\top } denotes the gravity in a gravity-aligned
+inertial frame, G denotes its magnitude, and \pr o tect \bm  {R}_{\mathrm {wg}} \in \mathrm {SO} (3) is the rotation from
+the inertial frame to the world frame. For simplicity, we omit the transformation
+Tcb between the camera and IMU coordinate frames in the equations; however,
+it is taken into account in the implementation.
+Frontend Tracking: Local Bundle Adjustment. We maintain a sliding-
+window local frame graph E, following DROID-SLAM [57]. For pose initializa-
+tion, we use IMU pre-integration to initialize each new keyframe. To prevent
+unreliable inertial cues, we fall back to the previous-pose initialization whenever
+the pre-integration uncertainty is high, i.e., when the covariance trace exceeds
+a predefined threshold, tr(Σiner
+ij
+) > τ init
+Σ . Using the estimated pose of the new
+keyframe, we initialize correspondences to earlier frames via geometric warping,
+providing a stronger starting point for the GRU-based update operator. We then
+perform joint visual-inertial optimization by minimizing the sum of the vision
+Eq. (1) and inertial Eq. (2) residuals on the local frame graph E. The pose T ,
+velocity v, bias b and disparity d are jointly optimized using the Levenberg-
+Marquardt algorithm through custom CUDA kernels as follows:
+ 
+ \
+fo o
+t n
+ot
+es
+i
+z
+e
+ \
+be
+g
+in {a l igned} {\ren e wcomman
+d { \array s tretch }{1.3} \begin {bmatrix} \bm {B} & \bm {E} \\ \bm {E}^{\mathsf {T}} & \bm {C} \end {bmatrix} \begin {bmatrix} \Delta \boldsymbol {\xi } \\ \Delta \bm {d} \end {bmatrix} = \begin {bmatrix} \bm {w}_{\xi } \\ \bm {w}_{d} \end {bmatrix}} \end {aligned} \qquad \begin {aligned} \Delta \boldsymbol {\xi } &= [\bm {B} - \bm {E}\bm {C}^{-1}\bm {E}^{\mathsf {T}}]^{-1} (\bm {w}_{\xi } - \bm {E}\bm {C}^{-1}\bm {w}_{d})\\ \Delta \bm {d} &= \bm {C}^{-1}(\bm {w}_{d} - \bm {E}^{\mathsf {T}}\Delta \boldsymbol {\xi }) \end {aligned} \label {eq:schur_update} 
+(4)
+where ∆ξ represents the update of [T , v, b], and ∆d denotes the depth update.
+Matrix C is diagonal as each term in Eq. (1) depends only on a single depth
+value, thus it can be inverted by C−1 = 1/C.
+VIGS-SLAM
+7
+Loop Closure: Pose Graph Bundle Adjustment (PGBA). To handle loop
+closure efficiently, inspired by [65], we adopt PGBA rather than a full global BA,
+trading a small amount of accuracy for substantial speed up. A parallel loop-
+detector builds loop edges E∗based on optical flow differences. We dynamically
+grow the relative pose graph E+ by adding the relative pose from local frame
+graph E. We restrict heavy vision updates to only loop closure pairs E∗and add
+lightweight relative-pose constraints over the whole pose graph E+ as follows:
+  \foot n ot e
+s
+ize \beg
+in {
+al i g
+n
+ed} E_{\ma thr
+m {P
+GBA }
+}
+({\bm T,
+\bm d}
+) = \ su m _
+{
+(i,j
+)
+\in 
+\m
+athcal E^{*}} \left \| \bm {u^{*}}_{ij}- \Pi \!\big (\bm T_{ij}\,\Pi ^{-1}(\bm u_i,\bm d_i)\big ) \right \|_{\bm \Sigma _{ij}}^{2} + \sum _{(i,j)\in \mathcal E^{+}} \left \| \log \!\big (\tilde {\bm T}_{ij}\,\bm T_i\,\bm T_j^{-1}\big ) \right \|_{\bm \Sigma ^{\mathrm {rel}}_{ij}}^{2} \nonumber , \label {eq:pgba} \end {aligned} 
+where ˜Tij is the relative pose in the pose graph, and Σrel
+ij
+are relative-pose
+covariance from pairwise dense two-view correspondences as in [65]. The graph
+is optimized in Sim(3) to correct long-term scale drift.
+3.2
+IMU Initialization
+At the beginning of each sequence, we initialize the IMU using a carefully de-
+signed three-stage procedure to ensure stable visual-inertial coupling.
+Stage 1: Pure Vision Initialization. Using the first N vis
+init keyframes, we min-
+imize Eq. (1) to estimate poses Ti and disparities di up to a single global scale.
+Stage 2: Inertial-Only Optimization. We continue visual tracking until N iner
+init
+keyframes are available. We solve the inertial objective Eq. (2) restricted to only
+the Rwg, thereby aligning the gravity direction. Keeping Ti fixed, we augment
+the optimization variables with per-keyframe velocities vi, and IMU bias bi
+together with a global log-scale parameter to recover metric scale. Details are in
+the supplementary material.
+Stage 3: Visual-Inertial Optimization. We further refine the estimates by
+jointly minimizing the visual and inertial objectives in Eqs. 1 and 2, respectively.
+Our staged initialization enhances robustness by postponing visual-inertial cou-
+pling until the IMU parameters can be reliably estimated.
+3.3
+Gaussian Splatting Mapping
+Preliminary. We utilize the 3D Gaussian representation [27] to model scene
+appearance and geometry. The scene is represented by a set of anisotropic Gaus-
+sians G = {gi}K
+i=1. Each Gaussian gi contains color ci ∈R3, opacity oi ∈[0, 1],
+mean µi ∈R3, and covariance matrix Σi ∈R3×3. The color of each pixel in the
+rendered image is calculated by alpha-blending the visible Gaussians. Following
+prior work [40,63], we replace spherical-harmonic colors with direct RGB value,
+reducing optimization complexity.
+Map Management. We initialize the Gaussian map by unprojecting the new
+keyframe’s depth D (converted from disparity d) into 3D, setting each Gaus-
+sian’s color c to the corresponding pixel color and its opacity o to 0.5. For each
+new keyframe, we run 10 mapping iterations. In each iteration, we randomly
+8
+Zihan Zhu et al.
+sample keyframes from the frontend tracking frame graph E along with two
+global keyframes to render color ˆI and depth ˆD from the Gaussian map. We
+calculate color loss Lc = ∥ˆI −I∥1 and depth loss Ld = ∥ˆD −D∥1, as well as
+isotropic regularization loss Liso [40] to prevent excessive elongation in sparsely
+observed regions. The optimization minimizes the following weighted total loss:
+  \lab e l {e q :render} \mathcal {L} = \lambda _d \mathcal {L}_d + \lambda _c \mathcal {L}_c + \lambda _{iso} \mathcal {L}_{iso} \, . 
+(5)
+Loop Closure Gaussian Update. After loop closure, the poses and scales
+of all keyframes in the relative pose graph are updated. To keep the map con-
+sistent without reinitializing and reoptimizing all Gaussians, we propagate each
+keyframe’s update to the Gaussians anchored to it. For keyframe k, let pre-
+/post-PGBA poses be (R−
+k , p−
+k ) and (R+
+k , p+
+k ), and let the scale change be δsk.
+For any Gaussian gi initialized from keyframe k with mean µ−
+i and covariance
+Σ−
+i , we update by first transforming into the old camera frame, applying the
+scale, then mapping to the new world frame as follows:
+  
+\fo o tno
+t esi
+ze
+ \ be
+g
+i
+n
+ {
+ali g ned} 
+\bm 
+x_
+{ \ te
+x t 
+{lo c }}
+^ {-} = (\bm R_k^{-})^{\top }\big (\boldsymbol {\mu }_i^{-}-\bm t_k^{-}\big ), \qquad \bm {x}_{\text {loc}}^{+} = \delta s_k\bm x_{\text {loc}}^{-}, \qquad \boldsymbol {\mu }_i^{+} = \bm R_k^{+}\bm x_{\text {loc}}^{+}+\bm t_k^{+}. \end {aligned} 
+(6)
+Covariances are updated analogously:
+  
+\ f oo
+t
+n
+ote
+size
+ \beg
+i n 
+{
+a
+lig
+n ed} \boldsymbol {\Sigma }_i^{+} = \bm R_k^{+}\left (\delta s_k^{2}(\bm R_k^{-})^{\top }\boldsymbol {\Sigma }_i^{-}\bm R_k^{-}\right )(\bm R_k^{+})^{\top }, \end {aligned} 
+(7)
+while oi and ci remain unchanged. This entire update is applied in batch oper-
+ations for high efficiency.
+4
+Experiments
+Datasets. We evaluate on the EuRoC [3], RPNG AR Table [6], UTMM [56],
+FAST-LIVO2 [68] datasets, as well as a self-captured dataset. The EuRoC dataset
+provides grayscale images, while the others offer RGB ones. For FAST-LIVO2 [68]
+dataset, we use the poses from FAST-LIVO2 [68] as ground truth since it lever-
+ages LiDAR measurements. For our self-captured dataset, we use the Manifold
+Odin 1 [38], whose offline processing tool MindCloud [39] provides ground-truth
+poses via LiDAR-visual-inertial fusion. The remaining datasets provide motion-
+capture ground truth. Additional details are provided in the supp. material.
+Baselines. We compare our VIGS-SLAM with 15 methods. (a) Classic Visual
+SLAM : DSO [11], SVO [13]; (b) Learning-based Visual SLAM : TartanVO [60],
+DROID-SLAM [57]; (c) Visual Gaussian Splatting SLAM : Splat-SLAM [53] and
+HI-SLAM2 [65]; (d) classic Visual-Inertial SLAM : MSCKF [43], OKVIS [30],
+VINS-Mono [48], OPEN-VINS [14], ORB-SLAM3 [4]; (e) Learning-based Visual-
+Inertial SLAM : DBA-Fusion [70]; (f) Visual-Inertial Gaussian Splatting SLAM :
+MM3DGS-SLAM [56], VINGS-Mono [61]; (g) Feed-forward SLAM : TTT3R [7].
+To evaluate the online setting, for DROID-SLAM [57], Splat-SLAM [53], HI-
+SLAM2 [65], and our VIGS-SLAM, we report metrics computed before the final
+global bundle adjustment and the final color refinement (which typically takes
+VIGS-SLAM
+9
+Table 1: Tracking Performance on EuRoC Dataset [3] (ATE RMSE ↓[cm]).
+Best results are highlighted as first , second , and third . ‘F’ indicates failure. Results
+for SVO [13], TartanVO [60], DSO [11], MSCKF [43], OKVIS [30], VINS-Mono [48], and
+ORB-SLAM3 [4] are as reported by the ORB-SLAM3 paper [4]; DROID-SLAM [57]
+numbers are from its paper. All other results are reproduced from their official code.
+Method
+MH_01
+MH_02
+MH_03
+MH_04
+MH_05
+V1_01
+V1_02
+V1_03
+V2_01
+V2_02
+V2_03
+Avg.
+RGB
+SVO [13]
+10.00
+12.00
+41.00
+43.00
+30.00
+7.00
+21.00
+F
+11.00
+11.00 108.00
+N/A
+Splat-SLAM [53]
+257.64 266.02 312.58 458.14 360.86 168.99 166.65 128.67 198.84 195.85 190.86 245.01
+TTT3R [7]
+421.47 385.94 293.01 414.59 381.05 155.43 128.70 118.06 141.96
+93.56 101.81 239.60
+TartanVO [60]
+63.90
+32.50
+55.00 115.30 102.10
+44.70
+38.90
+62.20
+43.30
+74.90 115.20
+68.00
+DSO [11]
+4.60
+4.60
+17.20 381.00
+11.00
+8.90
+10.70
+90.30
+4.40
+13.20 115.20
+60.10
+DROID-SLAM [57]
+16.30
+12.10
+24.20
+39.90
+27.00
+10.30
+16.50
+15.80
+10.20
+11.50
+20.40
+18.60
+HI-SLAM2 [65]
+2.66
+1.44
+2.71
+6.86
+5.07
+3.55
+1.32
+2.49
+2.56
+1.77
+1.92
+2.94
+RGB+IMU
+MSCKF [43]
+42.00
+45.00
+23.00
+37.00
+48.00
+34.00
+20.00
+67.00
+10.00
+16.00 113.00
+41.40
+VINGS-Mono [61]
+21.03
+16.47
+25.46
+25.03
+36.01
+6.54
+9.79
+11.46
+11.51
+93.44
+12.39
+24.47
+OKVIS [30]
+16.00
+22.00
+24.00
+34.00
+47.00
+9.00
+20.00
+24.00
+13.00
+16.00
+29.00
+23.10
+DBA-Fusion [70]
+17.88
+16.72
+24.03
+23.57
+27.81
+20.11
+9.51
+8.89
+10.37
+11.51
+16.22
+16.97
+OPEN-VINS [14]
+50.61
+5.61
+7.16
+6.34
+12.78
+17.46
+9.48
+5.96
+11.68
+10.47
+14.83
+13.85
+VINS-Mono [48]
+8.40
+10.50
+7.40
+12.20
+14.70
+4.70
+6.60
+18.00
+5.60
+9.00
+24.40
+11.00
+ORB-SLAM3 [4]
+6.20
+3.70
+4.60
+7.50
+5.70
+4.90
+1.50
+3.70
+4.20
+2.10
+2.70
+4.30
+VIGS-SLAM (Ours)
+1.42
+1.29
+2.55
+5.16
+5.64
+3.67
+1.15
+2.68
+2.34
+1.53
+3.27
+2.79
+Table 2: Tracking Performance on RPNG AR Table Dataset [6] (ATE RMSE
+↓[cm]). Best results are highlighted as first , second , and third . ‘F’ indicates failure.
+Method
+table_01
+table_02
+table_03
+table_04
+table_05
+table_06
+table_07
+table_08
+Avg.
+RGB
+HI-SLAM2 [65]
+1.43
+1.66
+1.23
+2.59
+F
+1.47
+0.97
+2.67
+N/A
+Splat-SLAM [53]
+22.46
+41.50
+37.93
+1.09
+1.19
+1.53
+1.76
+4.37
+13.98
+DROID-SLAM [57]
+9.59
+6.58
+7.28
+11.82
+6.24
+4.22
+4.27
+46.59
+12.07
+RGB+IMU
+OKVIS [30]
+9.00
+7.70
+15.30
+16.20
+24.50
+10.20
+13.60
+19.80
+14.60
+VINGS-Mono [61]
+4.57
+2.90
+4.04
+6.51
+1.90
+5.16
+5.08
+23.05
+6.65
+DBA-Fusion [70]
+4.73
+2.77
+4.85
+6.64
+2.27
+4.28
+5.64
+20.71
+6.49
+OPEN-VINS [14]
+4.29
+3.03
+3.11
+6.20
+3.85
+4.45
+6.58
+9.20
+5.09
+ORB-SLAM3 [4]
+2.52
+15.79
+1.57
+1.22
+7.34
+1.49
+1.24
+3.43
+4.33
+VINS-Mono [48]
+2.72
+5.98
+3.30
+4.01
+2.18
+1.87
+2.05
+5.54
+3.46
+VIGS-SLAM (Ours)
+1.31
+1.57
+1.22
+1.75
+1.28
+1.38
+1.08
+3.86
+1.68
+over 10 minutes). Results with these refinements are provided in the supple-
+mentary material. For brevity, we report all methods on the EuRoC dataset [3]
+and evaluate only the stronger and representative baselines in subsequent exper-
+iments. For DBA-Fusion [70] and its successor VINGS-Mono [61], we worked
+closely with the first author of VINGS-Mono [61] and made targeted mod-
+ifications to improve their performance (see supplementary material for de-
+tails). As confirmed by its authors, MM3DGS-SLAM [56] primarily targets an
+RGB+LiDAR+IMU setup; the open-sourced code does not fully support a pure
+visual-inertial setting. It is evaluated only on the UTMM dataset [56], and we
+copy the tracking results from the paper.
+Metrics. For camera tracking, we align the estimated trajectory to the ground
+truth using evo [15], and report the Absolute Trajectory Error (ATE) in terms
+of RMSE [54]. In addition, we report Recall – percentage of ground-truth poses
+whose translation error to the trajectory is below a threshold. For rendering
+10
+Zihan Zhu et al.
+evaluation, we report PSNR, SSIM, and LPIPS on frames that are not used
+as keyframes by any method, excluding all views involved in mapping. Conse-
+quently, the rendering results reported by MM3DGS-SLAM [56] are not directly
+comparable to ours. In the tables, we use ‘F’ to denote failure, either unable to
+initialize or significant drift.
+4.1
+Mapping, Tracking, and Rendering
+EuRoC Dataset [3]. As shown in Table 1, our approach achieves the best over-
+all ATE, ranking first or second in most sequences. In contrast, purely feedfor-
+ward methods like TTT3R [7] accumulate large drift over time. ORB-SLAM3 [4],
+a highly engineered system with robust optimization and loop-closure mecha-
+nisms, lags behind our method. We attribute this to its reliance on handcrafted
+sparse features and non-differentiable components, which limit its robustness. In
+contrast, our system leverages dense, learning-based visual correspondences and
+tightly couples inertial constraints into a unified framework.
+VINGS-Mono [61]
+HI-SLAM2 [65]
+Ours
+GT
+table_01
+table_06
+EgoDrv
+Sq-2
+CBD2
+Retail
+Fig. 3: Novel View Synthesis Results across Datasets. Sequences are sam-
+pled from RPNG [6] (table_01, table_06), UTMM [56] (EgoDrv, Sq-2), and FAST-
+LIVO2 [68] (CBD2, Retail) datasets.
+VIGS-SLAM
+11
+Table 3: Rendering Evaluation across Datasets. As HI-SLAM2 [65] fails on one
+sequence in the RPNG dataset [6], we compute averages over the remaining sequences.
+Detailed per-sequence results are provided in the supplementary material.
+Metric
+Method
+RPNG
+UTMM
+FAST-LIVO2
+PSNR ↑
+VINGS-Mono [61]
+11.03
+11.85
+10.36
+Splat-SLAM [53]
+17.32
+13.56
+13.96
+HI-SLAM2 [65]
+21.12
+18.84
+21.49
+VIGS-SLAM (Ours)
+22.21
+20.87
+23.15
+SSIM ↑
+VINGS-Mono [61]
+0.264
+0.408
+0.343
+Splat-SLAM [53]
+0.543
+0.470
+0.484
+HI-SLAM2 [65]
+0.685
+0.632
+0.692
+VIGS-SLAM (Ours)
+0.723
+0.687
+0.729
+LPIPS ↓
+VINGS-Mono [61]
+0.704
+0.660
+0.724
+Splat-SLAM [53]
+0.465
+0.653
+0.745
+HI-SLAM2 [65]
+0.358
+0.501
+0.560
+VIGS-SLAM (Ours)
+0.314
+0.441
+0.487
+Table 4: Tracking Performance on UTMM Dataset [56] (ATE RMSE ↓
+[cm]). Best results are highlighted as first , second , and third . ‘F’ indicates failure.
+MM3DGS-SLAM [56] has not open-sourced its non-LiDAR variant; we use the paper’s
+reported metrics and indicate unreported sequences with ‘–’.
+Method
+Ego-1 Ego-2 EgoDrv FastStr SStr-1 SStr-2
+Sq-1
+Sq-2 Avg.
+RGB
+MM3DGS-SLAM (RGB) [56]
+4.09
+–
+67.20
+25.78
+–
+–
+59.48
+– N/A
+Splat-SLAM [53]
+1.38
+0.62
+3.26
+0.95
+5.48
+0.54 103.60
+71.29 23.39
+HI-SLAM2 [65]
+2.06
+3.35
+4.36
+0.99
+0.71
+0.84
+27.85
+24.63
+8.10
+DROID-SLAM [57]
+2.00
+3.17
+30.94
+1.30
+0.97
+0.86
+14.95
+9.10
+7.91
+RGB+IMU
+ORB-SLAM3 [4]
+3.64
+F
+3.53
+F
+F
+F
+F
+F N/A
+MM3DGS-SLAM (RGB+IMU) [56]
+3.41
+–
+68.50
+16.78
+–
+–
+44.26
+– N/A
+VINS-Mono [48]
+127.01
+3.97
+92.00
+3.43
+0.61
+2.06 262.38 211.16 87.83
+DBA-Fusion [70]
+13.27
+5.45
+65.01
+118.77
+0.37
+1.02
+88.93 133.28 53.26
+OPEN-VINS [14]
+117.27
+3.43
+26.49
+6.29
+5.58
+5.98
+50.53
+34.39 31.50
+VINGS-Mono [61]
+5.00
+7.29
+12.43
+13.36
+0.67
+0.71
+36.01
+25.70 12.54
+VIGS-SLAM (Ours)
+1.81
+0.93
+1.45
+1.20
+0.81
+0.93
+2.17
+16.61 3.24
+RPNG AR Table Dataset [6]. The tracking and rendering accuracies are
+shown in Table 2 and Table 3, respectively. The proposed VIGS-SLAM achieves
+the lowest tracking errors, halving the error of the second-best VINS-Mono [48],
+while also leading to the highest novel view synthesis scores. Qualitative results
+in Fig. 3 show sharper and more faithful high-frequency details (especially in the
+tablecloth and carpet), while baselines produce blurred textures.
+UTMM Dataset [56]. We additionally evaluate our method on the UTMM
+dataset, introduced in MM3DGS-SLAM [56]. Since the non-LiDAR variant of
+MM3DGS-SLAM has not been publicly released, we compare against the results
+reported in their paper. As shown in Table 4, our method achieves substantially
+more accurate tracking results than baselines. Rendering results are shown in
+Fig. 3 and Table 3. This dataset is particularly challenging due to its cluttered
+backgrounds with fine-grained structures, coupled with foreground objects that
+12
+Zihan Zhu et al.
+Table 5: Tracking Performance on FAST-LIVO2 Dataset [68] (ATE RMSE ↓
+[cm]). Best results are highlighted as first , second , and third . ‘F’ indicates failure.
+Method
+CBD1
+CBD2
+HKU
+Retail
+SYSU1
+Avg.
+RGB
+Splat-SLAM [53]
+5.52
+7.74
+4.44
+212.01
+313.56
+108.65
+DROID-SLAM [57]
+72.48
+15.67
+15.10
+16.81
+50.94
+34.20
+HI-SLAM2 [65]
+4.38
+24.30
+4.87
+7.20
+10.36
+10.22
+RGB+IMU
+OPEN-VINS [14]
+F
+F
+F
+F
+F
+N/A
+ORB-SLAM3 [4]
+F
+F
+F
+F
+F
+N/A
+VINS-Mono [48]
+F
+F
+F
+25.64
+F
+N/A
+DBA-Fusion [70]
+22.96
+127.79
+56.20
+26.69
+337.86
+114.30
+VINGS-Mono [61]
+20.54
+129.55
+52.42
+51.67
+269.83
+104.80
+VIGS-SLAM (Ours)
+4.50
+5.76
+3.88
+8.88
+7.36
+6.08
+introduce strong depth discontinuities and complex occlusions. Nonetheless, our
+method produces sharp renderings with minimal floating artifacts.
+FAST-LIVO2 Dataset [68]. We further evaluate on the challenging FAST-
+LIVO2 dataset, which features outdoor sequences with low frame rates, shaky
+motion, and reflective surfaces. As shown in Table 5, classical VIO systems ex-
+hibit frequent initialization failures despite repeated restarts. Our method ro-
+bustly initializes from the first frame and maintains stable tracking throughout
+all sequences, achieving the lowest average tracking error. Rendering results in
+Table 3 and Fig. 3 show sharp and consistent reconstructions with preserved
+text and edges, benefiting from effective loop-closure handling that maintains a
+consistent Gaussian map, especially in outdoor sequences with large loops.
+1
+5
+10
+20
+40
+Stride
+0
+25
+50
+75
+100
+Recall @ 5 cm [%]
+1
+5
+10
+20
+40
+Stride
+0
+25
+50
+75
+100
+Recall @ 10 cm [%]
+HI-SLAM2
+VINS-Mono
+OPEN-VINS
+ORB-SLAM3
+VIGS-SLAM(Ours)
+(a) Strided EuRoC Dataset [3]
+1
+5
+10
+20
+40
+Stride
+0
+25
+50
+75
+100
+Recall @ 5 cm [%]
+1
+5
+10
+20
+40
+Stride
+0
+25
+50
+75
+100
+Recall @ 10 cm [%]
+(b) Strided RPNG AR Table Dataset [6]
+Fig. 4: Average Tracking Performance on Strided Datasets. We plot mean
+recall at 5 cm and 10 cm thresholds under different stride settings.
+VIGS-SLAM
+13
+4.2
+Tracking Robustness
+Strided Evaluation. To evaluate robustness under degraded visual input, we
+create strided variants of the EuRoC [3] and RPNG AR Table [6] datasets by
+temporally subsampling RGB frames with different strides while keeping the
+original IMU readings, simulating frame drops, limited bandwidth and high-
+speed motion. We report average Recall@5cm and Recall@10cm instead of ATE
+RMSE, because several methods fail on certain sequences, making it difficult
+to compute meaningful ATE averages. We assign a recall score of zero when
+a method fails to produce a valid trajectory. As shown in Fig. 4, our method
+remains stable and consistently outperforms all baselines, whereas others fre-
+quently fail to initialize or lose tracking under large inter-frame gaps.
+Self-Captured Dataset. We further capture 18 challenging sequences spanning
+(i) appearance degradation, including motion blur, exposure changes, sun glare,
+and low-light conditions; (ii) geometric ambiguity, such as low texture, repeti-
+tive patterns, and reflective or transparent surfaces; (iii) interference caused by
+dynamic objects; (iv) aggressive camera motion with hand-held shake; and (v)
+0
+1
+2
+3
+4
+5
+ATE RMSE [m]
+5
+10
+15
+total
+# Successful Sequences
+      Method
+ATE 
+AUC 
+Ours
+0.588
+97.419
+DBA-Fusion
+1.850
+79.713
+VINGS-Mono
+2.764
+78.854
+HI-SLAM2
+12.046
+62.026
+DROID-SLAM
+8.318
+58.305
+HI-SLAM2 [65]
+VIGS-SLAM (Ours)
+Fig. 5: Evaluation on the Self-Captured Dataset. Left: cumulative success curve
+under different ATE RMSE thresholds, together with the average ATE RMSE and the
+AUC up to 6 meters. Right: renderings from extrapolated views.
+40
+20
+0
+20
+X [m]
+150
+125
+100
+75
+50
+25
+0
+25
+Y [m]
+Ground Truth
+VINGS-Mono
+Ours
+125
+100
+75
+50
+25
+0
+25
+X [m]
+80
+60
+40
+20
+0
+20
+40
+Y [m]
+Ground Truth
+DBA-Fusion
+Ours
+0
+10
+20
+30
+40
+50
+60
+70
+X [m]
+8
+6
+4
+2
+0
+2
+Z [m]
+Ground Truth
+HI-SLAM2
+Ours
+Campus1
+Corridor1
+Downtown3
+Fig. 6: Sample Input Frames and Trajectory Plots on the Self-Captured
+Dataset. Representative frames illustrate the various challenges of our dataset.
+14
+Zihan Zhu et al.
+Table 6: Tracking Ablation on EuRoC (stride = 10) [3] Dataset.
+Avg. ATE RMSE [cm] ↓
+Avg. Recall @ 10cm [%] ↑
+(a) w/o IMU Bias Estimation
+338.99
+0.05
+(b) w/o IMU Fusion
+88.54
+32.50
+(c)
+w/o 3-Staged IMU Initialization
+50.65
+68.32
+(d) w/o KF Pose Initialization with IMU
+40.94
+64.95
+(e)
+w/o Loop Closure
+23.78
+40.63
+(f)
+w/o Per-KF Bias Estimation
+8.83
+90.01
+Ours (Full System)
+3.39
+98.99
+Table 7: Rendering Ablation on FAST-LIVO2 Dataset [68].
+Method
+Avg. PSNR ↑
+Avg. SSIM ↑
+Avg. LPIPS ↓
+w/o Loop Closure GS Update
+22.06
+0.677
+0.541
+Ours (Full System)
+23.15
+0.729
+0.487
+long trajectories. As shown in Fig. 5 and Fig. 6, baseline methods suffer from
+significant tracking drift, while our method remains accurate and robust despite
+these severe real-world challenges. Please refer to the supplementary material
+for more results and dataset details.
+4.3
+Ablation Study
+Tracking. We report ablation results for 6 design choices in Table 6. In (a) w/o
+IMU Bias Estimation, the IMU bias is fixed to zero and not optimized. In (b)
+w/o IMU Fusion, the optimization is constrained solely by visual residuals. In
+(c), we remove the inertial-only optimization stage during IMU initialization. In
+(d) w/o KF Pose Initialization with IMU, we disable the IMU pre-integration-
+based pose initialization for newly selected keyframes. In (e), we disable the loop
+closure. In (f), we optimize a single global IMU bias shared across all keyframes
+instead of estimating per-keyframe biases. Table 6 demonstrates that removing
+any component will degrade tracking accuracy as well as robustness, while our
+full system achieves the best results.
+Mapping. We ablate the loop closure Gaussian update in Table 7. Disabling
+this update leads to inconsistent Gaussian maps, which in turn leads to rendering
+performance degradation.
+5
+Conclusion
+We present VIGS-SLAM, a novel visual-inertial 3D Gaussian Splatting SLAM
+system that achieves robust real-time tracking and high-fidelity Gaussian map-
+ping. It tightly couples learning-based dense visual correspondences with inertial
+constraints within a unified optimization framework. Furthermore, we perform
+robust IMU initialization and efficient loop closure with consistent Gaussian up-
+dates. Extensive evaluations on five challenging datasets show that VIGS-SLAM
+achieves state-of-the-art performance in both tracking accuracy and novel view
+VIGS-SLAM
+15
+synthesis quality, and is among the very few methods that succeed on all se-
+quences without failure. Code and dataset will be made public.
+Limitation. In the current system, the Gaussian map does not directly improve
+tracking. Incorporating a Gaussian re-rendering loss for pose optimization yields
+only marginal gains, likely because renderings during online optimization are not
+yet sufficiently sharp to produce reliable gradients for pose refinement.
+Supplementary Material for VIGS-SLAM:
+Visual-Inertial Gaussian Splatting SLAM
+Zihan Zhu1, Wei Zhang2, Moyang Li1, Norbert Haala2,
+Marc Pollefeys1,3, and Daniel Barath1
+1 ETH Zurich, Zurich, Switzerland
+2 University of Stuttgart, Stuttgart, Germany
+3 Microsoft
+Abstract. In the supplementary material, we provide additional details
+about the following:
+1. Implementation details of the real-time demo in the supplementary
+material (Sec. 6).
+2. More information about the datasets used in evaluation (Sec. 7).
+3. Implementation details of Baseline Methods (Sec. 8).
+4. Implementation details of VIGS-SLAM (Sec. 9).
+5. Additional results (Sec. 10).
+We additionally include supplementary videos where we show addi-
+tional visual results.
+6
+Real-time Demo Implementation Details
+We include a real-time demo in the supplementary videos, where an iPhone
+17 Pro streams RGB frames and IMU measurements to a desktop computer
+equipped with an Intel(R) Core(TM) i7-14700K CPU and an NVIDIA GeForce
+RTX 5090 GPU. Our VIGS-SLAM system robustly tracks camera motion while
+simultaneously reconstructing a photorealistic Gaussian map and dense point
+clouds in real time. The iPhone capture application is implemented in Swift,
+and data transmission is performed over Wi-Fi. The camera intrinsics remain
+fixed during capture.
+7
+Dataset Details
+Dataset Statistics. In Table 8, we report comprehensive dataset statistics and
+outline the specific challenges associated with each dataset.
+Self-Captured Dataset. For the self-captured dataset described in Sec. 4.2, we
+use the Manifold Odin 1 [38] for data acquisition. RGB frames are captured at
+10 FPS, while IMU measurements are recorded at 400 Hz. The camera intrinsics
+and camera-IMU extrinsics are factory pre-calibrated. The original images are
+captured with a fisheye lens; we undistort them to a pinhole model before feeding
+them to all methods. The accompanying offline processing tool, MindCloud [39],
+2
+Zihan Zhu et al.
+Table 8: Dataset Statistics. Detailed statistics of all datasets used in our evaluation,
+along with the characteristic challenges.
+EuRoC [3]
+RPNG AR Table [6]
+UTMM [56]
+FAST-LIVO2 [68]
+Self-Captured
+Year
+2016
+2023
+2024
+2024
+2026
+# Sequences
+11
+8
+8
+5
+18
+Avg. # Frames
+2459
+4521
+763
+1305
+1949
+RGB / Gray
+Gray
+RGB
+RGB
+RGB
+RGB
+Resolution
+752×480
+848×480
+1280×660
+1280×1024
+1600×1296
+RGB FPS
+20
+30
+30
+10
+10
+IMU Rate (Hz)
+200
+400
+100
+200
+400
+GT Source
+MoCap
+MoCap
+MoCap
+FAST-LIVO2 [68]
+CloudMind [39]
+Environment
+Indoor (industrial)
+Indoor (tabletop)
+Indoor (large open hall)
+Outdoor
+Indoor & Outdoor
+Challenges
+low-texture
+motion blur
+illumination changes
+close-range geometry
+high-frequency texture
+motion blur
+distant cluttered background
+long trajectory
+reflective surfaces
+illumination changes
+low-texture
+illumination changes
+motion blur
+dynamic objects
+long trajectory
+sun glare
+aggressive motion
+reflective/transparent surfaces
+repetitive patterns
+provides ground-truth poses via LiDAR-visual-inertial fusion. In total, we cap-
+ture 18 sequences across diverse indoor and outdoor environments, with trajec-
+tory lengths ranging from 34 to 1079 meters and sequence durations from 47
+seconds to 10 minutes. The input sequences are visualized in the supplementary
+video. We use Deface [46] to blur human faces and EgoBlur [49] to blur vehicle
+license plates.
+8
+Baseline Implementation Details
+For DBA-Fusion [70] and its successor VINGS-Mono [61], we worked closely with
+the first author of VINGS-Mono [61] and applied several targeted modifications
+to improve their stability and performance.
+8.1
+DBA-Fusion [70]
+On the EuRoC dataset [3], the drone often remains static or exhibits only small
+motions at the beginning of a sequence. In this scenario, DBA-Fusion’s vision-
+only keyframe selection tends to cause severe drift due to long IMU preintegra-
+tion intervals. To mitigate this issue, we enforce the insertion of a new keyframe
+at least every 20 frames, even when the frontend motion filter does not trigger
+keyframe selection. This strategy prevents excessively long IMU preintegration
+intervals and reduces accumulated noise.
+For the UTMM dataset [56], some sequences do not reach the default thresh-
+old required for IMU initialization throughout the entire sequence, resulting in
+no IMU initialization being performed. To address this issue, we lower the IMU
+initialization threshold to 0.15 for those sequences.
+VIGS-SLAM
+3
+8.2
+VINGS-Mono [61]
+For VINGS-Mono, we apply the same modifications as for DBA-Fusion on the
+EuRoC and UTMM datasets [3, 56]. In addition, we observe that disabling
+monocular metric depth and loop closure yields more robust results. We sus-
+pect this is because the metric depth model does not generalize well to our
+datasets, and the loop closure module occasionally produces false positives or
+estimates inaccurate relative poses for loop closure frames. Therefore, we disable
+these components in all experiments.
+9
+Our VIGS-SLAM Implementation Details
+Except for the number of keyframes used in IMU initialization N iner
+init , all datasets
+share the same hyperparameters.
+Frontend Tracking. A new keyframe is created when the average optical-flow
+magnitude exceeds τkf = 2.4. To reduce IMU pre-integration drift, we also enforce
+a keyframe at least every tkf = 3 s. For each new keyframe, we initialize its pose
+using IMU pre-integration unless the estimated uncertainty is too high. When
+the covariance trace tr(Σiner
+ij
+) exceeds τ init
+Σ
+= 10−4, we revert to initializing the
+new keyframe with the pose of the previous keyframe.
+Loop Closure. Loop-closure detection runs in parallel with the frontend track-
+ing. We only compare the current keyframe against earlier keyframes that are
+at least τLC-gap = 55 keyframes apart to avoid redundant loop candidates. A
+loop-closure edge is added when the average optical-flow magnitude falls below
+τLC-flow = 22 and the relative orientation difference is below τLC-ang = 120◦.
+IMU Initialization. Pure-vision initialization is performed once the number
+of keyframes reaches N vis
+init = 10. Inertial initialization begins when the keyframe
+count reaches N iner
+init , which is set to 20 by default (25 for FAST-LIVO2 due to
+rapid motion and 15 for UTMM due to short trajectory).
+After completing the vision-only initialization, we begin inertial-only initial-
+ization by first recovering the gravity direction Rwg. Then we aim to recover
+IMU parameters as well as convert the trajectory to metric scale by introduc-
+ing a global log-scale parameter s ∈R. The positions and velocities are then
+rewritten as
+  \ bm {p}
+_ i
+ & = e ^{s}
+\ ,
+\bm
+ { p }_ i^{\
+t e
+xt {v is}}
+, & \bm {v}_i &= e^{s}\,\bm {v}_i^{\text {vis}}, \\ \bm {p}_j &= e^{s}\,\bm {p}_j^{\text {vis}}, & \bm {v}_j &= e^{s}\,\bm {v}_j^{\text {vis}}
+.
+(2)
+During this stage, the visual poses T vis
+i
+= (Ri, pi) are kept fixed, and we solve
+for the gravity direction Rwg, IMU bias bi, per-keyframe velocity vi, and the
+scale parameter s. Finally, we perform full visual–inertial initialization by incor-
+porating the camera poses into the optimization as well.
+Final Global Bundle Adjustment. Following prior works [53,57,65,69], we
+optionally perform a final global bundle adjustment step to refine all poses. We
+adopt the same global frame-graph construction as prior works and optimize only
+4
+Zihan Zhu et al.
+Table 9: Runtime Evaluation on the RPNG [6] dataset. We report runtime
+(FPS) and GPU memory usage for pure tracking and for the full system (tracking +
+Gaussian mapping). All results are measured on an Intel(R) Core(TM) i7-14700K CPU
+and an NVIDIA GeForce RTX 5090 GPU. HI-SLAM2 fails on table_05, ‘F’ denotes
+failure, ‘*’ denote taking the average of all other sequences.
+table_01 table_02 table_03 table_04 table_05 table_06 table_07 table_08
+Avg.
+#Frames
+2506
+2914
+7006
+6068
+6164
+2767
+4784
+8484
+5087
+ORB-SLAM3
+#Keyframes
+211
+389
+416
+280
+250
+238
+184
+227
+274
+Tracking [FPS]
+23.40
+19.81
+19.51
+23.11
+22.30
+22.86
+22.72
+22.47
+22.02
++ GS Mapping [FPS]
+–
+–
+–
+–
+–
+–
+–
+–
+–
+HI-SLAM2
+#Keyframes
+252
+368
+535
+424
+F
+239
+220
+564
+*372
+Tracking [FPS]
+28.04
+23.50
+29.58
+32.08
+F
+27.60
+50.28
+22.92 *30.57
++ GS Mapping [FPS]
+9.94
+8.44
+11.82
+12.53
+F
+11.57
+20.99
+12.41 *12.53
+VIGS-SLAM
+(Ours)
+#Keyframes
+250
+349
+525
+427
+341
+232
+223
+579
+366
+Tracking [FPS]
+36.73
+32.47
+43.30
+43.30
+32.44
+34.02
+66.37
+30.03
+39.83
+Tracking GPU Mem [GiB]
+7.48
+7.71
+8.15
+8.98
+8.81
+8.42
+7.42
+9.73
+8.34
++Mapping [FPS]
+9.11
+7.82
+10.73
+11.25
+13.79
+11.04
+20.22
+12.18
+12.02
++Mapping GPU Mem [GiB]
+7.64
+7.88
+8.64
+9.16
+8.94
+8.36
+7.56
+9.88
+8.51
+vision residuals, as inertial constraints mainly benefit initialization and coarse
+pose estimation, but offer limited improvement during the refinement stage.
+Unless otherwise specified, all reported results reflect the online performance
+before this final refinement.
+Final Color Refinement. Similar to prior works [53, 65, 69], after the final
+global bundle adjustment, we optionally perform a global refinement of the Gaus-
+sian map using all keyframes. Specifically, in each iteration we randomly sample
+a keyframe from the global keyframe list and minimize the rendering loss in
+Eq. (5) to update the Gaussian map. Similar to the final global bundle adjust-
+ment, all rendering metrics we report are taken before this refinement step, unless
+explicitly stated otherwise.
+10
+Additional Experiments
+Runtime and Memory Analysis. We report the runtime evaluation on the
+RPNG dataset in Table 9. All experiments are conducted on a desktop equipped
+with an Intel(R) Core(TM) i7-14700K CPU and an NVIDIA GeForce RTX 5090
+GPU. FPS is computed as the total number of frames divided by the total run-
+time in seconds. GPU memory reports the peak GPU memory usage, indicating
+suitability for deployment on common robotic platforms such as Jetson Orin NX
+and Jetson AGX Orin.
+To accelerate runtime, we identified several bottlenecks in the underlying
+codebases we build upon, DROID-SLAM [57] and HI-SLAM2 [65], such as inef-
+ficient Python for-loops, and introduced targeted optimizations to address them.
+In addition, we deploy TensorRT [45] for neural network inference, implement
+IMU preintegration in C++, and perform Jacobian and Hessian computations
+using custom CUDA kernels.
+Per-sequence Tracking Results on the Self-Captured Dataset. As shown
+in Table 10, pure visual methods such as DROID-SLAM [57] and HI-SLAM2 [65]
+VIGS-SLAM
+5
+Table 10: Tracking Performance on the Self-Captured Dataset (ATE RMSE ↓
+[m]). Best and second-best results are highlighted as first and second . ‘F’ indicates
+failure. We also report the trajectory length of each sequence for reference.
+Sequence
+Seq. Len. [m] HI-SLAM2 [65] DROID-SLAM [57] VINGS-Mono [61] DBA-Fusion [70] VIGS-SLAM (Ours)
+Basement1
+34.590
+0.749
+0.819
+0.132
+0.102
+0.078
+Basement2
+79.250
+1.452
+1.208
+1.389
+0.366
+0.430
+Basement3
+53.710
+0.834
+0.749
+0.321
+0.240
+0.076
+Basement4
+34.350
+1.142
+0.786
+0.136
+0.117
+0.132
+Campus1
+499.010
+19.328
+21.348
+5.830
+7.902
+0.631
+Campus2
+1079.650
+127.437
+54.719
+25.449
+6.371
+4.831
+Corridor1
+518.050
+25.269
+35.621
+7.148
+4.318
+1.454
+Corridor2
+504.620
+16.782
+9.608
+2.342
+2.666
+0.532
+Downtown1
+61.320
+0.073
+0.109
+0.184
+0.100
+0.065
+Downtown2
+139.890
+0.154
+0.482
+0.487
+0.148
+0.131
+Downtown3
+278.180
+3.980
+7.508
+3.067
+8.726
+0.797
+Ferrari1
+253.640
+1.384
+2.917
+0.697
+0.725
+0.636
+Ferrari2
+91.450
+0.608
+7.231
+0.633
+0.192
+0.134
+Graffiti1
+50.330
+0.063
+0.065
+0.190
+0.080
+0.059
+Graffiti2
+70.810
+0.275
+3.394
+0.511
+0.295
+0.097
+Graffiti3
+63.400
+5.178
+2.195
+0.396
+0.344
+0.366
+Motorworld
+100.990
+0.075
+0.695
+0.327
+0.430
+0.072
+Office
+96.850
+F
+0.260
+0.520
+0.172
+0.061
+Avg.
+222.783
+12.046
+8.318
+2.764
+1.850
+0.588
+suffer from severe drift under challenging conditions. Although VINGS-Mono [61]
+and DBA-Fusion [70] incorporate IMU signals, their interleaved optimization
+strategies still limit robustness. In contrast, our VIGS-SLAM achieves the best
+performance, benefiting from the proposed tightly coupled visual-inertial joint
+optimization, together with robust IMU initialization and effective loop closure.
+Simulation of Various Visual Degradation. To evaluate our methods ro-
+bustness under progressively degraded visual input, we apply controlled pho-
+tometric corruptions to the RGB input frames. Motion Blur is simulated by
+convolving each image with a linear motion kernel of fixed length k pixels, where
+the blur direction is independently sampled per frame from a uniform distribu-
+tion over [0, 2π). Given an input image I ∈[0, 1], the resulting image is given by
+  I_{ \ t e xt { blu
+r } } = I * K(k, \theta ), \quad \theta \sim \mathcal {U}(0, 2\pi ), 
+(3)
+where K(k, θ) denotes a motion blur kernel with strength k and direction θ.
+Larger kernel sizes correspond to more severe motion blur. Overexposure is
+modeled by amplifying image intensities followed by highlight clipping:
+  I_{ \ text {ov er }} = \mathrm {clip}(\beta I, 0, 1), 
+(4)
+where β > 1 controls the exposure level and progressively saturates bright re-
+gions, significantly reducing texture and local contrast. Low-light conditions
+are simulated by first reducing image exposure and contrast using a gamma
+transformation, followed by the injection of realistic sensor noise. We apply
+  I _{\
+g a mma } = I^{\gamma }, \quad \gamma > 1, 
+(5)
+which models reduced illumination and nonlinear camera response under low-
+light conditions. We then add signal-dependent shot noise and additive Gaussian
+6
+Zihan Zhu et al.
+read noise:
+  I_ { \tex
+t {low}} = \ma
+t
+h rm { clip }\ !
+\
+left ( \frac {\mathrm {Poisson}(s \cdot I_{\gamma })}{s} + \mathcal {N}(0,\sigma ^2), \,0,\,1 \right ), 
+(6)
+where s denotes the photon scale and σ is the standard deviation of Gaussian
+noise. This formulation jointly reduces visual contrast and amplifies noise in a
+physically plausible manner. As shown in Table 11, Table 12 and Table 13, our
+method remains robust under various challenges thanks to our tightly coupled
+vision-inertial fusion.
+Table 11: Tracking Performance on Motion Blurred EuRoC Dataset [3] (ATE
+RMSE ↓[cm]).
+Method
+MH_01
+MH_02
+MH_03
+MH_04
+MH_05
+V1_01
+V1_02
+V1_03
+V2_01
+V2_02
+V2_03
+Avg.
+Motion Blur Strength k = 5
+HI-SLAM2 [65]
+1.72
+1.62
+2.74
+6.56
+7.18
+3.53
+1.51
+2.53
+2.94
+2.68
+2.23
+3.20
+VIGS-SLAM (Ours)
+1.32
+1.24
+2.66
+6.48
+4.35
+3.58
+1.14
+2.29
+2.03
+1.69
+2.08
+2.62
+Motion Blur Strength k = 10
+HI-SLAM2 [65]
+2.14
+2.18
+2.79
+36.63
+16.24
+3.63
+2.03
+2.48
+2.56
+2.12
+3.10
+6.90
+VIGS-SLAM (Ours)
+1.27
+2.80
+2.85
+6.76
+4.40
+3.51
+1.26
+2.86
+1.57
+1.93
+2.60
+2.89
+Table 12: Tracking Performance on the EuRoC Dataset [3] with Over-
+Exposure (ATE RMSE ↓[cm]).
+Method
+MH_01
+MH_02
+MH_03
+MH_04
+MH_05
+V1_01
+V1_02
+V1_03
+V2_01
+V2_02
+V2_03
+Avg.
+β = 2
+HI-SLAM2 [65]
+2.29
+1.41
+2.88
+13.88
+10.25
+3.65
+2.10
+2.61
+2.75
+1.95
+2.48
+4.21
+VIGS-SLAM (Ours)
+1.10
+2.20
+2.62
+4.89
+5.32
+3.60
+1.23
+2.26
+2.45
+1.70
+2.85
+2.75
+β = 3
+HI-SLAM2 [65]
+1.76
+1.79
+2.93
+260.88
+11.03
+4.26
+37.77
+3.10
+3.11
+3.25
+3.75
+30.33
+VIGS-SLAM (Ours)
+1.17
+1.49
+3.06
+4.81
+7.18
+3.54
+4.41
+2.39
+2.20
+2.49
+2.64
+3.22
+β = 4
+HI-SLAM2 [65]
+1.75
+1.95
+3.61
+23.03
+F
+6.26
+140.40
+19.24
+4.36
+5.49
+6.18
+21.23*
+VIGS-SLAM (Ours)
+1.63
+1.24
+2.83
+11.52
+10.14
+3.82
+5.42
+9.79
+2.66
+3.25
+3.72
+5.09
+Table 13: Tracking Performance on the Low-Lighting EuRoC Dataset [3]
+(ATE RMSE ↓[cm]).
+Method
+MH_01
+MH_02
+MH_03
+MH_04
+MH_05
+V1_01
+V1_02
+V1_03
+V2_01
+V2_02
+V2_03
+Avg.
+γ = 3, σnoise = 0.05, s = 200
+HI-SLAM2 [65]
+2.11
+1.48
+2.69
+48.62
+184.65
+3.45
+1.61
+4.22
+2.82
+2.66
+3.90
+23.47
+VIGS-SLAM (Ours)
+1.34
+1.40
+2.58
+13.59
+4.37
+3.45
+1.18
+5.26
+1.83
+1.77
+3.67
+3.68
+γ = 4, σnoise = 0.05, s = 200
+HI-SLAM2 [65]
+2.75
+1.83
+3.04
+89.81
+23.21
+3.44
+1.54
+32.12
+2.54
+2.36
+4.17
+15.16
+VIGS-SLAM (Ours)
+1.68
+2.17
+2.65
+14.84
+5.66
+3.44
+1.24
+14.75
+1.82
+1.82
+6.15
+5.11
+Final Global Bundle Adjustment. We report results both before and after
+the final global bundle adjustment in Table 14, Table 15, Table 16, and Table 17.
+VIGS-SLAM
+7
+Table 14: Tracking Performance on EuRoC Dataset [3] (ATE RMSE ↓[cm]).
+Method
+MH_01
+MH_02
+MH_03
+MH_04
+MH_05
+V1_01
+V1_02
+V1_03
+V2_01
+V2_02
+V2_03
+Avg.
+Without Final BA
+Splat-SLAM [53]
+257.64
+266.02
+312.58
+458.14
+360.86
+168.99
+166.65
+128.67
+198.84
+195.85
+190.86
+245.01
+DROID-SLAM [57]
+16.30
+12.10
+24.20
+39.90
+27.00
+10.30
+16.50
+15.80
+10.20
+11.50
+20.40
+18.60
+HI-SLAM2 [65]
+2.66
+1.44
+2.71
+6.86
+5.07
+3.55
+1.32
+2.49
+2.56
+1.77
+1.92
+2.94
+VIGS-SLAM (Ours)
+1.42
+1.29
+2.55
+5.16
+5.64
+3.67
+1.15
+2.68
+2.34
+1.53
+3.27
+2.79
+With Final BA
+Splat-SLAM [53]
+273.08
+255.52
+260.95
+466.85
+354.35
+157.05
+165.36
+127.94
+216.10
+197.49
+192.43
+242.47
+DROID-SLAM [57]
+1.30
+1.40
+2.20
+4.30
+4.30
+3.70
+1.20
+2.00
+1.70
+1.30
+1.40
+2.20
+HI-SLAM2 [65]
+1.18
+1.23
+4.70
+4.79
+3.49
+1.82
+1.07
+1.49
+0.92
+1.32
+2.33
+2.21
+VIGS-SLAM (Ours)
+1.10
+1.12
+2.07
+4.55
+4.04
+3.58
+1.10
+1.77
+1.73
+1.06
+1.26
+2.13
+Table 15: Tracking Performance on RPNG AR Table Dataset [6] (ATE RMSE
+↓[cm]). “F” indicates failure.
+Method
+table_01 table_02 table_03 table_04 table_05 table_06 table_07 table_08 Avg.
+Without Final BA
+Splat-SLAM [53]
+22.46
+41.50
+37.93
+1.09
+1.19
+1.53
+1.76
+4.37 13.98
+DROID-SLAM [57]
+9.59
+6.58
+7.28
+11.82
+6.24
+4.22
+4.27
+46.59 12.07
+HI-SLAM2 [65]
+1.43
+1.66
+1.23
+2.59
+F
+1.47
+0.97
+2.67
+N/A
+VIGS-SLAM (Ours)
+1.31
+1.57
+1.22
+1.75
+1.28
+1.38
+1.08
+3.86
+1.68
+With Final BA
+Splat-SLAM [53]
+10.98
+40.44
+32.87
+0.98
+1.38
+1.21
+1.20
+4.27 11.67
+DROID-SLAM [57]
+1.20
+1.63
+1.25
+1.00
+4.97
+1.29
+0.98
+3.86
+2.02
+HI-SLAM2 [65]
+1.26
+1.65
+1.16
+0.98
+F
+1.32
+0.99
+4.08
+N/A
+VIGS-SLAM (Ours)
+1.27
+1.64
+1.16
+0.99
+1.13
+1.33
+0.97
+4.09
+1.57
+Across all datasets, our method achieves the best average performance, both with
+and without the final global BA refinement.
+Detailed Rendering Results. We report detailed per-sequence rendering re-
+sults both before the final color refinement (with average results shown in Table 3
+of the main paper) and after refinement. The full results are provided in Table 18,
+Table 19, and Table 20.
+Detailed Results for Strided Evaluation. We further include detailed per-
+sequence results for the strided evaluation shown in Fig. 4 in the main paper, as
+shown in Table 21 and Table 22.
+While ATE RMSE is a widely used accuracy metric, it alone can be mis-
+leading under strided evaluation. A method may fail to track large portions of
+a sequence yet still obtain a low ATE by aligning only a short, easy segment.
+To address this limitation, we additionally report Recall metrics, which quantify
+how much of the trajectory is successfully tracked within a given error thresh-
+old and provide a more comprehensive view of robustness. Unlike classical VIO
+methods that select favorable starting points, we initialize from the first N iner
+init
+keyframes and track the entire sequence from the beginning. For instance, in the
+RPNG dataset table_02 at stride = 10, ORB-SLAM3 [4] achieves a seemingly
+low ATE of 0.20 \,\mathrm {cm} but with only 10.72\ % recall@10cm, as it initializes success-
+fully only after roughly 220 frames (given the stride) and tracks a short segment
+before losing track. In contrast, our method attains 1.51 \,\mathrm {cm} ATE with 100.00\ %
+recall, reflecting both robustness and complete trajectory coverage.
+8
+Zihan Zhu et al.
+Table 16: Tracking Performance on UTMM Dataset [56] (ATE RMSE ↓[cm]).
+Method
+Ego-1 Ego-2 EgoDrv FastStr SStr-1 SStr-2
+Sq-1
+Sq-2 Avg.
+Without Final BA
+Splat-SLAM [53]
+1.38
+0.62
+3.26
+0.95
+5.48
+0.54 103.60 71.29 23.39
+DROID-SLAM [57]
+2.00
+3.17
+30.94
+1.30
+0.97
+0.86
+14.95
+9.10
+7.91
+HI-SLAM2 [65]
+2.06
+3.35
+4.36
+0.99
+0.71
+0.84
+27.85 24.63
+8.10
+VIGS-SLAM (Ours)
+1.81
+0.93
+1.45
+1.20
+0.81
+0.93
+2.17 16.61 3.24
+With Final BA
+Splat-SLAM [53]
+1.57
+0.72
+3.15
+0.92
+0.31
+0.48 119.19 75.65 25.25
+DROID-SLAM [57]
+0.61
+0.52
+2.99
+1.04
+0.90
+0.80
+3.75 52.02
+7.83
+HI-SLAM2 [65]
+0.57
+0.65
+2.70
+1.41
+0.71
+1.29
+25.25 27.34
+8.46
+VIGS-SLAM (Ours)
+0.48
+0.41
+2.13
+1.02
+1.05
+1.01
+3.57 19.31 3.62
+Table 17: Tracking Performance on FAST-LIVO2 Dataset [68] (ATE RMSE ↓
+[cm]).
+Method
+CBD1 CBD2
+HKU Retail SYSU1
+Avg.
+Without Final BA
+Splat-SLAM [53]
+5.52
+7.74
+4.44 212.01 313.56 108.65
+DROID-SLAM [57]
+72.48 15.67 15.10
+16.81
+50.94
+34.20
+HI-SLAM2 [65]
+4.38 24.30
+4.87
+7.20
+10.36
+10.22
+VIGS-SLAM (Ours)
+4.50 5.76 3.88
+8.88
+7.36
+6.08
+With Final BA
+Splat-SLAM [53]
+4.44 15.56
+2.95 196.71 299.82 103.89
+DROID-SLAM [57]
+73.51 12.30 23.98
+5.25
+12.12
+25.43
+HI-SLAM2 [65]
+4.09
+4.68 2.60
+4.94
+8.31
+4.92
+VIGS-SLAM (Ours) 4.02 4.31
+2.72
+4.84
+8.23
+4.82
+References
+1. Belos, T., Monasse, P., Dokladalova, E.: Mod slam: Mixed method for a more
+robust slam without loop closing. In: VISAPP (2022)
+2. Bloesch, M., Omari, S., Hutter, M., Siegwart, R.: Robust visual inertial odometry
+using a direct ekf-based approach. In: 2015 IEEE/RSJ international conference on
+intelligent robots and systems (IROS). pp. 298–304. IEEE (2015)
+3. Burri, M., Nikolic, J., Gohl, P., Schneider, T., Rehder, J., Omari, S., Achtelik,
+M.W., Siegwart, R.: The euroc micro aerial vehicle datasets. The International
+Journal of Robotics Research 35(10), 1157–1163 (2016)
+4. Campos, C., Elvira, R., Rodríguez, J.J.G., Montiel, J.M., Tardós, J.D.: Orb-slam3:
+An accurate open-source library for visual, visual–inertial, and multimap slam.
+IEEE transactions on robotics 37(6), 1874–1890 (2021)
+5. Cao, Z., Wu, H., Tang, L.W., Luo, Z., Zhu, Z., Zhang, W., Pollefeys, M., Oswald,
+M.R.: Mcgs-slam: A multi-camera slam framework using gaussian splatting for
+high-fidelity mapping. arXiv preprint arXiv:2509.14191 (2025)
+VIGS-SLAM
+9
+Table 18: Rendering Evaluation on RPNG AR Table Dataset [6]. ‘F’ indicates
+failure. VINGS-Mono [61] does not do final color refinement.
+Metrics
+Method
+table_01 table_02 table_03 table_04 table_05 table_06 table_07 table_08
+Avg.
+Before Final Color Refinement
+PSNR ↑
+VINGS-Mono [61]
+11.34
+10.73
+11.13
+10.86
+11.06
+10.88
+11.24
+10.99
+11.03
+Splat-SLAM [53]
+16.12
+10.96
+14.16
+17.43
+19.92
+17.63
+20.76
+21.59
+17.32
+HI-SLAM2 [65]
+22.10
+19.84
+19.97
+20.17
+F
+21.82
+23.77
+20.19 *21.12
+VIGS-SLAM (Ours)
+23.41
+20.84
+20.71
+21.97
+21.44
+23.47
+24.81
+21.05 22.21
+SSIM ↑
+VINGS-Mono [61]
+0.229
+0.168
+0.200
+0.213
+0.307
+0.351
+0.380
+0.266
+0.264
+Splat-SLAM [53]
+0.436
+0.223
+0.338
+0.583
+0.664
+0.650
+0.705
+0.742
+0.543
+HI-SLAM2 [65]
+0.698
+0.611
+0.601
+0.662
+F
+0.715
+0.803
+0.705 *0.685
+VIGS-SLAM (Ours)
+0.750
+0.654
+0.639
+0.742
+0.684
+0.775
+0.821
+0.720 0.723
+LPIPS ↓
+VINGS-Mono [61]
+0.689
+0.702
+0.704
+0.687
+0.718
+0.728
+0.687
+0.716
+0.704
+Splat-SLAM [53]
+0.483
+0.630
+0.649
+0.376
+0.404
+0.458
+0.373
+0.347
+0.465
+HI-SLAM2 [65]
+0.317
+0.388
+0.411
+0.306
+F
+0.398
+0.284
+0.401 *0.358
+VIGS-SLAM (Ours)
+0.289
+0.338
+0.353
+0.247
+0.345
+0.304
+0.252
+0.383 0.314
+After Final Color Refinement
+PSNR ↑
+Splat-SLAM [53]
+18.36
+11.67
+15.70
+18.52
+20.07
+18.37
+20.53
+22.61
+18.23
+HI-SLAM2 [65]
+24.18
+21.61
+23.52
+24.29
+F
+24.99
+26.88
+28.05 *24.79
+VIGS-SLAM (Ours)
+25.20
+21.89
+24.39
+26.03
+24.76
+25.18
+26.11
+27.88 25.18
+SSIM ↑
+Splat-SLAM [53]
+0.556
+0.234
+0.381
+0.679
+0.708
+0.720
+0.745
+0.791
+0.602
+HI-SLAM2 [65]
+0.812
+0.765
+0.796
+0.845
+F
+0.860
+0.893
+0.907 *0.840
+VIGS-SLAM (Ours)
+0.837
+0.780
+0.831
+0.884
+0.846
+0.860
+0.874
+0.902 0.852
+LPIPS ↓
+Splat-SLAM [53]
+0.365
+0.548
+0.541
+0.294
+0.292
+0.329
+0.289
+0.243
+0.363
+HI-SLAM2 [65]
+0.215
+0.237
+0.237
+0.177
+F
+0.211
+0.158
+0.145 *0.197
+VIGS-SLAM (Ours)
+0.189
+0.210
+0.193
+0.135
+0.187
+0.187
+0.166
+0.152 0.177
+6. Chen, C., Geneva, P., Peng, Y., Lee, W., Huang, G.: Monocular visual-inertial
+odometry with planar regularities. In: Proc. of the IEEE International Conference
+on Robotics and Automation. London, UK (2023)
+7. Chen, X., Chen, Y., Xiu, Y., Geiger, A., Chen, A.: Ttt3r: 3d reconstruction as
+test-time training. In: The Fourteenth International Conference on Learning Rep-
+resentations (2026)
+8. Chung, C.M., Tseng, Y.C., Hsu, Y.C., Shi, X.Q., Hua, Y.H., Yeh, J.F., Chen, W.C.,
+Chen, Y.T., Hsu, W.H.: Orbeez-slam: A real-time monocular visual slam with orb
+features and nerf-realized mapping. arXiv preprint arXiv:2209.13274 (2022)
+9. Dellaert, F.: Factor graphs and gtsam: A hands-on introduction. Georgia Institute
+of Technology, Tech. Rep 2(4) (2012)
+10. Deng, K., Zhang, Y., Yang, J., Xie, J.: Gigaslam: Large-scale monocular slam with
+hierarchical gaussian splats. arXiv preprint arXiv:2503.08071 (2025)
+11. Engel, J., Koltun, V., Cremers, D.: Direct sparse odometry. IEEE Trans. on Pattern
+Analysis and Machine Intelligence (PAMI) (2017)
+12. Forster, C., Carlone, L., Dellaert, F., Scaramuzza, D.: Imu preintegration on man-
+ifold for efficient visual-inertial maximum-a-posteriori estimation. In: RSS (2015)
+13. Forster, C., Pizzoli, M., Scaramuzza, D.: Svo: Fast semi-direct monocular visual
+odometry. In: 2014 IEEE international conference on robotics and automation
+(ICRA). pp. 15–22. IEEE (2014)
+14. Geneva, P., Eckenhoff, K., Lee, W., Yang, Y., Huang, G.: Openvins: A research
+platform for visual-inertial estimation. In: 2020 IEEE International Conference on
+Robotics and Automation (ICRA). pp. 4666–4672. IEEE (2020)
+15. Grupp, M.: evo: Python package for the evaluation of odometry and slam. https:
+//github.com/MichaelGrupp/evo (2017)
+16. Ha, S., Yeon, J., Yu, H.: Rgbd gs-icp slam. arXiv preprint arXiv:2403.12550 (2024)
+10
+Zihan Zhu et al.
+Table 19: Rendering Evaluation on UTMM Dataset [56]. VINGS-Mono [61]
+does not do final color refinement.
+Metrics
+Method
+Ego-1 Ego-2 EgoDrv FastStr SStr-1 SStr-2
+Sq-1
+Sq-2 Avg.
+Before Final Color Refinement
+PSNR ↑
+VINGS-Mono [61]
+11.16 10.33
+11.47
+11.52
+13.36
+14.52 10.78 11.66 11.85
+Splat-SLAM [53]
+17.90 18.65
+17.95
+9.74
+12.09
+9.97 11.32 10.89 13.56
+HI-SLAM2 [65]
+18.87 16.69
+15.56
+21.31 22.16 22.63 17.07 16.45 18.84
+VIGS-SLAM (Ours) 20.05 20.39 21.54
+21.98
+20.66
+21.92 19.98 20.42 20.87
+SSIM ↑
+VINGS-Mono [61]
+0.399 0.366
+0.384
+0.407
+0.456
+0.496 0.354 0.404 0.408
+Splat-SLAM [53]
+0.651 0.663
+0.588
+0.278
+0.466
+0.278 0.418 0.416 0.470
+HI-SLAM2 [65]
+0.675 0.612
+0.526
+0.682 0.713 0.725 0.564 0.558 0.632
+VIGS-SLAM (Ours) 0.711 0.716 0.696
+0.695
+0.669
+0.695 0.644 0.668 0.687
+LPIPS ↓
+VINGS-Mono [61]
+0.696 0.734
+0.697
+0.623
+0.583
+0.584 0.692 0.666 0.660
+Splat-SLAM [53]
+0.490 0.498
+0.548
+0.747
+0.727
+0.704 0.733 0.776 0.653
+HI-SLAM2 [65]
+0.438 0.498
+0.624
+0.449 0.435 0.423 0.568 0.575 0.501
+VIGS-SLAM (Ours) 0.394 0.382 0.399
+0.458
+0.482
+0.484 0.470 0.460 0.441
+After Final Color Refinement
+PSNR ↑
+Splat-SLAM [53]
+16.56 17.30
+16.93
+10.53
+14.56
+9.45 11.48 10.40 13.40
+HI-SLAM2 [65]
+21.08 22.01
+22.30
+17.80
+16.38
+16.62 19.95 21.15 19.66
+VIGS-SLAM (Ours) 21.55 22.66 23.47
+19.77 17.44 18.54 21.90 22.71 21.00
+SSIM ↑
+Splat-SLAM [53]
+0.622 0.641
+0.568
+0.255
+0.505
+0.229 0.412 0.392 0.453
+HI-SLAM2 [65]
+0.759 0.787
+0.720
+0.578
+0.570
+0.584 0.659 0.704 0.670
+VIGS-SLAM (Ours) 0.773 0.792 0.770
+0.678 0.613 0.621 0.746 0.761 0.719
+LPIPS ↓
+Splat-SLAM [53]
+0.416 0.404
+0.469
+0.718
+0.506
+0.765 0.668 0.741 0.586
+HI-SLAM2 [65]
+0.281 0.256
+0.327
+0.422
+0.435
+0.447 0.384 0.347 0.362
+VIGS-SLAM (Ours) 0.251 0.219 0.276
+0.314 0.426 0.402 0.296 0.276 0.308
+17. Hu, J., Chen, X., Feng, B., Li, G., Yang, L., Bao, H., Zhang, G., Cui, Z.: Cg-slam:
+Efficient dense rgb-d slam in a consistent uncertainty-aware 3d gaussian field. In:
+Proc. of the European Conf. on Computer Vision (ECCV) (2024)
+18. Huang, G.P., Mourikis, A.I., Roumeliotis, S.I.: Observability-based rules for design-
+ing consistent ekf slam estimators. The international journal of Robotics Research
+29(5), 502–528 (2010)
+19. Huang, H., Li, L., Cheng, H., Yeung, S.K.: Photo-slam: Real-time simultaneous
+localization and photorealistic mapping for monocular stereo and rgb-d cameras.
+In: Proc. IEEE Conf. on Computer Vision and Pattern Recognition (CVPR) (2024)
+20. Inc., A.: Apple vision pro (2024), https://www.apple.com/apple-vision-pro/specs
+21. Inc., D.T.: Dji osmo action cameras (gyroflow support) (2024), https://docs.
+gyroflow.xyz/app/getting-started/supported-cameras/dji
+22. Inc., I.: Insta360 x3 action camera (2022), https://insta360.com/product/insta360-
+x3
+23. Inc., S.: Zed 2 stereo camera (2024), https://www.stereolabs.com/products/zed-2
+24. Johari, M.M., Carta, C., Fleuret, F.: Eslam: Efficient dense slam system based on
+hybrid representation of signed distance fields. arXiv preprint arXiv:2211.11704
+(2022)
+25. Katragadda, S., Lee, W., Peng, Y., Geneva, P., Chen, C., Guo, C., Li, M., Huang,
+G.: Nerf-vins: A real-time neural radiance field map-based visual-inertial naviga-
+tion system. In: 2024 IEEE International Conference on Robotics and Automation
+(ICRA). pp. 10230–10237. IEEE (2024)
+VIGS-SLAM
+11
+Table 20: Rendering Evaluation on FAST-LIVO2 Dataset [68]. VINGS-
+Mono [61] does not do final color refinement.
+Metrics
+Method
+CBD1
+CBD2
+HKU Retail SYSU1
+Avg.
+Before Final Color Refinement
+PSNR ↑
+VINGS-Mono [61]
+9.87 11.07 11.88
+10.83
+8.15
+10.36
+Splat-SLAM [53]
+15.84 17.99 18.34
+5.39 12.22
+13.96
+HI-SLAM2 [65]
+21.05 19.58 25.01
+21.47 20.31
+21.49
+VIGS-SLAM (Ours) 21.68 22.68 26.38
+22.63 22.37 23.15
+SSIM ↑
+VINGS-Mono [61]
+0.366 0.392 0.315
+0.390 0.253
+0.343
+Splat-SLAM [53]
+0.679 0.663 0.566
+0.001 0.512
+0.484
+HI-SLAM2 [65]
+0.749 0.680 0.694
+0.658 0.679
+0.692
+VIGS-SLAM (Ours) 0.764 0.759 0.714
+0.709 0.699 0.729
+LPIPS ↓
+VINGS-Mono [61]
+0.702 0.719 0.762
+0.711 0.725
+0.724
+Splat-SLAM [53]
+0.682 0.584 0.613
+1.034 0.814
+0.745
+HI-SLAM2 [65]
+0.540 0.594 0.526
+0.462 0.677
+0.560
+VIGS-SLAM (Ours) 0.515 0.455 0.490
+0.361 0.611 0.487
+After Final Color Refinement
+PSNR ↑
+Splat-SLAM [53]
+19.38 18.29 20.94
+5.93 11.60
+15.23
+HI-SLAM2 [65]
+22.50 25.16 29.79
+26.87 23.13
+25.49
+VIGS-SLAM (Ours) 22.68 25.42 30.19
+27.97 23.97 26.04
+SSIM ↑
+Splat-SLAM [53]
+0.724 0.661 0.623
+0.070 0.460
+0.508
+HI-SLAM2 [65]
+0.820 0.867 0.811
+0.877 0.778
+0.831
+VIGS-SLAM (Ours) 0.808 0.867 0.817
+0.892 0.812 0.839
+LPIPS ↓
+Splat-SLAM [53]
+0.532 0.511 0.536
+1.009 0.791
+0.676
+HI-SLAM2 [65]
+0.299 0.241 0.320
+0.132 0.386
+0.276
+VIGS-SLAM (Ours) 0.334 0.234 0.320
+0.108 0.333 0.266
+26. Keetha, N., Karhade, J., Jatavallabhula, K.M., Yang, G., Scherer, S., Ramanan,
+D., Luiten, J.: Splatam: Splat track & map 3d gaussians for dense rgb-d slam. In:
+Proc. IEEE Conf. on Computer Vision and Pattern Recognition (CVPR) (2024)
+27. Kerbl, B., Kopanas, G., Leimkühler, T., Drettakis, G.: 3d gaussian splatting for
+real-time radiance field rendering. ACM Trans. on Graphics (2023)
+28. Kruzhkov, E., Savinykh, A., Karpyshev, P., Kurenkov, M., Yudin, E., Potapov, A.,
+Tsetserukou, D.: Meslam: Memory efficient slam based on neural fields. In: IEEE
+International Conference on Systems, Man, and Cybernetics (SMC) (2022)
+29. Leutenegger, S., Chli, M., Siegwart, R.Y.: Brisk: Binary robust invariant scalable
+keypoints. In: Proceedings of the IEEE International Conference on Computer
+Vision (ICCV). pp. 2548–2555 (2011)
+30. Leutenegger, S., Lynen, S., Bosse, M., Siegwart, R., Furgale, P.: Keyframe-based
+visual–inertial odometry using nonlinear optimization. The International Journal
+of Robotics Research 34(3), 314–334 (2015)
+31. Li, K., Niemeyer, M., Navab, N., Tombari, F.: Dns slam: Dense neural semantic-
+informed slam. arXiv preprint arXiv:2312.00204 (2023)
+32. Li, L., Zhang, L., Wang, Z., Shen, Y.: Gs3lam: Gaussian semantic splatting slam.
+In: Proceedings of the 32nd ACM International Conference on Multimedia. pp.
+3019–3027 (2024)
+12
+Zihan Zhu et al.
+Table 21: Tracking Performance on Strided EuRoC Dataset [3] (ATE RMSE
+↓[cm] and Recall ↑[%]). All baseline results are obtained from the authors’ official
+code, using dataset-specific configurations when available.
+Metrics / Stride
+Method
+MH_01
+MH_02
+MH_03
+MH_04
+MH_05
+V1_01
+V1_02
+V1_03
+V2_01
+V2_02
+V2_03
+Avg.
+Stride = 1
+ATE RMSE [cm] ↓
+HI-SLAM2 [65]
+2.66
+1.44
+2.71
+6.86
+5.07
+3.55
+1.32
+2.49
+2.56
+1.77
+1.92
+2.94
+VINS-Mono [48]
+7.56
+8.59
+7.57
+19.85
+13.45
+4.42
+6.54
+29.71
+6.58
+20.41
+25.64
+13.67
+OPEN-VINS [14]
+9.48
+12.78
+14.83
+17.46
+50.61
+6.34
+5.61
+7.16
+10.47
+5.96
+11.68
+13.85
+ORB-SLAM3 [4]
+2.78
+9.03
+7.50
+7.86
+7.99
+3.21
+1.35
+3.10
+4.53
+2.27
+1.93
+4.69
+VIGS-SLAM (Ours)
+1.42
+1.29
+2.55
+5.16
+5.64
+3.67
+1.15
+2.68
+2.34
+1.53
+3.27
+2.79
+Recall @ 5cm [%] ↑
+HI-SLAM2 [65]
+98.23 100.00
+94.21
+46.49
+68.21
+89.14 100.00
+97.65 100.00
+99.74 100.00
+90.33
+VINS-Mono [48]
+46.54
+46.37
+44.81
+10.73
+17.93
+73.70
+52.52
+6.71
+62.36
+5.75
+5.30
+33.88
+OPEN-VINS [14]
+31.72
+28.11
+27.76
+12.87
+5.98
+63.61
+72.99
+46.62
+43.10
+69.42
+27.23
+39.04
+ORB-SLAM3 [4]
+71.24
+64.69
+64.78
+77.48
+71.52
+98.74
+97.65
+93.73
+89.09
+95.00
+92.38
+83.30
+VIGS-SLAM (Ours) 100.00 100.00
+94.29
+57.42
+50.00
+84.27 100.00
+96.98
+98.48 100.00
+91.64
+88.46
+Recall @ 10cm [%] ↑
+HI-SLAM2 [65]
+100.00 100.00 100.00
+88.96
+98.68 100.00 100.00 100.00 100.00 100.00 100.00
+98.88
+VINS-Mono [48]
+88.69
+75.14
+88.91
+37.93
+54.98
+95.73
+95.67
+24.20
+86.34
+35.39
+24.42
+64.31
+OPEN-VINS [14]
+70.04
+65.01
+67.64
+51.39
+15.62
+92.31 100.00
+92.06
+72.47
+96.28
+72.79
+72.33
+ORB-SLAM3 [4]
+76.24
+75.16
+79.61
+83.29
+86.85 100.00
+98.40
+93.99
+94.10
+97.43 100.00
+89.55
+VIGS-SLAM (Ours) 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00
+98.25
+99.84
+Stride = 5
+ATE RMSE [cm] ↓
+HI-SLAM2 [65]
+1.64
+1.58
+2.82
+14.49
+5.76
+3.43
+1.26
+19.50
+3.12
+2.21 197.21
+23.00
+VINS-Mono [48]
+6.97
+5.90
+19.78
+14.22
+15.36
+4.86
+25.45 150.27
+6.46
+53.64 201.71
+45.88
+OPEN-VINS [14]
+11.20
+8.82
+23.68
+18.83
+36.15
+6.14
+16.41 151.30 112.66
+66.56 199.50
+59.21
+ORB-SLAM3 [4]
+2.03
+3.59
+3.65
+11.48
+10.95
+3.24
+1.08
+1.42
+4.77
+1.86
+F
+N/A
+VIGS-SLAM (Ours)
+2.04
+3.67
+3.43
+8.55
+5.37
+3.48
+1.55
+2.25
+2.09
+1.29
+2.26
+3.27
+Recall @ 5cm [%] ↑
+HI-SLAM2 [65]
+100.00 100.00
+94.67
+9.81
+56.77
+88.39 100.00
+87.17
+95.33
+98.42
+0.00
+75.51
+VINS-Mono [48]
+26.96
+29.45
+5.63
+9.56
+6.64
+57.41
+3.18
+0.12
+52.48
+0.62
+0.10
+17.47
+OPEN-VINS [14]
+22.92
+19.88
+2.33
+14.66
+1.12
+47.99
+7.30
+0.22
+0.26
+1.66
+0.27
+10.78
+ORB-SLAM3 [4]
+77.13
+53.30
+48.09
+3.93
+11.57
+75.96
+44.55
+52.25
+80.12
+58.86
+0.00
+45.98
+VIGS-SLAM (Ours)
+96.51
+86.15
+90.36
+20.57
+66.48
+86.27 100.00 100.00 100.00 100.00
+96.45
+85.71
+Recall @ 10cm [%] ↑
+HI-SLAM2 [65]
+100.00 100.00 100.00
+37.85
+95.31 100.00 100.00
+99.67 100.00 100.00
+0.35
+84.83
+VINS-Mono [48]
+69.01
+67.63
+36.69
+49.38
+35.62
+92.72
+16.05
+0.60
+88.65
+4.36
+1.06
+41.98
+OPEN-VINS [14]
+65.98
+71.09
+14.90
+29.37
+8.19
+92.57
+34.67
+0.55
+0.94
+10.77
+0.65
+29.97
+ORB-SLAM3 [4]
+97.38
+85.51
+74.10
+23.82
+47.62
+96.56
+70.90
+81.22
+93.13
+85.35
+0.00
+68.69
+VIGS-SLAM (Ours) 100.00
+96.97
+98.93
+82.86
+96.15 100.00 100.00 100.00 100.00 100.00 100.00
+97.72
+Stride = 10
+ATE RMSE [cm] ↓
+HI-SLAM2 [65]
+6.23
+39.40 269.95 239.54 321.23
+3.54 167.69 156.13
+2.66 191.08 191.29
+144.43
+VINS-Mono [48]
+23.49
+25.15 100.74
+F
+77.16
+14.16
+F 165.96
+15.62
+F 216.58
+N/A
+OPEN-VINS [14]
+F
+F
+F
+F
+F
+F
+F
+F
+F
+F
+F
+N/A
+ORB-SLAM3 [4]
+F
+2.23
+3.14
+2.21
+11.39
+3.14
+F
+F
+4.95
+0.02
+F
+N/A
+VIGS-SLAM (Ours)
+3.32
+3.51
+3.85
+5.72
+5.11
+3.49
+3.49
+2.61
+2.53
+1.00
+2.68
+3.39
+Recall @ 5cm [%] ↑
+HI-SLAM2 [65]
+98.17
+2.38
+0.00
+0.00
+0.00
+86.54
+0.00
+1.19
+99.26
+0.97
+0.60
+26.28
+VINS-Mono [48]
+3.00
+4.20
+0.17
+0.00
+0.00
+7.12
+0.00
+0.06
+14.19
+0.00
+0.20
+2.63
+OPEN-VINS [14]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+ORB-SLAM3 [4]
+0.00
+18.75
+18.30
+7.93
+3.66
+41.90
+0.00
+0.00
+52.20
+2.43
+0.00
+13.20
+VIGS-SLAM (Ours)
+90.45
+86.36
+85.71
+58.91
+65.28
+86.43
+83.55
+95.51
+99.29 100.00
+94.67
+86.02
+Recall @ 10cm [%] ↑
+HI-SLAM2 [65]
+98.62
+7.14
+0.00
+0.00
+0.00 100.00
+2.04
+1.19 100.00
+2.43
+3.61
+28.64
+VINS-Mono [48]
+19.14
+24.21
+1.75
+0.00
+0.26
+29.95
+0.00
+0.33
+53.16
+0.00
+0.52
+11.75
+OPEN-VINS [14]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+ORB-SLAM3 [4]
+0.00
+35.93
+31.91
+12.14
+14.12
+73.83
+0.00
+0.00
+85.47
+2.61
+0.00
+23.27
+VIGS-SLAM (Ours) 100.00
+98.86
+99.49
+93.80
+97.92 100.00 100.00 100.00 100.00 100.00
+98.82
+98.99
+Stride = 20
+ATE RMSE [cm] ↓
+HI-SLAM2 [65]
+1.58
+11.65 356.45 415.73 459.36 140.07 176.20 145.07 124.11 201.46 198.88
+202.78
+VINS-Mono [48]
+3.58
+F
+F
+F
+F
+F
+F
+F
+F
+F
+F
+N/A
+OPEN-VINS [14]
+F
+F
+F
+F
+F
+F
+F
+F
+F
+F
+F
+N/A
+ORB-SLAM3 [4]
+F
+F
+F
+F
+F
+F
+F
+F
+F
+F
+F
+N/A
+VIGS-SLAM (Ours)
+11.00 446.48
+7.90
+15.75
+21.12
+3.58 178.79 152.87 200.96 191.40 200.88 130.07
+Recall @ 5cm [%] ↑
+HI-SLAM2 [65]
+100.00
+19.67
+0.00
+0.00
+0.00
+0.00
+1.28
+0.00
+0.00
+0.00
+2.27
+11.20
+VINS-Mono [48]
+1.02
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.09
+OPEN-VINS [14]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+ORB-SLAM3 [4]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+VIGS-SLAM (Ours)
+46.72
+0.00
+56.14
+10.71
+9.47
+90.70
+0.00
+0.00
+0.00
+0.00
+0.00
+19.43
+Recall @ 10cm [%] ↑
+HI-SLAM2 [65]
+100.00
+80.33
+0.00
+0.00
+0.00
+4.69
+1.28
+2.04
+3.41
+0.00
+2.27
+17.64
+VINS-Mono [48]
+3.11
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.28
+OPEN-VINS [14]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+ORB-SLAM3 [4]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+VIGS-SLAM (Ours)
+67.88
+1.69
+89.47
+29.76
+32.63 100.00
+0.00
+0.00
+0.00
+1.98
+0.00
+29.40
+Stride = 40
+ATE RMSE [cm] ↓
+HI-SLAM2 [65]
+300.60 289.42 351.79 642.30 662.75 177.83 177.01 153.13 201.51 203.35 184.52
+304.02
+VINS-Mono [48]
+F
+F
+F
+F
+F
+F
+F
+F
+F
+F
+F
+N/A
+OPEN-VINS [14]
+F
+F
+F
+F
+F
+F
+F
+F
+F
+F
+F
+N/A
+ORB-SLAM3 [4]
+F
+F
+F
+F
+F
+F
+F
+F
+F
+F
+F
+N/A
+VIGS-SLAM (Ours)
+10.27 461.22 362.04 689.67 693.66 177.80 176.79 154.44 196.70 191.02 195.09 300.79
+Recall @ 5cm [%] ↑
+HI-SLAM2 [65]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+4.65
+0.42
+VINS-Mono [48]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+OPEN-VINS [14]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+ORB-SLAM3 [4]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+VIGS-SLAM (Ours)
+56.47
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+5.13
+Recall @ 10cm [%] ↑
+HI-SLAM2 [65]
+1.37
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+2.00
+0.00
+0.00
+4.65
+0.73
+VINS-Mono [48]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+OPEN-VINS [14]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+ORB-SLAM3 [4]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+VIGS-SLAM (Ours)
+74.12
+0.00
+0.00
+0.00
+0.00
+1.41
+0.00
+0.00
+0.00
+0.00
+0.00
+6.87
+VIGS-SLAM
+13
+Table 22: Tracking Performance on Strided RPNG AR Table Dataset [6]
+(ATE RMSE ↓[cm] and Recall ↑[%]). All baseline results are obtained from the
+authors’ official code, using dataset-specific configurations when available.
+Metrics / Stride
+Method
+table_01 table_02 table_03 table_04 table_05 table_06 table_07 table_08
+Avg.
+Stride = 1
+ATE RMSE [cm] ↓
+HI-SLAM2 [65]
+1.43
+1.66
+1.23
+2.59
+F
+1.47
+0.97
+2.67
+N/A
+VINS-Mono [48]
+2.72
+5.98
+3.30
+4.01
+2.18
+1.87
+2.05
+5.54
+3.46
+OPEN-VINS [14]
+4.29
+3.03
+3.11
+6.20
+3.85
+4.45
+6.58
+9.20
+5.09
+ORB-SLAM3 [4]
+2.52
+15.79
+1.57
+1.22
+7.34
+1.49
+1.24
+3.43
+4.33
+VIGS-SLAM (Ours)
+1.31
+1.57
+1.22
+1.75
+1.28
+1.38
+1.08
+3.86
+1.68
+Recall @ 5cm [%] ↑
+HI-SLAM2 [65]
+100.00
+100.00
+100.00
+95.02
+0.00
+100.00
+100.00
+98.58
+86.70
+VINS-Mono [48]
+72.71
+58.95
+68.89
+76.74
+90.88
+85.15
+87.47
+81.21
+77.75
+OPEN-VINS [14]
+89.82
+93.64
+95.62
+76.80
+93.96
+90.20
+77.56
+49.09
+83.34
+ORB-SLAM3 [4]
+93.52
+82.02
+97.68
+96.49
+73.02
+99.83
+95.61
+96.32
+91.81
+VIGS-SLAM (Ours)
+100.00
+100.00
+100.00
+98.44
+100.00
+100.00
+100.00
+88.14
+98.32
+Recall @ 10cm [%] ↑
+HI-SLAM2 [65]
+100.00
+100.00
+100.00
+98.58
+0.00
+100.00
+100.00
+100.00
+87.32
+VINS-Mono [48]
+95.74
+95.92
+96.56
+95.45
+99.66
+98.22
+95.01
+95.28
+96.48
+OPEN-VINS [14]
+100.00
+100.00
+100.00
+98.36
+99.78
+93.74
+98.51
+87.58
+97.25
+ORB-SLAM3 [4]
+99.98
+91.69
+98.08
+96.56
+84.12
+100.00
+100.00
+98.82
+96.16
+VIGS-SLAM (Ours)
+100.00
+100.00
+100.00
+100.00
+100.00
+100.00
+100.00
+100.00 100.00
+Stride = 5
+ATE RMSE [cm] ↓
+HI-SLAM2 [65]
+2.91
+17.33
+6.26
+3.83
+1.76
+1.52
+1.14
+2.61
+4.67
+VINS-Mono [48]
+1.93
+6.02
+5.07
+3.12
+2.07
+2.74
+1.17
+4.02
+3.27
+OPEN-VINS [14]
+2.27
+2.35
+2.44
+3.08
+2.81
+3.88
+3.06
+6.69
+3.32
+ORB-SLAM3 [4]
+4.30
+2.84
+7.77
+4.80
+4.19
+8.55
+4.04
+5.77
+5.28
+VIGS-SLAM (Ours)
+1.26
+1.56
+1.19
+2.50
+1.26
+1.41
+1.03
+3.55
+1.72
+Recall @ 5cm [%] ↑
+HI-SLAM2 [65]
+96.35
+12.30
+94.51
+89.37
+99.38
+100.00
+100.00
+98.45
+86.29
+VINS-Mono [48]
+75.52
+70.75
+83.50
+85.14
+93.14
+84.46
+91.49
+81.70
+83.21
+OPEN-VINS [14]
+74.68
+90.60
+95.70
+93.29
+93.47
+78.07
+90.40
+62.21
+84.80
+ORB-SLAM3 [4]
+12.25
+91.38
+97.72
+95.46
+95.58
+91.15
+91.11
+89.86
+83.06
+VIGS-SLAM (Ours)
+100.00
+100.00
+100.00
+92.87
+100.00
+100.00
+100.00
+88.02
+97.61
+Recall @ 10cm [%] ↑
+HI-SLAM2 [65]
+98.63
+54.57
+99.37
+96.46
+100.00
+100.00
+100.00
+100.00
+93.63
+VINS-Mono [48]
+98.32
+97.39
+96.60
+94.94
+99.53
+98.93
+98.99
+99.48
+98.02
+OPEN-VINS [14]
+99.63
+99.76
+99.91
+96.21
+99.74
+99.49
+95.09
+93.54
+97.92
+ORB-SLAM3 [4]
+13.03
+100.00
+98.37
+96.58
+100.00
+99.95
+96.74
+96.48
+87.64
+VIGS-SLAM (Ours)
+100.00
+100.00
+100.00
+100.00
+100.00
+100.00
+100.00
+100.00 100.00
+Stride = 10
+ATE RMSE [cm] ↓
+HI-SLAM2 [65]
+11.78
+76.90
+45.69
+8.65
+1.56
+2.07
+1.04
+F
+N/A
+VINS-Mono [48]
+F
+14.53
+5.30
+6.06
+2.94
+11.33
+1.34
+21.81
+N/A
+OPEN-VINS [14]
+4.22
+120.15
+5.04
+8.11
+4.03
+178.25
+3.22
+8.32
+41.42
+ORB-SLAM3 [4]
+1.57
+0.20
+1.19
+0.93
+1.32
+1.04
+0.94
+2.79
+1.25
+VIGS-SLAM (Ours)
+1.20
+1.51
+1.18
+1.62
+1.29
+1.32
+1.04
+3.24
+1.55
+Recall @ 5cm [%] ↑
+HI-SLAM2 [65]
+41.12
+5.58
+13.29
+84.84
+99.66
+98.98
+100.00
+0.00
+55.43
+VINS-Mono [48]
+0.00
+17.37
+60.68
+48.59
+72.17
+26.00
+69.32
+18.15
+39.04
+OPEN-VINS [14]
+40.64
+0.00
+64.62
+30.07
+71.14
+0.00
+65.91
+29.44
+37.73
+ORB-SLAM3 [4]
+13.97
+4.55
+70.24
+62.94
+78.09
+21.09
+72.21
+61.11
+48.03
+VIGS-SLAM (Ours)
+100.00
+100.00
+100.00
+97.91
+100.00
+100.00
+100.00
+93.75
+98.96
+Recall @ 10cm [%] ↑
+HI-SLAM2 [65]
+89.72
+32.27
+50.90
+95.74
+100.00
+100.00
+100.00
+0.00
+67.36
+VINS-Mono [48]
+0.00
+63.63
+94.67
+96.15
+93.34
+80.68
+97.78
+58.43
+73.09
+OPEN-VINS [14]
+86.59
+0.46
+99.14
+87.43
+98.35
+0.00
+98.93
+82.81
+69.21
+ORB-SLAM3 [4]
+15.75
+10.72
+94.25
+89.13
+98.01
+49.72
+99.94
+93.48
+68.88
+VIGS-SLAM (Ours)
+100.00
+100.00
+100.00
+100.00
+100.00
+100.00
+100.00
+100.00 100.00
+Stride = 20
+ATE RMSE [cm] ↓
+HI-SLAM2 [65]
+28.59
+87.66
+114.75
+29.30
+5.57
+4.56
+1.01
+127.72
+49.90
+VINS-Mono [48]
+F
+F
+F
+F
+F
+F
+14.78
+147.92
+N/A
+OPEN-VINS [14]
+F
+F
+F
+F
+F
+F
+F
+F
+N/A
+ORB-SLAM3 [4]
+F
+0.53
+F
+0.28
+F
+0.23
+1.03
+3.15
+N/A
+VIGS-SLAM (Ours)
+8.96
+123.66
+0.95
+2.36
+1.26
+1.55
+1.18
+160.08
+37.50
+Recall @ 5cm [%] ↑
+HI-SLAM2 [65]
+8.41
+4.07
+7.19
+13.21
+98.44
+91.80
+100.00
+0.00
+40.39
+VINS-Mono [48]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+11.35
+0.34
+1.46
+OPEN-VINS [14]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+ORB-SLAM3 [4]
+0.00
+3.82
+0.00
+1.59
+0.00
+4.31
+38.19
+21.73
+8.71
+VIGS-SLAM (Ours)
+1.77
+0.00
+100.00
+99.63
+100.00
+100.00
+100.00
+0.00
+62.68
+Recall @ 10cm [%] ↑
+HI-SLAM2 [65]
+34.58
+11.38
+4.63
+50.94
+99.61
+96.72
+100.00
+12.94
+51.35
+VINS-Mono [48]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+42.93
+0.81
+5.47
+OPEN-VINS [14]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+ORB-SLAM3 [4]
+0.00
+10.35
+0.00
+2.05
+0.00
+11.31
+80.63
+53.37
+19.71
+VIGS-SLAM (Ours)
+93.81
+0.86
+100.00
+100.00
+100.00
+100.00
+100.00
+0.32
+74.37
+Stride = 40
+ATE RMSE [cm] ↓
+HI-SLAM2 [65]
+158.63
+120.37
+145.92
+145.39
+22.82
+172.33
+52.77
+160.83
+122.38
+VINS-Mono [48]
+F
+F
+F
+F
+F
+F
+F
+F
+N/A
+OPEN-VINS [14]
+F
+F
+F
+F
+F
+F
+F
+F
+N/A
+ORB-SLAM3 [4]
+F
+F
+F
+F
+F
+F
+F
+F
+N/A
+VIGS-SLAM (Ours)
+162.20
+122.94
+147.07
+148.91
+7.20
+166.17
+1.05
+162.41 114.74
+Recall @ 5cm [%] ↑
+HI-SLAM2 [65]
+0.00
+1.59
+0.00
+0.00
+46.21
+0.00
+4.46
+0.00
+6.53
+VINS-Mono [48]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+OPEN-VINS [14]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+ORB-SLAM3 [4]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+VIGS-SLAM (Ours)
+0.00
+0.0
+0.0
+0.0
+62.07
+1.56
+100.00
+0.00
+20.45
+Recall @ 10cm [%] ↑
+HI-SLAM2 [65]
+0.00
+1.59
+0.60
+0.00
+64.83
+0.00
+16.07
+0.99
+10.51
+VINS-Mono [48]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+OPEN-VINS [14]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+ORB-SLAM3 [4]
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+0.00
+VIGS-SLAM (Ours)
+0.00
+1.49
+0.00
+0.00
+91.03
+1.56
+100.00
+0.00
+24.26
+14
+Zihan Zhu et al.
+33. Li, M., Liu, S., Zhou, H., Zhu, G., Cheng, N., Deng, T., Wang, H.: Sgs-slam:
+Semantic gaussian splatting for neural dense slam. In: Proc. of the European Conf.
+on Computer Vision (ECCV) (2024)
+34. Li, M., Mourikis, A.I.: High-precision, consistent ekf-based visual-inertial odome-
+try. The International Journal of Robotics Research 32(6), 690–711 (2013)
+35. Liu, H., Chen, M., Zhang, G., Bao, H., Bao, Y.: Ice-ba: Incremental, consistent and
+efficient bundle adjustment for visual-inertial slam. In: Proceedings of the IEEE
+Conference on Computer Vision and Pattern Recognition. pp. 1974–1982 (2018)
+36. Liu, X., Tan, N.: Gi-slam: Gaussian-inertial slam. arXiv preprint arXiv:2503.18275
+(2025)
+37. LLC, G.: Google pixel 9 (2024), https://store.google.com/product/pixel_9_specs?
+hl=en-US
+38. Manifold Tech: Manifold Odin 1: Spatial Memory Module. https://www.
+manifoldtech.cn/products/Odin1
+39. Manifold Tech: Mindcloud: A point cloud data processing platform. https://www.
+manifold.com.co/mindcloud
+40. Matsuki, H., Murai, R., Kelly, P.H., Davison, A.J.: Gaussian splatting slam. In:
+Proc. IEEE Conf. on Computer Vision and Pattern Recognition (CVPR) (2024)
+41. Meta Platforms, I.: Meta quest 3 (2023), https://vr-compare.com/headset/
+metaquest3
+42. Mildenhall, B., Srinivasan, P.P., Tancik, M., Barron, J.T., Ramamoorthi, R., Ng,
+R.: Nerf: Representing scenes as neural radiance fields for view synthesis. In: Proc.
+of the European Conf. on Computer Vision (ECCV) (2020)
+43. Mourikis, A.I., Roumeliotis, S.I.: A multi-state constraint kalman filter for vision-
+aided inertial navigation. In: Proceedings 2007 IEEE international conference on
+robotics and automation. pp. 3565–3572. IEEE (2007)
+44. Ndoye, A., Nègre, A., Marchand, N., Ruffier, F.: Vigs-fusion: Fast gaussian splat-
+ting slam processed onboard a small quadrirotor. In: International Conference on
+Advanced Robotics (ICAR) (2025)
+45. Nvidia: Nvidia corporation. tensorrt. https://developer.nvidia.com/tensorrt (2017-
+2018)
+46. ORB-HD: deface: Video anonymization by face detection. https://github.com/
+ORB-HD/deface (2026), gitHub repository
+47. Peng, Z., Shao, T., Liu, Y., Zhou, J., Yang, Y., Wang, J., Zhou, K.: Rtg-slam:
+Real-time 3d reconstruction at scale using gaussian splatting. In: SIGGRAPH 2024
+Conference Papers (2024)
+48. Qin, T., Li, P., Shen, S.: Vins-mono: A robust and versatile monocular visual-
+inertial state estimator. IEEE transactions on robotics 34(4), 1004–1020 (2018)
+49. Raina, N., Somasundaram, G., Zheng, K., Miglani, S., Saarinen, S., Meissner, J.,
+Schwesinger, M., Pesqueira, L., Prasad, I., Miller, E., Gupta, P., Yan, M., New-
+combe, R., Ren, C., Parkhi, O.M.: Egoblur: Responsible innovation in aria (2023)
+50. Rosinol, A., Leonard, J.J., Carlone, L.: Nerf-slam: Real-time dense monocular slam
+with neural radiance fields. In: 2023 IEEE/RSJ International Conference on Intel-
+ligent Robots and Systems (IROS). pp. 3437–3444. IEEE (2023)
+51. Rublee, E., Rabaud, V., Konolige, K., Bradski, G.: Orb: An efficient alternative
+to sift or surf. In: Proceedings of the IEEE International Conference on Computer
+Vision (ICCV). pp. 2564–2571 (2011)
+52. Samsung Electronics Co., L.: Samsung galaxy s24 (2024), https://www.samsung.
+com/latin_en/smartphones/galaxy-s24/specs
+VIGS-SLAM
+15
+53. Sandström, E., Tateno, K., Oechsle, M., Niemeyer, M., Van Gool, L., Oswald, M.R.,
+Tombari, F.: Splat-slam: Globally optimized rgb-only slam with 3d gaussians. arXiv
+preprint arXiv:2405.16544 (2024)
+54. Sturm, J., Engelhard, N., Endres, F., Burgard, W., Cremers, D.: A benchmark
+for the evaluation of rgb-d slam systems. In: Proc. IEEE International Conf. on
+Intelligent Robots and Systems (IROS) (2012)
+55. Sucar, E., Liu, S., Ortiz, J., Davison, A.J.: imap: Implicit mapping and positioning
+in real-time. In: Proc. of the IEEE International Conf. on Computer Vision (ICCV)
+(2021)
+56. Sun, L.C., Bhatt, N.P., Liu, J.C., Fan, Z., Wang, Z., Humphreys, T.E., Topcu, U.:
+Mm3dgs slam: Multi-modal 3d gaussian splatting for slam using vision, depth, and
+inertial measurements (2024)
+57. Teed, Z., Deng, J.: Droid-slam: Deep visual slam for monocular, stereo, and rgb-d
+cameras. In: Advances in Neural Information Processing Systems (NeurIPS) (2021)
+58. Von Stumberg, L., Usenko, V., Cremers, D.: Direct sparse visual-inertial odom-
+etry using dynamic marginalization. In: 2018 IEEE International Conference on
+Robotics and Automation (ICRA). pp. 2510–2517. IEEE (2018)
+59. Wang, H., Wang, J., Agapito, L.: Co-slam: Joint coordinate and sparse parametric
+encodings for neural real-time slam. In: Proc. IEEE Conf. on Computer Vision and
+Pattern Recognition (CVPR) (2023)
+60. Wang, W., Hu, Y., Scherer, S.: Tartanvo: A generalizable learning-based vo. In:
+Conference on Robot Learning. pp. 1761–1772. PMLR (2021)
+61. Wu, K., Zhang, Z., Tie, M., Ai, Z., Gan, Z., Ding, W.: Vings-mono: Visual-inertial
+gaussian splatting monocular slam in large scenes. IEEE Transactions on Robotics
+(2025)
+62. Yan, C., Qu, D., Xu, D., Zhao, B., Wang, Z., Wang, D., Li, X.: Gs-slam: Dense
+visual slam with 3d gaussian splatting. In: Proc. IEEE Conf. on Computer Vision
+and Pattern Recognition (CVPR) (2024)
+63. Yugay, V., Li, Y., Gevers, T., Oswald, M.R.: Gaussian-slam: Photo-realistic dense
+slam with gaussian splatting. arXiv preprint arXiv:2312.10070 (2023)
+64. Zhai, H., Huang, G., Hu, Q., Li, G., Bao, H., Zhang, G.: Nis-slam: Neural implicit
+semantic rgb-d slam for 3d consistent scene understanding. IEEE Transactions on
+Visualization and Computer Graphics (2024)
+65. Zhang, W., Cheng, Q., Skuddis, D., Zeller, N., Cremers, D., Haala, N.: Hi-slam2:
+Geometry-aware gaussian slam for fast monocular scene reconstruction. IEEE
+Transactions on Robotics 41, 6478–6493 (2025)
+66. Zhang, W., Sun, T., Wang, S., Cheng, Q., Haala, N.: Hi-slam: Monocular real-time
+dense mapping with hybrid implicit fields. IEEE Robotics and Automation Letters
+(2023)
+67. Zhang, Y., Wang, D., Xu, J., Liu, M., Zhu, P., Ren, W.: Nerf-vio: Map-based
+visual-inertial odometry with initialization leveraging neural radiance fields. arXiv
+preprint arXiv:2503.07952 (2025)
+68. Zheng, C., Xu, W., Zou, Z., Hua, T., Yuan, C., He, D., Zhou, B., Liu, Z., Lin, J.,
+Zhu, F., et al.: Fast-livo2: Fast, direct lidar-inertial-visual odometry. IEEE Trans-
+actions on Robotics (2024)
+69. Zheng, J., Zhu, Z., Bieri, V., Pollefeys, M., Peng, S., Armeni, I.: Wildgs-slam:
+Monocular gaussian splatting slam in dynamic environments. In: Proceedings of
+the Computer Vision and Pattern Recognition Conference. pp. 11461–11471 (2025)
+70. Zhou, Y., Li, X., Li, S., Wang, X., Feng, S., Tan, Y.: Dba-fusion: Tightly inte-
+grating deep dense visual bundle adjustment with multiple sensors for large-scale
+16
+Zihan Zhu et al.
+localization and mapping. IEEE Robotics and Automation Letters 9(7), 6138–6145
+(2024)
+71. Zhu, L., Li, Y., Sandström, E., Schindler, K., Armeni, I.: Loopsplat: Loop closure
+by registering 3d gaussian splats. In: Proc. of the International Conf. on 3D Vision
+(3DV) (2025)
+72. Zhu, S., Wang, G., Blum, H., Liu, J., Song, L., Pollefeys, M., Wang, H.: Sni-slam:
+Semantic neural implicit slam. In: Proc. IEEE Conf. on Computer Vision and
+Pattern Recognition (CVPR) (2024)
+73. Zhu, Z., Peng, S., Larsson, V., Cui, Z., Oswald, M.R., Geiger, A., Pollefeys, M.:
+Nicer-slam: Neural implicit scene encoding for rgb slam. In: Proc. of the Interna-
+tional Conf. on 3D Vision (3DV) (2024)
+74. Zhu, Z., Peng, S., Larsson, V., Xu, W., Bao, H., Cui, Z., Oswald, M.R., Pollefeys,
+M.: Nice-slam: Neural implicit scalable encoding for slam. In: Proc. IEEE Conf.
+on Computer Vision and Pattern Recognition (CVPR) (2022)
