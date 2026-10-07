@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
  *   poses.csv     timestamp_ns,tx,ty,tz,qx,qy,qz,qw,fx,fy,cx,cy   (camera.getPose(), image intrinsics)
  *   tracking.csv  timestamp_ns,state,failure_reason              (every frame, incl. non-TRACKING)
  *   points.csv    timestamp_ns,x,y,z,id,confidence                (world-space feature points)
+ *   quality.csv   live IQA per frame (level, sharpness, brightness, motion; see QualityMonitor)
  *   depth/<timestamp_ns>.depth  raw uint16 mm, depth/<timestamp_ns>.conf  uint8 (ARCore raw depth)
  *   meta.json     camera config, image + depth resolution, device
  */
@@ -41,7 +42,7 @@ public class CaptureLogger {
 
   private final File dir;
   private final ExecutorService io = Executors.newSingleThreadExecutor();
-  private BufferedWriter poses, tracking, points;
+  private BufferedWriter poses, tracking, points, quality;
   private long lastDepthTs = 0;
   private boolean wroteMeta = false;
 
@@ -51,6 +52,13 @@ public class CaptureLogger {
     poses = new BufferedWriter(new FileWriter(new File(dir, "poses.csv")), 1 << 16);
     tracking = new BufferedWriter(new FileWriter(new File(dir, "tracking.csv")), 1 << 16);
     points = new BufferedWriter(new FileWriter(new File(dir, "points.csv")), 1 << 16);
+    quality = new BufferedWriter(new FileWriter(new File(dir, "quality.csv")), 1 << 16);
+    quality.write("timestamp_ns,level,sharpness,sharpness_rel,brightness,overexposed_frac,ang_speed_deg_s,lin_speed_m_s,tracking\n");
+  }
+
+  /** Per-frame live-IQA record (see QualityMonitor). */
+  public void logQuality(String line) {
+    post(() -> write(quality, line));
   }
 
   /** Call once per frame from the GL thread, after session.update(). */
@@ -174,6 +182,7 @@ public class CaptureLogger {
         poses.close();
         tracking.close();
         points.close();
+        quality.close();
       } catch (IOException e) {
         Log.e(TAG, "close failed", e);
       }

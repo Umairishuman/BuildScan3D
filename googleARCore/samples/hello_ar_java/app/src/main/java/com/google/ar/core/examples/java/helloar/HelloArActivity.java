@@ -98,6 +98,13 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   private boolean isRecording = false;
   private java.io.File currentDatasetDir;
   private CaptureLogger captureLogger;
+  // Live capture IQA
+  private final QualityMonitor qualityMonitor = new QualityMonitor();
+  private android.widget.TextView qualityText;
+  private android.widget.TextView coverageText;
+  private long lastQualityUiNs = 0;
+  private long lastBuzzMs = 0;
+  private QualityMonitor.Level lastLevel = QualityMonitor.Level.GOOD;
   private View recordToggleButton;
   private android.widget.TextView recordTimerText;
   private android.widget.TextView cameraInfoText;
@@ -240,6 +247,8 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     recordTimerText = findViewById(R.id.tv_record_timer);
     recordToggleButton = findViewById(R.id.btn_record_toggle);
     cameraInfoText = findViewById(R.id.tv_camera_info);
+    qualityText = findViewById(R.id.tv_quality);
+    coverageText = findViewById(R.id.tv_coverage);
 
     recordToggleButton.setOnClickListener(
         v -> {
@@ -526,6 +535,44 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     displayRotationHelper.onResume();
   }
 
+  /** Live IQA: evaluate this frame, log it while recording, refresh the banner at ~5 Hz. */
+  private void updateQuality(Frame frame, Camera camera) {
+    final QualityMonitor.Result q = qualityMonitor.update(frame, camera, isRecording);
+    if (isRecording && captureLogger != null) {
+      captureLogger.logQuality(q.csv(frame.getTimestamp()));
+    }
+    // short vibration when quality turns bad while recording (rate-limited)
+    long nowMs = System.currentTimeMillis();
+    if (isRecording && q.level == QualityMonitor.Level.BAD && lastLevel != QualityMonitor.Level.BAD
+        && nowMs - lastBuzzMs > 1500) {
+      lastBuzzMs = nowMs;
+      android.os.Vibrator vib = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
+      if (vib != null && vib.hasVibrator()) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+          vib.vibrate(android.os.VibrationEffect.createOneShot(80, android.os.VibrationEffect.DEFAULT_AMPLITUDE));
+        } else {
+          vib.vibrate(80);
+        }
+      }
+    }
+    lastLevel = q.level;
+    long nowNs = System.nanoTime();
+    if (nowNs - lastQualityUiNs < 200_000_000L) return;
+    lastQualityUiNs = nowNs;
+    final String coverage = isRecording ? qualityMonitor.coverageText() : null;
+    runOnUiThread(() -> {
+      if (qualityText != null) {
+        int color = q.level == QualityMonitor.Level.GOOD ? 0xCC2E7D32
+            : q.level == QualityMonitor.Level.WARN ? 0xCCF9A825 : 0xCCC62828;
+        qualityText.setBackgroundColor(color);
+        qualityText.setText(q.message);
+      }
+      if (coverageText != null && coverage != null) {
+        coverageText.setText(coverage);
+      }
+    });
+  }
+
   // Code Injection - BLAZING
   private void startRecording() {
     if (session == null) return;
@@ -549,7 +596,11 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
               .setAutoStopOnPause(true);
 
       session.startRecording(recordingConfig);
+      qualityMonitor.resetSession();
       isRecording = true;
+      if (coverageText != null) {
+        coverageText.setVisibility(View.VISIBLE);
+      }
 
       // START THE TIMER
       startTime = System.currentTimeMillis();
@@ -579,6 +630,14 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
         captureLogger.close();
         captureLogger = null;
       }
+      final String summary = qualityMonitor.summary();
+      runOnUiThread(() -> {
+        if (coverageText != null) {
+          coverageText.setVisibility(View.GONE);
+        }
+        new AlertDialog.Builder(this).setTitle("Capture quality").setMessage(summary)
+            .setPositiveButton("OK", null).show();
+      });
 
       // STOP THE TIMER AND RESET TEXT
       timerHandler.removeCallbacks(timerRunnable);
@@ -805,6 +864,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     if (isRecording && captureLogger != null) {
       captureLogger.onFrame(session, frame, camera);
     }
+    updateQuality(frame, camera);
     // --- END POSE DUMP ---
 
     // Update BackgroundRenderer state to match the depth settings.

@@ -6,10 +6,11 @@ Status as of 2026-10-06. Pipeline lives in `src/arcore3dgs/`:
 
 ## Now — finish the current capture (roomAttemptSadness)
 
-- [ ] **Train v3 on the cleaned two-pass fusion** (paused to free the PC). Close the viewer first; 8 GB VRAM overflows otherwise.
+- [x] **Train v3 on the cleaned two-pass fusion** (paused to free the PC). Close the viewer first; 8 GB VRAM overflows otherwise.
       `nerfstudio-env\Scripts\python.exe -W ignore -u src/arcore3dgs/train.py --work dataset/roomAttemptSadness/work --out dataset/roomAttemptSadness/work/gs_v3 --steps 7000`
-- [ ] Check that the floating curtain/cupboard copies above the bed are gone (anti-aliasing + 10 cm prune are new and untested).
-- [ ] Run `compare.py` on v1 / v2 / v3, then point `view_splat.bat` at `gs_v3`.
+- [x] Check that the floating curtain/cupboard copies above the bed are gone. Free-space floaters 10.7% → 7.4% of visible splats; the big ghost in front of the curtain is gone. Colour-fit PSNR 21.74 → 21.37 dB, SSIM unchanged at 0.769.
+- [ ] Remaining 7.4% free-space floaters: try a free-space loss during training (see Novelty) rather than more pruning.
+- [x] Run `compare.py` on v1 / v2 / v3 (renders in `work/compare_v3/`), then point `view_splat.bat` at `gs_v3`.
 - [ ] Commit `src/arcore3dgs/`, the app changes (`CaptureLogger.java`) and the `.bat` launchers. Nothing is committed yet.
 
 ## Next — new capture with the updated app
@@ -41,7 +42,9 @@ Status as of 2026-10-06. Pipeline lives in `src/arcore3dgs/`:
 
 ## Android app
 
-- [ ] **Live IQA + coverage guidance:** on-device image quality assessment while recording, which tells the user live:
+- [x] **Basic live IQA (tier 1)** — `QualityMonitor.java`: colour banner (tracking lost / moving or turning too fast / blurry / too dark / overexposed), vibration on bad quality while recording, ceiling/floor/8-direction coverage checklist, end-of-recording summary, per-frame `quality.csv`. Builds (`app-debug.apk`); **thresholds not yet tuned on a device.**
+- [ ] Tune IQA thresholds on the phone; use `quality.csv` in `prepare.py` keyframe selection.
+- [ ] **Live IQA + coverage guidance (tier 2):** on-device image quality assessment while recording, which tells the user live:
   - which sections are left to record or need further scanning (surfaces seen from too few viewpoints or angles, ceiling or floor missing, holes in ARCore depth coverage);
   - when frames are too blurry, too dark or overexposed, or the camera is moving too fast;
   - when tracking is degraded or lost (from `tracking.csv` state and failure reason).

@@ -46,6 +46,41 @@
       android:shadowDy="1"
       android:shadowRadius="2" />
 
+  <!-- Live capture quality (QualityMonitor): colour-coded instruction + coverage checklist -->
+  <TextView
+      android:id="@+id/tv_quality"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_below="@id/tv_camera_info"
+      android:layout_centerHorizontal="true"
+      android:layout_marginTop="8dp"
+      android:text="Checking quality..."
+      android:textColor="#FFFFFF"
+      android:textSize="16sp"
+      android:textStyle="bold"
+      android:background="#CC2E7D32"
+      android:paddingStart="14dp"
+      android:paddingEnd="14dp"
+      android:paddingTop="6dp"
+      android:paddingBottom="6dp" />
+
+  <TextView
+      android:id="@+id/tv_coverage"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_below="@id/tv_quality"
+      android:layout_centerHorizontal="true"
+      android:layout_marginTop="4dp"
+      android:text=""
+      android:textColor="#FFFFFF"
+      android:textSize="13sp"
+      android:background="#66000000"
+      android:paddingStart="10dp"
+      android:paddingEnd="10dp"
+      android:paddingTop="3dp"
+      android:paddingBottom="3dp"
+      android:visibility="gone" />
+
   <ImageButton
       android:id="@+id/btn_gallery"
       android:layout_width="48dp"
