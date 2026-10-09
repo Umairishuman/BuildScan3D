@@ -145,6 +145,17 @@ Final BA runtime is about 2 minutes, plus a one-time 4 minutes for features.
   - Capture guidance: in plain rooms, keep an edge, corner or object in view when sweeping walls/ceiling.
 - **Lesson:** Coverage advice has to account for texture. A blank ceiling adds frames that hurt rather than help, unless the reconstruction has a planar prior for it.
 
+### 4.4 The baseline itself underfits ("cotton" texture): wrong depth supervision target
+- **Symptom:** Blurry, cotton-like, messy renders in both rooms; ARCore depth made no visible difference.
+- **Investigation (`diagnose.py`, render only):** colour-fit PSNR on the model's *own training views* was only 21–22 dB (healthy 3DGS: ~28–35 dB); render sharpness was 4–11% of the photo's; ~48% of splats were near-transparent. Train ≈ test, so the trainer underfits.
+- **Root cause:**
+  - The depth loss uses the fused TSDF mesh rendered into each view as its target.
+  - Fusion carves away thin/foreground objects that other views see through (e.g. a mesh chair back is measured by MVS but absent from the target).
+  - Where stereo measured the true depth, the target was off by >5% on ~30% of pixels and lay *behind* the real surface ~25% of the time.
+  - The depth loss then drags those splats onto the wall/floor behind them, fighting the photometric loss; the 10 cm post-prune deletes the remainder.
+- **Planned fix:** supervise with per-frame depth weighted by the MVS mask, keep the fused mesh for initialisation only, weaken/shorten the depth loss, drop the mesh-distance prune, train the last phase at full resolution; verify with `diagnose.py` (train-view PSNR > 27 dB) before re-adding ARCore depth.
+- **Lesson:** a geometrically "clean" fused surface is not automatically a good per-pixel training target; check that the model can fit its training views before judging extra inputs.
+
 ## 5. 3DGS training quality
 
 ### 5.1 Scene rotated in the Nerfstudio viewer

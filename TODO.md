@@ -26,7 +26,31 @@ Status as of 2026-10-06. Pipeline lives in `src/arcore3dgs/`:
 - [x] ARCore raw depth as an extra anchor (`mvs.py --arcore_depth 1`): ARCore vs MVS agree within 2.7%; fusion keeps 573 instead of 525 frames, p90 depth disagreement 22.1% → 15.7%, floaters 8.1% → 7.1%; image quality unchanged (colour-fit PSNR 21.35, SSIM 0.810). Consider making it the default.
 - [ ] Full-quality run on the new capture: full resolution, 15–30k steps.
 
-## roomAttemptSadness2 findings (2026-10-07)
+## PRIORITY — fix the baseline before adding ARCore depth (2026-10-09)
+
+The baseline itself is bad, so anything layered on top (ARCore depth anchors) inherits it. `diagnose.py` (render-only, no training) shows the trainer **underfits**: the model cannot reproduce its own training images.
+
+| | Room 1 (gs_v3) | Room 2 (gs) |
+|---|---|---|
+| Colour-fit PSNR on its own *training* views | 22.06 dB | 21.36 dB |
+| Render sharpness / photo sharpness (same view) | 0.11 | 0.04 |
+| Splats with opacity < 0.1 ("cotton") | 49% | 48% |
+
+A healthy 3DGS fits its training views at ~28–35 dB. Train ≈ test, so this is not a generalisation problem.
+
+**Root cause:** the depth supervision target (`depth_fused/`, the fused TSDF mesh rendered back into each view) is wrong in many places. Where stereo actually measured the depth, the target is off by >5% on ~30% of pixels and >10% on ~21%; ~25% of the time it lies *behind* the real surface, so foreground objects are erased. Example: the mesh-back chair is measured by MVS but missing from the fused target, because other views see through it and TSDF carves it away. The depth loss (weight 0.5 → 0.05 over the first 60% of training) then drags those splats to the wall/floor behind, fighting the photometric loss → averaged, cotton-like texture. The post-training 10 cm prune then deletes what is left of such objects.
+
+Secondary limits: training at half resolution (960x540) and only 7k steps.
+
+- [ ] Supervise depth with each frame's own depth (`depth_mvs`), weighted by `mvs_mask` (measured pixels full weight, filled pixels low weight), instead of the fused TSDF render.
+- [ ] Use the fused TSDF only for initialisation (and maybe a weak far-plane/free-space hint), never as a hard per-pixel target.
+- [ ] Lower and shorten the depth loss (e.g. 0.1 → 0, off after densification) so photometric detail wins.
+- [ ] Remove the post-train "distance to fused mesh" prune, or prune against per-frame depth instead (it deletes thin/foreground objects missing from the mesh).
+- [ ] Full-resolution training for the final phase; auto steps already scale with frame count.
+- [ ] Re-run `diagnose.py` after each change: target train-view PSNR > 27 dB and sharpness ratio > 0.5 **before** re-enabling ARCore depth anchoring.
+- [ ] Optional check: rolling-shutter signature in BA residuals (row-dependent error vs angular speed).
+
+
 
 - [x] Diagnosed why it looked worse than the first capture: more plain wall/ceiling footage (49% flat pixels vs 38%), stereo measured only 5% of pixels, 28% of keyframes inconsistent. Inconsistency tracks viewing direction (floor/down 11–23%, up 50%, ceiling 94%) and tracking loss (< 2 s after a loss: 91%), not blur or IQA level.
 - [x] Pipeline fixes: skip frames within 3 s after a tracking loss (`prepare.py --settle`, `filter_frames.py`); no BA relative-motion prior across tracking gaps; ARCore depth on by default; training steps auto-scale (15 x training frames).
