@@ -97,7 +97,8 @@ public class CaptureLogger {
     StringBuilder sb = new StringBuilder();
     for (int i = 0, j = 0; i + 3 < p.limit(); i += 4, j++) {
       float conf = p.get(i + 3);
-      if (conf < 0.3f) continue;   // keep more points than before; confidence is stored for filtering
+      // !(conf >= 0.3f) also rejects NaN (NaN < 0.3f is false, which let NaN rows through before)
+      if (!(conf >= 0.3f) || Float.isNaN(p.get(i)) || Float.isNaN(p.get(i + 1)) || Float.isNaN(p.get(i + 2))) continue;
       sb.append(ts).append(',').append(p.get(i)).append(',').append(p.get(i + 1)).append(',')
           .append(p.get(i + 2)).append(',').append(ids.get(j)).append(',').append(conf).append('\n');
     }

@@ -26,6 +26,7 @@ ap.add_argument("--out", required=True)
 ap.add_argument("--window", type=int, default=8)
 ap.add_argument("--rel_sharpness", type=float, default=0.6, help="drop keyframe if sharpness < this * local median")
 ap.add_argument("--pose_offset", type=float, default=0.0)
+ap.add_argument("--settle", type=float, default=3.0, help="skip frames within this many s after an ARCore tracking loss")
 args = ap.parse_args()
 
 cap_info = Capture(args.dataset, pose_offset=args.pose_offset)
@@ -53,6 +54,8 @@ for s in range(0, N, args.window):
     if sharp[k] < args.rel_sharpness * local_med[k]:
         continue
     if cap_info.frame_pose(k) is None:
+        continue
+    if not cap_info.tracking_settled(cap_info.pts[k] + args.pose_offset, args.settle):
         continue
     selected.append(k)
 print(f"Selected {len(selected)} keyframes from {N} frames")

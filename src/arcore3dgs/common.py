@@ -38,11 +38,47 @@ class Capture:
         pts_path = os.path.join(root, "points.csv")
         if os.path.exists(pts_path):
             Q = np.loadtxt(pts_path, delimiter=",", dtype=np.float64, usecols=(0, 1, 2, 3))
+            Q = Q[np.isfinite(Q).all(1)]                  # older app builds logged NaN points
             self.sp_t = (Q[:, 0] - self.t0_ns) / 1e9
             self.sp_xyz = Q[:, 1:4]
             self.sp_times = np.unique(self.sp_t)
         else:
             self.sp_t = None
+
+        # tracking.csv (newer app builds): every frame incl. non-TRACKING -> intervals where ARCore lost
+        # tracking. After a loss ARCore relocalises and its world frame can jump, so frames shortly after
+        # a loss are unreliable (roomAttemptSadness2: 91% of keyframes < 2 s after a loss were inconsistent).
+        self.lost = np.zeros((0, 2))
+        tr_path = os.path.join(root, "tracking.csv")
+        if os.path.exists(tr_path):
+            ts, ok = [], []
+            for line in open(tr_path):
+                parts = line.strip().split(",")
+                if len(parts) >= 2 and parts[0].isdigit():
+                    ts.append(int(parts[0])); ok.append(parts[1] == "TRACKING")
+            ts = (np.array(ts, dtype=np.float64) - self.t0_ns) / 1e9
+            ok = np.array(ok)
+            segs, i = [], 0
+            while i < len(ok):
+                if not ok[i]:
+                    j = i
+                    while j < len(ok) and not ok[j]:
+                        j += 1
+                    segs.append((ts[i], ts[min(j, len(ts) - 1)]))
+                    i = j
+                else:
+                    i += 1
+            self.lost = np.array(segs).reshape(-1, 2)
+
+    def tracking_settled(self, t, settle=3.0):
+        """False if pose-time t is inside a tracking loss or within `settle` s after one."""
+        if len(self.lost) == 0:
+            return True
+        return not np.any((t >= self.lost[:, 0]) & (t <= self.lost[:, 1] + settle))
+
+    def loss_between(self, ta, tb):
+        """True if a tracking loss happened between pose-times ta < tb."""
+        return bool(np.any((self.lost[:, 1] >= ta) & (self.lost[:, 0] <= tb))) if len(self.lost) else False
 
     def K(self, scale=1.0):
         return np.array([[self.fx * scale, 0, self.cx * scale], [0, self.fy * scale, self.cy * scale], [0, 0, 1]])

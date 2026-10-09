@@ -1,5 +1,5 @@
 @echo off
-REM Usage: run_arcore3dgs.bat <dataset_dir> [steps]
+REM Usage: run_arcore3dgs.bat <dataset_dir> [steps]   (steps 0 = auto: 15 x training frames)
 REM   ARCore capture -> metric 3DGS:
 REM   prepare (keyframes + Metric3D) -> ba (bundle adjustment on ARCore poses) -> mvs (multi-view depth)
 REM   -> align_fuse (TSDF fusion) -> train (depth-supervised gsplat). Output: <dataset>\work\gs\splat.ply
@@ -7,7 +7,7 @@ setlocal
 set DATA=%~1
 if "%DATA%"=="" set DATA=dataset\roomAttemptSadness
 set STEPS=%~2
-if "%STEPS%"=="" set STEPS=7000
+if "%STEPS%"=="" set STEPS=0
 set PYTHONUTF8=1
 set PYTHONIOENCODING=utf-8
 set NS=nerfstudio-env\Scripts\python.exe -W ignore -u

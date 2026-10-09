@@ -128,6 +128,23 @@ Final BA runtime is about 2 minutes, plus a one-time 4 minutes for features.
 
 ---
 
+### 4.3 A second capture of the same room came out worse (roomAttemptSadness2)
+- **Symptom:** Following the new filming checklist (ceiling and floor sweeps, walls at two heights) produced blurrier, messier results than the first capture.
+- **Investigation:** Per-keyframe comparison of the two captures, then the dropped (inconsistent) frames correlated against texture, sharpness, IQA level, time since tracking loss and viewing direction.
+- **Finding:**
+  - The new footage had much more blank surface: 49% flat pixels vs 38%; stereo measured 5% of pixels vs 9.5%; fusion dropped 28% of keyframes vs 15%.
+  - Inconsistency followed viewing direction: floor/down 11–23%, level 40%, up 50%, ceiling 94%. The walls and ceiling are plain white.
+  - It also followed tracking loss: all 4 losses (233–292 s) happened while looking up; 91% of keyframes within 2 s after a loss were inconsistent, and ARCore's pose jumped 21–115 cm across the gaps.
+  - Blur and the live IQA level did *not* predict it (drop rate 24–30% at every level).
+- **Fix:**
+  - `prepare.py --settle` / `filter_frames.py`: skip frames within 3 s after a tracking loss (read from `tracking.csv`).
+  - `ba.py`: no frame-to-frame motion prior across a tracking gap, so ARCore's relocalisation jump isn't baked into the poses.
+  - `mvs.py`: ARCore depth anchoring on by default (it agrees with stereo within 2.7%).
+  - `train.py`: training steps scale with the number of frames (the second capture had 40% more frames on the same 7k-step budget).
+  - App: new "too plain / low texture" IQA warning, calibrated on this capture to fire before tracking is lost.
+  - Capture guidance: in plain rooms, keep an edge, corner or object in view when sweeping walls/ceiling.
+- **Lesson:** Coverage advice has to account for texture. A blank ceiling adds frames that hurt rather than help, unless the reconstruction has a planar prior for it.
+
 ## 5. 3DGS training quality
 
 ### 5.1 Scene rotated in the Nerfstudio viewer

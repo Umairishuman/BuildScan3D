@@ -22,7 +22,7 @@ from pytorch_msssim import ssim
 ap = argparse.ArgumentParser()
 ap.add_argument("--work", required=True)
 ap.add_argument("--out", default=None)
-ap.add_argument("--steps", type=int, default=7000)
+ap.add_argument("--steps", type=int, default=0, help="0 = auto: max(7000, 15 x training frames)")
 ap.add_argument("--downscale", type=int, default=2)
 ap.add_argument("--depth_w", type=float, default=0.5, help="initial depth loss weight")
 ap.add_argument("--depth_w_final", type=float, default=0.05)
@@ -67,7 +67,9 @@ test_ids = list(range(0, N, args.test_every)) if args.test_every > 0 else []
 train_ids = [i for i in range(N) if i not in set(test_ids)]
 cam_centers = torch.linalg.inv(w2cs)[:, :3, 3]
 scene_scale = float((cam_centers - cam_centers.mean(0)).norm(dim=1).max()) * 1.1
-print(flush=True); print(f"{N} frames ({len(train_ids)} train / {len(test_ids)} test) at {W}x{H}, scene scale {scene_scale:.2f} m")
+if args.steps <= 0:
+    args.steps = max(7000, 15 * len(train_ids))
+print(flush=True); print(f"{N} frames ({len(train_ids)} train / {len(test_ids)} test) at {W}x{H}, scene scale {scene_scale:.2f} m, {args.steps} steps")
 
 # ---------------- init gaussians ----------------
 ply = PlyData.read(os.path.join(args.work, "init.ply"))["vertex"]

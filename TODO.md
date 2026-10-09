@@ -15,15 +15,23 @@ Status as of 2026-10-06. Pipeline lives in `src/arcore3dgs/`:
 
 ## Next — new capture with the updated app
 
-- [ ] Install the updated app on the phone and test a short recording: confirm `tracking.csv`, `points.csv` (with ids/confidence), `depth/` and `meta.json` are written.
+- [x] Install the updated app and record: `roomAttemptSadness2` (292 s, realme RMX5111). All files written; fixed NaN rows in `points.csv` (app + loader).
 - [ ] Record one room using the capture protocol:
-  - [ ] ceiling and floor sweeps
+  - [ ] ceiling and floor sweeps, **but in plain/white rooms keep an edge, corner, light fitting or furniture in frame** — pure blank ceiling/wall views caused all 4 tracking losses in roomAttemptSadness2 and 50–94% of upward-looking keyframes were inconsistent
+  - [ ] after a tracking loss, go back to an area that was tracked well and pause ~3 s before continuing
   - [ ] every wall at two heights (chest and knee)
   - [ ] slow movement (about half the speed of roomAttemptSadness)
   - [ ] close passes (30–50 cm) over anything that must look sharp up close
   - [ ] lock exposure if possible (add to app)
-- [ ] Add ARCore raw depth to the pipeline as a third depth source next to MVS and Metric3D. It is metric depth for plain walls, where MVS fails.
+- [x] ARCore raw depth as an extra anchor (`mvs.py --arcore_depth 1`): ARCore vs MVS agree within 2.7%; fusion keeps 573 instead of 525 frames, p90 depth disagreement 22.1% → 15.7%, floaters 8.1% → 7.1%; image quality unchanged (colour-fit PSNR 21.35, SSIM 0.810). Consider making it the default.
 - [ ] Full-quality run on the new capture: full resolution, 15–30k steps.
+
+## roomAttemptSadness2 findings (2026-10-07)
+
+- [x] Diagnosed why it looked worse than the first capture: more plain wall/ceiling footage (49% flat pixels vs 38%), stereo measured only 5% of pixels, 28% of keyframes inconsistent. Inconsistency tracks viewing direction (floor/down 11–23%, up 50%, ceiling 94%) and tracking loss (< 2 s after a loss: 91%), not blur or IQA level.
+- [x] Pipeline fixes: skip frames within 3 s after a tracking loss (`prepare.py --settle`, `filter_frames.py`); no BA relative-motion prior across tracking gaps; ARCore depth on by default; training steps auto-scale (15 x training frames).
+- [ ] Retrain roomAttemptSadness2 with the fixes (auto steps ≈ 10–12k, ~20 min) and compare with `gs` / `gs_arcore`.
+- [ ] Planar prior for blank walls/ceiling (see Novelty) — the remaining failure mode in plain rooms.
 
 ## Evaluation (thesis numbers)
 
@@ -43,7 +51,8 @@ Status as of 2026-10-06. Pipeline lives in `src/arcore3dgs/`:
 ## Android app
 
 - [x] **Basic live IQA (tier 1)** — `QualityMonitor.java`: colour banner (tracking lost / moving or turning too fast / blurry / too dark / overexposed), vibration on bad quality while recording, ceiling/floor/8-direction coverage checklist, end-of-recording summary, per-frame `quality.csv`. Builds (`app-debug.apk`); **thresholds not yet tuned on a device.**
-- [ ] Tune IQA thresholds on the phone; use `quality.csv` in `prepare.py` keyframe selection.
+- [x] Added a "too plain / low texture" IQA warning (calibrated on roomAttemptSadness2: flags ~52% of frames just before a tracking loss, ~2% of normal frames).
+- [ ] Tune IQA thresholds on the phone. (Note: the IQA level itself did not predict inconsistent frames — tracking loss and texture did.)
 - [ ] **Live IQA + coverage guidance (tier 2):** on-device image quality assessment while recording, which tells the user live:
   - which sections are left to record or need further scanning (surfaces seen from too few viewpoints or angles, ceiling or floor missing, holes in ARCore depth coverage);
   - when frames are too blurry, too dark or overexposed, or the camera is moving too fast;

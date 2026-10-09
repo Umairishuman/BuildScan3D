@@ -253,6 +253,17 @@ s_at, s_ar = args.sigma_abs_t, np.radians(args.sigma_abs_r)
 # ARCore relative motion between consecutive keyframes (world frame)
 dC0 = C0[1:] - C0[:-1]
 dR0 = np.einsum("nij,nkj->nik", R0[1:], R0[:-1])                  # R_{k+1} R_k^T
+# No relative-motion prior across an ARCore tracking loss (or a long time gap): after relocalisation the
+# ARCore world frame can jump, and forcing that "motion" would bake the jump into the poses. Segments are
+# then tied together only by feature matches (+ the weak absolute prior).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from common import Capture
+_cap = Capture(meta["dataset"], pose_offset=meta.get("pose_offset", 0.0))
+_pt = np.array([f["pts"] for f in frames]) + meta.get("pose_offset", 0.0)
+rel_w = np.array([0.0 if (_cap.loss_between(_pt[k], _pt[k + 1]) or _pt[k + 1] - _pt[k] > 2.0) else 1.0
+                  for k in range(N - 1)])
+print(f"   relative-motion prior broken at {int((rel_w == 0).sum())} tracking gaps")
+rw3 = np.repeat(rel_w, 3)
 HUBER = 2.0                                                       # px
 
 # Prior Jacobian is constant (linearised): relative t/r between consecutive frames + absolute t/r.
@@ -262,7 +273,7 @@ nr = 3 * (N - 1)
 pr_rows = np.concatenate([np.arange(nr), np.arange(nr), nr + np.arange(nr), nr + np.arange(nr),
                           2 * nr + np.arange(3 * N), 2 * nr + 3 * N + np.arange(3 * N)])
 pr_cols = np.concatenate([6 * (k + 1) + 3 + a3, 6 * k + 3 + a3, 6 * (k + 1) + a3, 6 * k + a3, 6 * kk + 3 + aa, 6 * kk + aa])
-pr_vals = np.concatenate([np.full(nr, 1 / s_rt), np.full(nr, -1 / s_rt), np.full(nr, 1 / s_rr), np.full(nr, -1 / s_rr),
+pr_vals = np.concatenate([rw3 / s_rt, -rw3 / s_rt, rw3 / s_rr, -rw3 / s_rr,
                           np.full(3 * N, 1 / s_at), np.full(3 * N, 1 / s_ar)])
 Jpr = coo_matrix((pr_vals, (pr_rows, pr_cols)), shape=(2 * nr + 6 * N, n_cam_p)).tocsr()
 JtJ_pr = (Jpr.T @ Jpr).toarray()
@@ -271,9 +282,9 @@ JtJ_pr = (Jpr.T @ Jpr).toarray()
 def prior_res(cp):
     Rn = (so3_exp(torch.tensor(cp[:, :3], device=dev)) @ R0t).cpu().numpy()
     C = C0 + cp[:, 3:]
-    r_t = ((C[1:] - C[:-1]) - dC0).ravel() / s_rt
+    r_t = ((C[1:] - C[:-1]) - dC0).ravel() / s_rt * rw3
     dR = np.einsum("nij,nkj->nik", Rn[1:], Rn[:-1])
-    r_r = Rot.from_matrix(np.einsum("nij,nkj->nik", dR, dR0)).as_rotvec().ravel() / s_rr
+    r_r = Rot.from_matrix(np.einsum("nij,nkj->nik", dR, dR0)).as_rotvec().ravel() / s_rr * rw3
     return np.concatenate([r_t, r_r, (cp[:, 3:] / s_at).ravel(), (cp[:, :3] / s_ar).ravel()])
 
 

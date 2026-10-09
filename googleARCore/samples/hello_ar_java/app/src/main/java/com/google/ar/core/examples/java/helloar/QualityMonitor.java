@@ -16,7 +16,8 @@ import java.util.Locale;
  * the user, in priority order, what is wrong with the footage right now:
  *   1. tracking lost / degraded (ARCore state + failure reason)
  *   2. moving / turning too fast (pose delta between frames -> calibration-free motion-blur predictor)
- *   3. blurry image (Laplacian variance of a subsampled Y plane, relative to the recent median)
+ *   3. too little texture (absolute Laplacian variance; plain walls/ceilings -> tracking loss), then
+ *      blurry image (Laplacian variance relative to the recent median)
  *   4. too dark / overexposed (mean luma, saturated-pixel fraction)
  * Plus a lightweight coverage checklist: has the user looked at the ceiling, the floor, and all
  * horizontal directions while recording.
@@ -41,6 +42,11 @@ public class QualityMonitor {
   private static final float LIN_WARN = 0.40f, LIN_BAD = 0.80f;   // m/s
   private static final float SHARP_WARN = 0.60f, SHARP_BAD = 0.40f; // fraction of recent median sharpness
   private static final float DARK_WARN = 60f, DARK_BAD = 35f;     // mean luma 0..255
+  // absolute texture (Laplacian variance of the subsampled Y plane). Calibrated on roomAttemptSadness2:
+  // 2 s before ARCore lost tracking the median was 14.5 vs 63 during normal tracking; < 15 flags ~52% of
+  // pre-loss frames and ~2% of normal frames. Plain white walls / ceilings are the main cause of lost
+  // tracking, failed stereo depth and floating geometry, so this warns BEFORE tracking drops.
+  private static final float TEX_WARN = 22f, TEX_BAD = 13f;
   private static final float OVER_WARN = 0.12f, OVER_BAD = 0.25f; // fraction of pixels >= 245
   private static final int IMAGE_EVERY = 3;                       // analyse every 3rd camera image
   private static final int STEP = 5;                              // pixel subsampling stride
@@ -105,6 +111,9 @@ public class QualityMonitor {
     } else if (angEma > ANG_BAD || linEma > LIN_BAD) {
       r.level = Level.BAD;
       r.message = angEma > ANG_BAD ? "Turning far too fast - slow down" : "Moving far too fast - slow down";
+    } else if (lastSharp >= 0 && lastSharp < TEX_BAD && lastBright > DARK_BAD) {
+      r.level = Level.BAD;
+      r.message = "Too plain - include edges, corners or objects";
     } else if (lastSharpRel >= 0 && lastSharpRel < SHARP_BAD) {
       r.level = Level.BAD;
       r.message = "Image blurry - hold steady";
@@ -117,6 +126,9 @@ public class QualityMonitor {
     } else if (angEma > ANG_WARN || linEma > LIN_WARN) {
       r.level = Level.WARN;
       r.message = angEma > ANG_WARN ? "Turning a bit fast" : "Moving a bit fast";
+    } else if (lastSharp >= 0 && lastSharp < TEX_WARN && lastBright > DARK_BAD) {
+      r.level = Level.WARN;
+      r.message = "Low texture - keep some detail in view";
     } else if (lastSharpRel >= 0 && lastSharpRel < SHARP_WARN) {
       r.level = Level.WARN;
       r.message = "Slightly blurry";
@@ -164,7 +176,7 @@ public class QualityMonitor {
       lastOver = (float) over / n;
       lastSharp = varL;
       // sharpness relative to the recent median (scene-independent); ignore very dark frames
-      if (mean > DARK_BAD) {
+      if (mean > DARK_BAD && varL >= TEX_BAD) {
         sharpHist[sharpIdx] = varL; sharpIdx = (sharpIdx + 1) % sharpHist.length;
         sharpN = Math.min(sharpN + 1, sharpHist.length);
       }
