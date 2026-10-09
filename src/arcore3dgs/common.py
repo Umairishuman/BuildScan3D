@@ -8,6 +8,7 @@ Conventions (verified on roomAttemptSadness by correlating pose angular velocity
 """
 import os, subprocess
 import numpy as np
+import cv2
 from scipy.spatial.transform import Rotation as R, Slerp
 
 # OpenGL camera (x right, y up, -z fwd) <-> OpenCV camera (x right, y down, +z fwd)
@@ -31,9 +32,12 @@ class Capture:
         self._slerp = Slerp(self.t, self.rot)
         self.fx, self.fy, self.cx, self.cy = P[:, 8:12].mean(0)
 
-        self.pts = np.sort(np.array(subprocess.check_output(
-            ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "packet=pts_time",
-             "-of", "csv=p=0", self.video]).split(), dtype=np.float64))
+        if os.path.exists(self.video):
+            self.pts = np.sort(np.array(subprocess.check_output(
+                ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "packet=pts_time",
+                 "-of", "csv=p=0", self.video]).split(), dtype=np.float64))
+        else:                                                # image-sequence capture: frames/*.jpg + pts.txt
+            self.pts = np.sort(np.loadtxt(os.path.join(root, "pts.txt"), dtype=np.float64))
 
         pts_path = os.path.join(root, "points.csv")
         if os.path.exists(pts_path):
@@ -106,6 +110,32 @@ class Capture:
             return np.zeros((0, 3))
         m = np.abs(self.sp_t - t) <= window
         return self.sp_xyz[m]
+
+
+class _ImageSequence:
+    """Minimal cv2.VideoCapture look-alike over <root>/frames/*.jpg (sorted by name)."""
+    def __init__(self, folder):
+        self.files = sorted(os.path.join(folder, n) for n in os.listdir(folder) if n.lower().endswith((".jpg", ".png")))
+        self.i = 0
+
+    def get(self, prop):
+        return len(self.files)
+
+    def read(self):
+        if self.i >= len(self.files):
+            return False, None
+        self.i += 1
+        return True, cv2.imread(self.files[self.i - 1])
+
+    def release(self):
+        pass
+
+
+def open_frames(cap):
+    """Video capture over dataset.mp4 if it exists, otherwise over the frames/ image sequence."""
+    if os.path.exists(cap.video):
+        return cv2.VideoCapture(cap.video)
+    return _ImageSequence(os.path.join(cap.root, "frames"))
 
 
 def project(points_w, c2w_gl, K, W, H):

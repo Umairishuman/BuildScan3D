@@ -14,7 +14,7 @@ import sys, types, os, json, argparse
 import cv2, numpy as np, torch
 
 sys.path.insert(0, os.path.dirname(__file__))
-from common import Capture
+from common import Capture, open_frames
 
 mmcv = types.ModuleType('mmcv'); mmcv_utils = types.ModuleType('mmcv.utils')
 mmcv_utils.collect_env = lambda: {"OS": "Windows Bypassed"}
@@ -35,7 +35,7 @@ os.makedirs(os.path.join(args.out, "depth_m3d"), exist_ok=True)
 
 # ---- pass 1: sharpness of every frame (downscaled, fast) ----
 print("Pass 1: sharpness scan")
-cap = cv2.VideoCapture(cap_info.video)
+cap = open_frames(cap_info)
 N = min(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), len(cap_info.pts))
 sharp = np.zeros(N)
 for k in range(N):
@@ -62,7 +62,7 @@ print(f"Selected {len(selected)} keyframes from {N} frames")
 
 # ---- pass 2: write images + Metric3D depth ----
 dev = torch.device("cuda")
-model = torch.hub.load('yvanyin/metric3d', 'metric3d_vit_large', pretrain=True).to(dev).eval()
+model = torch.hub.load('yvanyin/metric3d', 'metric3d_vit_large', pretrain=True, trust_repo=True).to(dev).eval()
 INPUT = (616, 1064)
 MEAN = torch.tensor([123.675, 116.28, 103.53], device=dev).view(1, 3, 1, 1)
 STD = torch.tensor([58.395, 57.12, 57.375], device=dev).view(1, 3, 1, 1)
@@ -85,7 +85,7 @@ def metric_depth(bgr, fx, out_hw):
 
 
 frames = []
-cap = cv2.VideoCapture(cap_info.video)
+cap = open_frames(cap_info)
 sel = set(selected)
 for k in range(max(selected) + 1):
     ok, f = cap.read()
