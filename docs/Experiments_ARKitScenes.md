@@ -1,6 +1,17 @@
-# Testing the trainer fix on a public room (ARKitScenes) with Kaggle
+# Trainer experiments on a public room (ARKitScenes), run on Kaggle
 
-Branch: `feature/trainer-baseline-fix`. This note records what we tried while the capture phone and the 3070 PC were not available, what we measured, and what we still do not know.
+Branch: `exp/trainer-arkitscenes` (work in progress). This note records what we tried while the capture phone and the 3070 PC were not available, what we measured, and what we still do not know.
+
+## Status and short summary
+
+Work in progress. This is a first round of experiments, not a finished fix of the baseline.
+
+- I tested the proposed fix for the "cotton" blur (supervise depth with each frame's own stereo depth instead of the fused mesh) on a public ARKitScenes room, because our own rooms were not available.
+- The depth target alone made no measurable difference.
+- Training longer (15,000 steps instead of 7,000) made held-out quality worse, not better.
+- Weaker, fading depth and flatness losses gave a modest gain at 7,000 steps: about +0.8 dB held-out colour-fit PSNR, 18% fewer splats, a faster run. The raw test PSNR and SSIM barely changed.
+- On this scene the old trainer did not underfit, so the problem seen in our own rooms was not reproduced here.
+- Still untested: our own 1080p captures, which is where the underfitting was observed. The next step is to run the same comparison on them.
 
 ## 1. Why this experiment
 
