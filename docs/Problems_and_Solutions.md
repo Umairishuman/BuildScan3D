@@ -156,6 +156,18 @@ Final BA runtime is about 2 minutes, plus a one-time 4 minutes for features.
 - **Planned fix:** supervise with per-frame depth weighted by the MVS mask, keep the fused mesh for initialisation only, weaken/shorten the depth loss, drop the mesh-distance prune, train the last phase at full resolution; verify with `diagnose.py` (train-view PSNR > 27 dB) before re-adding ARCore depth.
 - **Lesson:** a geometrically "clean" fused surface is not automatically a good per-pixel training target; check that the model can fit its training views before judging extra inputs.
 
+### 4.5 Testing the "wrong depth target" explanation on a public scene (ARKitScenes)
+- **Symptom:** we could not re-run on our own rooms (no GPU, no capture phone), so the fix proposed in §4.4 was untested.
+- **Investigation:** converted one ARKitScenes room (640×480, ARKit poses) to our capture format, ran the full pipeline on a Kaggle T4, and trained seven variants, changing one thing at a time (details and tables in `docs/Experiments_ARKitScenes.md`).
+- **Findings:**
+  - Replacing the fused-mesh depth target with each frame's own MVS depth changed held-out colour-fit PSNR by 0.2 dB (25.34 → 25.11), which is within run-to-run noise.
+  - Doubling the schedule from 7,000 to 15,000 steps made held-out quality worse (colour-fit 25.34 → 23.55 dB, SSIM 0.849 → 0.800) while the training fit improved. This overfits a 186-frame capture, and the old and new loss settings behave the same way.
+  - Fading out the depth and flatness losses and starting at opacity 0.1 gave about +0.8 dB held-out colour-fit PSNR (26.11 dB) at 7,000 steps, with 18% fewer splats and a shorter run; the baseline's dark patches on the plain wall are gone.
+  - On this scene the old trainer reached 26.5 dB colour-fit PSNR on its own training views, so the underfitting from §4.4 did not appear here.
+- **Fix kept:** the new loss settings, with the step count back to `max(7000, 15 × training frames)`; checkpoint/resume added to the trainer.
+- **Other bugs found on the way:** `mvs.py` crashed on frames that have no stereo source views (missing raw-depth file), and a crashed stage was skipped on re-run because its output folder already existed.
+- **Lesson:** do not assume more training steps help a small handheld capture; judge a change on held-out views, and check one factor at a time. The underfitting still has to be checked on our own 1080p captures.
+
 ## 5. 3DGS training quality
 
 ### 5.1 Scene rotated in the Nerfstudio viewer
