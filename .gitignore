@@ -20,3 +20,4 @@ __pycache__/
 *.exe
 .next/
 node_modules/
+.idea/
