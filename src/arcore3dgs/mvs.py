@@ -217,7 +217,9 @@ if args.arcore_depth:
 
 # ---------- pass 2: geometric consistency + fill ----------
 print("geometric consistency check + fill")
-raw = lambda i: torch.from_numpy(np.load(os.path.join(args.work, "depth_mvs_raw", frames[i]["name"] + ".npy"))).to(dev)
+def raw(i):
+    f = os.path.join(args.work, "depth_mvs_raw", frames[i]["name"] + ".npy")      # frames without sources have no raw depth
+    return torch.from_numpy(np.load(f)).to(dev) if os.path.exists(f) else torch.zeros(H, W, device=dev)
 kept_frac, mono_err, ar_vs_mvs, n_ar = [], [], [], 0
 for i in range(N):
     name = frames[i]["name"]
