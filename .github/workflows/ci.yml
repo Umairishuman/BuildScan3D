@@ -167,8 +167,8 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Install Android SDK and accept licences
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licences (the SDK is preinstalled on the runner)
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
       - name: Check the Gradle wrapper is the official one
         uses: gradle/actions/wrapper-validation@v4
