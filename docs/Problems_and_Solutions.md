@@ -155,6 +155,86 @@ Final BA runtime is about 2 minutes, plus a one-time 4 minutes for features.
   - The depth loss then drags those splats onto the wall/floor behind them, fighting the photometric loss; the 10 cm post-prune deletes the remainder.
 - **Planned fix:** supervise with per-frame depth weighted by the MVS mask, keep the fused mesh for initialisation only, weaken/shorten the depth loss, drop the mesh-distance prune, train the last phase at full resolution; verify with `diagnose.py` (train-view PSNR > 27 dB) before re-adding ARCore depth.
 - **Lesson:** a geometrically "clean" fused surface is not automatically a good per-pixel training target; check that the model can fit its training views before judging extra inputs.
+- **Result after the fix (`gs_fixed2`):** training-view PSNR 21.36 → 23.60 dB; visibly sharper. Further experiments:
+  - Overfit tests: 20 frames fit at 31.15 dB, 100 frames at 26.81 dB (15 steps/frame) / 28.15 dB (30 steps/frame) → the trainer works; the whole room is limited by **capacity** (one 3.2M-splat budget on 8 GB VRAM), and the sharpest frames fit worst.
+  - Per-frame fit was uniform except the last 30 s after the tracking losses (14 dB) → automatic outlier-frame rejection (dropped 16 frames, 13 from that tail).
+  - MCMC densification was unstable with this setup (photo error rose to 0.16–0.23) and overflowed VRAM at 3.5M splats; default densification kept.
+  - Trainer memory: images/depths moved to pinned RAM (VRAM 7.4 GB → ~4.5 GB), splat cap, SH degree 2.
+  - Learned pose corrections were not exported, so evaluation rendered at slightly wrong poses → now saved to `frames_refined.json`.
+  - Next: block-wise training to raise the effective splat budget.
+
+### 4.5 Our trainer produced degenerate, half-transparent splats (worse than plain splatfacto)
+- **Symptom:** Even after 4.4, `gs_fixed2` looked worse ("cotton", hazy, messy) than the very first Nerfstudio splatfacto runs.
+- **Investigation (no training; details in `docs/Training_Analysis.md`):**
+  - Re-read PocketGS, VIGS-SLAM and the original 3DGS paper for their initialisation, losses and schedules.
+  - Compared splat-shape statistics of every model we have trained:
+
+    | | Splatfacto (earlier) | Ours (all versions) |
+    |---|---|---|
+    | Thickness ÷ width, median | 0.13–0.25 | 0.000 |
+    | Splats thinner than 1% of width | 2–12% | 77–100% |
+    | Opacity < 0.1 | 11–19% | 48–51% |
+    | Opacity > 0.9 | 33–55% | 12–17% |
+    | Typical width | ~7 mm | 13–15 mm |
+
+  - Checked initialisation accuracy against bundle-adjustment points (≥ 3 views, 0.6 px): 19–26% lie more than 5 cm from the TSDF mesh used for initialisation.
+- **Root causes:**
+  1. **Flattening regulariser × Adam.** On a face-on disc the photometric gradient on the thin axis is ~0, so the regulariser is the only gradient there. Adam rescales it to full step size, driving every splat to zero thickness. PocketGS: normals "only for initialization, never as training constraints"; VIGS-SLAM uses the opposite (anti-elongation) term.
+  2. **Anti-aliased rasterisation × zero-thickness splats.** gsplat's opacity compensation scales opacity by how much screen area the splat covers; a zero-thickness splat covers almost none, so its opacity collapses and the optimiser piles on semi-transparent sheets.
+  3. **Initialisation from a single-image-depth surface** (TSDF mesh) instead of triangulated / multi-view-measured points; the ~110k BA points were never used.
+  4. **Depth loss including single-image fill**, which none of the image-only methods use; metric scale already comes from the BA poses.
+  5. **Joint pose refinement after BA**: poses drifted up to 73 mm to absorb other errors.
+  6. Initial opacity 0.5 instead of 0.1.
+- **Fix (implemented next, see below):**
+  - Initialisation from BA triangulated points + MVS-measured points only, voxel-balanced, PocketGS-style discs (normals from 16-NN, width from 3-NN, thickness 0.2 × width), opacity 0.1.
+  - No flattening / needle terms; depth loss off by default; classic rasterisation; poses fixed after BA.
+  - Standard 3DGS schedule (densify until 50% of steps, opacity reset every 3000, 30 steps per frame).
+  - Sanity baseline: Nerfstudio splatfacto trained on the same poses and initial points.
+- **Acceptance:** `diagnose.py` train-view PSNR > 27 dB, thickness/width median > 0.05, < 25% of splats with opacity < 0.1.
+- **Result (2026-10-10):**
+
+| `diagnose.py`, roomAttemptSadness2 | Old baseline | `gs_fixed2` | Our trainer, new recipe (`gs_v4`) | **Splatfacto on our inputs** |
+|---|---|---|---|---|
+| Training views, colour-fit PSNR | 21.36 dB | 22.16 dB | 26.06 dB | **28.08 dB** |
+| Held-out views, colour-fit PSNR | 21.48 dB | 21.65 dB | 24.70 dB | **27.81 dB** |
+| Render/photo sharpness ratio | 0.04 | 0.07 | 0.36 | **0.49** |
+| Splat thickness ÷ width | 0.000 | 0.000 | 0.08 | **0.11** |
+| Opacity < 0.1 / > 0.9 | 48% / 12% | 48% / 17% | 59% / 15% | **21% / 55%** |
+
+  - New measured-only initialisation (`make_init.py`): 662k points (BA points in ≥ 3 views + MVS-measured pixels, 1 cm voxels, room-box filter); realistic extent 5.2 × 3.2 × 4.4 m.
+  - Our trainer with the plain recipe improved a lot (100-frame benchmark 26.81 → 28.03 dB).
+  - Nerfstudio splatfacto trained on exactly the same BA poses and initial points (`export_nerfstudio.py`) is better still, and meets every acceptance criterion.
+  - **Decision:** our pipeline does the phone-specific preprocessing (sync, tracking-loss filtering, metric BA, MVS, measured initialisation); splatfacto does the training. `run_arcore3dgs.bat` now does this by default. `train.py` remains for experiments.
+- **Lesson:** every "physically motivated" extra term (flatness, depth, pose refinement) needs an ablation against the plain recipe. Here, all of them together made the result worse than doing nothing.
+
+### 4.6 The best model still "looked like a mess" in the viewer
+- **Symptom:** The splatfacto model (held-out PSNR 27.8 dB) looked smeared and full of streaks in the viewer, especially at the edges of the screen and near the ceiling.
+- **Investigation:** Rendered off-path viewpoints three ways: the viewer's settings, a phone-like field of view with a near clip, and a floater-pruned model.
+- **Findings:**
+  - **Field of view (main cause).** The viewer used a 75° vertical FOV (~113° horizontal in a 2:1 window), while the phone frames cover ~63° × 38°. The edges of the screen showed directions and distances never filmed, where any 3DGS smears; free movement also put the virtual camera inside near floaters. At 45° with a 15 cm near clip the same model is clean.
+  - **Floater pruning (`clean_splats.py`).** Measured-depth evidence removes 1.4% of splats for −0.3 dB and no visible change. Adding filled (ARCore/Metric3D) depth as evidence removed 9.8% but deleted real surfaces (held-out 27.8 → 22.4 dB). Pruning is not used by default; filled-depth evidence is off.
+  - **Coverage (remaining limit).** Upward views of the ceiling / wardrobe top stay poor in every variant: plain, barely filmed areas.
+- **Fix:** Viewer defaults to a 45° FOV and 15 cm near clip, with sliders to adjust both.
+- **Lesson:** Judge a splat model at camera settings close to the capture before blaming the reconstruction.
+
+### 4.7 Sharp near the camera path, incoherent away from it: copying PocketGS's workflow
+- **Symptom:** The splatfacto model scored best on held-out frames (27.8 dB) but still looked like a mess when navigating; an earlier, blurrier model (`gs`) looked more coherent. PocketGS gets clean results from phone video in minutes.
+- **Investigation:** Rendered all six room-2 models at the same off-path viewpoints (45° FOV, 15 cm near clip).
+- **Finding: a trade-off.**
+  - Photometric-only training (splatfacto, `gs_v4`) is sharpest near recorded viewpoints, but only textured spots were initialised, so walls and empty space are free for the optimiser to fill with floaters.
+  - The early depth-supervised model was blurry (degenerate splats, wrong prior) but its geometry was held in place, so it stayed coherent off-path.
+  - PocketGS gets both: a **dense, multi-view-consistent, spatially balanced prior** (walls included) plus a **short** optimisation that stays close to it.
+- **Fix (`pocket_prior.py` + `train.py --frames_file --init_ply`):**
+  1. **Keyframe gate** as in PocketGS: keep a frame only if the camera moved ≥ 8 cm or turned ≥ 6° (342 of 759 frames).
+  2. **Dense prior:** each frame's full depth (stereo + ARCore-anchored fill), keeping pixels that ≥ 2 of 6 neighbouring views reproduce (< 2 px, < 2% depth). Median 70% of pixels kept, vs ~5% from stereo alone; voxel-fused at 2 cm (890k points, voxels seen from ≥ 2 frames).
+  3. Surface-aligned discs (16-NN normals, 3-NN width, thickness 0.2), opacity 0.1, photometric loss only.
+  4. Short training: 8k steps, last 30% at full resolution.
+- **Result:**
+  - Off-path views are as coherent as the early depth-supervised model and much sharper; no large floaters or wall streaks.
+  - Training takes 12.7 min (3k half-res steps: 2.3 min), vs 32 min for our previous trainer and ~45 min for splatfacto.
+  - Still softer than splatfacto at recorded viewpoints; ceiling / wardrobe-top areas remain weak (coverage).
+  - Now the default in `run_arcore3dgs.bat` (output `work/gs_pocket`).
+- **Lesson:** Held-out PSNR near the camera path does not measure what a user sees when navigating. Judge off-path coherence too, and give the optimiser a correct dense prior rather than leaving free space unconstrained.
 
 ## 5. 3DGS training quality
 

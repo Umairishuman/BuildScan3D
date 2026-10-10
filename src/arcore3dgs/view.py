@@ -13,6 +13,9 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--ply", required=True)
 ap.add_argument("--port", type=int, default=7010)
 ap.add_argument("--max_res", type=int, default=1024)
+# The phone frames cover ~63x38 deg; a wider viewer FOV shows directions/distances never filmed, where 3DGS smears.
+ap.add_argument("--fov", type=float, default=45.0, help="vertical field of view (deg)")
+ap.add_argument("--near", type=float, default=0.15, help="skip splats closer than this (m): avoids walking through floaters")
 ap.add_argument("--debug", action="store_true")
 ap.add_argument("--min_opacity", type=float, default=0.02)
 ap.add_argument("--fps", type=float, default=15, help="max frames/s sent while moving")
@@ -52,6 +55,8 @@ print("Renderer ready")
 server = viser.ViserServer(port=args.port)
 server.scene.set_up_direction("+y")          # ARCore world is +Y up
 info = server.gui.add_markdown("Drag to orbit, right-drag to pan, scroll / WASD to move. Press *Measure distance* to measure.")
+fov_slider = server.gui.add_slider("Field of view (deg)", min=25, max=90, step=1, initial_value=args.fov)
+near_slider = server.gui.add_slider("Near clip (m)", min=0.02, max=0.6, step=0.01, initial_value=args.near)
 picked = []
 
 
@@ -86,7 +91,7 @@ def render(client, res):
     t_r = time.time()
     if args.debug: print(f'  r: params W={W} H={H} fov={cam.fov} aspect={cam.aspect} pos={cam.position} wxyz={cam.wxyz}', flush=True)
     out, _, _ = rasterization(means, quats, scales, opac, colors, w2c, K[None], W, H, sh_degree=sh_deg,
-                              near_plane=0.02, rasterize_mode=AA)
+                              near_plane=float(near_slider.value), rasterize_mode=AA)
     img = (out[0].clamp(0, 1).cpu().numpy() * 255).astype(np.uint8)
     if args.debug: print('  r: rasterized', flush=True)
     client.scene.set_background_image(img, format="jpeg", jpeg_quality=80)
@@ -124,6 +129,7 @@ def render_loop():
 def _(client):
     if args.debug: print('connect handler start', flush=True)
     client.camera.position = start_pos
+    client.camera.fov = np.radians(fov_slider.value)
     if args.debug: print('set position ok', flush=True)
     if start_look is not None:
         client.camera.look_at = start_look
@@ -175,6 +181,19 @@ def _(client):
 
     dirty[client.client_id] = True
     if args.debug: print('connect handler done', client.client_id, flush=True)
+
+
+@fov_slider.on_update
+def _(_):
+    for cid, c in list(server.get_clients().items()):
+        c.camera.fov = np.radians(fov_slider.value)
+        dirty[cid] = True
+
+
+@near_slider.on_update
+def _(_):
+    for cid in list(server.get_clients()):
+        dirty[cid] = True
 
 
 threading.Thread(target=render_loop, daemon=True).start()

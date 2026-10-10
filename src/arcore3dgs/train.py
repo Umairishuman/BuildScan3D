@@ -22,25 +22,46 @@ from pytorch_msssim import ssim
 ap = argparse.ArgumentParser()
 ap.add_argument("--work", required=True)
 ap.add_argument("--out", default=None)
-ap.add_argument("--steps", type=int, default=0, help="0 = auto: max(7000, 15 x training frames)")
+ap.add_argument("--steps", type=int, default=0, help="0 = auto: max(7000, steps_per_frame x training frames)")
+ap.add_argument("--steps_per_frame", type=int, default=30)
 ap.add_argument("--downscale", type=int, default=2)
-ap.add_argument("--depth_w", type=float, default=0.5, help="initial depth loss weight")
-ap.add_argument("--depth_w_final", type=float, default=0.05)
-ap.add_argument("--flat_w", type=float, default=1.0)
-ap.add_argument("--pose_opt", type=int, default=1)
+ap.add_argument("--depth_src", default="mvs", choices=["mvs", "fused"],
+                help="mvs: each frame's own depth (depth_mvs, weighted by mvs_mask); fused: old TSDF re-render target")
+ap.add_argument("--depth_w", type=float, default=0.0, help="depth loss weight during densification (0 = off: metric scale comes from BA poses)")
+ap.add_argument("--depth_w_final", type=float, default=0.0, help="depth weight reached at the end (decays after densification)")
+ap.add_argument("--fill_w", type=float, default=0.05, help="weight of filled (not stereo-measured) depth pixels")
+ap.add_argument("--init_mvs", type=int, default=0, help="(mesh init only) add stereo-measured points")
+ap.add_argument("--init", default="points", choices=["points", "mesh"],
+                help="points: init_points.ply from make_init.py (BA + MVS-measured); mesh: old TSDF init.ply")
+ap.add_argument("--init_opacity", type=float, default=0.1)
+ap.add_argument("--frames_file", default="frames.json", help="e.g. frames_pocket.json (PocketGS keyframe gate)")
+ap.add_argument("--init_ply", default="", help="override initial point cloud, e.g. prior_points.ply (pocket_prior.py)")
+ap.add_argument("--init_thickness", type=float, default=0.2, help="initial disc thickness / width (PocketGS: thin but not degenerate)")
+ap.add_argument("--densify_until", type=float, default=0.5, help="fraction of steps with densification (3DGS: 15k of 30k)")
+ap.add_argument("--frame_range", default="", help="debug: train only on frames a:b (e.g. 200:220)")
+ap.add_argument("--strategy", default="default", choices=["mcmc", "default"],
+                help="mcmc: fixed splat budget, dead splats relocated to high-error areas (3DGS-as-MCMC)")
+ap.add_argument("--max_gaussians", type=float, default=3.2e6, help="splat budget (MCMC cap / VRAM safety cap)")
+ap.add_argument("--outlier_reject", type=int, default=1, help="drop training frames that fit far worse than the rest")
+ap.add_argument("--fullres_frac", type=float, default=0.3, help="last fraction of steps trained at full resolution")
+ap.add_argument("--flat_w", type=float, default=0.0, help="flattening regulariser (0 = off: with Adam it collapsed splats to zero thickness)")
+ap.add_argument("--pose_opt", type=int, default=0, help="BA poses are already refined; joint refinement drifted up to 73 mm")
 ap.add_argument("--exposure", type=int, default=1)
-ap.add_argument("--antialiased", type=int, default=1)
-ap.add_argument("--prune_dist", type=float, default=0.10, help="after training drop splats farther than this (m) from the fused surface; 0=off")
+ap.add_argument("--antialiased", type=int, default=0, help="classic raster; antialiased opacity compensation crushed thin splats")
+ap.add_argument("--prune_dist", type=float, default=0.0, help="drop splats farther than this (m) from the fused mesh; 0=off (it deletes thin objects the mesh misses)")
 ap.add_argument("--test_every", type=int, default=10)
-ap.add_argument("--sh_degree", type=int, default=3)
+ap.add_argument("--sh_degree", type=int, default=2)
 args = ap.parse_args()
 
 dev = torch.device("cuda")
 torch.manual_seed(0)
 OUT = args.out or os.path.join(args.work, "gs")
 os.makedirs(os.path.join(OUT, "renders"), exist_ok=True)
-meta = json.load(open(os.path.join(args.work, "frames.json")))
+meta = json.load(open(os.path.join(args.work, args.frames_file)))
 frames = meta["frames"]
+if args.frame_range:
+    _a, _b = map(int, args.frame_range.split(":"))
+    frames = frames[_a:_b]
 ds = args.downscale
 W, H = meta["W"] // ds, meta["H"] // ds
 K = torch.tensor([[meta["fx"] / ds, 0, meta["cx"] / ds], [0, meta["fy"] / ds, meta["cy"] / ds], [0, 0, 1]],
@@ -48,33 +69,83 @@ K = torch.tensor([[meta["fx"] / ds, 0, meta["cx"] / ds], [0, meta["fy"] / ds, me
 GL_TO_CV = np.diag([1.0, -1.0, -1.0, 1.0])
 
 # ---------------- data ----------------
-imgs, depths, w2cs = [], [], []
+# Depth target. The old target (fused TSDF re-rendered per view) erased thin/foreground objects that
+# other views see through: on stereo-measured pixels it was >5% off on ~30% of pixels, so the depth loss
+# fought the photometric loss -> underfitting, "cotton" texture. Now each frame is supervised with its
+# own depth: stereo-measured pixels at full weight, filled (Metric3D/ARCore-corrected) pixels low weight,
+# and no fill weight for frames that fusion flagged as inconsistent.
+dropped = set(meta.get("fusion_dropped", []))
+imgs, depths, dweights, w2cs = [], [], [], []
 for f in frames:
     im = cv2.imread(os.path.join(args.work, "images", f["name"] + ".jpg"))
     im = cv2.resize(im, (W, H), interpolation=cv2.INTER_AREA)
     imgs.append(torch.from_numpy(cv2.cvtColor(im, cv2.COLOR_BGR2RGB)))
-    d = np.load(os.path.join(args.work, "depth_fused", f["name"] + ".npy")).astype(np.float32)
+    if args.depth_src == "mvs":
+        d = np.load(os.path.join(args.work, "depth_mvs", f["name"] + ".npy")).astype(np.float32)
+        mm = np.load(os.path.join(args.work, "mvs_mask", f["name"] + ".npy"))
+        wgt = np.where(mm, 1.0, 0.0 if f["name"] in dropped else args.fill_w).astype(np.float32)
+    else:
+        d = np.load(os.path.join(args.work, "depth_fused", f["name"] + ".npy")).astype(np.float32)
+        wgt = np.ones_like(d)
     if d.shape != (H, W):
         d = cv2.resize(d, (W, H), interpolation=cv2.INTER_NEAREST)
-    depths.append(torch.from_numpy(d))
+        wgt = cv2.resize(wgt, (W, H), interpolation=cv2.INTER_NEAREST)
+    wgt[(d <= 0.05) | ~np.isfinite(d)] = 0
+    depths.append(torch.from_numpy(np.nan_to_num(d)).half())
+    dweights.append(torch.from_numpy((wgt * 255).astype(np.uint8)))
     c2w = np.array(f["c2w"]) @ GL_TO_CV                     # OpenGL cam -> OpenCV cam
     w2cs.append(torch.from_numpy(np.linalg.inv(c2w)).float())
-imgs = torch.stack(imgs).to(dev)                              # uint8 [N,H,W,3]
-depths = torch.stack(depths).to(dev)                          # [N,H,W], 0 = no surface
+# kept in pinned system RAM (~2.4 GB for 760 frames) and moved one frame per step: on an 8 GB GPU the
+# Gaussians need that memory once densification passes ~2.5M splats
+imgs = torch.stack(imgs).pin_memory()                         # uint8 [N,H,W,3]
+depths = torch.stack(depths).pin_memory()                     # float16 [N,H,W]
+dweights = torch.stack(dweights).pin_memory()                 # uint8 [N,H,W], weight*255
+IMG = lambda i: imgs[i].to(dev, non_blocking=True)
+DEP = lambda i: depths[i].to(dev, non_blocking=True)
+DW = lambda i: dweights[i].to(dev, non_blocking=True)
 w2cs = torch.stack(w2cs).to(dev)
+Kfull = torch.tensor([[meta["fx"], 0, meta["cx"]], [0, meta["fy"], meta["cy"]], [0, 0, 1]], dtype=torch.float32, device=dev)
+Wf, Hf = meta["W"], meta["H"]
 N = len(frames)
 test_ids = list(range(0, N, args.test_every)) if args.test_every > 0 else []
 train_ids = [i for i in range(N) if i not in set(test_ids)]
 cam_centers = torch.linalg.inv(w2cs)[:, :3, 3]
 scene_scale = float((cam_centers - cam_centers.mean(0)).norm(dim=1).max()) * 1.1
 if args.steps <= 0:
-    args.steps = max(7000, 15 * len(train_ids))
+    args.steps = max(7000, args.steps_per_frame * len(train_ids))
 print(flush=True); print(f"{N} frames ({len(train_ids)} train / {len(test_ids)} test) at {W}x{H}, scene scale {scene_scale:.2f} m, {args.steps} steps")
 
 # ---------------- init gaussians ----------------
-ply = PlyData.read(os.path.join(args.work, "init.ply"))["vertex"]
+ply = PlyData.read(os.path.join(args.work, args.init_ply or ("init_points.ply" if args.init == "points" else "init.ply")))["vertex"]
 xyz = torch.tensor(np.stack([ply["x"], ply["y"], ply["z"]], 1), dtype=torch.float32, device=dev)
 rgb = torch.tensor(np.stack([ply["red"], ply["green"], ply["blue"]], 1) / 255.0, dtype=torch.float32, device=dev)
+n_mesh = len(xyz)
+if args.init == "mesh" and args.init_mvs and args.depth_src == "mvs":
+    # add stereo-measured points (thin / foreground objects the fused mesh misses, e.g. a mesh chair back)
+    Kh = K.cpu().numpy(); Kinv = np.linalg.inv(Kh)
+    pts_l, col_l = [], []
+    for k, f in enumerate(frames):
+        if k % 2:
+            continue
+        mm = np.load(os.path.join(args.work, "mvs_mask", f["name"] + ".npy"))
+        if mm.shape != (H, W) or mm.sum() < 50:
+            continue
+        d = np.load(os.path.join(args.work, "depth_mvs", f["name"] + ".npy")).astype(np.float32)
+        vv, uu = np.nonzero(mm[::3, ::3]); vv, uu = vv * 3, uu * 3
+        z = d[vv, uu]
+        Xc = (Kinv @ np.stack([uu + 0.5, vv + 0.5, np.ones(len(uu))])) * z
+        c2w = np.array(f["c2w"]) @ GL_TO_CV
+        pts_l.append((c2w[:3, :3] @ Xc + c2w[:3, 3:4]).T)
+        col_l.append(imgs[k][vv, uu].cpu().numpy() / 255.0)
+    if pts_l:
+        P = np.concatenate(pts_l); Cc = np.concatenate(col_l)
+        _, uniq = np.unique(np.floor(P / 0.005).astype(np.int64), axis=0, return_index=True)   # 5 mm voxels
+        P, Cc = P[uniq], Cc[uniq]
+        if len(P) > 400000:
+            sel = np.random.default_rng(0).choice(len(P), 400000, replace=False); P, Cc = P[sel], Cc[sel]
+        xyz = torch.cat([xyz, torch.tensor(P, dtype=torch.float32, device=dev)])
+        rgb = torch.cat([rgb, torch.tensor(Cc, dtype=torch.float32, device=dev)])
+        print(f"init: {n_mesh} mesh points + {len(P)} stereo-measured points")
 # initial scale = mean distance to 3 nearest neighbours
 from scipy.spatial import cKDTree
 xyz_np = xyz.cpu().numpy()
@@ -90,8 +161,12 @@ if "nx" in ply.data.dtype.names:
     t2 = np.cross(nrm, t1)
     q_xyzw = _Rot.from_matrix(np.stack([t1, t2, nrm], 2)).as_quat()
     init_quats = torch.tensor(q_xyzw[:, [3, 0, 1, 2]], dtype=torch.float32, device=dev)   # gsplat: wxyz
-    init_logscale = torch.log(torch.stack([nn, nn, nn * 0.1], 1))
-    print("init: surface-aligned discs from mesh normals")
+    init_logscale = torch.log(torch.stack([nn[:n_mesh], nn[:n_mesh], nn[:n_mesh] * args.init_thickness], 1))
+    if len(xyz) > n_mesh:                                      # stereo points: no normal -> isotropic
+        extra = len(xyz) - n_mesh
+        init_quats = torch.cat([init_quats, F.normalize(torch.randn(extra, 4, device=dev), dim=-1)])
+        init_logscale = torch.cat([init_logscale, torch.log(nn[n_mesh:])[:, None].repeat(1, 3)])
+    print(f"init: {n_mesh} surface-aligned discs (thickness {args.init_thickness} x width, opacity {args.init_opacity}) from {args.init}")
 else:
     init_quats = F.normalize(torch.randn(len(xyz), 4, device=dev), dim=-1)
     init_logscale = torch.log(nn)[:, None].repeat(1, 3)
@@ -101,7 +176,7 @@ params = torch.nn.ParameterDict({
     "means": torch.nn.Parameter(xyz),
     "scales": torch.nn.Parameter(init_logscale),
     "quats": torch.nn.Parameter(init_quats),
-    "opacities": torch.nn.Parameter(torch.logit(torch.full((len(xyz),), 0.5, device=dev))),
+    "opacities": torch.nn.Parameter(torch.logit(torch.full((len(xyz),), args.init_opacity, device=dev))),
     "sh0": torch.nn.Parameter(((rgb - 0.5) / C0)[:, None, :]),
     "shN": torch.nn.Parameter(torch.zeros(len(xyz), n_sh - 1, 3, device=dev)),
 })
@@ -109,10 +184,18 @@ lrs = {"means": 1.6e-4 * scene_scale, "scales": 5e-3, "quats": 1e-3, "opacities"
 optimizers = {k: torch.optim.Adam([params[k]], lr=lrs[k], eps=1e-15) for k in params}
 means_sched = torch.optim.lr_scheduler.ExponentialLR(optimizers["means"], gamma=0.01 ** (1.0 / args.steps))
 
-strategy = DefaultStrategy(refine_start_iter=500, refine_stop_iter=int(args.steps * 0.7), reset_every=3000,
-                           refine_every=100, prune_opa=0.005, grow_grad2d=0.0002, verbose=False)
-strategy.check_sanity(params, optimizers)
-state = strategy.initialize_state(scene_scale=scene_scale)
+if args.strategy == "mcmc":
+    from gsplat.strategy import MCMCStrategy
+    strategy = MCMCStrategy(cap_max=int(args.max_gaussians), refine_start_iter=500,
+                            refine_stop_iter=int(args.steps * args.densify_until), refine_every=100, min_opacity=0.005)
+    strategy.check_sanity(params, optimizers)
+    state = strategy.initialize_state()
+else:
+    strategy = DefaultStrategy(refine_start_iter=500, refine_stop_iter=int(args.steps * args.densify_until), reset_every=3000,
+                               refine_every=100, prune_opa=0.005, grow_grad2d=0.0002, verbose=False)
+    strategy.check_sanity(params, optimizers)
+    state = strategy.initialize_state(scene_scale=scene_scale)
+frame_l1 = np.full(N, np.nan)                                   # running photometric error per frame
 
 # per-camera pose residual (axis-angle + translation), applied as w2c' = dT @ w2c
 pose_delta = torch.nn.Parameter(torch.zeros(N, 6, device=dev))
@@ -143,11 +226,12 @@ def get_w2c(i, refine=True):
     return T @ w2c
 
 
-def render(w2c, sh_deg):
+def render(w2c, sh_deg, full=False):
     colors = torch.cat([params["sh0"], params["shN"]], 1)
+    Kr, Wr, Hr = (Kfull, Wf, Hf) if full else (K, W, H)
     out, alpha, info = rasterization(
         params["means"], F.normalize(params["quats"], dim=-1), torch.exp(params["scales"]),
-        torch.sigmoid(params["opacities"]), colors, w2c, K[None], W, H,
+        torch.sigmoid(params["opacities"]), colors, w2c, Kr[None], Wr, Hr,
         sh_degree=sh_deg, near_plane=0.05, far_plane=50.0, render_mode="RGB+ED", packed=False,
         rasterize_mode="antialiased" if args.antialiased else "classic")
     return out[0, ..., :3].clamp(0, 1), out[0, ..., 3], alpha[0, ..., 0], info
@@ -162,23 +246,37 @@ for step in range(args.steps):
     i = order.pop()
     sh_deg = min(step // 1000, args.sh_degree)
     w2c = get_w2c(i)
-    rgb_r, dep_r, alpha_r, info = render(w2c, sh_deg)
-    strategy.step_pre_backward(params, optimizers, state, step, info)
+    full = step >= int(args.steps * (1 - args.fullres_frac))
+    rgb_r, dep_r, alpha_r, info = render(w2c, sh_deg, full)
+    if args.strategy != "mcmc":
+        strategy.step_pre_backward(params, optimizers, state, step, info)
 
-    gt = imgs[i].float() / 255.0
+    if full:   # stream full-res photo from disk (all of them would not fit in 8 GB VRAM)
+        im = cv2.imread(os.path.join(args.work, "images", frames[i]["name"] + ".jpg"))
+        gt = torch.from_numpy(cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).to(dev).float() / 255.0
+        dt = F.interpolate(DEP(i)[None, None].float(), (Hf, Wf), mode="nearest")[0, 0]
+        dwt = F.interpolate(DW(i)[None, None].float(), (Hf, Wf), mode="nearest")[0, 0] / 255.0
+    else:
+        gt = IMG(i).float() / 255.0
+        dt = DEP(i).float(); dwt = DW(i).float() / 255.0
     if args.exposure:
         rgb_r = rgb_r * torch.exp(expo[i, :3]) + expo[i, 3:]
     l1 = (rgb_r - gt).abs().mean()
     ssim_l = 1 - ssim(rgb_r.permute(2, 0, 1)[None], gt.permute(2, 0, 1)[None], data_range=1.0, size_average=True)
     loss = 0.8 * l1 + 0.2 * ssim_l
+    if args.strategy == "mcmc":
+        loss = loss + 0.01 * torch.sigmoid(params["opacities"]).mean() + 0.01 * torch.exp(params["scales"]).mean()
+    frame_l1[i] = l1.item() if np.isnan(frame_l1[i]) else 0.7 * frame_l1[i] + 0.3 * l1.item()
 
-    # depth: relative L1 against the fused (multi-view consistent) depth
-    dt = depths[i]
-    m = dt > 0
-    a = min(step / (0.6 * args.steps), 1.0)
+    # depth: weighted relative L1, capped at 20% so a wrong target cannot dominate the photo loss;
+    # full weight during densification, then decays to depth_w_final
+    stop = int(args.steps * args.densify_until)
+    a = 0.0 if step < stop else (step - stop) / max(1, args.steps - stop)
     dw = args.depth_w * (1 - a) + args.depth_w_final * a
-    if m.any():
-        loss = loss + dw * ((dep_r[m] - dt[m]).abs() / dt[m]).mean()
+    m = dwt > 0
+    if dw > 0 and m.any():
+        rel = ((dep_r[m] - dt[m]).abs() / dt[m]).clamp(max=0.2)
+        loss = loss + dw * (rel * dwt[m]).sum() / dwt[m].sum()
 
     # flatten gaussians onto surfaces + limit needles
     if args.flat_w > 0:
@@ -196,7 +294,26 @@ for step in range(args.steps):
     pose_optim.zero_grad(set_to_none=True)
     expo_optim.step(); expo_optim.zero_grad(set_to_none=True)
     means_sched.step()
-    strategy.step_post_backward(params, optimizers, state, step, info, packed=False)
+    if args.strategy == "mcmc":
+        strategy.step_post_backward(params, optimizers, state, step, info, lr=means_sched.get_last_lr()[0])
+    else:
+        strategy.step_post_backward(params, optimizers, state, step, info, packed=False)
+    # outlier frames (wrong pose after tracking loss, moving objects, ...): at 40% of training drop frames whose
+    # running photo error is far above the rest, so they stop corrupting their region
+    if args.outlier_reject and step == int(args.steps * 0.4):
+        seen = np.array([i for i in train_ids if not np.isnan(frame_l1[i])])
+        e = frame_l1[seen]; med = np.median(e); mad = np.median(np.abs(e - med)) + 1e-6
+        bad = set(seen[e > med + 4 * 1.4826 * mad].tolist())
+        train_ids = [i for i in train_ids if i not in bad]; order = [i for i in order if i not in bad]
+        print(f"outlier rejection: dropped {len(bad)} training frames (running L1 > {med + 4 * 1.4826 * mad:.3f}; median {med:.3f}): "
+              f"{sorted(frames[i]['name'] for i in bad)[:20]}", flush=True)
+    if args.strategy != "mcmc" and len(params["means"]) > args.max_gaussians and step % 100 == 0:
+        with torch.no_grad():
+            excess = len(params["means"]) - int(args.max_gaussians)
+            idx = torch.topk(params["opacities"].detach(), excess, largest=False).indices
+            mask = torch.zeros(len(params["means"]), dtype=torch.bool, device=dev); mask[idx] = True
+        from gsplat.strategy.ops import remove as _remove
+        _remove(params, optimizers, state, mask)
 
     if step % 250 == 0 or step == args.steps - 1:
         el = time.time() - t_start
@@ -212,24 +329,41 @@ def evaluate():
     ps, ss, drel = [], [], []
     for j, i in enumerate(test_ids):
         rgb_r, dep_r, _, _ = render(w2cs[i:i + 1], args.sh_degree)
-        gt = imgs[i].float() / 255.0
+        gt = IMG(i).float() / 255.0
         mse = ((rgb_r - gt) ** 2).mean()
         ps.append(float(-10 * torch.log10(mse)))
         ss.append(float(ssim(rgb_r.permute(2, 0, 1)[None], gt.permute(2, 0, 1)[None], data_range=1.0)))
-        m = depths[i] > 0
-        drel.append(float(((dep_r[m] - depths[i][m]).abs() / depths[i][m]).median()))
+        m = DW(i) >= 255                                      # stereo-measured pixels only
+        if m.sum() > 100:
+            dtf = DEP(i).float()
+            drel.append(float(((dep_r[m] - dtf[m]).abs() / dtf[m]).median()))
         if j % max(1, len(test_ids) // 6) == 0:
             dv = (dep_r / 5.0).clamp(0, 1).cpu().numpy()
             dv = cv2.applyColorMap((dv * 255).astype(np.uint8), cv2.COLORMAP_TURBO)
             row = np.hstack([(gt.cpu().numpy() * 255).astype(np.uint8)[..., ::-1],
                              (rgb_r.cpu().numpy() * 255).astype(np.uint8)[..., ::-1], dv])
             cv2.imwrite(os.path.join(OUT, "renders", f"test_{frames[i]['name']}.jpg"), row)
-    return np.mean(ps), np.mean(ss), np.median(drel)
+    return np.mean(ps), np.mean(ss), (np.median(drel) if drel else float("nan"))
+
+
+@torch.no_grad()
+def train_fit(n=40):
+    """PSNR on training views (with their learned exposure): the model must at least fit what it saw."""
+    ids = train_ids[:: max(1, len(train_ids) // n)]
+    ps = []
+    for i in ids:
+        rgb_r, _, _, _ = render(get_w2c(i), args.sh_degree)
+        if args.exposure:
+            rgb_r = (rgb_r * torch.exp(expo[i, :3]) + expo[i, 3:]).clamp(0, 1)
+        ps.append(float(-10 * torch.log10(((rgb_r - IMG(i).float() / 255.0) ** 2).mean())))
+    return np.mean(ps)
 
 
 psnr, ssim_v, drel = evaluate() if test_ids else (float("nan"),) * 3
 pose_shift = pose_delta[:, 3:].norm(dim=1)
-print(f"TEST  PSNR {psnr:.2f}  SSIM {ssim_v:.3f}  depth rel.err {drel * 100:.1f}%  | "
+train_psnr = train_fit()
+print(f"TRAIN-VIEW PSNR {train_psnr:.2f} dB (target > 27: the model must reproduce what it saw)")
+print(f"TEST  PSNR {psnr:.2f}  SSIM {ssim_v:.3f}  depth rel.err (stereo pixels) {drel * 100:.1f}%  | "
       f"pose corrections: median {pose_shift.median() * 1000:.1f} mm, max {pose_shift.max() * 1000:.1f} mm")
 
 # ---------------- prune splats far from the fused surface (residual floaters) ----------------
@@ -260,7 +394,14 @@ el = np.empty(len(xyz), dtype=[(a, "f4") for a in attrs])
 for j, a in enumerate(attrs):
     el[a] = data[:, j]
 PlyData([PlyElement.describe(el, "vertex")]).write(os.path.join(OUT, "splat.ply"))
+# poses refined during training (pose_opt): without them, evaluation renders at slightly wrong poses
+with torch.no_grad():
+    fr_out = json.loads(json.dumps(meta)); fr_out["frames"] = [dict(f) for f in frames]
+    for k in range(N):
+        c2w_cv = torch.linalg.inv(get_w2c(k)[0]).cpu().numpy()
+        fr_out["frames"][k]["c2w"] = (c2w_cv @ GL_TO_CV).tolist()
+    json.dump(fr_out, open(os.path.join(OUT, "frames_refined.json"), "w"), indent=1)
 json.dump({"psnr": psnr, "ssim": ssim_v, "depth_rel_err": drel, "train_minutes": train_time / 60,
-           "gaussians": len(xyz), "steps": args.steps,
+           "gaussians": len(xyz), "steps": args.steps, "train_view_psnr": train_psnr,
            "antialiased": bool(args.antialiased)}, open(os.path.join(OUT, "metrics.json"), "w"), indent=1)
 print("Exported", os.path.join(OUT, "splat.ply"))
