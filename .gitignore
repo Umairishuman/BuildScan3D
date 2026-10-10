@@ -5,7 +5,7 @@ nerfstudio-env/
 dataset/
 *.mp4
 *.jpg
-*.png
+# *.png
 *.ply
 
 # Training Outputs and Models
@@ -18,5 +18,10 @@ __pycache__/
 
 ~*.docx
 *.exe
+*.iml
+*.idea/
+.idea/
 .next/
 node_modules/
+.idea/
+myenv/

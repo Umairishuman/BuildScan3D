@@ -1,0 +1,188 @@
+import os
+
+content = """\"use client\";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { Mail, Lock, Eye, EyeOff, ShieldCheck } from "lucide-react";
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("pm.jenkins@buildscan3d.ai");
+  const [password, setPassword] = useState("password123");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSignIn = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setTimeout(() => {
+      router.push("/dashboard");
+    }, 400);
+  };
+
+  return (
+    <div className="min-h-screen w-full flex flex-col md:flex-row bg-white">
+      {/* LEFT COLUMN: Architectural 3D Graphic Panel */}
+      <div className="relative w-full md:w-[48%] lg:w-[46%] bg-[#f4f8fd] min-h-[360px] md:min-h-screen p-8 md:p-12 flex flex-col justify-between overflow-hidden select-none border-r border-[#e2edf8]">
+        {/* Top Text */}
+        <div className="relative z-10 space-y-1">
+          <h2 className="text-sm md:text-base font-semibold text-[#1e293b] tracking-tight">
+            Real sites. 3D truth.
+          </h2>
+          <p className="text-xs md:text-sm text-[#64748b]">
+            Verify. Measure. Build better.
+          </p>
+        </div>
+
+        {/* Center Blueprint / Point Cloud Illustration (High-Res) */}
+        <div className="relative my-auto py-4 flex items-center justify-center w-full">
+          <div className="relative w-full max-w-[560px] aspect-[16/9] drop-shadow-sm">
+            <Image
+              src="/images/login-left-panel-new.png"
+              alt="3D Spatial BIM Scan"
+              fill
+              className="object-contain"
+              priority
+              quality={100}
+            />
+          </div>
+        </div>
+
+        {/* Bottom Text */}
+        <div className="relative z-10">
+          <p className="text-[11px] md:text-xs text-[#64748b] font-normal">
+            Powered by spatial data. Built for construction.
+          </p>
+        </div>
+      </div>
+
+      {/* RIGHT COLUMN: Clean Enterprise Authentication Form */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 md:p-16 bg-white">
+        <div className="w-full max-w-[380px] flex flex-col items-center">
+          {/* Logo & Brand Name */}
+          <div className="flex flex-col items-center text-center mb-8">
+            <div className="flex items-center gap-2.5 mb-2">
+              {/* Isometric 3D Cube Icon */}
+              <svg
+                className="w-9 h-9 text-[#2563eb]"
+                viewBox="0 0 48 48"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M24 4L42 14.3923V35.1769L24 45.5692L6 35.1769V14.3923L24 4Z"
+                  stroke="currentColor"
+                  strokeWidth="3.2"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M24 4V24.5M24 24.5L42 14.5M24 24.5L6 14.5M24 24.5V45.5"
+                  stroke="currentColor"
+                  strokeWidth="2.8"
+                  strokeLinecap="round"
+                />
+                <circle cx="24" cy="24.5" r="3" fill="currentColor" />
+                <circle cx="15" cy="19.5" r="1.5" fill="currentColor" />
+                <circle cx="33" cy="19.5" r="1.5" fill="currentColor" />
+                <circle cx="24" cy="35" r="1.5" fill="currentColor" />
+              </svg>
+
+              <h1 className="text-2xl font-bold tracking-tight text-[#0f172a]">
+                BuildScan <span className="text-[#2563eb]">3D</span>
+              </h1>
+            </div>
+            <p className="text-xs text-[#64748b]">
+              Construction Spatial Intelligence Platform
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSignIn} className="w-full space-y-4">
+            {/* Email Field */}
+            <div className="relative flex items-center border border-[#e2e8f0] rounded-xl px-3.5 py-3 bg-white focus-within:border-[#2563eb] focus-within:ring-2 focus-within:ring-[#2563eb]/10 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+              <Mail className="w-4 h-4 text-[#64748b] mr-3 shrink-0" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                className="w-full text-xs sm:text-sm text-[#0f172a] placeholder-[#94a3b8] bg-transparent focus:outline-none"
+                required
+              />
+            </div>
+
+            {/* Password Field */}
+            <div className="relative flex items-center border border-[#e2e8f0] rounded-xl px-3.5 py-3 bg-white focus-within:border-[#2563eb] focus-within:ring-2 focus-within:ring-[#2563eb]/10 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+              <Lock className="w-4 h-4 text-[#64748b] mr-3 shrink-0" />
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="w-full text-xs sm:text-sm text-[#0f172a] placeholder-[#94a3b8] bg-transparent focus:outline-none font-mono"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-[#64748b] hover:text-[#0f172a] ml-2 shrink-0 transition-colors cursor-pointer"
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3 px-4 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:bg-[#1e40af] text-white font-medium text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer mt-5"
+            >
+              {isLoading ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                "Sign In"
+              )}
+            </button>
+
+            {/* Forgot password link */}
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={() => alert("Password reset link sent to demo email")}
+                className="text-xs text-[#2563eb] hover:text-[#1d4ed8] hover:underline font-medium transition-colors cursor-pointer"
+              >
+                Forgot password?
+              </button>
+            </div>
+          </form>
+
+          {/* Security & Compliance Badges */}
+          <div className="w-full flex items-center justify-center gap-3 mt-12 pt-4">
+            <div className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-[#e2e8f0] bg-white text-[11px] font-medium text-[#64748b] shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+              <Lock className="w-3.5 h-3.5 text-[#64748b]" />
+              <span>256-bit encrypted</span>
+            </div>
+            <div className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-[#e2e8f0] bg-white text-[11px] font-medium text-[#64748b] shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#64748b]" />
+              <span>SOC 2 compliant</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+"""
+
+with open(r"d:\FYP\prototype\web-ui\src\app\page.tsx", "w", encoding="utf-8") as f:
+    f.write(content)
+
+print("Updated page.tsx with login-left-panel-new.png")
+
