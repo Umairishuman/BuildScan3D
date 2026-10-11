@@ -339,6 +339,32 @@ PocketGS's own reported quality is 22–23.5 dB PSNR on near-path test views (LL
   | **v3 (+ bilateral grid, scale reg., no camera opt.)** | 25.57 | 0.857 | **0.59%** / 3.1% | **clean and aligned** |
 
   PSNR against the photos favours v1 because the photos contain the exposure flicker that v1 memorised. At full resolution, v3's renders match the source frames almost pixel for pixel, and are sometimes sharper (multi-view averaging removes motion blur and noise). Before/after sheets are in `newRoomAttemptSadness/before_after/`.
+- **Metric accuracy (tape measure vs the viewer's measure tool, newRoomAttemptSadness v3):**
+
+  | Object | Model | Tape | Error | Relative |
+  |---|---|---|---|---|
+  | Table (short side) | 0.458 m | 0.459 m | −1 mm | −0.22% |
+  | Chair (soft edge) | 0.361 m | 0.368 m | −7 mm | −1.90% |
+  | Rug, 2 points (soft edge) | 0.858 m | 0.870 m | −12 mm | −1.38% |
+  | Table (long side) | 1.748 m | 1.750 m | −2 mm | −0.11% |
+  | Wall | 2.792 m | 2.800 m | −8 mm | −0.29% |
+  | Room length | 6.692 m | 6.700 m | −8 mm | −0.12% |
+
+  - Rigid objects: mean 4.8 mm / 0.19%.
+  - The error does not grow with length (−8 mm at both 2.8 m and 6.7 m), so the ARCore-derived scale is good to about 0.1%.
+  - The small, consistent negative offset is most likely endpoint picking in the viewer.
+  - Result: room-scale dimensions within ≤ 8 mm over 6.7 m, from a casual video on a mid-range Android phone with no LiDAR.
+
+### 4.12 Current best result (2026-10-11): SfM v3, the best model so far
+- **Best model:**
+  - `saved_models/2026-10-11_sfm_v3/newRoomAttemptSadness/splat.ply` (also at `dataset/newRoomAttemptSadness/work_sfm/gs_sfm_v3/`), viewer default;
+  - the same recipe on `roomAttemptSadness2`: held-out SSIM 0.912, geometry median 0.45%.
+  - Checkpoints, camera poses, metrics and before/after sheets are saved alongside (see the README.txt there).
+- **Why it beats every earlier attempt** on this recording, including the pocket prior, sparse depth loss, COLMAP-depth (`colmap_mvs.py`) and near-camera pruning:
+  - camera poses and the lens model come from the images (COLMAP), not from ARCore, which removes the 1 m / 28° re-anchor ghost and the distortion blur;
+  - training at full resolution;
+  - a per-image colour correction (bilateral grid) that keeps auto-exposure flicker out of the splats.
+- **Reproduce:** `run_arcore3dgs.bat dataset\newRoomAttemptSadness`. It takes about 75 min on an RTX 3070: matching 23, mapping 6, training about 45.
 - **Lesson:** ARCore's VIO world frame is not globally consistent. It re-anchors silently, and its factory intrinsics ignore distortion. Both are harmless for AR overlays and fatal for 3DGS. Poses for 3DGS must come from image-based SfM with lens self-calibration; ARCore should provide scale, gravity and a fallback only.
 
 ## 5. 3DGS training quality
