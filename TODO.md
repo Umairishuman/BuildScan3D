@@ -162,7 +162,20 @@ Secondary limits: training at half resolution (960x540) and only 7k steps.
 
 ## Evaluation (thesis numbers)
 
-- [ ] Tape-measure 10–15 references in the new room: wall lengths, room height, door width/height, desk, bed.
+- [x] Tape vs model (viewer measure tool), newRoomAttemptSadness, SfM v3 model, 2026-10-11:
+
+  | Object | Model | Tape | Error | Relative |
+  |---|---|---|---|---|
+  | Table (short side) | 0.458 m | 0.459 m | −1 mm | −0.22% |
+  | Chair (soft edge) | 0.361 m | 0.368 m | −7 mm | −1.90% |
+  | Rug, 2 points (soft edge) | 0.858 m | 0.870 m | −12 mm | −1.38% |
+  | Table (long side) | 1.748 m | 1.750 m | −2 mm | −0.11% |
+  | Wall | 2.792 m | 2.800 m | −8 mm | −0.29% |
+  | Room length | 6.692 m | 6.700 m | −8 mm | −0.12% |
+
+  Rigid objects: mean 4.8 mm / 0.19%. The error does not grow with length (−8 mm at both 2.8 m and 6.7 m), so the scale is good to about 0.1%. The consistent small negative offset looks like endpoint picking (clicks land just inside edges and corners).
+- [ ] More references (room 2, room height, doors) plus 3 repeated clicks each, to quantify clicking error.
+- [ ] Viewer: snap measure clicks to corners/edges to remove the endpoint-picking bias.
 - [ ] Script: compare model measurements against tape measurements → mean / max dimensional error (cm).
 - [ ] Report alongside: reprojection error before/after BA, MVS coverage, colour-fit PSNR/SSIM, free-space violation ratio.
 
