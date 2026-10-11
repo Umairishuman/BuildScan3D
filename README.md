@@ -111,7 +111,22 @@ pip install -r requirements.txt
 
 #### Running the Pipelines:
 
-- **Interactive Reviewer & 3DGS Exporter:**
+- **ARCore capture → metric 3DGS (current pipeline, best results):**
+  ```powershell
+  run_arcore3dgs.bat dataset\<recording>      # -> dataset\<recording>\work_sfm\gs_sfm\splat.ply
+  view_splat.bat <path\to\splat.ply>          # viewer at http://localhost:7010 (measure tool included)
+  ```
+  The pipeline runs in four stages:
+  1. Extract sharp keyframes from the video.
+  2. Reconstruct with COLMAP 4.2 (CUDA build in `tools\colmap_dl\`). This estimates camera poses and lens distortion from the images, then undistorts them.
+  3. Align to ARCore's poses, which gives real-world scale and the up direction.
+  4. Train Nerfstudio splatfacto at full resolution, with per-image colour correction.
+
+  - Best saved models: `saved_models\2026-10-11_sfm_v3\`.
+  - Rationale and results: `docs/Problems_and_Solutions.md` §4.11–4.12.
+  - Old ARCore-pose pipeline: `run_arcore3dgs_legacy.bat`.
+
+- **Interactive Reviewer & 3DGS Exporter (early prototype):**
   ```powershell
   python src/Metric3D_v2/interactive_viewer.py
   ```
