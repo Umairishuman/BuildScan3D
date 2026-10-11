@@ -45,6 +45,12 @@ public class CaptureLogger {
   private BufferedWriter poses, tracking, points, quality;
   private long lastDepthTs = 0;
   private boolean wroteMeta = false;
+  private CoverageMap coverage = null;
+
+  /** Live coverage map fed from the raw depth stream (may be null). */
+  public void setCoverage(CoverageMap c) {
+    coverage = c;
+  }
 
   public CaptureLogger(File dir) throws IOException {
     this.dir = dir;
@@ -85,7 +91,7 @@ public class CaptureLogger {
       writeMeta(session, intr);
     }
     if (ts - lastDepthTs >= DEPTH_INTERVAL_NS) {
-      if (saveRawDepth(frame, ts)) lastDepthTs = ts;
+      if (saveRawDepth(frame, ts, pose, intr)) lastDepthTs = ts;
     }
   }
 
@@ -106,12 +112,18 @@ public class CaptureLogger {
     post(() -> write(points, s));
   }
 
-  private boolean saveRawDepth(Frame frame, long ts) {
+  private boolean saveRawDepth(Frame frame, long ts, Pose pose, CameraIntrinsics intr) {
     try (Image depth = frame.acquireRawDepthImage16Bits();
          Image conf = frame.acquireRawDepthConfidenceImage()) {
       final byte[] d = copyPlane(depth);
       final byte[] cf = copyPlane(conf);
       final int w = depth.getWidth(), h = depth.getHeight();
+      final CoverageMap cov = coverage;
+      if (cov != null) {
+        final float[] fl = intr.getFocalLength(), pp = intr.getPrincipalPoint();
+        final int[] dims = intr.getImageDimensions();
+        post(() -> cov.addDepth(d, cf, w, h, pose, fl, pp, dims[0], dims[1]));
+      }
       post(() -> {
         writeBytes(new File(dir, "depth/" + ts + ".depth"), d);
         writeBytes(new File(dir, "depth/" + ts + ".conf"), cf);

@@ -25,3 +25,10 @@ __pycache__/
 node_modules/
 .idea/
 myenv/
+
+# COLMAP binary download (380 MB, see TODO.md)
+tools/colmap_dl/
+
+
+# saved best models (large binaries, kept locally)
+saved_models/

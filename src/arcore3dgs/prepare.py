@@ -26,6 +26,7 @@ ap.add_argument("--out", required=True)
 ap.add_argument("--window", type=int, default=8)
 ap.add_argument("--rel_sharpness", type=float, default=0.6, help="drop keyframe if sharpness < this * local median")
 ap.add_argument("--pose_offset", type=float, default=0.0)
+ap.add_argument("--depth", type=int, default=1, help="0 = skip Metric3D (not needed by the SfM pipeline, sfm_colmap.py)")
 ap.add_argument("--settle", type=float, default=3.0, help="skip frames within this many s after an ARCore tracking loss")
 args = ap.parse_args()
 
@@ -62,7 +63,7 @@ print(f"Selected {len(selected)} keyframes from {N} frames")
 
 # ---- pass 2: write images + Metric3D depth ----
 dev = torch.device("cuda")
-model = torch.hub.load('yvanyin/metric3d', 'metric3d_vit_large', pretrain=True).to(dev).eval()
+model = torch.hub.load('yvanyin/metric3d', 'metric3d_vit_large', pretrain=True).to(dev).eval() if args.depth else None
 INPUT = (616, 1064)
 MEAN = torch.tensor([123.675, 116.28, 103.53], device=dev).view(1, 3, 1, 1)
 STD = torch.tensor([58.395, 57.12, 57.375], device=dev).view(1, 3, 1, 1)
@@ -96,9 +97,11 @@ for k in range(max(selected) + 1):
     H, W = f.shape[:2]
     name = f"frame_{k:05d}"
     cv2.imwrite(os.path.join(args.out, "images", name + ".jpg"), f, [cv2.IMWRITE_JPEG_QUALITY, 95])
-    d = metric_depth(f, cap_info.fx, (H // 2, W // 2))
-    np.save(os.path.join(args.out, "depth_m3d", name + ".npy"), d.astype(np.float16))
+    if args.depth:
+        d = metric_depth(f, cap_info.fx, (H // 2, W // 2))
+        np.save(os.path.join(args.out, "depth_m3d", name + ".npy"), d.astype(np.float16))
     frames.append({"name": name, "video_index": k, "pts": float(cap_info.pts[k]), "sharpness": float(sharp[k]),
+                   "fallback": cap_info.is_fallback(cap_info.pts[k] + args.pose_offset),
                    "c2w": cap_info.frame_pose(k).tolist()})
     if len(frames) % 25 == 0:
         print(f"  {len(frames)}/{len(selected)} depth maps", flush=True)

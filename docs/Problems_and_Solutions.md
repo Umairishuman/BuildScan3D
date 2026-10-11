@@ -236,6 +236,111 @@ Final BA runtime is about 2 minutes, plus a one-time 4 minutes for features.
   - Now the default in `run_arcore3dgs.bat` (output `work/gs_pocket`).
 - **Lesson:** Held-out PSNR near the camera path does not measure what a user sees when navigating. Judge off-path coherence too, and give the optimiser a correct dense prior rather than leaving free space unconstrained.
 
+### 4.8 Audit: is the recording pipeline bugged? Is PocketGS implemented fully?
+**Recording checks on roomAttemptSadness2** (all passed):
+
+| Check | Result |
+|---|---|
+| Video ↔ pose sync (optical flow vs pose angular velocity) | Best offset +0.05 s (~1.5 frames), r = 0.72 |
+| Bundle adjustment residual | 0.62 px median over 626k observations |
+| Lens distortion (radial residual vs distance from centre) | ±0.25 px, no monotonic trend; negligible |
+| Rolling shutter (residual vs row × angular velocity) | Fitted readout 0.4 ms; explains 0% of residual; negligible |
+| Metric scale | BA trajectory length 1.000–1.003 × ARCore |
+
+Conclusion: the capture app and the preprocessing produce correct, synchronised, metric data. The remaining limits are the *content* of the recording (plain walls/ceiling, 4 tracking losses, coverage along a single walking path), not a bug.
+
+**PocketGS fidelity:**
+
+| PocketGS component | Ours |
+|---|---|
+| Information-gated keyframes (displacement + sharpness) | Yes (8 cm / 6° gate + sharpest-in-window) |
+| GPU global BA from VIO poses | Yes (Schur-complement LM, ARCore priors) |
+| Single-reference cost-volume MVS, **Census + SGM**, depth range from BA points, confidence ≥ 0.4 | **Different:** multi-source NCC plane sweep around the Metric3D depth + strict consistency, then ARCore/Metric3D fill verified across views |
+| Surface-aligned init (16-NN normal, 3-NN width, thin), opacity 0.1 | Yes |
+| Photometric loss, normals never a training constraint | Yes |
+| **500-iteration budget, 33–77k Gaussians** | **Different:** 8k steps, ~1–3M Gaussians, densification |
+| Mobile-GPU kernels | Not applicable (desktop) |
+
+PocketGS's own reported quality is 22–23.5 dB PSNR on near-path test views (LLFF / Mip-NeRF 360 / MobileScan). Our models already score 24.7–27.8 dB on near-path views, so copying it more literally would not fix free-navigation quality. No 3DGS method reconstructs reliably far from where the camera went.
+
+### 4.9 Capture guidance: show what is unmapped while recording
+- **Problem:** Off-path quality is limited by coverage (surfaces filmed from one direction only, plain ceiling barely filmed), and the user cannot see coverage while recording.
+- **Fix (app):**
+  - `CoverageMap` accumulates ARCore raw depth (5 Hz) into 10 cm voxels and stores, per voxel, the set of directions it was seen from.
+  - `CoverageOverlayView` draws the visible voxels over the camera image (red 1 direction, yellow 2–3, green 4+, none = unmapped), with a coarse screen-space z-buffer so hidden voxels are not drawn.
+  - The end-of-recording dialog reports the share of well-covered cells.
+- **Fix (desktop):** `check_capture.py` validates a recording in ~1–2 min before the 1.5 h pipeline is run.
+
+### 4.10 Novelty: featureless-tracking fallback (IMU bridging + re-alignment on re-tracking)
+- **Problem:** On plain surfaces ARCore loses tracking (INSUFFICIENT_FEATURES). Those frames had no poses and were thrown away. Worse, after re-tracking ARCore sometimes continued in a **shifted/rotated world frame**: on roomAttemptSadness2, 3 of 4 gaps ended with pure heading jumps of 109°, 31° and 35° about gravity. Even the "clean" gap left a position offset: post-gap frames disagreed with earlier frames by 50–650 px epipolar error, while pre-gap pairs agree to 3.8 px (raw) / 0.7 px (BA).
+- **Approach:**
+  1. **IMU from the recording itself** (`imu.py`): ARCore's MP4 stores gyroscope + accelerometer at 201 Hz (protobuf data tracks), on the same clock as the frames. No app change needed.
+  2. **Self-calibration** (`fallback.py`): IMU→camera rotation by Kabsch on gyro vs ARCore angular velocity (correlation 0.99, residual 0.010 rad/s, time offset 0 ms), plus gyro/accelerometer biases.
+  3. **Gap bridging** (lower-confidence fallback poses):
+     - rotation by gyro integration;
+     - position by accelerometer integration with the minimal cubic correction matching position and velocity at both anchors.
+  4. **Jump detection:** a yaw mismatch between the gyro-propagated orientation and ARCore at re-tracking reveals a new-map frame; the post-gap segment is re-aligned (heading + translation) and corrections chain.
+  5. **Visual re-alignment** (`relocalize_pnp.py`): post-gap keyframes are matched to the BA map (≥ 3 agreeing PnP solutions required), the segment gets one rigid correction, and BA re-runs from the corrected poses. Segments with no familiar view are flagged *unverified* and kept out of the prior and training.
+- **Validation:**
+
+  | Simulated gap (cut from tracked data) | IMU fallback: position median / max | rotation | Interpolation: position median / max | rotation |
+  |---|---|---|---|---|
+  | 2 s | 0.6 / 2.8 cm | 0.16° | 5.0 / 12.3 cm | 3.14° |
+  | 5 s | 1.5 / 3.4 cm | 0.34° | 20.6 / 52.4 cm | 11.8° |
+  | 9 s | 3.8 / 8.5 cm | 0.38° | 30.6 / 75.9 cm | 17.3° |
+
+  - Real gaps: all 3 heading jumps detected (axis ‖y‖ = 1.00). The segment after the first gap was relocalised by 14/14 PnP keyframes; its epipolar error against earlier frames fell 49.7 → 8.2 px (PnP) → 15.1 px after BA. BA's starting reprojection error fell 3.37 → 0.85 px, with 23% more verified observations (786k vs 640k).
+  - The 3 short ceiling-facing segments had no familiar view; they are flagged unverified (the frames that previously caused ghosts).
+- **Limits:**
+  - IMU-only *position* is reliable only when both ends are anchored (forward-only 9 s: 33 cm median).
+  - Re-alignment needs the user to come back to a mapped area; the app now says so during tracking loss and the coverage overlay shows where "mapped" is.
+- **Pipeline:** `fallback.py` → `prepare.py` (gap frames included, flagged) → `ba.py` → `relocalize_pnp.py` → `ba.py` again (starts from `c2w_init`).
+
+### 4.11 ROOT CAUSE: ARCore poses and calibration are not good enough for 3DGS (2026-10-11)
+- **Symptom:** On newRoomAttemptSadness every model:
+  - moved objects with the viewing angle;
+  - had splats hanging in the air;
+  - was far blurrier than the video.
+
+  Tuning did not help: dense priors, sparse depth loss, COLMAP depth, floater pruning and near-camera removal were each tried in turn.
+- **Diagnosis** (`fit_diag.py`: full-resolution renders of *training* views against their photos, with optical flow between them):
+  - **Training views only reached 22–24 dB.** A model cannot reproduce its own inputs when they are geometrically inconsistent.
+  - **The scene itself was misplaced.** Median misalignment was 7–30 px, and some training frames rendered a completely different part of the room.
+- **Causes:**
+  1. **Silent ARCore map correction at about 60 s.** There was no tracking loss. Every pose before 60 s is rigidly off by **about 1.0 m and 28°** from the image-based (COLMAP) solution; after 60 s the two agree within 2–4 cm. Our BA starts from ARCore and keeps ARCore priors, so it kept the wrong segment. The first part of the room existed twice in every model, giving ghosts, moving objects and floaters. This was invisible to our geometry check, because its reference points were triangulated with the same wrong poses.
+  2. **Lens model.** ARCore's intrinsics have no distortion. Self-calibration finds k1 = 0.093, k2 = −0.22 (several px at mid-image) and f +0.3–1%. Every view was slightly misaligned, so 3DGS averaged them into blur.
+  3. **49 of 592 keyframes (8%) never registered in our BA.** They were still trained on with raw ARCore poses.
+  4. **Training mostly at half resolution.** Renders cannot be as sharp as the 1080p video.
+- **Fix: `sfm_colmap.py`.** This is the standard phone-video recipe; ARCore is used only for metric scale and gravity.
+  - Pipeline: COLMAP 4.2 SIFT → exhaustive GPU matching (23 min) → `global_mapper` (6 min).
+  - Lens and poses are estimated from the images: one OPENCV camera.
+  - Images are undistorted.
+  - A RANSAC Sim3 fit to the ARCore/BA camera centres gives metric scale (inlier median 2.5 cm).
+  - 18 SfM mis-registrations (jumps > 30 cm between consecutive keyframes, impossible when walking slowly) are dropped.
+  - Training: splatfacto at **full resolution**.
+- **Result** (same room and recording):
+
+  | | Training views (full res) | Held-out colour-fit PSNR | SSIM | Sharpness vs photo | Misalignment |
+  |---|---|---|---|---|---|
+  | best previous (`gs_colmap_nc`) | 21.9 dB | 22.7 dB | 0.782 | 0.11 | 12–30 px |
+  | **`work_sfm/gs_sfm`** | **28.2 dB** | **27.2 dB** | **0.864** | 0.41 | 2–3 px |
+
+  Views from the room centre (never visited) are now coherent: the door, fridge, sofa, pictures and cupboard are recognisable.
+- **Follow-up: cloudy, mottled plain walls.** Phone auto-exposure and white balance change from frame to frame. Plain splatfacto bakes those changes into the splats, which shows up as cloudy walls and swirls on the floor.
+  - Splatfacto's **bilateral grid** (`--pipeline.model.use-bilateral-grid True`, per-image learned colour correction, BilaRF) absorbs them; the exported splat keeps a clean, consistent colour.
+  - **Scale regularisation** removes needle splats.
+  - **Do not use the SO3xR3 camera optimiser:** unanchored, it shifts the scene (v2b renders 3–16 px off the photos).
+  - **`splatfacto-big` thresholds run out of the 8 GB VRAM at full resolution.**
+
+  | newRoom, held-out (nerfstudio 10%) | Colour-fit PSNR | SSIM | Geometry median / > 25% off | Look |
+  |---|---|---|---|---|
+  | v1 (plain splatfacto) | 27.22 | 0.864 | 1.02% / 5.2% | cloudy walls, floor swirls |
+  | v2b (+ bilateral grid, scale reg., SO3xR3) | 24.46 | 0.824 | 0.74% / 2.6% | clean, but shifted |
+  | **v3 (+ bilateral grid, scale reg., no camera opt.)** | 25.57 | 0.857 | **0.59%** / 3.1% | **clean and aligned** |
+
+  PSNR against the photos favours v1 because the photos contain the exposure flicker that v1 memorised. At full resolution, v3's renders match the source frames almost pixel for pixel, and are sometimes sharper (multi-view averaging removes motion blur and noise). Before/after sheets are in `newRoomAttemptSadness/before_after/`.
+- **Lesson:** ARCore's VIO world frame is not globally consistent. It re-anchors silently, and its factory intrinsics ignore distortion. Both are harmless for AR overlays and fatal for 3DGS. Poses for 3DGS must come from image-based SfM with lens self-calibration; ARCore should provide scale, gravity and a fallback only.
+
 ## 5. 3DGS training quality
 
 ### 5.1 Scene rotated in the Nerfstudio viewer

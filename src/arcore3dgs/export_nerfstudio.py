@@ -13,12 +13,15 @@ import cv2
 ap = argparse.ArgumentParser()
 ap.add_argument("--work", required=True)
 ap.add_argument("--downscale", type=int, default=2)
+ap.add_argument("--frames_file", default="frames.json")
+ap.add_argument("--ply", default="init_points.ply")
 args = ap.parse_args()
 
-meta = json.load(open(os.path.join(args.work, "frames.json")))
+meta = json.load(open(os.path.join(args.work, args.frames_file)))
+meta["frames"] = [f for f in meta["frames"] if not f.get("fallback_unverified")]
 out = {"camera_model": "OPENCV", "fl_x": meta["fx"], "fl_y": meta["fy"], "cx": meta["cx"], "cy": meta["cy"],
        "w": meta["W"], "h": meta["H"], "k1": 0.0, "k2": 0.0, "p1": 0.0, "p2": 0.0,
-       "ply_file_path": "init_points.ply",
+       "ply_file_path": args.ply,
        "frames": [{"file_path": f"images/{f['name']}.jpg", "transform_matrix": f["c2w"]} for f in meta["frames"]]}
 json.dump(out, open(os.path.join(args.work, "transforms.json"), "w"), indent=1)
 

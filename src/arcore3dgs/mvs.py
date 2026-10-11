@@ -26,6 +26,7 @@ ap.add_argument("--range_lo", type=float, default=0.65)
 ap.add_argument("--range_hi", type=float, default=1.55)
 ap.add_argument("--win", type=int, default=7)
 ap.add_argument("--min_ncc", type=float, default=0.5)
+ap.add_argument("--min_votes", type=int, default=2, help="other views that must reproduce a pixel (1 px, 1%%)")
 ap.add_argument("--skip_sweep", action="store_true", help="reuse depth_mvs_raw/ from a previous run")
 ap.add_argument("--arcore_depth", type=int, default=-1, help="anchor the Metric3D fill to ARCore raw depth: 1 on, 0 off, -1 auto (on if <dataset>/depth/ exists)")
 ap.add_argument("--arcore_conf", type=int, default=128, help="min ARCore depth confidence (0-255)")
@@ -217,7 +218,11 @@ if args.arcore_depth:
 
 # ---------- pass 2: geometric consistency + fill ----------
 print("geometric consistency check + fill")
-raw = lambda i: torch.from_numpy(np.load(os.path.join(args.work, "depth_mvs_raw", frames[i]["name"] + ".npy"))).to(dev)
+def raw(i):
+    p_ = os.path.join(args.work, "depth_mvs_raw", frames[i]["name"] + ".npy")
+    if not os.path.exists(p_):                    # frame had no MVS sources -> no measurement
+        return torch.zeros(H, W, device=dev)
+    return torch.from_numpy(np.load(p_)).to(dev)
 kept_frac, mono_err, ar_vs_mvs, n_ar = [], [], [], 0
 for i in range(N):
     name = frames[i]["name"]
@@ -246,7 +251,7 @@ for i in range(N):
         reproj = torch.hypot(ur - pix[0], vr - pix[1])
         drel = (pr[2] - dr.reshape(-1)).abs() / dr.reshape(-1).clamp_min(1e-3)
         votes += (inb & (dj_s > 0) & (reproj < 1.0) & (drel < 0.01)).float()
-    keep = valid & (votes.reshape(H, W) >= 2)
+    keep = valid & (votes.reshape(H, W) >= args.min_votes)
     out = prior.clone()
     # anchors for the smooth correction field: MVS pixels (weight 1) + ARCore depth (weight arcore_weight)
     au, av, az, aw = [], [], [], []

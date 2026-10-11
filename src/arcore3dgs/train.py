@@ -25,11 +25,14 @@ ap.add_argument("--out", default=None)
 ap.add_argument("--steps", type=int, default=0, help="0 = auto: max(7000, steps_per_frame x training frames)")
 ap.add_argument("--steps_per_frame", type=int, default=30)
 ap.add_argument("--downscale", type=int, default=2)
-ap.add_argument("--depth_src", default="mvs", choices=["mvs", "fused"],
-                help="mvs: each frame's own depth (depth_mvs, weighted by mvs_mask); fused: old TSDF re-render target")
+ap.add_argument("--depth_src", default="mvs", choices=["mvs", "colmap", "fused"],
+                help="mvs: each frame's own depth (depth_mvs, weighted by mvs_mask); colmap: COLMAP PatchMatch depth "
+                     "(colmap_mvs.py) + our measured pixels, no mono fill; fused: old TSDF re-render target")
 ap.add_argument("--depth_w", type=float, default=0.0, help="depth loss weight during densification (0 = off: metric scale comes from BA poses)")
 ap.add_argument("--depth_w_final", type=float, default=0.0, help="depth weight reached at the end (decays after densification)")
 ap.add_argument("--fill_w", type=float, default=0.05, help="weight of filled (not stereo-measured) depth pixels")
+ap.add_argument("--sparse_depth_w", type=float, default=0.0,
+                help="depth loss at the BA-triangulated points each view observed (accurate, sparse; suppresses floaters)")
 ap.add_argument("--init_mvs", type=int, default=0, help="(mesh init only) add stereo-measured points")
 ap.add_argument("--init", default="points", choices=["points", "mesh"],
                 help="points: init_points.ply from make_init.py (BA + MVS-measured); mesh: old TSDF init.ply")
@@ -37,7 +40,11 @@ ap.add_argument("--init_opacity", type=float, default=0.1)
 ap.add_argument("--frames_file", default="frames.json", help="e.g. frames_pocket.json (PocketGS keyframe gate)")
 ap.add_argument("--init_ply", default="", help="override initial point cloud, e.g. prior_points.ply (pocket_prior.py)")
 ap.add_argument("--init_thickness", type=float, default=0.2, help="initial disc thickness / width (PocketGS: thin but not degenerate)")
+ap.add_argument("--near_cam", type=float, default=0.0,
+                help="m: every 100 steps remove Gaussians closer than this to the camera path (0 = off). Nothing real "
+                     "sits at the lens; such splats fake reflections/glare and show up as 'splats in the air'")
 ap.add_argument("--densify_until", type=float, default=0.5, help="fraction of steps with densification (3DGS: 15k of 30k)")
+ap.add_argument("--use_unverified", type=int, default=0, help="also train on fallback segments that could not be re-aligned")
 ap.add_argument("--frame_range", default="", help="debug: train only on frames a:b (e.g. 200:220)")
 ap.add_argument("--strategy", default="default", choices=["mcmc", "default"],
                 help="mcmc: fixed splat budget, dead splats relocated to high-error areas (3DGS-as-MCMC)")
@@ -59,6 +66,11 @@ OUT = args.out or os.path.join(args.work, "gs")
 os.makedirs(os.path.join(OUT, "renders"), exist_ok=True)
 meta = json.load(open(os.path.join(args.work, args.frames_file)))
 frames = meta["frames"]
+if not args.use_unverified:
+    _n0 = len(frames)
+    frames = [f for f in frames if not f.get("fallback_unverified")]
+    if len(frames) < _n0:
+        print(f"excluded {_n0 - len(frames)} frames from unverified fallback segments (no familiar view to re-align)")
 if args.frame_range:
     _a, _b = map(int, args.frame_range.split(":"))
     frames = frames[_a:_b]
@@ -84,6 +96,17 @@ for f in frames:
         d = np.load(os.path.join(args.work, "depth_mvs", f["name"] + ".npy")).astype(np.float32)
         mm = np.load(os.path.join(args.work, "mvs_mask", f["name"] + ".npy"))
         wgt = np.where(mm, 1.0, 0.0 if f["name"] in dropped else args.fill_w).astype(np.float32)
+    elif args.depth_src == "colmap":
+        # COLMAP PatchMatch depth (geometric-consistency filtered) where measured, else our own stereo-measured
+        # pixels; nothing is filled from Metric3D (that fill was consistently wrong in large rooms)
+        pc = os.path.join(args.work, "depth_colmap", f["name"] + ".npy")
+        dc = np.load(pc).astype(np.float32) if os.path.exists(pc) else np.zeros((1, 1), np.float32)
+        d = np.load(os.path.join(args.work, "depth_mvs", f["name"] + ".npy")).astype(np.float32)
+        mm = np.load(os.path.join(args.work, "mvs_mask", f["name"] + ".npy"))
+        if dc.shape == d.shape:
+            d = np.where(dc > 0, dc, d); mm = mm | (dc > 0)
+        wgt = mm.astype(np.float32)
+        wgt[d < 0.3] = 0                                    # a few PatchMatch maps collapse to depth_min
     else:
         d = np.load(os.path.join(args.work, "depth_fused", f["name"] + ".npy")).astype(np.float32)
         wgt = np.ones_like(d)
@@ -105,6 +128,26 @@ DEP = lambda i: depths[i].to(dev, non_blocking=True)
 DW = lambda i: dweights[i].to(dev, non_blocking=True)
 w2cs = torch.stack(w2cs).to(dev)
 Kfull = torch.tensor([[meta["fx"], 0, meta["cx"]], [0, meta["fy"], meta["cy"]], [0, 0, 1]], dtype=torch.float32, device=dev)
+# sparse depth targets: BA points observed by each frame (sparse.npz cam indices refer to frames.json order)
+sparse_t = {}
+if args.sparse_depth_w > 0 and os.path.exists(os.path.join(args.work, "sparse.npz")):
+    _all = [f["name"] for f in json.load(open(os.path.join(args.work, "frames.json")))["frames"]]
+    _sp = np.load(os.path.join(args.work, "sparse.npz"))
+    _X, _cam, _pt, _uv = _sp["X"], _sp["cam"], _sp["pt"], _sp["uv"]
+    _byname = {n: k for k, n in enumerate(_all)}
+    for _k, _f in enumerate(frames):
+        _idx = _byname.get(_f["name"])
+        if _idx is None:
+            continue
+        _o = _cam == _idx
+        if _o.sum() < 10:
+            continue
+        _c2w = np.array(_f["c2w"]) @ GL_TO_CV
+        _pc = (_X[_pt[_o]] - _c2w[:3, 3]) @ _c2w[:3, :3]
+        _ok = _pc[:, 2] > 0.1
+        sparse_t[_k] = (torch.tensor(_uv[_o][_ok], dtype=torch.float32, device=dev),
+                        torch.tensor(_pc[_ok, 2], dtype=torch.float32, device=dev))
+    print(f"sparse depth targets: {sum(len(v[1]) for v in sparse_t.values())} BA observations in {len(sparse_t)} frames")
 Wf, Hf = meta["W"], meta["H"]
 N = len(frames)
 test_ids = list(range(0, N, args.test_every)) if args.test_every > 0 else []
@@ -240,6 +283,11 @@ def render(w2c, sh_deg, full=False):
 # ---------------- train ----------------
 t_start = time.time()
 order = []
+n_near = 0
+if args.near_cam > 0:
+    from scipy.spatial import cKDTree
+    _C = cam_centers.cpu().numpy()                         # all keyframes (train + test), path densified 8x
+    cam_tree = cKDTree(np.concatenate([np.linspace(a, b, 8, endpoint=False) for a, b in zip(_C[:-1], _C[1:])] + [_C[-1:]]))
 for step in range(args.steps):
     if not order:
         order = list(np.random.permutation(train_ids))
@@ -278,6 +326,13 @@ for step in range(args.steps):
         rel = ((dep_r[m] - dt[m]).abs() / dt[m]).clamp(max=0.2)
         loss = loss + dw * (rel * dwt[m]).sum() / dwt[m].sum()
 
+    if args.sparse_depth_w > 0 and i in sparse_t:
+        _uvs, _zs = sparse_t[i]
+        _sc = 1.0 if full else 1.0 / ds
+        _u = (_uvs[:, 0] * _sc).long().clamp(0, dep_r.shape[1] - 1); _v = (_uvs[:, 1] * _sc).long().clamp(0, dep_r.shape[0] - 1)
+        _rel = ((dep_r[_v, _u] - _zs).abs() / _zs).clamp(max=0.3)
+        loss = loss + args.sparse_depth_w * _rel.mean()
+
     # flatten gaussians onto surfaces + limit needles
     if args.flat_w > 0:
         sc = torch.exp(params["scales"])
@@ -315,12 +370,23 @@ for step in range(args.steps):
         from gsplat.strategy.ops import remove as _remove
         _remove(params, optimizers, state, mask)
 
+    if args.near_cam > 0 and step % 100 == 0:
+        with torch.no_grad():
+            dist, _ = cam_tree.query(params["means"].detach().cpu().numpy())
+            mask = torch.tensor(dist < args.near_cam, device=dev)
+        if mask.any():
+            from gsplat.strategy.ops import remove as _remove
+            _remove(params, optimizers, state, mask)
+            n_near += int(mask.sum())
+
     if step % 250 == 0 or step == args.steps - 1:
         el = time.time() - t_start
         print(f"step {step:5d}  loss {loss.item():.4f}  l1 {l1.item():.4f}  gaussians {len(params['means'])/1e6:.2f}M  "
               f"{el:.0f}s elapsed, ETA {el / (step + 1) * (args.steps - step - 1):.0f}s", flush=True)
 
 train_time = time.time() - t_start
+if args.near_cam > 0:
+    print(f"near-camera removal: {n_near} Gaussians removed within {args.near_cam * 100:.0f} cm of the camera path")
 print(f"Training done in {train_time / 60:.1f} min")
 
 # ---------------- eval ----------------

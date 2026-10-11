@@ -222,14 +222,18 @@ public class QualityMonitor {
         100 * nGood / total, 100 * nWarn / total, 100 * nBad / total, coverageText());
   }
 
+  // While ARCore has lost tracking the recording continues in FALLBACK mode: the desktop pipeline bridges the
+  // gap with the IMU and re-aligns it once a familiar (already mapped) area is seen again. The user's job is to
+  // get back to a mapped area quickly so the gap stays short and the re-alignment has something to match.
   private static String trackingMessage(TrackingFailureReason reason) {
+    String back = " - FALLBACK: move slowly back to a green (mapped) area";
     switch (reason) {
-      case INSUFFICIENT_LIGHT: return "Tracking lost - too dark";
-      case EXCESSIVE_MOTION: return "Tracking lost - moving too fast";
-      case INSUFFICIENT_FEATURES: return "Tracking lost - aim at more texture";
+      case INSUFFICIENT_LIGHT: return "Tracking lost (too dark)" + back;
+      case EXCESSIVE_MOTION: return "Tracking lost (moving too fast)" + back;
+      case INSUFFICIENT_FEATURES: return "Tracking lost (plain surface)" + back;
       case CAMERA_UNAVAILABLE: return "Camera unavailable";
       case BAD_STATE: return "Tracking error - restart recording";
-      default: return "Tracking lost - move slowly, look at textured areas";
+      default: return "Tracking lost" + back;
     }
   }
 }
