@@ -15,13 +15,17 @@ GL_TO_CV = np.diag([1.0, -1.0, -1.0])
 
 
 class Capture:
-    def __init__(self, root, pose_offset=0.0, max_pose_gap=0.12):
+    def __init__(self, root, pose_offset=0.0, max_pose_gap=0.12, fallback=True):
+        """fallback=True: if fallback.py produced poses_fused.csv (IMU-bridged tracking gaps + ARCore
+        world-frame jumps re-aligned), use it; frames inside bridged gaps are flagged via is_fallback()."""
         self.root = root
         self.video = os.path.join(root, "dataset.mp4")
         self.pose_offset = pose_offset
         self.max_pose_gap = max_pose_gap
 
-        P = np.loadtxt(os.path.join(root, "poses.csv"), delimiter=",", dtype=np.float64)
+        fused = os.path.join(root, "poses_fused.csv")
+        self.using_fallback = fallback and os.path.exists(fused)
+        P = np.loadtxt(fused if self.using_fallback else os.path.join(root, "poses.csv"), delimiter=",", dtype=np.float64)
         P = P[np.argsort(P[:, 0], kind="stable")]
         P = P[np.unique(P[:, 0], return_index=True)[1]]
         self.t0_ns = P[0, 0]
@@ -69,10 +73,22 @@ class Capture:
                 else:
                     i += 1
             self.lost = np.array(segs).reshape(-1, 2)
+        # bridged intervals (pose-time s relative to the first pose of poses.csv)
+        self.fallback_iv = np.zeros((0, 2))
+        rp = os.path.join(root, "fallback_report.json")
+        if self.using_fallback and os.path.exists(rp):
+            import json as _json
+            self.fallback_iv = np.array(_json.load(open(rp)).get("fallback_intervals_s", [])).reshape(-1, 2)
+            t_raw0 = np.loadtxt(os.path.join(root, "poses.csv"), delimiter=",", usecols=0).min()
+            self.fallback_iv += (t_raw0 - self.t0_ns) / 1e9      # same time base as self.t
+
+    def is_fallback(self, t):
+        return bool(np.any((t >= self.fallback_iv[:, 0]) & (t <= self.fallback_iv[:, 1]))) if len(self.fallback_iv) else False
 
     def tracking_settled(self, t, settle=3.0):
-        """False if pose-time t is inside a tracking loss or within `settle` s after one."""
-        if len(self.lost) == 0:
+        """False if pose-time t is inside a tracking loss or within `settle` s after one.
+        With fallback poses, bridged gaps count as usable (flagged lower-confidence instead)."""
+        if len(self.lost) == 0 or self.is_fallback(t):
             return True
         return not np.any((t >= self.lost[:, 0]) & (t <= self.lost[:, 1] + settle))
 

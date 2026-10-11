@@ -59,7 +59,7 @@ rays = Kinv @ pix
 look = Cw + 1.5 * Rw[:, :, 2]
 pts_l, col_l, kept_frac = [], [], []
 for i in range(N):
-    if fr[i]["name"] in dropped:
+    if fr[i]["name"] in dropped or fr[i].get("fallback_unverified"):
         continue
     d = D[i, vv, uu].flatten()
     ok = (d > 0.15) & (d < 6)

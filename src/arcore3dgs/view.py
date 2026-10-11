@@ -18,7 +18,7 @@ ap.add_argument("--fov", type=float, default=45.0, help="vertical field of view 
 ap.add_argument("--near", type=float, default=0.15, help="skip splats closer than this (m): avoids walking through floaters")
 ap.add_argument("--debug", action="store_true")
 ap.add_argument("--min_opacity", type=float, default=0.02)
-ap.add_argument("--fps", type=float, default=15, help="max frames/s sent while moving")
+ap.add_argument("--fps", type=float, default=60, help="max frames/s sent while moving (half resolution); lower it if the browser lags")
 ap.add_argument("--stress", type=float, default=0, help="test: orbit camera for N seconds, log timings")
 args = ap.parse_args()
 

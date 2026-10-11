@@ -105,6 +105,11 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
   private long lastQualityUiNs = 0;
   private long lastBuzzMs = 0;
   private QualityMonitor.Level lastLevel = QualityMonitor.Level.GOOD;
+  // Live coverage overlay (which surfaces still need filming from more directions)
+  private final CoverageMap coverageMap = new CoverageMap();
+  private CoverageOverlayView coverageOverlay;
+  private long lastCoverageNs = 0;
+  private final float[] coverageMvp = new float[16];
   private View recordToggleButton;
   private android.widget.TextView recordTimerText;
   private android.widget.TextView cameraInfoText;
@@ -249,6 +254,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     cameraInfoText = findViewById(R.id.tv_camera_info);
     qualityText = findViewById(R.id.tv_quality);
     coverageText = findViewById(R.id.tv_coverage);
+    coverageOverlay = findViewById(R.id.coverage_overlay);
 
     recordToggleButton.setOnClickListener(
         v -> {
@@ -586,6 +592,8 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       java.io.File dest = new java.io.File(currentDatasetDir, "dataset.mp4");
       try {
         captureLogger = new CaptureLogger(currentDatasetDir);
+        coverageMap.clear();
+        captureLogger.setCoverage(coverageMap);
       } catch (java.io.IOException e) {
         Log.e(TAG, "Failed to open capture logs", e);
         return;
@@ -630,7 +638,12 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
         captureLogger.close();
         captureLogger = null;
       }
-      final String summary = qualityMonitor.summary();
+      final String summary = qualityMonitor.summary() + "\n" + coverageMap.summary();
+      runOnUiThread(() -> {
+        if (coverageOverlay != null) {
+          coverageOverlay.setData(null);
+        }
+      });
       runOnUiThread(() -> {
         if (coverageText != null) {
           coverageText.setVisibility(View.GONE);
@@ -940,6 +953,14 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
 
     // Get camera matrix and draw.
     camera.getViewMatrix(viewMatrix, 0);
+
+    // Live coverage overlay (~5 Hz while recording)
+    if (isRecording && coverageOverlay != null && System.nanoTime() - lastCoverageNs > 200_000_000L) {
+      lastCoverageNs = System.nanoTime();
+      Matrix.multiplyMM(coverageMvp, 0, projectionMatrix, 0, viewMatrix, 0);
+      final CoverageMap.Projection proj = coverageMap.project(coverageMvp, camera.getPose().getTranslation());
+      runOnUiThread(() -> coverageOverlay.setData(proj));
+    }
 
     // Code Injection - BLAZING
     // Visualize tracked points.

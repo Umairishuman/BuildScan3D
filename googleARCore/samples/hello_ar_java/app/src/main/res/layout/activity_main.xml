@@ -25,6 +25,14 @@
       android:layout_height="fill_parent"
       android:layout_gravity="top"/>
 
+  <!-- Live coverage overlay: red = seen from 1 direction, yellow = 2-3, green = 4+; no dot = unmapped -->
+  <com.google.ar.core.examples.java.helloar.CoverageOverlayView
+      android:id="@+id/coverage_overlay"
+      android:layout_width="match_parent"
+      android:layout_height="match_parent"
+      android:clickable="false"
+      android:focusable="false" />
+
   <TextView
       android:id="@+id/tv_camera_info"
       android:layout_width="wrap_content"

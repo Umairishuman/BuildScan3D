@@ -39,7 +39,7 @@ frames = meta["frames"]
 N = len(frames)
 K = np.array([[meta["fx"], 0, meta["cx"]], [0, meta["fy"], meta["cy"]], [0, 0, 1]])
 GL_TO_CV = np.diag([1.0, -1.0, -1.0])
-c2w_key = "c2w_arcore" if "c2w_arcore" in frames[0] else "c2w"     # always start from raw ARCore
+c2w_key = "c2w_init" if "c2w_init" in frames[0] else ("c2w_arcore" if "c2w_arcore" in frames[0] else "c2w")  # raw ARCore, or relocalised
 R0 = np.stack([np.array(f[c2w_key])[:3, :3] @ GL_TO_CV for f in frames])   # c2w rotation, OpenCV cam
 C0 = np.stack([np.array(f[c2w_key])[:3, 3] for f in frames])                # camera centres
 
