@@ -239,7 +239,7 @@ PIPELINE_COMMANDS = [
 ]
 
 
-def run_pipeline_on_runpod(job, api_key: str, gpu_type: str = "NVIDIA RTX 4090",
+def run_pipeline_on_runpod(job, api_key: str, gpu_type: str = "NVIDIA RTX 3090",
                             iterations: int = 30000):
     """
     Full pipeline: create pod → setup → upload → process → download → terminate.
@@ -361,7 +361,7 @@ def run_pipeline_on_runpod(job, api_key: str, gpu_type: str = "NVIDIA RTX 4090",
                 log.error("Failed to terminate pod %s: %s", pod_info.pod_id, e)
 
 
-def start_runpod_pipeline_thread(job, api_key: str, gpu_type: str = "NVIDIA RTX 4090",
+def start_runpod_pipeline_thread(job, api_key: str, gpu_type: str = "NVIDIA RTX 3090",
                                   iterations: int = 30000) -> threading.Thread:
     t = threading.Thread(
         target=run_pipeline_on_runpod,

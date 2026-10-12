@@ -40,7 +40,7 @@ jobs: dict[str, Job] = {}
 processing_config = {
     "mode": "runpod" if os.environ.get("RUNPOD_API_KEY") else "local",
     "runpod_api_key": os.environ.get("RUNPOD_API_KEY", ""),
-    "runpod_gpu_type": os.environ.get("RUNPOD_GPU_TYPE", "NVIDIA RTX 4090"),
+    "runpod_gpu_type": os.environ.get("RUNPOD_GPU_TYPE", "NVIDIA RTX 3090"),
 }
 
 
