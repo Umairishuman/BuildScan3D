@@ -14,7 +14,7 @@ if "%STEPS%"=="" set STEPS=8000
 set PYTHONUTF8=1
 set PYTHONIOENCODING=utf-8
 set NS=nerfstudio-env\Scripts\python.exe -W ignore -u
-cd /d %~dp0
+cd /d %~dp0..
 python src\arcore3dgs\fallback.py "%DATA%" || exit /b 1
 if not exist "%DATA%\work\frames.json" python src\arcore3dgs\prepare.py --dataset "%DATA%" --out "%DATA%\work" || exit /b 1
 %NS% src\arcore3dgs\ba.py --work "%DATA%\work" || exit /b 1
@@ -24,4 +24,4 @@ del /q "%DATA%\work\ba_tracks.npz" 2>nul
 %NS% src\arcore3dgs\mvs.py --work "%DATA%\work" || exit /b 1
 %NS% src\arcore3dgs\pocket_prior.py --work "%DATA%\work" || exit /b 1
 %NS% src\arcore3dgs\train.py --work "%DATA%\work" --out "%DATA%\work\gs_pocket" --frames_file frames_pocket.json --init_ply prior_points.ply --steps %STEPS% --fullres_frac 0.3 --sh_degree 3 || exit /b 1
-echo Done: %DATA%\work\gs_pocket\splat.ply   (view with: view_splat.bat %DATA%\work\gs_pocket\splat.ply)
+echo Done: %DATA%\work\gs_pocket\splat.ply   (view with: scripts\view_splat.bat %DATA%\work\gs_pocket\splat.ply)

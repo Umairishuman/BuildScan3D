@@ -16,7 +16,7 @@ if "%ITERS%"=="" set ITERS=30000
 set PYTHONUTF8=1
 set PYTHONIOENCODING=utf-8
 set NS=nerfstudio-env\Scripts
-cd /d %~dp0
+cd /d %~dp0..
 python src\arcore3dgs\fallback.py "%DATA%" || exit /b 1
 if not exist "%DATA%\work\frames.json" python src\arcore3dgs\prepare.py --dataset "%DATA%" --out "%DATA%\work" --depth 0 || exit /b 1
 python src\arcore3dgs\sfm_colmap.py --work "%DATA%\work" --out "%DATA%\work_sfm" || exit /b 1
@@ -29,4 +29,4 @@ python src\arcore3dgs\sfm_colmap.py --work "%DATA%\work" --out "%DATA%\work_sfm"
   --pipeline.datamanager.cache-images cpu --pipeline.datamanager.cache-images-type uint8 ^
   nerfstudio-data --auto-scale-poses False --center-method none --orientation-method none --downscale-factor 1 --load-3D-points True || exit /b 1
 %NS%\ns-export.exe gaussian-splat --load-config "%DATA%\work_sfm\ns\gs\splatfacto\run\config.yml" --output-dir "%DATA%\work_sfm\gs_sfm" || exit /b 1
-echo Done: %DATA%\work_sfm\gs_sfm\splat.ply   (view with: view_splat.bat %DATA%\work_sfm\gs_sfm\splat.ply)
+echo Done: %DATA%\work_sfm\gs_sfm\splat.ply   (view with: scripts\view_splat.bat %DATA%\work_sfm\gs_sfm\splat.ply)
