@@ -78,6 +78,11 @@ jobs:
       - name: Accept Android SDK licences (the SDK is preinstalled on the runner)
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
+      - name: Use the team's shared debug signing key (so every APK can be installed over the previous one)
+        run: |
+          mkdir -p ~/.android
+          cp "$GITHUB_WORKSPACE/.github/android/debug.keystore" ~/.android/debug.keystore
+
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Build debug APK
@@ -85,6 +90,15 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
+
+      - name: Check the built APK (package, permissions, launcher, signing key, size)
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          APK=googleARCore/samples/hello_ar_java/app/build/outputs/apk/debug/app-debug.apk
+          "$BT/apksigner" verify --print-certs "$APK" > "$RUNNER_TEMP/signer.txt"
+          "$BT/aapt2" dump badging "$APK" > "$RUNNER_TEMP/badging.txt"
+          { echo "### APK checks"; cat "$RUNNER_TEMP/signer.txt"; grep -E "^(package|sdkVersion|targetSdkVersion|launchable-activity)" "$RUNNER_TEMP/badging.txt"; } >> "$GITHUB_STEP_SUMMARY"
+          python3 .github/android/check_apk.py apk --badging "$RUNNER_TEMP/badging.txt" --signer "$RUNNER_TEMP/signer.txt" --apk "$APK"
 
       - name: Name the APK after the commit
         run: |

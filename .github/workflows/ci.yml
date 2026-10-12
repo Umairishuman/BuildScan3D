@@ -45,16 +45,19 @@ jobs:
             python:
               - 'src/**'
               - 'server/**'
+              - '.github/android/**'
               - 'scratch/**'
               - 'tests/**'
               - 'ruff.toml'
               - 'pytest.ini'
+              - '.coveragerc'
               - '.github/workflows/ci.yml'
             web:
               - 'prototype/web-ui/**'
               - '.github/workflows/ci.yml'
             android:
               - 'googleARCore/**'
+              - '.github/android/**'
               - '.github/workflows/ci.yml'
 
   python:
@@ -86,7 +89,7 @@ jobs:
         run: ruff check --select F401,F811,F841 --exit-zero --output-format=github .
 
       - name: Unit tests
-        run: pytest --junitxml=test-results/junit-${{ matrix.python }}.xml
+        run: pytest --cov --cov-report=term --cov-report=xml:test-results/coverage.xml --cov-fail-under=40 --junitxml=test-results/junit-${{ matrix.python }}.xml
 
       - name: Test summary
         if: always()
@@ -100,6 +103,9 @@ jobs:
               t += int(suite.get("tests", 0)); f += int(suite.get("failures", 0))
               e += int(suite.get("errors", 0)); s += int(suite.get("skipped", 0))
           print(f"### Python ${{ matrix.python }}: {t} tests, {f} failed, {e} errors, {s} skipped")
+          cov = ET.parse("test-results/coverage.xml").getroot().get("line-rate") if glob.glob("test-results/coverage.xml") else None
+          if cov:
+              print(f"Line coverage of the files the tests import: {float(cov) * 100:.0f}% (minimum 40%)")
           PY
 
       - name: Keep test report
@@ -171,6 +177,11 @@ jobs:
       - name: Accept Android SDK licences (the SDK is preinstalled on the runner)
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
+      - name: Use the team's shared debug signing key (so every APK can be installed over the previous one)
+        run: |
+          mkdir -p ~/.android
+          cp "$GITHUB_WORKSPACE/.github/android/debug.keystore" ~/.android/debug.keystore
+
       - name: Check the Gradle wrapper is the official one
         uses: gradle/actions/wrapper-validation@v4
 
@@ -182,12 +193,34 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
 
+      - name: Check the built APK (package, permissions, launcher, signing key, size)
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          "$BT/apksigner" verify --print-certs "$APK" > "$RUNNER_TEMP/signer.txt"
+          "$BT/aapt2" dump badging "$APK" > "$RUNNER_TEMP/badging.txt"
+          { echo "### APK checks"; cat "$RUNNER_TEMP/signer.txt"; grep -E "^(package|sdkVersion|targetSdkVersion|launchable-activity)" "$RUNNER_TEMP/badging.txt"; } >> "$GITHUB_STEP_SUMMARY"
+          python3 "$GITHUB_WORKSPACE/.github/android/check_apk.py" apk --badging "$RUNNER_TEMP/badging.txt" --signer "$RUNNER_TEMP/signer.txt" --apk "$APK"
+
       - name: Keep the APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
           path: googleARCore/samples/hello_ar_java/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          retention-days: 14
+
+      - name: Android lint (informational, never fails the build)
+        continue-on-error: true
+        run: ./gradlew lintDebug --stacktrace
+
+      - name: Keep the lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-lint-report
+          path: googleARCore/samples/hello_ar_java/app/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
           retention-days: 14
 
   repo-hygiene:

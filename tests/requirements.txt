@@ -4,6 +4,7 @@ numpy>=1.26
 scipy>=1.11
 opencv-python-headless>=4.9
 pytest>=8
+pytest-cov>=5
 ruff>=0.6
 # processing server (server/) and its test client
 fastapi>=0.110
