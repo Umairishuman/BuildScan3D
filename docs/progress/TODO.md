@@ -199,6 +199,9 @@ Secondary limits: training at half resolution (960x540) and only 7k steps.
 - [ ] Tune IQA thresholds on the phone. (Note: the IQA level itself did not predict inconsistent frames — tracking loss and texture did.)
 - [x] **Live coverage overlay (tier 2, 2026-10-10)** — `CoverageMap.java` + `CoverageOverlayView.java`: ARCore depth → 10 cm voxels, each remembers from how many directions (8 azimuth × 2 elevation) it was seen; dots over the camera view: red = 1 direction, yellow = 2–3, green = 4+, no dot = unmapped. End-of-recording dialog adds the coverage summary. Builds; **not yet tested on device**.
 - [x] `check_capture.py`: validates a recording (files, video, poses, tracking, IQA, depth, NaN, sync) before processing.
+- [x] **Performance fix (2026-10-12)**: during recording, skip all demo rendering (planes, virtual objects, PBR lighting, cubemap filtering). Only camera feed + capture logging + quality overlay runs. Reduces GL thread load significantly. Also: IQA image analysis every 5th frame (was 3rd), coverage overlay at 2 Hz (was 5 Hz), coverage projection capped at 5000 voxels, overlay drawing capped at 2000 dots.
+- [x] **Upload & Process UI (2026-10-12)** — `ProcessingActivity.java`: after recording stops, dialog offers "Upload & Process" button. Zips depth folder, uploads all dataset files to the processing server via OkHttp multipart POST. Polls `/status/{job_id}` every 3s and shows progress bar, step label, elapsed time, and recent logs. Retry on failure. OkHttp 4.12.0 added as dependency.
+- [x] **Configurable server URL (2026-10-12)**: settings menu → "Server URL" → saves to SharedPreferences. No recompile needed to change the server address.
 - [ ] (remaining tier-2 ideas) on-device image quality assessment while recording, which tells the user live:
   - which sections are left to record or need further scanning (surfaces seen from too few viewpoints or angles, ceiling or floor missing, holes in ARCore depth coverage);
   - when frames are too blurry, too dark or overexposed, or the camera is moving too fast;
@@ -206,6 +209,19 @@ Secondary limits: training at half resolution (960x540) and only 7k steps.
 
   Show this as an overlay or heatmap on the camera view, so missed areas are fixed during capture instead of after processing.
 - [ ] Lock exposure / white balance during recording (cuts the per-image colour drift that training compensates for).
+- [ ] Download and preview the finished splat.ply on the phone after processing completes.
+
+## Server & automation
+
+- [x] **Processing server (2026-10-12)** — `server/main.py` (FastAPI): receives dataset uploads from the app, runs the pipeline as subprocesses with per-step timeouts (watchdog kills hung steps), serves progress via `/status/{job_id}`. Endpoints: `/upload`, `/status/{job_id}`, `/jobs`, `/download/{job_id}`, `/config`, `/health`.
+- [x] **RunPod on-demand integration (2026-10-12)** — `server/runpod_client.py`: creates a GPU pod via RunPod API, installs deps via SSH, uploads dataset via SCP, runs pipeline remotely, downloads result, always terminates the pod (even on error). Supports configurable GPU type (default RTX 4090). Switch between local and RunPod mode via `POST /config` or `RUNPOD_API_KEY` env var.
+- [ ] End-to-end test of RunPod flow (create pod → process → terminate).
+- [ ] Build a Docker image with pre-installed deps (COLMAP, nerfstudio) to skip the setup step on each pod launch (~5 min saved).
+- [ ] Move server to a cheap always-on VPS so the phone can upload without the PC running.
+
+## Project organisation
+
+- [x] **Folder cleanup (2026-10-12)**: moved all `.bat` launchers to `scripts/`, proposal docs to `docs/proposal/`, progress docs to `docs/progress/`. Added `docs/Flow.md` documenting the full system flow and project structure.
 
 ## Known environment notes
 
