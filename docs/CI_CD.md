@@ -46,13 +46,13 @@ Details of the design:
 |---|---|---|
 | python | `ruff` for real errors only (syntax errors, undefined names); unused code is reported as a non-blocking warning; `pytest` with a minimum line coverage of 40% | an error is found, a test fails or coverage drops below 40% |
 | web-ui | `npm ci` (exactly the locked versions), ESLint, `tsc --noEmit`, `next build` | lint error, type error or build failure |
-| android | official Gradle wrapper check, `./gradlew assembleDebug`, then **APK checks** (see below) and an informational Android lint | the app does not compile, or an APK check fails |
+| android | official Gradle wrapper check, `./gradlew assembleDebug`, then signs and checks the APK (see below) and an informational Android lint | the app does not compile, or an APK check fails |
 | repo-hygiene | no tracked file over 10 MB (the ARCore samples and `docs/Research Papers` are exempt), no `.ply`/`.mp4`/`.pt`/`.pth`/`.ckpt`/`.npz`/key files, no private keys or access tokens | a rule is broken |
 | workflow-lint | `actionlint` over the workflow files | a workflow file has an error |
 
 ### APK checks (Android job and CD)
 
-After the build, the APK is inspected with Android's own tools (`aapt2`, `apksigner`) and compared with `.github/android/apk_expectations.json`: package name, minimum Android version (ARCore needs 24 or higher), camera and internet permissions, the AR camera feature, the launcher activity, the file size, and above all that it is signed with the shared debug key. A wrong key would force an uninstall on every update, which deletes the recordings, so it fails the pipeline. The source manifest is checked in the Python tests as well (the processing screen must stay declared, the ARCore entry must stay present). The result is also written to the run's summary page. Android lint runs afterwards for information and never fails the build; its report is kept as an artifact.
+After the build, the pipeline **signs the APK with the shared debug key** (`apksigner sign`), so the result never depends on where Gradle looks for a key file. It then reads the manifest from inside the APK (`apkanalyzer manifest print`) and the signing certificate (`apksigner verify --print-certs`), and compares them with `.github/android/apk_expectations.json`: package name, minimum Android version (ARCore needs 24 or higher), camera and internet permissions, the AR camera feature, the processing screen, the launcher activity, the file size, and above all that it is signed with the shared debug key. A wrong key would force an uninstall on every update, which deletes the recordings, so it fails the pipeline. The source manifest is checked in the Python tests as well (the processing screen must stay declared, the ARCore entry must stay present). The signing certificate is also written to the run's summary page. Android lint runs afterwards for information and never fails the build; its report is kept as an artifact.
 
 ### What the Python tests cover
 
@@ -65,7 +65,7 @@ The reconstruction scripts need a CUDA GPU, which GitHub's free machines do not 
 - `tests/test_server_pipeline.py`: the local job pipeline and the copy of it that runs on RunPod must list the same steps with the same timeouts, every script they call must exist in the repository, and iterations must reach the training command. This catches a renamed script before a RunPod job fails an hour in.
 - `tests/test_runpod_client.py`: the RunPod API client (pod creation, SSH port lookup, timeouts, errors) and the ssh/scp command builders, with the network faked.
 - `tests/test_imu.py`, `tests/test_fallback.py`, `tests/test_relocalize_and_sfm.py`, `tests/test_common_fallback.py`: the IMU parser, gap bridging with the IMU, pose correction after a tracking loss, the similarity fit, and edge cases of the tracking-loss logic.
-- `tests/test_apk_checks.py`: the APK/manifest checker (`.github/android/check_apk.py`) with samples shaped like real `aapt2` and `apksigner` output, a check of the real `AndroidManifest.xml`, and a check that the expected signing fingerprint matches the committed key.
+- `tests/test_apk_checks.py`: the APK/manifest checker (`.github/android/check_apk.py`) with samples shaped like real `apkanalyzer` and `apksigner` output, a check of the real `AndroidManifest.xml`, and a check that the expected signing fingerprint matches the committed key.
 - `tests/test_sources_compile.py`: every Python file under `src/`, `scratch/` and `tests/` compiles, so a syntax error in a script that only runs on the GPU PC is still caught.
 
 ## 4. Running the same checks locally

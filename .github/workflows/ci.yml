@@ -97,9 +97,11 @@ jobs:
           python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import glob, xml.etree.ElementTree as ET
           t = f = e = s = 0
-          for p in glob.glob("test-results/*.xml"):
+          for p in glob.glob("test-results/junit-*.xml"):
               root = ET.parse(p).getroot()
               suite = root if root.tag == "testsuite" else root.find("testsuite")
+              if suite is None:
+                  continue
               t += int(suite.get("tests", 0)); f += int(suite.get("failures", 0))
               e += int(suite.get("errors", 0)); s += int(suite.get("skipped", 0))
           print(f"### Python ${{ matrix.python }}: {t} tests, {f} failed, {e} errors, {s} skipped")
@@ -177,11 +179,6 @@ jobs:
       - name: Accept Android SDK licences (the SDK is preinstalled on the runner)
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
-      - name: Use the team's shared debug signing key (so every APK can be installed over the previous one)
-        run: |
-          mkdir -p ~/.android
-          cp "$GITHUB_WORKSPACE/.github/android/debug.keystore" ~/.android/debug.keystore
-
       - name: Check the Gradle wrapper is the official one
         uses: gradle/actions/wrapper-validation@v4
 
@@ -193,14 +190,19 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
 
-      - name: Check the built APK (package, permissions, launcher, signing key, size)
+      - name: Sign with the shared key, then check the built APK
         run: |
-          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          BT=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
           APK=app/build/outputs/apk/debug/app-debug.apk
+          # sign explicitly with the shared key: this does not depend on where Gradle looks for a key file
+          "$BT/apksigner" sign --ks "$GITHUB_WORKSPACE/.github/android/debug.keystore" --ks-pass pass:android             --key-pass pass:android --ks-key-alias androiddebugkey --out "$RUNNER_TEMP/signed.apk" "$APK"
+          mv "$RUNNER_TEMP/signed.apk" "$APK"
           "$BT/apksigner" verify --print-certs "$APK" > "$RUNNER_TEMP/signer.txt"
-          "$BT/aapt2" dump badging "$APK" > "$RUNNER_TEMP/badging.txt"
-          { echo "### APK checks"; cat "$RUNNER_TEMP/signer.txt"; grep -E "^(package|sdkVersion|targetSdkVersion|launchable-activity)" "$RUNNER_TEMP/badging.txt"; } >> "$GITHUB_STEP_SUMMARY"
-          python3 "$GITHUB_WORKSPACE/.github/android/check_apk.py" apk --badging "$RUNNER_TEMP/badging.txt" --signer "$RUNNER_TEMP/signer.txt" --apk "$APK"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest print "$APK" > "$RUNNER_TEMP/apk_manifest.xml"
+          cat "$RUNNER_TEMP/signer.txt"
+          echo "--- manifest inside the APK (first lines):"; head -c 2500 "$RUNNER_TEMP/apk_manifest.xml"; echo
+          { echo "### APK checks"; cat "$RUNNER_TEMP/signer.txt"; } >> "$GITHUB_STEP_SUMMARY"
+          python3 "$GITHUB_WORKSPACE/.github/android/check_apk.py" apk --manifest "$RUNNER_TEMP/apk_manifest.xml" --signer "$RUNNER_TEMP/signer.txt" --apk "$APK"
 
       - name: Keep the APK
         uses: actions/upload-artifact@v4

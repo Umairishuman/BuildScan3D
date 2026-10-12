@@ -2,8 +2,8 @@
 
     python .github/android/check_apk.py manifest <AndroidManifest.xml>
         static check of the source manifest (no Android SDK needed)
-    python .github/android/check_apk.py apk --badging <aapt2 dump badging output> --signer <apksigner output> --apk <file.apk>
-        checks the built APK: package, minimum Android version, permissions, launcher, signing key, size
+    python .github/android/check_apk.py apk --manifest <apkanalyzer manifest print output> --signer <apksigner output> --apk <file.apk>
+        checks the built APK: package, minimum Android version, permissions, features, activities, launcher, signing key, size
 
 The expected values live in apk_expectations.json next to this file. Exit code 1 and a list of problems if
 anything is off, so the pipeline fails with a readable reason instead of shipping a broken APK.
@@ -24,11 +24,21 @@ def load_expectations(path=None):
         return json.load(f)
 
 
-# ---------------------------------------------------------------- source manifest
-def check_manifest(xml_path, expect):
-    """Problems found in the AndroidManifest.xml in the repository (empty list = fine)."""
+# ---------------------------------------------------------------- manifest (source file or the one inside the APK)
+def _parse_manifest_text(text):
+    """Parse manifest XML. `apkanalyzer` can leave out the xmlns:android declaration, so add it when missing."""
+    if "xmlns:android" not in text:
+        text = text.replace("<manifest", '<manifest xmlns:android="http://schemas.android.com/apk/res/android"', 1)
+    return ET.fromstring(text)
+
+
+def check_manifest_text(text, expect, from_apk=False):
+    """Problems found in a manifest (empty list = fine). from_apk=True also checks the minimum Android version."""
     problems = []
-    root = ET.parse(xml_path).getroot()
+    try:
+        root = _parse_manifest_text(text)
+    except ET.ParseError as e:
+        return [f"could not read the manifest: {e}"]
     if root.get("package") != expect["package"]:
         problems.append(f"manifest package is {root.get('package')!r}, expected {expect['package']!r}")
     perms = {e.get(ANDROID + "name") for e in root.iter("uses-permission")}
@@ -50,48 +60,30 @@ def check_manifest(xml_path, expect):
                  if any(c.get(ANDROID + "name") == "android.intent.category.LAUNCHER" for c in a.iter("category"))]
     if launchers != [expect["launchable_activity"]]:
         problems.append(f"launcher activity is {launchers}, expected [{expect['launchable_activity']!r}]")
+    if from_apk:
+        sdk = next(iter(root.iter("uses-sdk")), None)
+        min_sdk = sdk.get(ANDROID + "minSdkVersion") if sdk is not None else None
+        if min_sdk is None or not str(min_sdk).isdigit() or int(min_sdk) < expect["min_sdk_at_least"]:
+            problems.append(f"minimum Android version is {min_sdk}, ARCore needs at least {expect['min_sdk_at_least']}")
     return problems
 
 
+def check_manifest(xml_path, expect):
+    """Static check of the AndroidManifest.xml in the repository."""
+    with open(xml_path, encoding="utf8") as f:
+        return check_manifest_text(f.read(), expect)
+
+
 # ---------------------------------------------------------------- built APK
-def parse_badging(text):
-    """Pull the facts we care about out of `aapt2 dump badging` output."""
-    info = {"permissions": set(), "features": set()}
-    m = re.search(r"^package: name='([^']+)'(?: versionCode='([^']*)')?(?: versionName='([^']*)')?", text, re.M)
-    if m:
-        info["package"], info["version_code"], info["version_name"] = m.group(1), m.group(2), m.group(3)
-    m = re.search(r"^sdkVersion:'(\d+)'", text, re.M)
-    info["min_sdk"] = int(m.group(1)) if m else None
-    m = re.search(r"^targetSdkVersion:'(\d+)'", text, re.M)
-    info["target_sdk"] = int(m.group(1)) if m else None
-    info["permissions"] = set(re.findall(r"^uses-permission: name='([^']+)'", text, re.M))
-    info["features"] = set(re.findall(r"^uses-feature(?:-not-required)?: name='([^']+)'", text, re.M))
-    m = re.search(r"^launchable-activity: name='([^']+)'", text, re.M)
-    info["launcher"] = m.group(1) if m else None
-    return info
-
-
 def parse_signer_sha256(text):
     """SHA-256 of the signing certificate from `apksigner verify --print-certs`, lower case without colons."""
     m = re.search(r"certificate SHA-256 digest:\s*([0-9a-fA-F:]+)", text)
     return m.group(1).replace(":", "").lower() if m else None
 
 
-def check_apk(badging_text, signer_text, size_bytes, expect):
-    problems = []
-    info = parse_badging(badging_text)
-    if info.get("package") != expect["package"]:
-        problems.append(f"APK package is {info.get('package')!r}, expected {expect['package']!r}")
-    if info["min_sdk"] is None or info["min_sdk"] < expect["min_sdk_at_least"]:
-        problems.append(f"minimum Android version is {info['min_sdk']}, ARCore needs at least {expect['min_sdk_at_least']}")
-    for p in expect["required_permissions"]:
-        if p not in info["permissions"]:
-            problems.append(f"APK is missing permission {p}")
-    for ft in expect["required_features"]:
-        if ft not in info["features"]:
-            problems.append(f"APK is missing uses-feature {ft}")
-    if info["launcher"] != expect["launchable_activity"]:
-        problems.append(f"APK launcher is {info['launcher']!r}, expected {expect['launchable_activity']!r}")
+def check_apk(manifest_text, signer_text, size_bytes, expect):
+    """manifest_text = `apkanalyzer manifest print app.apk`, signer_text = `apksigner verify --print-certs app.apk`."""
+    problems = check_manifest_text(manifest_text, expect, from_apk=True)
     sig = parse_signer_sha256(signer_text)
     if sig is None:
         problems.append("could not read the signing certificate (is the APK signed?)")
@@ -109,13 +101,13 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="cmd", required=True)
     pm = sub.add_parser("manifest"); pm.add_argument("path")
     pa = sub.add_parser("apk")
-    pa.add_argument("--badging", required=True); pa.add_argument("--signer", required=True); pa.add_argument("--apk", required=True)
+    pa.add_argument("--manifest", required=True); pa.add_argument("--signer", required=True); pa.add_argument("--apk", required=True)
     args = ap.parse_args(argv)
     expect = load_expectations()
     if args.cmd == "manifest":
         problems = check_manifest(args.path, expect)
     else:
-        problems = check_apk(open(args.badging, encoding="utf8").read(), open(args.signer, encoding="utf8").read(),
+        problems = check_apk(open(args.manifest, encoding="utf8").read(), open(args.signer, encoding="utf8").read(),
                              os.path.getsize(args.apk), expect)
     for p in problems:
         print(f"::error::{p}")
