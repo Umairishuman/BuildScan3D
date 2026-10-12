@@ -621,6 +621,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
         captureLogger = new CaptureLogger(currentDatasetDir);
         coverageMap.clear();
         captureLogger.setCoverage(coverageMap);
+        captureLogger.writeCameraCharacteristics(this, session);
       } catch (java.io.IOException e) {
         Log.e(TAG, "Failed to open capture logs", e);
         return;

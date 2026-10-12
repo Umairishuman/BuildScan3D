@@ -5,7 +5,9 @@ import android.util.Log;
 import com.google.ar.core.Camera;
 import com.google.ar.core.CameraConfig;
 import com.google.ar.core.CameraIntrinsics;
+import com.google.ar.core.Anchor;
 import com.google.ar.core.Frame;
+import com.google.ar.core.ImageMetadata;
 import com.google.ar.core.PointCloud;
 import com.google.ar.core.Pose;
 import com.google.ar.core.Session;
@@ -19,6 +21,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,17 +37,32 @@ import java.util.concurrent.TimeUnit;
  *   tracking.csv  timestamp_ns,state,failure_reason              (every frame, incl. non-TRACKING)
  *   points.csv    timestamp_ns,x,y,z,id,confidence                (world-space feature points)
  *   quality.csv   live IQA per frame (level, sharpness, brightness, motion; see QualityMonitor)
+ *   camera.csv    timestamp_ns,exposure_ns,rolling_shutter_skew_ns,frame_duration_ns,iso,focus_distance_diopter,
+ *                 ae_state,awb_state,lens_state   (per-frame sensor metadata: exposure time + rolling-shutter
+ *                 readout are what motion-blur / rolling-shutter modelling in 3DGS needs; -1 = not reported)
+ *   anchors.csv   timestamp_ns,anchor_id,tracking_state,tx,ty,tz,qx,qy,qz,qw   (5 Hz) An anchor is dropped at
+ *                 the camera every ANCHOR_INTERVAL_NS. ARCore moves anchors when it silently corrects its world
+ *                 frame (map merge / loop closure); a jump in an anchor's logged pose = a re-anchor event, and
+ *                 its size is the correction (newRoomAttemptSadness had an unlogged ~1 m / 28 deg one).
+ *   lens_metadata.json, camera_characteristics.json   lens calibration/distortion (ARCore metadata, Camera2)
  *   depth/<timestamp_ns>.depth  raw uint16 mm, depth/<timestamp_ns>.conf  uint8 (ARCore raw depth)
  *   meta.json     camera config, image + depth resolution, device
  */
 public class CaptureLogger {
   private static final String TAG = "CaptureLogger";
   private static final long DEPTH_INTERVAL_NS = 200_000_000L; // 5 Hz
+  private static final long ANCHOR_INTERVAL_NS = 10_000_000_000L; // new reference anchor every 10 s
+  private static final long ANCHOR_LOG_NS = 200_000_000L;         // log all anchors at 5 Hz
+  private static final int MAX_ANCHORS = 40;
 
   private final File dir;
   private final ExecutorService io = Executors.newSingleThreadExecutor();
-  private BufferedWriter poses, tracking, points, quality;
+  private BufferedWriter poses, tracking, points, quality, cameraMeta, anchorsOut;
   private long lastDepthTs = 0;
+  private long lastDepthImageTs = -1;
+  private final List<Anchor> anchors = new ArrayList<>();
+  private long lastAnchorCreateTs = 0, lastAnchorLogTs = 0;
+  private boolean wroteLensMeta = false;
   private boolean wroteMeta = false;
   private CoverageMap coverage = null;
 
@@ -60,6 +79,10 @@ public class CaptureLogger {
     points = new BufferedWriter(new FileWriter(new File(dir, "points.csv")), 1 << 16);
     quality = new BufferedWriter(new FileWriter(new File(dir, "quality.csv")), 1 << 16);
     quality.write("timestamp_ns,level,sharpness,sharpness_rel,brightness,overexposed_frac,ang_speed_deg_s,lin_speed_m_s,tracking\n");
+    cameraMeta = new BufferedWriter(new FileWriter(new File(dir, "camera.csv")), 1 << 16);
+    cameraMeta.write("timestamp_ns,exposure_ns,rolling_shutter_skew_ns,frame_duration_ns,iso,focus_distance_diopter,ae_state,awb_state,lens_state\n");
+    anchorsOut = new BufferedWriter(new FileWriter(new File(dir, "anchors.csv")), 1 << 16);
+    anchorsOut.write("timestamp_ns,anchor_id,tracking_state,tx,ty,tz,qx,qy,qz,qw\n");
   }
 
   /** Per-frame live-IQA record (see QualityMonitor). */
@@ -73,6 +96,8 @@ public class CaptureLogger {
     final TrackingState state = camera.getTrackingState();
     final String reason = camera.getTrackingFailureReason().name();
     post(() -> write(tracking, ts + "," + state.name() + "," + reason + "\n"));
+    logSensorMetadata(frame, ts);
+    logAnchors(session, camera, ts, state);
 
     if (state != TrackingState.TRACKING) return;
 
@@ -115,6 +140,10 @@ public class CaptureLogger {
   private boolean saveRawDepth(Frame frame, long ts, Pose pose, CameraIntrinsics intr) {
     try (Image depth = frame.acquireRawDepthImage16Bits();
          Image conf = frame.acquireRawDepthConfidenceImage()) {
+      if (depth.getTimestamp() == lastDepthImageTs) {
+        return false;                                   // ARCore has not produced a new depth map yet
+      }
+      lastDepthImageTs = depth.getTimestamp();
       final byte[] d = copyPlane(depth);
       final byte[] cf = copyPlane(conf);
       final int w = depth.getWidth(), h = depth.getHeight();
@@ -147,6 +176,121 @@ public class CaptureLogger {
       buf.get(out, y * rowBytes, rowBytes);
     }
     return out;
+  }
+
+  private static long metaLong(ImageMetadata md, int key) {
+    try {
+      return md.getLong(key);
+    } catch (Exception e) {
+      return -1;
+    }
+  }
+
+  private static int metaInt(ImageMetadata md, int key) {
+    try {
+      return md.getInt(key);
+    } catch (Exception e) {
+      return -1;
+    }
+  }
+
+  private static String metaFloats(ImageMetadata md, int key) {
+    try {
+      return arr(md.getFloatArray(key));
+    } catch (Exception e) {
+      return "null";
+    }
+  }
+
+  /** Per-frame exposure / rolling-shutter / ISO / focus metadata -> camera.csv. */
+  private void logSensorMetadata(Frame frame, long ts) {
+    final ImageMetadata md;
+    try {
+      md = frame.getImageMetadata();
+    } catch (Exception e) {
+      return;                                           // not available for this frame
+    }
+    float focus = -1;
+    try {
+      focus = md.getFloat(ImageMetadata.LENS_FOCUS_DISTANCE);
+    } catch (Exception ignored) {
+    }
+    final String line = String.format(Locale.US, "%d,%d,%d,%d,%d,%.4f,%d,%d,%d\n", ts,
+        metaLong(md, ImageMetadata.SENSOR_EXPOSURE_TIME), metaLong(md, ImageMetadata.SENSOR_ROLLING_SHUTTER_SKEW),
+        metaLong(md, ImageMetadata.SENSOR_FRAME_DURATION), metaInt(md, ImageMetadata.SENSOR_SENSITIVITY), focus,
+        metaInt(md, ImageMetadata.CONTROL_AE_STATE), metaInt(md, ImageMetadata.CONTROL_AWB_STATE),
+        metaInt(md, ImageMetadata.LENS_STATE));
+    post(() -> write(cameraMeta, line));
+    if (!wroteLensMeta) {                               // lens calibration as ARCore reports it per frame
+      wroteLensMeta = true;
+      final String json = "{\n \"image_metadata_lens_intrinsic_calibration\": " + metaFloats(md, ImageMetadata.LENS_INTRINSIC_CALIBRATION)
+          + ",\n \"image_metadata_lens_radial_distortion\": " + metaFloats(md, ImageMetadata.LENS_RADIAL_DISTORTION)
+          + ",\n \"image_metadata_lens_focal_length_mm\": " + metaFloats(md, ImageMetadata.LENS_FOCAL_LENGTH) + "\n}\n";
+      post(() -> writeBytes(new File(dir, "lens_metadata.json"), json.getBytes()));
+    }
+  }
+
+  /** Re-anchor detection: drop a reference anchor every 10 s and log every anchor's pose at 5 Hz. */
+  private void logAnchors(Session session, Camera camera, long ts, TrackingState state) {
+    if (state == TrackingState.TRACKING && anchors.size() < MAX_ANCHORS
+        && (anchors.isEmpty() || ts - lastAnchorCreateTs >= ANCHOR_INTERVAL_NS)) {
+      try {
+        anchors.add(session.createAnchor(camera.getPose()));
+        lastAnchorCreateTs = ts;
+      } catch (Exception e) {
+        Log.w(TAG, "anchor creation failed", e);
+      }
+    }
+    if (anchors.isEmpty() || ts - lastAnchorLogTs < ANCHOR_LOG_NS) return;
+    lastAnchorLogTs = ts;
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < anchors.size(); i++) {
+      Anchor a = anchors.get(i);
+      Pose p = a.getPose();
+      float[] t = p.getTranslation(), q = p.getRotationQuaternion();
+      sb.append(String.format(Locale.US, "%d,%d,%s,%.6f,%.6f,%.6f,%.7f,%.7f,%.7f,%.7f\n", ts, i, a.getTrackingState().name(),
+          t[0], t[1], t[2], q[0], q[1], q[2], q[3]));
+    }
+    final String s = sb.toString();
+    post(() -> write(anchorsOut, s));
+  }
+
+  /** Factory lens calibration of the camera ARCore uses (Camera2), once per recording. */
+  public void writeCameraCharacteristics(android.content.Context ctx, Session session) {
+    try {
+      String id = session.getCameraConfig().getCameraId();
+      android.hardware.camera2.CameraManager cm = ctx.getSystemService(android.hardware.camera2.CameraManager.class);
+      android.hardware.camera2.CameraCharacteristics ch = cm.getCameraCharacteristics(id);
+      StringBuilder sb = new StringBuilder("{\n");
+      sb.append(" \"camera_id\": \"").append(id).append("\",\n");
+      sb.append(" \"lens_intrinsic_calibration_fx_fy_cx_cy_s\": ")
+          .append(arr(ch.get(android.hardware.camera2.CameraCharacteristics.LENS_INTRINSIC_CALIBRATION))).append(",\n");
+      if (android.os.Build.VERSION.SDK_INT >= 28) {
+        sb.append(" \"lens_distortion_k1_k2_k3_p1_p2\": ")
+            .append(arr(ch.get(android.hardware.camera2.CameraCharacteristics.LENS_DISTORTION))).append(",\n");
+      }
+      sb.append(" \"lens_focal_lengths_mm\": ")
+          .append(arr(ch.get(android.hardware.camera2.CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS))).append(",\n");
+      android.util.SizeF phys = ch.get(android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
+      sb.append(" \"sensor_physical_size_mm\": ").append(phys == null ? "null" : "[" + phys.getWidth() + ", " + phys.getHeight() + "]").append(",\n");
+      android.graphics.Rect act = ch.get(android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+      sb.append(" \"sensor_active_array\": ")
+          .append(act == null ? "null" : "[" + act.left + ", " + act.top + ", " + act.right + ", " + act.bottom + "]").append(",\n");
+      Integer src = ch.get(android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_TIMESTAMP_SOURCE);
+      sb.append(" \"sensor_timestamp_source\": ").append(src == null ? "null" : src.toString()).append(",\n");
+      sb.append(" \"note\": \"Camera2 intrinsics are in sensor active-array pixels; ARCore images are a scaled/cropped view\"\n}\n");
+      final String json = sb.toString();
+      post(() -> writeBytes(new File(dir, "camera_characteristics.json"), json.getBytes()));
+    } catch (Exception e) {
+      Log.w(TAG, "camera characteristics unavailable", e);
+    }
+  }
+
+  private static String arr(float[] v) {
+    if (v == null) return "null";
+    StringBuilder sb = new StringBuilder("[");
+    for (int i = 0; i < v.length; i++) sb.append(i > 0 ? ", " : "").append(v[i]);
+    return sb.append("]").toString();
   }
 
   private void writeMeta(Session session, CameraIntrinsics intr) {
@@ -190,12 +334,21 @@ public class CaptureLogger {
 
   /** Flush and close everything; blocks until pending writes finish. */
   public void close() {
+    for (Anchor a : anchors) {
+      try {
+        a.detach();
+      } catch (Exception ignored) {
+      }
+    }
+    anchors.clear();
     post(() -> {
       try {
         poses.close();
         tracking.close();
         points.close();
         quality.close();
+        cameraMeta.close();
+        anchorsOut.close();
       } catch (IOException e) {
         Log.e(TAG, "close failed", e);
       }
