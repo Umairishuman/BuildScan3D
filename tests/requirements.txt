@@ -5,3 +5,9 @@ scipy>=1.11
 opencv-python-headless>=4.9
 pytest>=8
 ruff>=0.6
+# processing server (server/) and its test client
+fastapi>=0.110
+httpx>=0.27
+python-multipart>=0.0.9
+pydantic>=2.0
+requests>=2.31
