@@ -44,6 +44,7 @@ jobs:
           filters: |
             python:
               - 'src/**'
+              - 'server/**'
               - 'scratch/**'
               - 'tests/**'
               - 'ruff.toml'
