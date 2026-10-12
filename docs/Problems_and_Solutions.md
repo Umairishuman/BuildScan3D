@@ -365,6 +365,33 @@ PocketGS's own reported quality is 22–23.5 dB PSNR on near-path test views (LL
   - training at full resolution;
   - a per-image colour correction (bilateral grid) that keeps auto-exposure flicker out of the splats.
 - **Reproduce:** `run_arcore3dgs.bat dataset\newRoomAttemptSadness`. It takes about 75 min on an RTX 3070: matching 23, mapping 6, training about 45.
+
+### 4.13 Improving v3: motion blur, frame choice and dense initialisation (overnight, 2026-10-12)
+- **Problem:** v3 was good but softer than "great", even though camera poses and the lens were now right.
+- **Diagnosis — motion blur.**
+  - From the 201 Hz gyroscope, the median keyframe blur is **~6–12 px** (exposure 1/60–1/30 s, which ARCore does not record) and **89–97% of keyframes exceed 3 px**.
+  - Rotation dominates: 9.7°/s median while walking, versus 0.13 m/s translation.
+  - The old keyframe choice (sharpest Laplacian in an 8-frame window) barely tracks this (r = 0.20 with gyro blur): Laplacian measures texture more than stillness.
+  - 3DGS averages blurred views into a soft model.
+- **Fixes (no change to the training recipe):**
+  1. **Gyro-aware frame selection** (`select_sharp.py`): the least-blurred frame per 0.2 s window, giving 1166 frames instead of 574. They were **registered into v3's existing COLMAP model** (CPU SIFT, time-neighbour pairs, `image_registrator`, global BA with fixed intrinsics) rather than re-running exhaustive SfM, which keeps the same world frame and took ~16 min.
+  2. **Dense MVS initialisation** (PocketGS operator G / their 3DGS-MVS baseline): COLMAP PatchMatch + fusion on the SfM model gives 1.15M points. These are mapped into the training world by a trimmed Sim3 and voxelised at 1 cm (~460k start points versus ~69k SfM points), so plain walls and the floor start covered instead of relying on densification.
+  3. **Slightly finer densification:** grad threshold 0.0006. The "big" setting 0.0005 + cull 0.005 runs out of memory on 8 GB.
+- **Fair evaluation** (`fair_compare.py`): 42 frames that no model trained on (2 dropped where every model fails, i.e. the reference pose was wrong). Poses are mapped into each model's world by a trimmed Sim3 (~1 mm residual). An untrimmed fit gave a 1.5 cm offset, which made the better model look 3 dB worse.
+
+  | Model | Frames | Init | PSNR (cf) | SSIM |
+  |---|---|---|---|---|
+  | v3 | 574 (Laplacian) | SfM 69k | 26.04 | 0.8756 |
+  | v4_sharp | 1108 (gyro) | SfM | 26.30 | 0.8849 |
+  | v5 | 1108 (gyro) | dense 459k | 26.51 | 0.8879 |
+  | **v6** | 1108 (gyro) | dense, grad 0.0006 | **26.52** | **0.8886** |
+
+  The full-res crops show the finest detail in v6 (printer vents, tablecloth lace), and the room-centre views are clean. The lower "sharpness ratio" of v4–v6 (0.48 vs 0.68) is less sensor noise, not blur. The best model is in `saved_models/2026-10-12_sharp_mvs_v6/`.
+- **Environment issues hit:**
+  - Nerfstudio pins the cached images in page-locked RAM; with > 1000 full-res frames (~6.7 GB) that fails on Windows with "CUDA error: out of memory" and breaks the CUDA context. Patched in nerfstudio-env to skip pinning above 4 GB.
+  - COLMAP PatchMatch caches ~7 GB of RAM, so never train alongside it on a 16 GB machine.
+  - COLMAP writes PLY headers with `\r\n`.
+- **Next:** model the remaining blur explicitly (IMU-driven motion-blur + rolling-shutter, TODO step 3). The gyro data quantifies exactly how much there is.
 - **Lesson:** ARCore's VIO world frame is not globally consistent. It re-anchors silently, and its factory intrinsics ignore distortion. Both are harmless for AR overlays and fatal for 3DGS. Poses for 3DGS must come from image-based SfM with lens self-calibration; ARCore should provide scale, gravity and a fallback only.
 
 ## 5. 3DGS training quality

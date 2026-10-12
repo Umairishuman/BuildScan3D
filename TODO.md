@@ -1,5 +1,33 @@
 # BuildScan3D — To Do
 
+## IMMEDIATE PRIORITY: make v3 top-notch (run overnight, one experiment per night)
+
+Baseline: `saved_models/2026-10-11_sfm_v3/` (newRoomAttemptSadness: held-out SSIM 0.857, PSNR(cf) 25.57, geometry median 0.59%). It is never overwritten.
+
+Every experiment writes to its own folder, is compared with `compare_models.py --split nerfstudio` (held-out frames + room-centre views), `fit_diag.py` (full-res training views) and full-res crops against the source photos, and replaces v3 only if it is clearly better visually *and* in the numbers. Use only the bilateral-grid recipe (no SO3xR3, no splatfacto-big thresholds: those run out of the 8 GB VRAM).
+
+**Overnight 2026-10-12 results: new best = `saved_models/2026-10-12_sharp_mvs_v6/` (viewer default).** Fair test on 42 frames no model trained on: v3 26.04 dB / SSIM 0.8756, v4_sharp 26.30 / 0.8849, v5 26.51 / 0.8879, **v6 26.52 / 0.8886**. Finest detail at full res; room-centre views clean. Tools: `select_sharp.py`, `mvs_init.py`, `fair_compare.py`; nerfstudio pin_memory patch for > 1000 frames (see memory / GPU notes).
+
+- [ ] **Put v6's recipe into `run_arcore3dgs.bat`.** Not done yet: needs testing on room 2. Tonight's frames were registered into v3's existing COLMAP model; a fresh pipeline would need `select_sharp.py` → `sfm_colmap.py` on ~1100 frames (exhaustive matching ~4× longer, ~90 min, so switch to sequential/spatial matching) → dense → `mvs_init.py` → splatfacto with `--pipeline.model.densify-grad-thresh 0.0006`.
+- [x] **0. Blur check.** Median keyframe blur from the gyroscope is **~6–12 px** (exposure 1/60–1/30 s); 89–97% of keyframes are above 3 px. The rotation part dominates (median 9.7°/s while walking). Laplacian sharpness hardly correlates with gyro blur (r = 0.20), so the old selection was mostly picking texture, not stillness. → Step 3 is worth doing.
+- [x] **1. Dense MVS initialisation.** Done overnight: COLMAP PatchMatch at 1000 px with 8 sources (2 h 15 min, deleting depth maps afterwards keeps it at 123 MB) → 1.15M fused points → `mvs_init.py` (trimmed Sim3 into the training world, 1 cm voxels + SfM points, ~460k points). Adds +0.21 dB / +0.003 SSIM on top of sharp frames. Original plan: (PocketGS operator G; PocketGS's own table: 3DGS from dense COLMAP MVS points beats SfM-initialised 3DGS, SSIM 0.834 vs 0.791). v3 starts from ~69k SfM points with almost none on plain walls or the floor.
+  - Run COLMAP `patch_match_stereo` + `stereo_fusion` on `work_sfm` (undistorted SfM model, ~960 px, 12 sources): ~1.5 h.
+  - Voxel-downsample the fused cloud (~1 cm) to `init_points.ply` in a copy of work_sfm.
+  - Retrain with the v3 recipe (~45 min). Optionally seed splats as surface-aligned flat discs (PocketGS operator I: PCA normals from K=16 neighbours, width = mean distance to 3 neighbours, thickness 0.3×, opacity 0.1).
+- [x] **2. More (and sharper) training frames.** Done overnight as gyro-aware selection (`select_sharp.py`, least predicted blur per 0.2 s window): 1166 frames, registered into v3's model in ~16 min (CPU SIFT, 8.4k time-neighbour pairs, `image_registrator` + global BA 0.97 → 0.88 px), 1108 kept. The biggest single gain: +0.26 dB / +0.009 SSIM. Original plan: v3 uses 574 of 7,177 video frames (one per ~0.4 s).
+  - Extract ~2× keyframes (`prepare.py --window 4 --depth 0` into a new work dir).
+  - Register the new frames into the existing COLMAP model (`feature_extractor` + matching against temporal and spatial neighbours + `image_registrator` + `bundle_adjuster`), rather than a new exhaustive match.
+  - Undistort, export, retrain. ~1–2 h.
+- [ ] **3. Motion-blur + rolling-shutter compensation using the IMU** ("Gaussian Splatting on the Move", Seiskari et al. 2024). Model each frame as a blur along the camera motion during exposure plus the row-by-row rolling-shutter time offset; the motion comes from our calibrated IMU (`imu.py`, `fallback.py`). Also a thesis novelty: ARCore/IMU data improving 3DGS quality, not just scale.
+  - First check whether the paper's code can be ported to our nerfstudio 1.1.5 / prebuilt gsplat 1.4 (we cannot recompile gsplat CUDA). Otherwise render N sub-frames per training step in Python; training becomes ~1.5–3 h.
+  - Exposure time is not in ARCore recordings: estimate it, or learn it per frame. Also consider logging it in the app (Camera2 `SENSOR_EXPOSURE_TIME`, rolling-shutter skew).
+  - Estimate: 3–5 days, 6–10 h GPU. Only if step 0 shows meaningful blur.
+- [ ] **4. PGSR-style geometric regularisation during training** (PGSR paper in `docs/Research Papers`): flatten Gaussians (min-scale loss), unbiased plane-based depth, single-view depth/normal consistency with edge-aware weights, multi-view homography consistency. Rendering quality stays about the same as 3DGS while geometry gets much flatter and sharper. This is the proper way to get flat walls/floors (see the parked flattening project) without losing the glossy floor. Needs a custom splatfacto model: several days.
+- [ ] **5. Anti-aliasing (Mip-Splatting idea / gsplat `rasterize_mode="antialiased"`)** for zooming in/out in the viewer without sparkle or blur. Cheap to try with step 1 or 2. Note: antialiased PLYs need an antialiased-aware viewer, so update `view.py` too.
+
+### Parked (later)
+- **Wall/floor flattening.** Post-hoc snapping (`planarize.py`) killed the glossy-floor reflections and crushed door frames, so it was rejected by the user. The structural layer (`structure.py`) works for geometry: per-wall planes, corners, wall lengths 6.649/6.682 × 4.451/4.475 m, 5 doors detected. Its flat textures can't reproduce the glossy floor. Use it for measurements, openings and the floor plan; fix the ceiling-height detection (2.555 m is probably the top of the cupboards or doors). Visual flattening should come from step 4.
+
 ## CURRENT PIPELINE (2026-10-11): image-based SfM + ARCore scale — see Problems_and_Solutions 4.11
 
 `run_arcore3dgs.bat <dataset>` runs `prepare.py --depth 0`, then `sfm_colmap.py` (COLMAP 4.2: SIFT, exhaustive matching, global mapper, lens self-calibration, undistortion, Sim3 to raw ARCore, mis-registration filter), then `export_nerfstudio.py --downscale 1`, then splatfacto at full resolution (bilateral grid, SO3xR3 camera optimiser, scale regularisation) and `ns-export`. The output is `<dataset>/work_sfm/gs_sfm/splat.ply`. The old ARCore-pose pipeline is in `run_arcore3dgs_legacy.bat`.
