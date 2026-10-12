@@ -48,7 +48,7 @@ public class QualityMonitor {
   // tracking, failed stereo depth and floating geometry, so this warns BEFORE tracking drops.
   private static final float TEX_WARN = 22f, TEX_BAD = 13f;
   private static final float OVER_WARN = 0.12f, OVER_BAD = 0.25f; // fraction of pixels >= 245
-  private static final int IMAGE_EVERY = 3;                       // analyse every 3rd camera image
+  private static final int IMAGE_EVERY = 5;                       // analyse every 5th camera image
   private static final int STEP = 5;                              // pixel subsampling stride
   private static final float CEIL_PITCH = 35f, FLOOR_PITCH = -35f;// deg
   private static final int COVER_FRAMES = 45;                     // ~1.5 s of looking counts as covered

@@ -6,8 +6,11 @@ Endpoints:
   GET  /status/{job_id} Poll job progress
   GET  /jobs            List all jobs
   GET  /download/{job_id}  Download the finished splat.ply
+  GET  /config          Show current processing mode
+  POST /config          Switch between local and RunPod processing
 
-Run:  python -m uvicorn server.main:app --host 0.0.0.0 --port 8000
+Run (local):   python -m uvicorn server.main:app --host 0.0.0.0 --port 8000
+Run (RunPod):  RUNPOD_API_KEY=your_key python -m uvicorn server.main:app --host 0.0.0.0 --port 8000
 """
 
 import os
@@ -18,8 +21,10 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel
 
 from .pipeline import Job, JobStatus, start_pipeline_thread
+from .runpod_client import start_runpod_pipeline_thread
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -29,8 +34,40 @@ DATASET_ROOT = PROJECT_ROOT / "dataset"
 
 app = FastAPI(title="BuildScan 3D Processing Server")
 
-# In-memory job store (single-server; swap for Redis/DB on RunPod if needed)
 jobs: dict[str, Job] = {}
+
+# Processing mode: "local" or "runpod"
+processing_config = {
+    "mode": "runpod" if os.environ.get("RUNPOD_API_KEY") else "local",
+    "runpod_api_key": os.environ.get("RUNPOD_API_KEY", ""),
+    "runpod_gpu_type": os.environ.get("RUNPOD_GPU_TYPE", "NVIDIA RTX 4090"),
+}
+
+
+class ConfigUpdate(BaseModel):
+    mode: str = None
+    runpod_api_key: str = None
+    runpod_gpu_type: str = None
+
+
+@app.get("/config")
+async def get_config():
+    return {
+        "mode": processing_config["mode"],
+        "runpod_gpu_type": processing_config["runpod_gpu_type"],
+        "runpod_api_key_set": bool(processing_config["runpod_api_key"]),
+    }
+
+
+@app.post("/config")
+async def update_config(cfg: ConfigUpdate):
+    if cfg.mode and cfg.mode in ("local", "runpod"):
+        processing_config["mode"] = cfg.mode
+    if cfg.runpod_api_key is not None:
+        processing_config["runpod_api_key"] = cfg.runpod_api_key
+    if cfg.runpod_gpu_type:
+        processing_config["runpod_gpu_type"] = cfg.runpod_gpu_type
+    return await get_config()
 
 
 @app.post("/upload")
@@ -51,7 +88,6 @@ async def upload_dataset(
     depth_dir.mkdir(exist_ok=True)
 
     try:
-        # Save sidecar CSV/JSON files
         for name, upload in [
             ("dataset.mp4", video),
             ("poses.csv", poses),
@@ -66,7 +102,6 @@ async def upload_dataset(
                     f.write(chunk)
             log.info("Saved %s (%d bytes)", dst.name, dst.stat().st_size)
 
-        # Unzip depth folder if provided
         if depth_zip and depth_zip.filename:
             zip_path = dataset_dir / "depth.zip"
             with open(zip_path, "wb") as f:
@@ -80,12 +115,27 @@ async def upload_dataset(
         shutil.rmtree(dataset_dir, ignore_errors=True)
         raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
 
-    # Create job and start processing
     job = Job(job_id=job_id, dataset_dir=str(dataset_dir))
     jobs[job_id] = job
-    start_pipeline_thread(job, iterations=iterations)
 
-    return {"job_id": job_id, "status": "processing", "poll": f"/status/{job_id}"}
+    mode = processing_config["mode"]
+    if mode == "runpod":
+        api_key = processing_config["runpod_api_key"]
+        if not api_key:
+            raise HTTPException(status_code=400, detail="RunPod API key not set. POST /config or set RUNPOD_API_KEY env var.")
+        gpu_type = processing_config["runpod_gpu_type"]
+        start_runpod_pipeline_thread(job, api_key=api_key, gpu_type=gpu_type, iterations=iterations)
+        log.info("Job %s started on RunPod (%s)", job_id, gpu_type)
+    else:
+        start_pipeline_thread(job, iterations=iterations)
+        log.info("Job %s started locally", job_id)
+
+    return {
+        "job_id": job_id,
+        "status": "processing",
+        "mode": mode,
+        "poll": f"/status/{job_id}",
+    }
 
 
 @app.get("/status/{job_id}")
@@ -127,4 +177,4 @@ async def download_splat(job_id: str):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    return {"status": "ok", "mode": processing_config["mode"]}

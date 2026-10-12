@@ -91,7 +91,9 @@ public class CoverageMap {
       cap = cells.size();
       xs = new float[cap]; ys = new float[cap]; ds = new float[cap]; cols = new int[cap];
       int m = 0;
+      int limit = 5000;
       for (Map.Entry<Long, int[]> e : cells.entrySet()) {
+        if (m >= limit) break;
         long k = e.getKey();
         float x = (((k >> 32) & 0xFFFF) - 32768 + 0.5f) * VOXEL;
         float y = (((k >> 16) & 0xFFFF) - 32768 + 0.5f) * VOXEL;

@@ -285,8 +285,35 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     } else if (item.getItemId() == R.id.instant_placement_settings) {
       launchInstantPlacementSettingsMenuDialog();
       return true;
+    } else if (item.getItemId() == R.id.server_settings) {
+      launchServerUrlDialog();
+      return true;
     }
     return false;
+  }
+
+  private void launchServerUrlDialog() {
+    android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
+    String current = prefs.getString(ProcessingActivity.PREF_SERVER_URL, ProcessingActivity.DEFAULT_SERVER_URL);
+
+    android.widget.EditText input = new android.widget.EditText(this);
+    input.setText(current);
+    input.setSelectAllOnFocus(true);
+    input.setSingleLine();
+
+    new AlertDialog.Builder(this)
+        .setTitle("Server URL")
+        .setMessage("Enter the processing server address (e.g. http://192.168.1.100:8000)")
+        .setView(input)
+        .setPositiveButton("Save", (dialog, which) -> {
+          String url = input.getText().toString().trim();
+          if (!url.isEmpty()) {
+            prefs.edit().putString(ProcessingActivity.PREF_SERVER_URL, url).apply();
+            Toast.makeText(this, "Server URL saved", Toast.LENGTH_SHORT).show();
+          }
+        })
+        .setNegativeButton("Cancel", null)
+        .show();
   }
 
   @Override
@@ -648,8 +675,16 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
         if (coverageText != null) {
           coverageText.setVisibility(View.GONE);
         }
+        final String datasetPath = currentDatasetDir != null ? currentDatasetDir.getAbsolutePath() : null;
         new AlertDialog.Builder(this).setTitle("Capture quality").setMessage(summary)
-            .setPositiveButton("OK", null).show();
+            .setPositiveButton("Upload & Process", (d, w) -> {
+              if (datasetPath != null) {
+                Intent intent = new Intent(HelloArActivity.this, ProcessingActivity.class);
+                intent.putExtra("dataset_path", datasetPath);
+                startActivity(intent);
+              }
+            })
+            .setNegativeButton("Close", null).show();
       });
 
       // STOP THE TIMER AND RESET TEXT
@@ -880,6 +915,27 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     updateQuality(frame, camera);
     // --- END POSE DUMP ---
 
+    // During recording, skip demo rendering (planes, objects, lighting) to save GPU for capture
+    if (isRecording) {
+      camera.getProjectionMatrix(projectionMatrix, 0, Z_NEAR, Z_FAR);
+      camera.getViewMatrix(viewMatrix, 0);
+      if (coverageOverlay != null && System.nanoTime() - lastCoverageNs > 500_000_000L) {
+        lastCoverageNs = System.nanoTime();
+        Matrix.multiplyMM(coverageMvp, 0, projectionMatrix, 0, viewMatrix, 0);
+        final CoverageMap.Projection proj = coverageMap.project(coverageMvp, camera.getPose().getTranslation());
+        runOnUiThread(() -> coverageOverlay.setData(proj));
+      }
+      try (PointCloud pointCloud = frame.acquirePointCloud()) {
+        if (pointCloud.getTimestamp() > lastPointCloudTimestamp) {
+          lastPointCloudTimestamp = pointCloud.getTimestamp();
+          if (captureLogger != null) {
+            captureLogger.onPointCloud(pointCloud);
+          }
+        }
+      }
+      return;
+    }
+
     // Update BackgroundRenderer state to match the depth settings.
     try {
       backgroundRenderer.setUseDepthVisualization(
@@ -955,7 +1011,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     camera.getViewMatrix(viewMatrix, 0);
 
     // Live coverage overlay (~5 Hz while recording)
-    if (isRecording && coverageOverlay != null && System.nanoTime() - lastCoverageNs > 200_000_000L) {
+    if (isRecording && coverageOverlay != null && System.nanoTime() - lastCoverageNs > 500_000_000L) {
       lastCoverageNs = System.nanoTime();
       Matrix.multiplyMM(coverageMvp, 0, projectionMatrix, 0, viewMatrix, 0);
       final CoverageMap.Projection proj = coverageMap.project(coverageMvp, camera.getPose().getTranslation());

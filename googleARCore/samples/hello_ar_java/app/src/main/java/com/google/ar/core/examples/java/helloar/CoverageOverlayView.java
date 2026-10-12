@@ -32,7 +32,7 @@ public class CoverageOverlayView extends View {
     if (p == null || p.n == 0) return;
     float w = getWidth(), h = getHeight();
     float r = Math.max(3f, w / 160f);
-    for (int i = 0; i < p.n; i++) {
+    for (int i = 0; i < Math.min(p.n, 2000); i++) {
       paint.setColor(p.colors[i]);
       canvas.drawCircle((p.ndc[2 * i] + 1) * 0.5f * w, (1 - p.ndc[2 * i + 1]) * 0.5f * h, r, paint);
     }
