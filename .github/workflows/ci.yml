@@ -1,0 +1,248 @@
+name: CI
+
+# Continuous integration: every push (except to master, where cd.yml runs this workflow itself),
+# every pull request, a manual run, and a call from the CD workflow.
+on:
+  push:
+    branches-ignore: [master]
+    tags-ignore: ["**"]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      run-all:
+        description: Run every job regardless of which files changed
+        type: boolean
+        default: false
+
+# A newer push to the same branch/PR cancels the older, still-running run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Decide which parts of the project changed, so a docs-only change does not rebuild the Android app.
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      python: ${{ steps.filter.outputs.python }}
+      web: ${{ steps.filter.outputs.web }}
+      android: ${{ steps.filter.outputs.android }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            python:
+              - 'src/**'
+              - 'scratch/**'
+              - 'tests/**'
+              - 'ruff.toml'
+              - 'pytest.ini'
+              - '.github/workflows/ci.yml'
+            web:
+              - 'prototype/web-ui/**'
+              - '.github/workflows/ci.yml'
+            android:
+              - 'googleARCore/**'
+              - '.github/workflows/ci.yml'
+
+  python:
+    name: Python ${{ matrix.python }} (lint + tests)
+    needs: changes
+    if: ${{ inputs.run-all || github.event_name == 'workflow_dispatch' || needs.changes.outputs.python == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+
+      - name: Install test dependencies (CPU only, no torch or gsplat)
+        run: python -m pip install -r tests/requirements.txt
+
+      - name: Lint, real errors only (blocking)
+        run: ruff check --output-format=github .
+
+      - name: Lint, unused code (informational, never fails)
+        run: ruff check --select F401,F811,F841 --exit-zero --output-format=github .
+
+      - name: Unit tests
+        run: pytest --junitxml=test-results/junit-${{ matrix.python }}.xml
+
+      - name: Test summary
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import glob, xml.etree.ElementTree as ET
+          t = f = e = s = 0
+          for p in glob.glob("test-results/*.xml"):
+              root = ET.parse(p).getroot()
+              suite = root if root.tag == "testsuite" else root.find("testsuite")
+              t += int(suite.get("tests", 0)); f += int(suite.get("failures", 0))
+              e += int(suite.get("errors", 0)); s += int(suite.get("skipped", 0))
+          print(f"### Python ${{ matrix.python }}: {t} tests, {f} failed, {e} errors, {s} skipped")
+          PY
+
+      - name: Keep test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-test-results-${{ matrix.python }}
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  web-ui:
+    name: Web UI (lint, types, build)
+    needs: changes
+    if: ${{ inputs.run-all || github.event_name == 'workflow_dispatch' || needs.changes.outputs.web == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: prototype/web-ui
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: prototype/web-ui/package-lock.json
+
+      - name: Install dependencies (exactly as locked)
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Cache Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: prototype/web-ui/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('prototype/web-ui/package-lock.json') }}-${{ hashFiles('prototype/web-ui/src/**') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('prototype/web-ui/package-lock.json') }}-
+
+      - name: Production build
+        run: npm run build
+
+  android:
+    name: Android app (debug build)
+    needs: changes
+    if: ${{ inputs.run-all || github.event_name == 'workflow_dispatch' || needs.changes.outputs.android == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: googleARCore/samples/hello_ar_java
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Accept Android SDK licences (the SDK is preinstalled on the runner)
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - name: Check the Gradle wrapper is the official one
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up Gradle with caching
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+
+      - name: Keep the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: googleARCore/samples/hello_ar_java/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  repo-hygiene:
+    name: Repo hygiene (big files, data, secrets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No oversized files, datasets or key files
+        run: |
+          set -euo pipefail
+          bad=0
+          while IFS= read -r -d '' f; do
+            case "$f" in googleARCore/*|"docs/Research Papers/"*) continue ;; esac
+            size=$(stat -c%s "$f")
+            if [ "$size" -gt 10485760 ]; then
+              echo "::error file=$f::larger than 10 MB ($size bytes)"; bad=1
+            fi
+            case "$f" in
+              *.ply|*.mp4|*.pt|*.pth|*.ckpt|*.npz|*.pem|*.key|.env|*/.env)
+                echo "::error file=$f::datasets, model files and keys must not be committed"; bad=1 ;;
+            esac
+          done < <(git ls-files -z)
+          exit $bad
+
+      - name: No obvious secrets in tracked files
+        run: |
+          if git grep -I -n -E 'BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}' -- . ':!googleARCore' ':!.github'; then
+            echo "::error::possible secret found in a tracked file"; exit 1
+          fi
+
+  workflow-lint:
+    name: Lint the workflow files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker://rhysd/actionlint:1.7.7
+        with:
+          args: -color
+
+  # One status to look at (and the one to mark as required in branch protection).
+  # Jobs that were skipped because nothing relevant changed count as fine.
+  ci-ok:
+    name: CI passed
+    if: ${{ always() }}
+    needs: [changes, python, web-ui, android, repo-hygiene, workflow-lint]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check every job
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          case " $RESULTS " in
+            *" failure "*|*" cancelled "*) echo "::error::at least one job failed or was cancelled"; exit 1 ;;
+          esac

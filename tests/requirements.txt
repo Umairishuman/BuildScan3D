@@ -1,0 +1,7 @@
+# Light dependencies for CI and local test runs. The full pipeline needs a CUDA GPU (see requirements.txt),
+# but the tests only touch the CPU-side maths, so torch/gsplat are not installed here.
+numpy>=1.26
+scipy>=1.11
+opencv-python-headless>=4.9
+pytest>=8
+ruff>=0.6
