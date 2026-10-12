@@ -20,10 +20,19 @@ Every experiment writes to its own folder, is compared with `compare_models.py -
   - Undistort, export, retrain. ~1–2 h.
 - [ ] **3. Motion-blur + rolling-shutter compensation using the IMU** ("Gaussian Splatting on the Move", Seiskari et al. 2024). Model each frame as a blur along the camera motion during exposure plus the row-by-row rolling-shutter time offset; the motion comes from our calibrated IMU (`imu.py`, `fallback.py`). Also a thesis novelty: ARCore/IMU data improving 3DGS quality, not just scale.
   - First check whether the paper's code can be ported to our nerfstudio 1.1.5 / prebuilt gsplat 1.4 (we cannot recompile gsplat CUDA). Otherwise render N sub-frames per training step in Python; training becomes ~1.5–3 h.
-  - Exposure time is not in ARCore recordings: estimate it, or learn it per frame. Also consider logging it in the app (Camera2 `SENSOR_EXPOSURE_TIME`, rolling-shutter skew).
+  - Exposure time: **the app now logs it** (2026-10-12, see below), so new recordings have the real per-frame exposure and rolling-shutter readout. Older recordings need it estimated or learned.
   - Estimate: 3–5 days, 6–10 h GPU. Only if step 0 shows meaningful blur.
 - [ ] **4. PGSR-style geometric regularisation during training** (PGSR paper in `docs/Research Papers`): flatten Gaussians (min-scale loss), unbiased plane-based depth, single-view depth/normal consistency with edge-aware weights, multi-view homography consistency. Rendering quality stays about the same as 3DGS while geometry gets much flatter and sharper. This is the proper way to get flat walls/floors (see the parked flattening project) without losing the glossy floor. Needs a custom splatfacto model: several days.
 - [ ] **5. Anti-aliasing (Mip-Splatting idea / gsplat `rasterize_mode="antialiased"`)** for zooming in/out in the viewer without sparkle or blur. Cheap to try with step 1 or 2. Note: antialiased PLYs need an antialiased-aware viewer, so update `view.py` too.
+
+### App update (2026-10-12, `CaptureLogger.java`), built into `app-debug.apk`
+- [x] `camera.csv`: per-frame exposure time, rolling-shutter skew, frame duration, ISO, focus distance, AE/AWB/lens state (ARCore `Frame.getImageMetadata()`). This is the input for IMU motion-blur / rolling-shutter modelling (step 3).
+- [x] `anchors.csv`: a reference anchor at the camera every 10 s, all anchor poses logged at 5 Hz. ARCore moves anchors when it silently corrects its world frame, so a jump = a re-anchor event, and its size is the correction (the newRoom 1 m / 28° event would now be visible). `check_capture.py` reports these events.
+- [x] `lens_metadata.json` / `camera_characteristics.json`: the phone's own lens calibration and distortion (ARCore metadata + Camera2 `LENS_INTRINSIC_CALIBRATION` / `LENS_DISTORTION`), for comparison with COLMAP's self-calibration (k1 ≈ 0.08, k2 ≈ −0.2).
+- [x] Raw depth is saved only when ARCore produced a new map (the same stale map used to be written repeatedly).
+- [x] `select_sharp.py` uses the recorded per-frame exposure instead of the 1/45 s assumption; `check_capture.py` reports exposure, rolling-shutter readout and re-anchor events.
+- [ ] Exposure lock is not possible through the normal ARCore session API (ARCore owns the camera's auto-exposure). It would need ARCore's Shared Camera API (custom capture requests), a larger refactor. The bilateral grid already absorbs exposure changes, so this is low priority.
+- [ ] Use `anchors.csv` corrections in the pipeline: re-align pre-correction ARCore poses (better Sim3 inliers, and a COLMAP-free fallback).
 
 ### Parked (later)
 - **Wall/floor flattening.** Post-hoc snapping (`planarize.py`) killed the glossy-floor reflections and crushed door frames, so it was rejected by the user. The structural layer (`structure.py`) works for geometry: per-wall planes, corners, wall lengths 6.649/6.682 × 4.451/4.475 m, 5 doors detected. Its flat textures can't reproduce the glossy floor. Use it for measurements, openings and the floor plan; fix the ceiling-height detection (2.555 m is probably the top of the cupboards or doors). Visual flattening should come from step 4.

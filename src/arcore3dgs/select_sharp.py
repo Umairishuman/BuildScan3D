@@ -44,7 +44,14 @@ pts = np.asarray(cap_info.pts[:N])
 wk = np.interp(pts, gt, np.convolve(w, np.ones(9) / 9, mode="same"))                # ~40 ms smoothed rad/s
 C = np.array([(cap_info.frame_pose(k) if cap_info.frame_pose(k) is not None else np.full((4, 4), np.nan))[:3, 3] for k in range(N)])
 v = np.linalg.norm(np.gradient(np.nan_to_num(C), pts, axis=0), axis=1)
-blur = (wk + v / 2.5) * args.exposure * cap_info.fx                                  # predicted blur, px
+exposure = np.full(N, args.exposure)
+cam_csv = os.path.join(args.dataset, "camera.csv")                                     # app >= 2026-10-12
+if os.path.exists(cam_csv):
+    Cm = np.genfromtxt(cam_csv, delimiter=",", skip_header=1); Cm = Cm[Cm[:, 1] > 0]
+    if len(Cm):
+        exposure = np.interp(pts, (Cm[:, 0] - t0) / 1e9, Cm[:, 1] / 1e9)              # real per-frame exposure, s
+        print(f"using recorded exposure times: median {np.median(exposure) * 1000:.1f} ms")
+blur = (wk + v / 2.5) * exposure * cap_info.fx                                        # predicted blur, px
 print(f"{N} frames; predicted blur px: median {np.median(blur):.1f}, p10 {np.percentile(blur, 10):.1f}, "
       f"p90 {np.percentile(blur, 90):.1f}; corr(blur, -Laplacian) = {np.corrcoef(blur, -sharp)[0, 1]:.2f}")
 local_med = np.array([np.median(sharp[max(0, k - 60):k + 60]) for k in range(N)])
