@@ -32,3 +32,9 @@ tools/colmap_dl/
 
 # saved best models (large binaries, kept locally)
 saved_models/
+
+*.zip
+*.tex
+*.sty
+*.bib
+*.cls
