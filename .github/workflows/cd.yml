@@ -113,9 +113,11 @@ jobs:
           # If this is a tag push, use the tag version
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             TAG_VERSION="${GITHUB_REF#refs/tags/v}"
-            echo "version_name=$TAG_VERSION" >> "$GITHUB_OUTPUT"
-            echo "version_tag=v$TAG_VERSION" >> "$GITHUB_OUTPUT"
-            echo "did_bump=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "version_name=$TAG_VERSION"
+              echo "version_tag=v$TAG_VERSION"
+              echo "did_bump=false"
+            } >> "$GITHUB_OUTPUT"
             echo "Using tag version: $TAG_VERSION"
             exit 0
           fi
@@ -140,9 +142,11 @@ jobs:
           git tag "v$NEW_NAME"
           git push origin master --tags
 
-          echo "version_name=$NEW_NAME" >> "$GITHUB_OUTPUT"
-          echo "version_tag=v$NEW_NAME" >> "$GITHUB_OUTPUT"
-          echo "did_bump=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "version_name=$NEW_NAME"
+            echo "version_tag=v$NEW_NAME"
+            echo "did_bump=true"
+          } >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-java@v4
         with:
@@ -225,7 +229,7 @@ jobs:
           path: dist
 
       - name: Give the APK a fixed name (a stable download link)
-        run: cp dist/buildscan3d-*.apk dist/buildscan3d-latest.apk
+        run: cp dist/BuildScan3D-*.apk dist/buildscan3d-latest.apk
 
       - name: Move the "latest" tag to this commit
         run: |
