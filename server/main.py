@@ -163,6 +163,61 @@ async def list_jobs():
     ]
 
 
+@app.get("/logs/{job_id}")
+async def get_logs(job_id: str):
+    """Full log output for a job — useful for debugging failures."""
+    job = jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {
+        "job_id": job.job_id,
+        "status": job.status.value,
+        "error": job.error,
+        "log_lines": job.log_lines,
+    }
+
+
+@app.post("/retry/{job_id}")
+async def retry_job(job_id: str):
+    """Re-run a failed job with the same dataset."""
+    job = jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.status != JobStatus.FAILED:
+        raise HTTPException(status_code=409, detail=f"Job is {job.status.value}, not failed — only failed jobs can be retried")
+    if not os.path.isdir(job.dataset_dir):
+        raise HTTPException(status_code=404, detail="Dataset directory no longer exists")
+
+    # Reset job state
+    job.status = JobStatus.QUEUED
+    job.error = None
+    job.current_step = None
+    job.current_step_label = "Retrying..."
+    job.step_index = 0
+    job.progress_pct = 0
+    job.started_at = None
+    job.finished_at = None
+    job.output_path = None
+    job.log_lines = [f"=== RETRY at {__import__('datetime').datetime.now().isoformat()} ==="]
+
+    mode = processing_config["mode"]
+    if mode == "runpod":
+        api_key = processing_config["runpod_api_key"]
+        if not api_key:
+            raise HTTPException(status_code=400, detail="RunPod API key not set")
+        gpu_type = processing_config["runpod_gpu_type"]
+        start_runpod_pipeline_thread(job, api_key=api_key, gpu_type=gpu_type)
+        log.info("Retrying job %s on RunPod", job_id)
+    elif mode == "dry_run":
+        job.status = JobStatus.QUEUED
+        job.current_step_label = "Upload saved — processing disabled (dry_run mode)"
+    else:
+        start_pipeline_thread(job)
+        log.info("Retrying job %s locally", job_id)
+
+    return {"job_id": job_id, "status": "retrying", "mode": mode}
+
+
 @app.get("/download/{job_id}")
 async def download_splat(job_id: str):
     job = jobs.get(job_id)
