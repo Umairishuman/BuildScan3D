@@ -25,6 +25,7 @@ from pydantic import BaseModel
 
 from .pipeline import Job, JobStatus, start_pipeline_thread
 from .runpod_client import start_runpod_pipeline_thread
+from .remote_gpu import start_remote_pipeline_thread
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -36,11 +37,14 @@ app = FastAPI(title="BuildScan 3D Processing Server")
 
 jobs: dict[str, Job] = {}
 
-# Processing mode: "local" or "runpod"
 processing_config = {
     "mode": os.environ.get("PROCESSING_MODE", "dry_run"),
     "runpod_api_key": os.environ.get("RUNPOD_API_KEY", ""),
     "runpod_gpu_type": os.environ.get("RUNPOD_GPU_TYPE", "NVIDIA RTX 3090"),
+    "remote_host": os.environ.get("REMOTE_GPU_HOST", ""),
+    "remote_port": int(os.environ.get("REMOTE_GPU_PORT", "22")),
+    "remote_user": os.environ.get("REMOTE_GPU_USER", "root"),
+    "remote_skip_setup": os.environ.get("REMOTE_SKIP_SETUP", "").lower() in ("1", "true", "yes"),
 }
 
 
@@ -48,6 +52,10 @@ class ConfigUpdate(BaseModel):
     mode: str = None
     runpod_api_key: str = None
     runpod_gpu_type: str = None
+    remote_host: str = None
+    remote_port: int = None
+    remote_user: str = None
+    remote_skip_setup: bool = None
 
 
 @app.get("/config")
@@ -56,17 +64,29 @@ async def get_config():
         "mode": processing_config["mode"],
         "runpod_gpu_type": processing_config["runpod_gpu_type"],
         "runpod_api_key_set": bool(processing_config["runpod_api_key"]),
+        "remote_host": processing_config["remote_host"],
+        "remote_port": processing_config["remote_port"],
+        "remote_user": processing_config["remote_user"],
+        "remote_skip_setup": processing_config["remote_skip_setup"],
     }
 
 
 @app.post("/config")
 async def update_config(cfg: ConfigUpdate):
-    if cfg.mode and cfg.mode in ("local", "runpod", "dry_run"):
+    if cfg.mode and cfg.mode in ("local", "runpod", "dry_run", "remote"):
         processing_config["mode"] = cfg.mode
     if cfg.runpod_api_key is not None:
         processing_config["runpod_api_key"] = cfg.runpod_api_key
     if cfg.runpod_gpu_type:
         processing_config["runpod_gpu_type"] = cfg.runpod_gpu_type
+    if cfg.remote_host is not None:
+        processing_config["remote_host"] = cfg.remote_host
+    if cfg.remote_port is not None:
+        processing_config["remote_port"] = cfg.remote_port
+    if cfg.remote_user is not None:
+        processing_config["remote_user"] = cfg.remote_user
+    if cfg.remote_skip_setup is not None:
+        processing_config["remote_skip_setup"] = cfg.remote_skip_setup
     return await get_config()
 
 
@@ -130,6 +150,18 @@ async def upload_dataset(
         gpu_type = processing_config["runpod_gpu_type"]
         start_runpod_pipeline_thread(job, api_key=api_key, gpu_type=gpu_type, iterations=iterations)
         log.info("Job %s started on RunPod (%s)", job_id, gpu_type)
+    elif mode == "remote":
+        rhost = processing_config["remote_host"]
+        if not rhost:
+            raise HTTPException(status_code=400, detail="Remote GPU host not set. POST /config or set REMOTE_GPU_HOST env var.")
+        start_remote_pipeline_thread(
+            job, host=rhost,
+            port=processing_config["remote_port"],
+            user=processing_config["remote_user"],
+            iterations=iterations,
+            skip_setup=processing_config["remote_skip_setup"],
+        )
+        log.info("Job %s started on remote GPU (%s)", job_id, rhost)
     else:
         start_pipeline_thread(job, iterations=iterations)
         log.info("Job %s started locally", job_id)
@@ -208,6 +240,17 @@ async def retry_job(job_id: str):
         gpu_type = processing_config["runpod_gpu_type"]
         start_runpod_pipeline_thread(job, api_key=api_key, gpu_type=gpu_type)
         log.info("Retrying job %s on RunPod", job_id)
+    elif mode == "remote":
+        rhost = processing_config["remote_host"]
+        if not rhost:
+            raise HTTPException(status_code=400, detail="Remote GPU host not set")
+        start_remote_pipeline_thread(
+            job, host=rhost,
+            port=processing_config["remote_port"],
+            user=processing_config["remote_user"],
+            skip_setup=processing_config["remote_skip_setup"],
+        )
+        log.info("Retrying job %s on remote GPU", job_id)
     elif mode == "dry_run":
         job.status = JobStatus.QUEUED
         job.current_step_label = "Upload saved — processing disabled (dry_run mode)"
@@ -216,6 +259,93 @@ async def retry_job(job_id: str):
         log.info("Retrying job %s locally", job_id)
 
     return {"job_id": job_id, "status": "retrying", "mode": mode}
+
+
+@app.get("/datasets")
+async def list_datasets():
+    """List all scan datasets on disk (uploaded or not)."""
+    datasets = []
+    if DATASET_ROOT.exists():
+        for d in sorted(DATASET_ROOT.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+            if d.is_dir() and d.name.startswith("scan_"):
+                video = d / "dataset.mp4"
+                poses = d / "poses.csv"
+                has_job = any(j.dataset_dir == str(d) for j in jobs.values())
+                job_status = None
+                job_id = None
+                for j in jobs.values():
+                    if j.dataset_dir == str(d):
+                        job_status = j.status.value
+                        job_id = j.job_id
+                        break
+                datasets.append({
+                    "name": d.name,
+                    "path": str(d),
+                    "size_mb": round(video.stat().st_size / (1024 * 1024), 1) if video.exists() else 0,
+                    "has_video": video.exists(),
+                    "has_poses": poses.exists(),
+                    "has_job": has_job,
+                    "job_id": job_id,
+                    "job_status": job_status,
+                })
+    return datasets
+
+
+@app.post("/reprocess")
+async def reprocess_dataset(dataset_name: str = Form(...), iterations: int = Form(30000)):
+    """Queue processing for an existing dataset on disk — no re-upload needed."""
+    dataset_dir = DATASET_ROOT / dataset_name
+    if not dataset_dir.is_dir():
+        raise HTTPException(status_code=404, detail=f"Dataset '{dataset_name}' not found in {DATASET_ROOT}")
+    if not (dataset_dir / "dataset.mp4").exists():
+        raise HTTPException(status_code=400, detail="Dataset has no video file")
+
+    job_id = dataset_name.replace("scan_", "")[:12]
+    # If a job already exists for this dataset, reset it
+    if job_id in jobs:
+        job = jobs[job_id]
+        if job.status.value in ("processing", "uploading"):
+            raise HTTPException(status_code=409, detail="Job is already running")
+    else:
+        job = Job(job_id=job_id, dataset_dir=str(dataset_dir))
+        jobs[job_id] = job
+
+    job.status = JobStatus.QUEUED
+    job.error = None
+    job.current_step = None
+    job.current_step_label = "Reprocessing..."
+    job.step_index = 0
+    job.progress_pct = 0
+    job.started_at = None
+    job.finished_at = None
+    job.output_path = None
+    job.log_lines = [f"=== REPROCESS {dataset_name} at {__import__('datetime').datetime.now().isoformat()} ==="]
+
+    mode = processing_config["mode"]
+    if mode == "dry_run":
+        job.current_step_label = "Upload saved — processing disabled (dry_run mode)"
+    elif mode == "runpod":
+        api_key = processing_config["runpod_api_key"]
+        if not api_key:
+            raise HTTPException(status_code=400, detail="RunPod API key not set")
+        gpu_type = processing_config["runpod_gpu_type"]
+        start_runpod_pipeline_thread(job, api_key=api_key, gpu_type=gpu_type, iterations=iterations)
+    elif mode == "remote":
+        rhost = processing_config["remote_host"]
+        if not rhost:
+            raise HTTPException(status_code=400, detail="Remote GPU host not set")
+        start_remote_pipeline_thread(
+            job, host=rhost,
+            port=processing_config["remote_port"],
+            user=processing_config["remote_user"],
+            iterations=iterations,
+            skip_setup=processing_config["remote_skip_setup"],
+        )
+    else:
+        start_pipeline_thread(job, iterations=iterations)
+
+    log.info("Reprocessing %s as job %s in %s mode", dataset_name, job_id, mode)
+    return {"job_id": job_id, "dataset": dataset_name, "mode": mode, "poll": f"/status/{job_id}"}
 
 
 @app.get("/download/{job_id}")

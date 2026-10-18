@@ -57,7 +57,7 @@ class RunPodClient:
         self,
         name: str = "buildscan-3dgs",
         gpu_type: str = "NVIDIA RTX 4090",
-        image: str = "runpod/pytorch:2.1.0-py3.10-cuda12.1.0-devel-ubuntu22.04",
+        image: str = "runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04",
         disk_gb: int = 50,
         volume_gb: int = 0,
         cloud_type: str = "SECURE",

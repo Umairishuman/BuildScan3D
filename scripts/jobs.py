@@ -140,27 +140,49 @@ def show_config():
     if not cfg:
         return
     mode = cfg["mode"]
-    color = {"runpod": YELLOW, "dry_run": CYAN, "local": GREEN}.get(mode, "")
-    print(f"\n  {BOLD}Mode:{RESET}      {color}{mode}{RESET}")
-    print(f"  {BOLD}GPU:{RESET}       {cfg['runpod_gpu_type']}")
-    print(f"  {BOLD}API Key:{RESET}   {'Set' if cfg['runpod_api_key_set'] else RED + 'Not set' + RESET}")
+    color = {"runpod": YELLOW, "dry_run": CYAN, "local": GREEN, "remote": YELLOW}.get(mode, "")
+    print(f"\n  {BOLD}Mode:{RESET}        {color}{mode}{RESET}")
+    if mode == "runpod":
+        print(f"  {BOLD}GPU Type:{RESET}    {cfg['runpod_gpu_type']}")
+        print(f"  {BOLD}API Key:{RESET}     {'Set' if cfg['runpod_api_key_set'] else RED + 'Not set' + RESET}")
+    elif mode == "remote":
+        rhost = cfg.get("remote_host", "")
+        print(f"  {BOLD}Remote GPU:{RESET}  {rhost or RED + 'Not set' + RESET}:{cfg.get('remote_port', 22)}")
+        print(f"  {BOLD}User:{RESET}        {cfg.get('remote_user', 'root')}")
+        print(f"  {BOLD}Skip Setup:{RESET}  {cfg.get('remote_skip_setup', False)}")
 
 
 def switch_mode():
     show_config()
-    modes = ["runpod", "dry_run", "local"]
+    modes = ["local", "runpod", "remote", "dry_run"]
+    descs = {
+        "local":   "Process on this machine's GPU (your partner's PC)",
+        "runpod":  "Process on RunPod cloud GPU (costs credits)",
+        "remote":  "SSH into a friend's GPU machine for processing",
+        "dry_run": "Save uploads only, no processing",
+    }
     print()
     for i, m in enumerate(modes, 1):
-        desc = {"runpod": "Process on RunPod GPU (costs credits)",
-                "dry_run": "Save uploads only, no processing",
-                "local": "Process on this machine"}.get(m, "")
-        print(f"  {BOLD}{i}{RESET}) {m:<10} {DIM}{desc}{RESET}")
+        print(f"  {BOLD}{i}{RESET}) {m:<10} {DIM}{descs[m]}{RESET}")
     print(f"  {BOLD}0{RESET}) Cancel")
     try:
-        choice = input(f"\n  Switch to [1-3]: ").strip()
-        if choice in ("1", "2", "3"):
-            new_mode = modes[int(choice) - 1]
-            api("POST", "/config", {"mode": new_mode})
+        choice = input(f"\n  Switch to [1-{len(modes)}]: ").strip()
+        idx = int(choice) - 1
+        if 0 <= idx < len(modes):
+            new_mode = modes[idx]
+            config_data = {"mode": new_mode}
+
+            if new_mode == "remote":
+                host = input(f"  Remote GPU host (IP or hostname): ").strip()
+                port = input(f"  SSH port [22]: ").strip() or "22"
+                user = input(f"  SSH user [root]: ").strip() or "root"
+                skip = input(f"  Skip setup (deps already installed)? [y/N]: ").strip().lower()
+                config_data["remote_host"] = host
+                config_data["remote_port"] = int(port)
+                config_data["remote_user"] = user
+                config_data["remote_skip_setup"] = skip in ("y", "yes")
+
+            api("POST", "/config", config_data)
             print(f"\n  {GREEN}Switched to: {new_mode}{RESET}")
     except (ValueError, EOFError):
         pass
@@ -178,8 +200,9 @@ def menu():
   {BOLD}3{RESET}) Watch job (live tail)
   {BOLD}4{RESET}) Retry failed job
   {BOLD}5{RESET}) Full logs
-  {BOLD}6{RESET}) Processing mode
-  {BOLD}7{RESET}) Server health
+  {BOLD}6{RESET}) Reprocess existing scan
+  {BOLD}7{RESET}) Processing mode
+  {BOLD}8{RESET}) Server health
   {BOLD}0{RESET}) Exit
 """)
         try:
@@ -243,10 +266,52 @@ def menu():
             pause()
 
         elif choice == "6":
-            switch_mode()
+            datasets = api("GET", "/datasets")
+            if datasets is None:
+                pause()
+                continue
+            if not datasets:
+                print(f"\n  {DIM}No datasets on disk. Upload a scan from the app first.{RESET}")
+            else:
+                print(f"\n  {BOLD}Existing scans on disk:{RESET}\n")
+                for i, ds in enumerate(datasets, 1):
+                    status_str = ""
+                    if ds["job_status"]:
+                        jcolor = {"completed": GREEN, "failed": RED, "processing": YELLOW, "queued": CYAN}.get(ds["job_status"], "")
+                        status_str = f"  {jcolor}[{ds['job_status'].upper()}]{RESET}"
+                    print(f"  {BOLD}{i}{RESET}) {ds['name']}  {DIM}{ds['size_mb']} MB{RESET}{status_str}")
+                print(f"  {BOLD}0{RESET}) Cancel")
+                try:
+                    pick = input(f"\n  Reprocess which scan? [1-{len(datasets)}]: ").strip()
+                    idx = int(pick) - 1
+                    if 0 <= idx < len(datasets):
+                        ds = datasets[idx]
+                        iters = input(f"  Iterations [30000]: ").strip() or "30000"
+                        # Use form-encoded POST
+                        import urllib.parse
+                        form_data = urllib.parse.urlencode({"dataset_name": ds["name"], "iterations": int(iters)}).encode()
+                        url = f"{SERVER}/reprocess"
+                        req = urllib.request.Request(url, data=form_data, method="POST")
+                        req.add_header("Content-Type", "application/x-www-form-urlencoded")
+                        try:
+                            with urllib.request.urlopen(req, timeout=10) as resp:
+                                r = json.loads(resp.read())
+                            print(f"\n  {GREEN}Queued {ds['name']} as job {r['job_id']} ({r['mode']} mode){RESET}")
+                            ans = input(f"\n  Watch live? [Y/n]: ").strip().lower()
+                            if ans != "n":
+                                do_watch(r["job_id"])
+                        except urllib.error.HTTPError as e:
+                            err = json.loads(e.read()) if e.fp else {}
+                            print(f"\n  {RED}ERROR: {err.get('detail', e.reason)}{RESET}")
+                except (ValueError, EOFError):
+                    pass
             pause()
 
         elif choice == "7":
+            switch_mode()
+            pause()
+
+        elif choice == "8":
             h = api("GET", "/health")
             if h:
                 print(f"\n  {GREEN}Server is running{RESET}")
