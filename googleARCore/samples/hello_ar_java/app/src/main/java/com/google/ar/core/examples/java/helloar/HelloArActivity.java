@@ -272,6 +272,8 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
         startActivity(intent);
       });
     }
+
+    new UpdateChecker(this).check();
   }
 
   /** Menu button to launch feature specific settings. */
