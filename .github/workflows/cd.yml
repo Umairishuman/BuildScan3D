@@ -80,7 +80,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: web-ui-build
+          name: buildscan-web
           path: web-ui-build.tar.gz
           if-no-files-found: error
           retention-days: 30
@@ -160,6 +160,20 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
 
+      - name: Sign with the shared key, then check the built APK
+        run: |
+          BT=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          APK=googleARCore/samples/hello_ar_java/app/build/outputs/apk/debug/app-debug.apk
+          "$BT/apksigner" sign --ks "$GITHUB_WORKSPACE/.github/android/debug.keystore" --ks-pass pass:android \
+            --key-pass pass:android --ks-key-alias androiddebugkey --out "$RUNNER_TEMP/signed.apk" "$APK"
+          mv "$RUNNER_TEMP/signed.apk" "$APK"
+          "$BT/apksigner" verify --print-certs "$APK" > "$RUNNER_TEMP/signer.txt"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest print "$APK" > "$RUNNER_TEMP/apk_manifest.xml"
+          cat "$RUNNER_TEMP/signer.txt"
+          echo "--- manifest inside the APK (first lines):"; head -c 2500 "$RUNNER_TEMP/apk_manifest.xml"; echo
+          { echo "### APK checks"; cat "$RUNNER_TEMP/signer.txt"; } >> "$GITHUB_STEP_SUMMARY"
+          python3 .github/android/check_apk.py apk --manifest "$RUNNER_TEMP/apk_manifest.xml" --signer "$RUNNER_TEMP/signer.txt" --apk "$APK"
+
       - name: Name the APK
         run: |
           mkdir -p dist
@@ -168,7 +182,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
+          name: buildscan-apk
           path: dist/*.apk
           if-no-files-found: error
           retention-days: 30
@@ -182,7 +196,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: app-debug-apk
+          pattern: buildscan-*
           path: release-files
 
       - uses: softprops/action-gh-release@v2
@@ -191,3 +205,41 @@ jobs:
           name: BuildScan 3D ${{ needs.build-android.outputs.version_tag }}
           files: release-files/*
           generate_release_notes: true
+
+  # Every push to master refreshes one pre-release called "latest" with the newest APK, so the app can be
+  # installed on a phone straight from the GitHub Releases page (no PC, no Android Studio).
+  publish-latest:
+    name: Update the "latest" APK release
+    if: ${{ github.ref == 'refs/heads/master' }}
+    needs: [build-web, build-android]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: buildscan-apk
+          path: dist
+
+      - name: Give the APK a fixed name (a stable download link)
+        run: cp dist/buildscan3d-*.apk dist/buildscan3d-latest.apk
+
+      - name: Move the "latest" tag to this commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f latest "$GITHUB_SHA"
+          git push -f origin latest
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build (master)
+          prerelease: true
+          files: dist/buildscan3d-latest.apk
+          body: |
+            Debug APK built automatically from master, commit ${{ github.sha }}.
+            Install it over the previous version. Every build is signed with the same key, so recordings and settings are kept.
