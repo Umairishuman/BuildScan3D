@@ -916,6 +916,25 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     updateQuality(frame, camera);
     // --- END POSE DUMP ---
 
+    // Update BackgroundRenderer state to match the depth settings.
+    try {
+      backgroundRenderer.setUseDepthVisualization(
+              render, depthSettings.depthColorVisualizationEnabled());
+      backgroundRenderer.setUseOcclusion(render, depthSettings.useDepthForOcclusion());
+    } catch (IOException e) {
+      Log.e(TAG, "Failed to read a required asset file", e);
+      messageSnackbarHelper.showError(this, "Failed to read a required asset file: " + e);
+      return;
+    }
+    // BackgroundRenderer.updateDisplayGeometry must be called every frame to update the coordinates
+    // used to draw the background camera image.
+    backgroundRenderer.updateDisplayGeometry(frame);
+
+    // Draw camera feed before the recording early-return so the screen stays live
+    if (frame.getTimestamp() != 0) {
+      backgroundRenderer.drawBackground(render);
+    }
+
     // During recording, skip demo rendering (planes, objects, lighting) to save GPU for capture
     if (isRecording) {
       camera.getProjectionMatrix(projectionMatrix, 0, Z_NEAR, Z_FAR);
@@ -936,20 +955,6 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       }
       return;
     }
-
-    // Update BackgroundRenderer state to match the depth settings.
-    try {
-      backgroundRenderer.setUseDepthVisualization(
-              render, depthSettings.depthColorVisualizationEnabled());
-      backgroundRenderer.setUseOcclusion(render, depthSettings.useDepthForOcclusion());
-    } catch (IOException e) {
-      Log.e(TAG, "Failed to read a required asset file", e);
-      messageSnackbarHelper.showError(this, "Failed to read a required asset file: " + e);
-      return;
-    }
-    // BackgroundRenderer.updateDisplayGeometry must be called every frame to update the coordinates
-    // used to draw the background camera image.
-    backgroundRenderer.updateDisplayGeometry(frame);
 
     if (camera.getTrackingState() == TrackingState.TRACKING
             && (depthSettings.useDepthForOcclusion()
@@ -988,14 +993,6 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       messageSnackbarHelper.hide(this);
     } else {
       messageSnackbarHelper.showMessage(this, message);
-    }
-
-    // -- Draw background
-
-    if (frame.getTimestamp() != 0) {
-      // Suppress rendering if the camera did not produce the first frame yet. This is to avoid
-      // drawing possible leftover data from previous sessions if the texture is reused.
-      backgroundRenderer.drawBackground(render);
     }
 
     // If not tracking, don't draw 3D objects.

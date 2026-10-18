@@ -20,8 +20,16 @@ if "%PROCESSING_MODE%"=="dry_run" (
 ) else (
     echo  Mode: Local   (no RUNPOD_API_KEY found)
 )
-echo  URL:  http://0.0.0.0:8000
-echo  Docs: http://localhost:8000/docs
+REM Get local WiFi IP for phone connection
+for /f "tokens=2 delims=:" %%I in ('ipconfig ^| findstr /C:"IPv4"') do (
+    set "LOCAL_IP=%%I"
+)
+set "LOCAL_IP=%LOCAL_IP: =%"
+echo  Local: http://localhost:8000
+echo  Docs:  http://localhost:8000/docs
+echo.
+echo  Phone: http://%LOCAL_IP%:8000
+echo         ^^^^ Set this as server URL in the app
 echo.
 
 python -m uvicorn server.main:app --host 0.0.0.0 --port 8000
