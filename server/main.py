@@ -98,7 +98,7 @@ async def upload_dataset(
         ]:
             dst = dataset_dir / name
             with open(dst, "wb") as f:
-                while chunk := await upload.read(1024 * 1024):
+                while chunk := await upload.read(8 * 1024 * 1024):
                     f.write(chunk)
             log.info("Saved %s (%d bytes)", dst.name, dst.stat().st_size)
 

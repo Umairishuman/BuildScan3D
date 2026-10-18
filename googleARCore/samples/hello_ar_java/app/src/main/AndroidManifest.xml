@@ -65,6 +65,12 @@
         android:exported="false"
         android:theme="@style/Theme.AppCompat.NoActionBar"
         android:screenOrientation="locked" />
+    <activity
+        android:name="com.google.ar.core.examples.java.helloar.ScanDetailActivity"
+        android:configChanges="orientation|screenSize"
+        android:exported="false"
+        android:theme="@style/Theme.AppCompat.NoActionBar"
+        android:screenOrientation="locked" />
     <!-- Indicates whether "Google Play Services for AR" (ARCore) is "required" or "optional". -->
     <meta-data android:name="com.google.ar.core" android:value="required" />
   </application>

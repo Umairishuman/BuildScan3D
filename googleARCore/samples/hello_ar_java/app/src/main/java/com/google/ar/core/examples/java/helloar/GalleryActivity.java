@@ -1,404 +1,433 @@
-/*
- * Copyright 2026 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.google.ar.core.examples.java.helloar;
 
-import android.media.MediaCodec;
-import android.media.MediaExtractor;
-import android.media.MediaFormat;
-import android.media.MediaMetadataRetriever;
-import android.media.MediaMuxer;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.ImageButton;
-import android.widget.MediaController;
-import android.widget.SeekBar;
+import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.VideoView;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class GalleryActivity extends AppCompatActivity {
 
   private static final String TAG = "GalleryActivity";
+  private static final String PREF_UPLOADED = "uploaded_scans";
 
-  private VideoView videoView;
-  private TextView tvDatasetInfo;
-  private TextView tvTrimRange;
-  private TextView tvTrimStatus;
-  private SeekBar sbTrimStart;
-  private SeekBar sbTrimEnd;
-  private Button btnTrimSave;
+  private ListView listView;
+  private TextView tvEmpty;
+  private TextView tvScanCount;
+  private List<File> scanDirs = new ArrayList<>();
+  private Set<String> uploadedScans;
+  private SharedPreferences prefs;
+  private ScanAdapter adapter;
+  private final Handler handler = new Handler(Looper.getMainLooper());
 
-  private File datasetFile;
-  private File posesFile;
-  private File pointsFile;
+  // Track upload state per scan
+  private final java.util.Map<String, Integer> uploadProgress = new java.util.concurrent.ConcurrentHashMap<>();
+  private final java.util.Map<String, String> uploadStatus = new java.util.concurrent.ConcurrentHashMap<>();
 
-  private int videoDurationMs = 0;
-  private int trimStartMs = 0;
-  private int trimEndMs = 0;
+  private final OkHttpClient client = new OkHttpClient.Builder()
+      .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+      .writeTimeout(600, java.util.concurrent.TimeUnit.SECONDS)
+      .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+      .build();
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_gallery);
 
+    prefs = PreferenceManager.getDefaultSharedPreferences(this);
+    uploadedScans = new HashSet<>(prefs.getStringSet(PREF_UPLOADED, new HashSet<>()));
+
     ImageButton btnBack = findViewById(R.id.btn_back);
     btnBack.setOnClickListener(v -> finish());
 
-    videoView = findViewById(R.id.video_preview);
-    tvDatasetInfo = findViewById(R.id.tv_dataset_info);
-    tvTrimRange = findViewById(R.id.tv_trim_range);
-    tvTrimStatus = findViewById(R.id.tv_trim_status);
-    sbTrimStart = findViewById(R.id.sb_trim_start);
-    sbTrimEnd = findViewById(R.id.sb_trim_end);
-    btnTrimSave = findViewById(R.id.btn_trim_save);
+    listView = findViewById(R.id.lv_scans);
+    tvEmpty = findViewById(R.id.tv_empty);
+    tvScanCount = findViewById(R.id.tv_scan_count);
 
+    adapter = new ScanAdapter();
+    listView.setAdapter(adapter);
+
+    loadScans();
+  }
+
+  @Override
+  protected void onResume() {
+    super.onResume();
+    loadScans();
+  }
+
+  private void loadScans() {
+    scanDirs.clear();
     File rootDir = getExternalFilesDir(null);
-    File targetDir = rootDir;
     if (rootDir != null) {
-      File[] scanDirs = rootDir.listFiles((dir, name) -> name.startsWith("Scan_") && new File(dir, name).isDirectory());
-      if (scanDirs != null && scanDirs.length > 0) {
-        java.util.Arrays.sort(scanDirs, (f1, f2) -> Long.compare(f2.lastModified(), f1.lastModified()));
-        targetDir = scanDirs[0];
+      File[] dirs = rootDir.listFiles((dir, name) ->
+          name.startsWith("Scan_") && new File(dir, name).isDirectory());
+      if (dirs != null) {
+        Arrays.sort(dirs, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+        Collections.addAll(scanDirs, dirs);
       }
     }
-    datasetFile = new File(targetDir, "dataset.mp4");
-    posesFile = new File(targetDir, "poses.csv");
-    pointsFile = new File(targetDir, "points.csv");
 
-    loadDataset();
-
-    sbTrimStart.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-      @Override
-      public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-        if (fromUser) {
-          if (progress >= trimEndMs - 500) {
-            trimStartMs = Math.max(0, trimEndMs - 500);
-            sbTrimStart.setProgress(trimStartMs);
-          } else {
-            trimStartMs = progress;
-          }
-          videoView.seekTo(trimStartMs);
-          updateTrimRangeText();
-        }
-      }
-      @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-      @Override public void onStopTrackingTouch(SeekBar seekBar) {}
-    });
-
-    sbTrimEnd.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-      @Override
-      public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-        if (fromUser) {
-          if (progress <= trimStartMs + 500) {
-            trimEndMs = Math.min(videoDurationMs, trimStartMs + 500);
-            sbTrimEnd.setProgress(trimEndMs);
-          } else {
-            trimEndMs = progress;
-          }
-          videoView.seekTo(trimEndMs);
-          updateTrimRangeText();
-        }
-      }
-      @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-      @Override public void onStopTrackingTouch(SeekBar seekBar) {}
-    });
-
-    btnTrimSave.setOnClickListener(v -> performTrimming());
+    tvScanCount.setText(scanDirs.size() + " scans");
+    tvEmpty.setVisibility(scanDirs.isEmpty() ? View.VISIBLE : View.GONE);
+    listView.setVisibility(scanDirs.isEmpty() ? View.GONE : View.VISIBLE);
+    adapter.notifyDataSetChanged();
   }
 
-  private void loadDataset() {
-    if (!datasetFile.exists() || datasetFile.length() == 0) {
-      tvDatasetInfo.setText("No dataset found. Please record a dataset first.");
-      btnTrimSave.setEnabled(false);
-      sbTrimStart.setEnabled(false);
-      sbTrimEnd.setEnabled(false);
+  private String getScanInfo(File dir) {
+    File video = new File(dir, "dataset.mp4");
+    File poses = new File(dir, "poses.csv");
+    StringBuilder sb = new StringBuilder();
+
+    if (video.exists()) {
+      double mb = video.length() / (1024.0 * 1024.0);
+      sb.append(String.format(Locale.US, "%.1f MB", mb));
+    } else {
+      sb.append("No video");
+    }
+
+    if (poses.exists()) {
+      int lines = countLines(poses);
+      sb.append(String.format(Locale.US, "  |  %d poses", lines));
+    }
+
+    String name = dir.getName();
+    if (name.startsWith("Scan_") && name.length() >= 20) {
+      try {
+        String ts = name.substring(5);
+        Date date = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).parse(ts);
+        sb.append("  |  ").append(new SimpleDateFormat("MMM dd, HH:mm", Locale.US).format(date));
+      } catch (Exception ignored) {}
+    }
+    return sb.toString();
+  }
+
+  private int countLines(File f) {
+    int count = 0;
+    try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.FileReader(f))) {
+      while (r.readLine() != null) count++;
+    } catch (IOException ignored) {}
+    return count;
+  }
+
+  private boolean isUploaded(File dir) {
+    return uploadedScans.contains(dir.getName());
+  }
+
+  private void markUploaded(File dir) {
+    uploadedScans.add(dir.getName());
+    prefs.edit().putStringSet(PREF_UPLOADED, uploadedScans).apply();
+  }
+
+  private void deleteScan(File dir, int position) {
+    new AlertDialog.Builder(this)
+        .setTitle("Delete Scan")
+        .setMessage("Delete " + dir.getName() + "? This cannot be undone.")
+        .setPositiveButton("Delete", (d, w) -> {
+          deleteRecursive(dir);
+          uploadedScans.remove(dir.getName());
+          prefs.edit().putStringSet(PREF_UPLOADED, uploadedScans).apply();
+          loadScans();
+          Toast.makeText(this, "Scan deleted", Toast.LENGTH_SHORT).show();
+        })
+        .setNegativeButton("Cancel", null)
+        .show();
+  }
+
+  private void deleteRecursive(File f) {
+    if (f.isDirectory()) {
+      File[] children = f.listFiles();
+      if (children != null) {
+        for (File child : children) deleteRecursive(child);
+      }
+    }
+    f.delete();
+  }
+
+  private void startUpload(File dir) {
+    String key = dir.getName();
+    if ("uploading".equals(uploadStatus.get(key))) {
+      Toast.makeText(this, "Already uploading", Toast.LENGTH_SHORT).show();
       return;
     }
 
-    // Set up VideoView
-    videoView.setVideoPath(datasetFile.getAbsolutePath());
-    MediaController mediaController = new MediaController(this);
-    mediaController.setAnchorView(videoView);
-    videoView.setMediaController(mediaController);
+    String serverUrl = prefs.getString(ProcessingActivity.PREF_SERVER_URL,
+        ProcessingActivity.DEFAULT_SERVER_URL);
 
-    // Get Duration
-    MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-    try {
-      retriever.setDataSource(datasetFile.getAbsolutePath());
-      String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
-      if (durationStr != null) {
-        videoDurationMs = Integer.parseInt(durationStr);
-      }
-      retriever.release();
-    } catch (Exception e) {
-      Log.e(TAG, "Error getting video duration", e);
-    }
-
-    int poseCount = countFileLines(posesFile);
-    int pointCount = countFileLines(pointsFile);
-    double fileSizeMb = (double) datasetFile.length() / (1024 * 1024);
-
-    String info = String.format(Locale.US,
-        "Video: %.2f MB  |  Duration: %s  |  Poses: %d  |  Points: %d",
-        fileSizeMb, formatMs(videoDurationMs), poseCount, pointCount);
-    tvDatasetInfo.setText(info);
-
-    trimStartMs = 0;
-    trimEndMs = videoDurationMs;
-    sbTrimStart.setMax(videoDurationMs);
-    sbTrimStart.setProgress(0);
-    sbTrimEnd.setMax(videoDurationMs);
-    sbTrimEnd.setProgress(videoDurationMs);
-
-    updateTrimRangeText();
-    btnTrimSave.setEnabled(true);
-    sbTrimStart.setEnabled(true);
-    sbTrimEnd.setEnabled(true);
-  }
-
-  private void updateTrimRangeText() {
-    int duration = Math.max(0, trimEndMs - trimStartMs);
-    String text = String.format(Locale.US,
-        "Start: %s  |  End: %s  |  Duration: %s",
-        formatMs(trimStartMs), formatMs(trimEndMs), formatMs(duration));
-    tvTrimRange.setText(text);
-  }
-
-  private String formatMs(int ms) {
-    int totalSec = ms / 1000;
-    int minutes = totalSec / 60;
-    int seconds = totalSec % 60;
-    return String.format(Locale.US, "%02d:%02d", minutes, seconds);
-  }
-
-  private int countFileLines(File file) {
-    if (!file.exists()) return 0;
-    int lines = 0;
-    try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-      while (reader.readLine() != null) {
-        lines++;
-      }
-    } catch (IOException e) {
-      Log.e(TAG, "Error reading lines from " + file.getName(), e);
-    }
-    return lines;
-  }
-
-  private void performTrimming() {
-    if (trimStartMs == 0 && trimEndMs == videoDurationMs) {
-      Toast.makeText(this, "Select a valid sub-range to trim.", Toast.LENGTH_SHORT).show();
-      return;
-    }
-
-    tvTrimStatus.setVisibility(View.VISIBLE);
-    tvTrimStatus.setText("Trimming video & sensor data...");
-    btnTrimSave.setEnabled(false);
-
-    long startUs = trimStartMs * 1000L;
-    long endUs = trimEndMs * 1000L;
+    uploadStatus.put(key, "uploading");
+    uploadProgress.put(key, 0);
+    adapter.notifyDataSetChanged();
 
     new Thread(() -> {
-      boolean success = true;
-      String errorMsg = null;
-
       try {
-        // 1. Trim Video
-        File trimmedVideo = new File(getExternalFilesDir(null), "dataset_trimmed.mp4");
-        if (trimmedVideo.exists()) trimmedVideo.delete();
-
-        trimVideo(datasetFile, trimmedVideo, startUs, endUs);
-
-        // Replace original video
-        if (datasetFile.delete()) {
-          trimmedVideo.renameTo(datasetFile);
+        File depthDir = new File(dir, "depth");
+        File depthZip = null;
+        if (depthDir.exists() && depthDir.isDirectory()) {
+          updateUploadUI(key, 5, "Zipping depth data...");
+          depthZip = new File(dir, "depth.zip");
+          zipDirectory(depthDir, depthZip);
         }
 
-        // 2. Trim CSV Sensor Data
-        trimCsvFiles(startUs, endUs);
+        updateUploadUI(key, 10, "Uploading...");
+
+        MultipartBody.Builder builder = new MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("iterations", "30000");
+
+        addFilePart(builder, "video", new File(dir, "dataset.mp4"), "video/mp4");
+        addFilePart(builder, "poses", new File(dir, "poses.csv"), "text/csv");
+        addFilePart(builder, "tracking", new File(dir, "tracking.csv"), "text/csv");
+        addFilePart(builder, "points", new File(dir, "points.csv"), "text/csv");
+        addFilePart(builder, "quality", new File(dir, "quality.csv"), "text/csv");
+        addFilePart(builder, "meta", new File(dir, "meta.json"), "application/json");
+
+        if (depthZip != null && depthZip.exists()) {
+          addFilePart(builder, "depth_zip", depthZip, "application/zip");
+        }
+
+        RequestBody requestBody = builder.build();
+        long totalBytes = requestBody.contentLength();
+
+        // Wrap in a progress-tracking body
+        RequestBody trackedBody = new ProgressRequestBody(requestBody, (bytesWritten, contentLength) -> {
+          int pct = (int) (10 + (bytesWritten * 85.0 / contentLength));
+          updateUploadUI(key, pct, String.format(Locale.US,
+              "Uploading... %.1f / %.1f MB",
+              bytesWritten / (1024.0 * 1024.0),
+              contentLength / (1024.0 * 1024.0)));
+        });
+
+        Request request = new Request.Builder()
+            .url(serverUrl + "/upload")
+            .post(trackedBody)
+            .build();
+
+        try (Response response = client.newCall(request).execute()) {
+          if (!response.isSuccessful()) {
+            String body = response.body() != null ? response.body().string() : "Unknown error";
+            throw new IOException("Server error: " + response.code() + " " + body);
+          }
+        }
+
+        if (depthZip != null && depthZip.exists()) {
+          depthZip.delete();
+        }
+
+        uploadStatus.put(key, "done");
+        uploadProgress.put(key, 100);
+        handler.post(() -> {
+          markUploaded(dir);
+          adapter.notifyDataSetChanged();
+          Toast.makeText(this, "Upload complete!", Toast.LENGTH_SHORT).show();
+        });
 
       } catch (Exception e) {
-        Log.e(TAG, "Trimming failed", e);
-        success = false;
-        errorMsg = e.getMessage();
+        Log.e(TAG, "Upload failed", e);
+        uploadStatus.put(key, "failed");
+        handler.post(() -> {
+          adapter.notifyDataSetChanged();
+          Toast.makeText(this, "Upload failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        });
       }
-
-      final boolean isSuccess = success;
-      final String finalErrorMsg = errorMsg;
-
-      runOnUiThread(() -> {
-        tvTrimStatus.setVisibility(View.GONE);
-        if (isSuccess) {
-          Toast.makeText(GalleryActivity.this, "Dataset & sensor data trimmed successfully!", Toast.LENGTH_LONG).show();
-          loadDataset();
-        } else {
-          Toast.makeText(GalleryActivity.this, "Trimming failed: " + finalErrorMsg, Toast.LENGTH_LONG).show();
-          btnTrimSave.setEnabled(true);
-        }
-      });
     }).start();
   }
 
-  @SuppressWarnings("WrongConstant")
-  private void trimVideo(File input, File output, long startUs, long endUs) throws IOException {
-    MediaExtractor extractor = new MediaExtractor();
-    extractor.setDataSource(input.getAbsolutePath());
-
-    int trackIndex = -1;
-    MediaFormat format = null;
-    for (int i = 0; i < extractor.getTrackCount(); i++) {
-      MediaFormat f = extractor.getTrackFormat(i);
-      String mime = f.getString(MediaFormat.KEY_MIME);
-      if (mime != null && mime.startsWith("video/")) {
-        trackIndex = i;
-        format = f;
-        break;
-      }
-    }
-
-    if (trackIndex < 0 || format == null) {
-      extractor.release();
-      throw new IOException("No video track found in " + input.getName());
-    }
-
-    extractor.selectTrack(trackIndex);
-    extractor.seekTo(startUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
-
-    MediaMuxer muxer = new MediaMuxer(output.getAbsolutePath(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
-    int muxerTrackIndex = muxer.addTrack(format);
-    muxer.start();
-
-    int maxBufferSize = format.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)
-        ? format.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE)
-        : 1024 * 1024;
-    ByteBuffer buffer = ByteBuffer.allocateDirect(maxBufferSize);
-    MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
-
-    long ptsOffset = -1;
-
-    while (true) {
-      int sampleSize = extractor.readSampleData(buffer, 0);
-      if (sampleSize < 0) {
-        break;
-      }
-      long sampleTimeUs = extractor.getSampleTime();
-      if (sampleTimeUs > endUs) {
-        break;
-      }
-      if (sampleTimeUs >= startUs) {
-        if (ptsOffset < 0) {
-          ptsOffset = sampleTimeUs;
-        }
-        bufferInfo.offset = 0;
-        bufferInfo.size = sampleSize;
-        bufferInfo.presentationTimeUs = sampleTimeUs - ptsOffset;
-        bufferInfo.flags = extractor.getSampleFlags();
-        muxer.writeSampleData(muxerTrackIndex, buffer, bufferInfo);
-      }
-      extractor.advance();
-    }
-
-    muxer.stop();
-    muxer.release();
-    extractor.release();
+  private void updateUploadUI(String key, int pct, String text) {
+    uploadProgress.put(key, pct);
+    uploadStatus.put(key, text);
+    handler.post(() -> adapter.notifyDataSetChanged());
   }
 
-  private void trimCsvFiles(long startUs, long endUs) {
-    if (!posesFile.exists()) return;
-
-    // Find first timestamp in poses.csv
-    long firstPoseTs = -1;
-    try (BufferedReader reader = new BufferedReader(new FileReader(posesFile))) {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        line = line.trim();
-        if (line.isEmpty()) continue;
-        String[] parts = line.split(",");
-        if (parts.length > 0) {
-          try {
-            firstPoseTs = Long.parseLong(parts[0]);
-            break;
-          } catch (NumberFormatException e) {
-            // Ignore header or malformed line
-          }
-        }
-      }
-    } catch (IOException e) {
-      Log.e(TAG, "Error reading first pose timestamp", e);
-    }
-
-    if (firstPoseTs < 0) return;
-
-    // Target timestamp range in nanoseconds (ARCore timestamps are in nanoseconds)
-    long targetStartNs = firstPoseTs + (startUs * 1000L);
-    long targetEndNs = firstPoseTs + (endUs * 1000L);
-
-    // 1. Trim poses.csv
-    filterCsvFileByTimestamp(posesFile, targetStartNs, targetEndNs);
-
-    // 2. Trim points.csv
-    if (pointsFile.exists()) {
-      filterCsvFileByTimestamp(pointsFile, targetStartNs, targetEndNs);
+  private void addFilePart(MultipartBody.Builder builder, String name, File file, String mimeType) {
+    if (file.exists()) {
+      builder.addFormDataPart(name, file.getName(),
+          RequestBody.create(file, MediaType.parse(mimeType)));
     }
   }
 
-  private void filterCsvFileByTimestamp(File csvFile, long startNs, long endNs) {
-    File tempFile = new File(csvFile.getParent(), csvFile.getName() + ".tmp");
-    try (BufferedReader reader = new BufferedReader(new FileReader(csvFile));
-         BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
-
-      String line;
-      while ((line = reader.readLine()) != null) {
-        String trimmed = line.trim();
-        if (trimmed.isEmpty()) continue;
-        String[] parts = trimmed.split(",");
-        if (parts.length > 0) {
-          try {
-            long ts = Long.parseLong(parts[0]);
-            if (ts >= startNs && ts <= endNs) {
-              writer.write(line);
-              writer.newLine();
-            }
-          } catch (NumberFormatException e) {
-            // Write non-numeric lines (like CSV headers) unconditionally
-            writer.write(line);
-            writer.newLine();
+  private void zipDirectory(File dir, File zipFile) throws IOException {
+    try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
+      File[] files = dir.listFiles();
+      if (files == null) return;
+      byte[] buffer = new byte[65536];
+      for (File f : files) {
+        if (!f.isFile()) continue;
+        zos.putNextEntry(new ZipEntry("depth/" + f.getName()));
+        try (FileInputStream fis = new FileInputStream(f)) {
+          int len;
+          while ((len = fis.read(buffer)) > 0) {
+            zos.write(buffer, 0, len);
           }
         }
+        zos.closeEntry();
       }
-      writer.flush();
-    } catch (IOException e) {
-      Log.e(TAG, "Error filtering CSV file: " + csvFile.getName(), e);
+    }
+  }
+
+  // Adapter
+  private class ScanAdapter extends BaseAdapter {
+    @Override public int getCount() { return scanDirs.size(); }
+    @Override public File getItem(int i) { return scanDirs.get(i); }
+    @Override public long getItemId(int i) { return i; }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+      if (convertView == null) {
+        convertView = getLayoutInflater().inflate(R.layout.item_scan, parent, false);
+      }
+
+      File dir = getItem(position);
+      String key = dir.getName();
+
+      TextView tvName = convertView.findViewById(R.id.tv_scan_name);
+      TextView tvInfo = convertView.findViewById(R.id.tv_scan_info);
+      TextView tvBadge = convertView.findViewById(R.id.tv_status_badge);
+      ProgressBar pbUpload = convertView.findViewById(R.id.pb_upload);
+      TextView tvUploadProg = convertView.findViewById(R.id.tv_upload_progress);
+      Button btnPlay = convertView.findViewById(R.id.btn_play);
+      Button btnUpload = convertView.findViewById(R.id.btn_upload);
+      Button btnTrim = convertView.findViewById(R.id.btn_trim);
+      Button btnDelete = convertView.findViewById(R.id.btn_delete);
+
+      // Format name
+      String displayName = key;
+      if (key.startsWith("Scan_") && key.length() >= 20) {
+        try {
+          Date d = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).parse(key.substring(5));
+          displayName = new SimpleDateFormat("MMM dd, yyyy  HH:mm", Locale.US).format(d);
+        } catch (Exception ignored) {}
+      }
+      tvName.setText(displayName);
+      tvInfo.setText(getScanInfo(dir));
+
+      // Status badge
+      boolean uploaded = isUploaded(dir);
+      String status = uploadStatus.get(key);
+      if ("uploading".equals(status) || (status != null && status.startsWith("Uploading") || (status != null && status.startsWith("Zipping")))) {
+        tvBadge.setText("UPLOADING");
+        tvBadge.setBackgroundColor(0xFF2196F3);
+        pbUpload.setVisibility(View.VISIBLE);
+        tvUploadProg.setVisibility(View.VISIBLE);
+        Integer pct = uploadProgress.get(key);
+        pbUpload.setProgress(pct != null ? pct : 0);
+        tvUploadProg.setText(status);
+        btnUpload.setEnabled(false);
+        btnUpload.setText("...");
+      } else if ("failed".equals(status)) {
+        tvBadge.setText("FAILED");
+        tvBadge.setBackgroundColor(0xFFFF3B30);
+        pbUpload.setVisibility(View.GONE);
+        tvUploadProg.setVisibility(View.GONE);
+        btnUpload.setEnabled(true);
+        btnUpload.setText("Retry");
+      } else if (uploaded) {
+        tvBadge.setText("UPLOADED");
+        tvBadge.setBackgroundColor(0xFF00C853);
+        pbUpload.setVisibility(View.GONE);
+        tvUploadProg.setVisibility(View.GONE);
+        btnUpload.setEnabled(true);
+        btnUpload.setText("Re-upload");
+      } else {
+        tvBadge.setText("LOCAL");
+        tvBadge.setBackgroundColor(0xFF78909C);
+        pbUpload.setVisibility(View.GONE);
+        tvUploadProg.setVisibility(View.GONE);
+        btnUpload.setEnabled(true);
+        btnUpload.setText("Upload");
+      }
+
+      btnPlay.setOnClickListener(v -> {
+        Intent intent = new Intent(GalleryActivity.this, ScanDetailActivity.class);
+        intent.putExtra("scan_path", dir.getAbsolutePath());
+        startActivity(intent);
+      });
+
+      btnUpload.setOnClickListener(v -> startUpload(dir));
+
+      btnTrim.setOnClickListener(v -> {
+        Intent intent = new Intent(GalleryActivity.this, ScanDetailActivity.class);
+        intent.putExtra("scan_path", dir.getAbsolutePath());
+        intent.putExtra("open_trim", true);
+        startActivity(intent);
+      });
+
+      btnDelete.setOnClickListener(v -> deleteScan(dir, position));
+
+      return convertView;
+    }
+  }
+
+  // Progress-tracking RequestBody wrapper
+  static class ProgressRequestBody extends RequestBody {
+    private final RequestBody delegate;
+    private final ProgressListener listener;
+
+    interface ProgressListener {
+      void onProgress(long bytesWritten, long contentLength);
     }
 
-    if (tempFile.exists()) {
-      if (csvFile.delete()) {
-        tempFile.renameTo(csvFile);
-      }
+    ProgressRequestBody(RequestBody delegate, ProgressListener listener) {
+      this.delegate = delegate;
+      this.listener = listener;
+    }
+
+    @Override public MediaType contentType() { return delegate.contentType(); }
+    @Override public long contentLength() throws IOException { return delegate.contentLength(); }
+
+    @Override
+    public void writeTo(okio.BufferedSink sink) throws IOException {
+      long total = contentLength();
+      okio.ForwardingSink countingSink = new okio.ForwardingSink(sink) {
+        long written = 0;
+        long lastNotify = 0;
+        @Override
+        public void write(okio.Buffer source, long byteCount) throws IOException {
+          super.write(source, byteCount);
+          written += byteCount;
+          if (written - lastNotify > 65536) {
+            listener.onProgress(written, total);
+            lastNotify = written;
+          }
+        }
+      };
+      okio.BufferedSink bufferedSink = okio.Okio.buffer(countingSink);
+      delegate.writeTo(bufferedSink);
+      bufferedSink.flush();
     }
   }
 }
