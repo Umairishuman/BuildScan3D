@@ -202,6 +202,7 @@ jobs:
         with:
           pattern: buildscan-*
           path: release-files
+          merge-multiple: true
 
       - uses: softprops/action-gh-release@v2
         with:
@@ -214,8 +215,8 @@ jobs:
   # installed on a phone straight from the GitHub Releases page (no PC, no Android Studio).
   publish-latest:
     name: Update the "latest" APK release
-    if: ${{ github.ref == 'refs/heads/master' }}
-    needs: [build-web, build-android]
+    if: ${{ always() && github.ref == 'refs/heads/master' && needs.build-android.result == 'success' }}
+    needs: [build-android]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
