@@ -13,7 +13,9 @@ if exist .env (
 echo.
 echo  BuildScan 3D Server
 echo  ====================
-if defined RUNPOD_API_KEY (
+if "%PROCESSING_MODE%"=="dry_run" (
+    echo  Mode: Dry Run  (uploads saved, no processing)
+) else if defined RUNPOD_API_KEY (
     echo  Mode: RunPod  (API key loaded)
 ) else (
     echo  Mode: Local   (no RUNPOD_API_KEY found)

@@ -38,7 +38,7 @@ jobs: dict[str, Job] = {}
 
 # Processing mode: "local" or "runpod"
 processing_config = {
-    "mode": "runpod" if os.environ.get("RUNPOD_API_KEY") else "local",
+    "mode": os.environ.get("PROCESSING_MODE", "dry_run"),
     "runpod_api_key": os.environ.get("RUNPOD_API_KEY", ""),
     "runpod_gpu_type": os.environ.get("RUNPOD_GPU_TYPE", "NVIDIA RTX 3090"),
 }
@@ -61,7 +61,7 @@ async def get_config():
 
 @app.post("/config")
 async def update_config(cfg: ConfigUpdate):
-    if cfg.mode and cfg.mode in ("local", "runpod"):
+    if cfg.mode and cfg.mode in ("local", "runpod", "dry_run"):
         processing_config["mode"] = cfg.mode
     if cfg.runpod_api_key is not None:
         processing_config["runpod_api_key"] = cfg.runpod_api_key
@@ -119,7 +119,11 @@ async def upload_dataset(
     jobs[job_id] = job
 
     mode = processing_config["mode"]
-    if mode == "runpod":
+    if mode == "dry_run":
+        job.status = JobStatus.QUEUED
+        job.current_step_label = "Upload saved — processing disabled (dry_run mode)"
+        log.info("Job %s saved in dry_run mode (no processing)", job_id)
+    elif mode == "runpod":
         api_key = processing_config["runpod_api_key"]
         if not api_key:
             raise HTTPException(status_code=400, detail="RunPod API key not set. POST /config or set RUNPOD_API_KEY env var.")
@@ -132,7 +136,7 @@ async def upload_dataset(
 
     return {
         "job_id": job_id,
-        "status": "processing",
+        "status": "queued" if mode == "dry_run" else "processing",
         "mode": mode,
         "poll": f"/status/{job_id}",
     }
