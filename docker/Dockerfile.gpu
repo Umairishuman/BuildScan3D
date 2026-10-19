@@ -1,0 +1,25 @@
+FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
+
+# Install COLMAP
+RUN apt-get update && \
+    apt-get install -y colmap && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies (nerfstudio compiles CUDA kernels — slow but cached in image)
+RUN pip install --no-cache-dir --ignore-installed blinker && \
+    pip install --no-cache-dir \
+    nerfstudio==1.1.5 \
+    open3d==0.19.0 \
+    pyquaternion \
+    scipy \
+    opencv-python-headless \
+    plyfile
+
+# Verify installations
+RUN colmap -h > /dev/null 2>&1 && echo "COLMAP ready" && \
+    python -c "import cv2, scipy, plyfile; print('Python deps ready')"
+
+WORKDIR /workspace
+
+# Start SSH daemon (RunPod convention)
+CMD ["/start.sh"]
