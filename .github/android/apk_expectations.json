@@ -1,0 +1,14 @@
+{
+  "package": "com.google.ar.core.examples.java.helloar",
+  "min_sdk_at_least": 24,
+  "launchable_activity": "com.google.ar.core.examples.java.helloar.HelloArActivity",
+  "required_permissions": ["android.permission.CAMERA", "android.permission.INTERNET"],
+  "required_activities": [
+    "com.google.ar.core.examples.java.helloar.HelloArActivity",
+    "com.google.ar.core.examples.java.helloar.ProcessingActivity"
+  ],
+  "required_features": ["android.hardware.camera", "android.hardware.camera.ar"],
+  "signing_sha256": "27993d158e74b6f073b65dccb21b0bf4eab95a05e144de52772adecf36f14bed",
+  "min_apk_mb": 1,
+  "max_apk_mb": 100
+}

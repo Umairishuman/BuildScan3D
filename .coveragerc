@@ -1,0 +1,6 @@
+[run]
+source = server, src
+omit = server/test_upload.py
+
+[report]
+show_missing = False

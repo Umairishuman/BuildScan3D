@@ -57,7 +57,7 @@ class RunPodClient:
         self,
         name: str = "buildscan-3dgs",
         gpu_type: str = "NVIDIA RTX 4090",
-        image: str = "runpod/pytorch:2.1.0-py3.10-cuda12.1.0-devel-ubuntu22.04",
+        image: str = "runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04",
         disk_gb: int = 50,
         volume_gb: int = 0,
         cloud_type: str = "SECURE",
@@ -239,6 +239,21 @@ PIPELINE_COMMANDS = [
 ]
 
 
+MAX_POD_LIFETIME_SEC = int(os.environ.get("MAX_POD_LIFETIME", 1800))  # 30 min default
+
+
+def _pod_watchdog(client: RunPodClient, pod_id: str, job, max_sec: int):
+    """Kill the pod if it runs longer than max_sec. Runs as a daemon thread."""
+    time.sleep(max_sec)
+    if job.status.value in ("processing", "uploading", "queued"):
+        log.error("WATCHDOG: pod %s exceeded %ds lifetime — terminating", pod_id, max_sec)
+        job._append_log(f"WATCHDOG: max pod lifetime ({max_sec}s) exceeded — terminating pod")
+        try:
+            client.terminate_pod(pod_id)
+        except Exception as e:
+            log.error("WATCHDOG: failed to terminate pod %s: %s", pod_id, e)
+
+
 def run_pipeline_on_runpod(job, api_key: str, gpu_type: str = "NVIDIA RTX 3090",
                             iterations: int = 30000):
     """
@@ -263,6 +278,15 @@ def run_pipeline_on_runpod(job, api_key: str, gpu_type: str = "NVIDIA RTX 3090",
 
         pod_info = client.create_pod(gpu_type=gpu_type)
         job._append_log(f"Pod created: {pod_info.pod_id}")
+
+        # Safety watchdog — terminates pod if total time exceeds limit
+        watchdog = threading.Thread(
+            target=_pod_watchdog,
+            args=(client, pod_info.pod_id, job, MAX_POD_LIFETIME_SEC),
+            daemon=True,
+        )
+        watchdog.start()
+        job._append_log(f"Watchdog armed: pod will be killed after {MAX_POD_LIFETIME_SEC}s")
 
         # Step 2: Wait for SSH
         job.current_step_label = "Waiting for pod to start..."

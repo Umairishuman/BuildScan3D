@@ -1,4 +1,4 @@
-/*
+/* BuildScan 3D — Android App
  * Copyright 2017 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,8 +25,8 @@ android {
         // AR Required apps must declare minSdkVersion >= 24.
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode 1
-        versionName '1.0'
+        versionCode 5
+        versionName '0.3.2'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

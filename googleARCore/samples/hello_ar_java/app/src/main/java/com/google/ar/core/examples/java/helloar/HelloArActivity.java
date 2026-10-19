@@ -272,6 +272,8 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
         startActivity(intent);
       });
     }
+
+    new UpdateChecker(this).check();
   }
 
   /** Menu button to launch feature specific settings. */
@@ -296,24 +298,144 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
     String current = prefs.getString(ProcessingActivity.PREF_SERVER_URL, ProcessingActivity.DEFAULT_SERVER_URL);
 
+    // Build dialog with a scanning list + manual entry
+    android.widget.LinearLayout layout = new android.widget.LinearLayout(this);
+    layout.setOrientation(android.widget.LinearLayout.VERTICAL);
+    layout.setPadding(48, 24, 48, 0);
+
+    android.widget.TextView tvStatus = new android.widget.TextView(this);
+    tvStatus.setText("Scanning network for servers...");
+    tvStatus.setTextSize(13);
+    tvStatus.setPadding(0, 0, 0, 16);
+    layout.addView(tvStatus);
+
+    android.widget.LinearLayout listContainer = new android.widget.LinearLayout(this);
+    listContainer.setOrientation(android.widget.LinearLayout.VERTICAL);
+    layout.addView(listContainer);
+
+    android.widget.TextView tvManual = new android.widget.TextView(this);
+    tvManual.setText("Or enter manually:");
+    tvManual.setTextSize(13);
+    tvManual.setPadding(0, 24, 0, 8);
+    layout.addView(tvManual);
+
     android.widget.EditText input = new android.widget.EditText(this);
     input.setText(current);
     input.setSelectAllOnFocus(true);
     input.setSingleLine();
+    input.setTextSize(14);
+    layout.addView(input);
 
-    new AlertDialog.Builder(this)
+    AlertDialog dialog = new AlertDialog.Builder(this)
         .setTitle("Server URL")
-        .setMessage("Enter the processing server address (e.g. http://192.168.1.100:8000)")
-        .setView(input)
-        .setPositiveButton("Save", (dialog, which) -> {
+        .setView(layout)
+        .setPositiveButton("Save", (d, w) -> {
           String url = input.getText().toString().trim();
           if (!url.isEmpty()) {
             prefs.edit().putString(ProcessingActivity.PREF_SERVER_URL, url).apply();
-            Toast.makeText(this, "Server URL saved", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Server: " + url, Toast.LENGTH_SHORT).show();
           }
         })
         .setNegativeButton("Cancel", null)
-        .show();
+        .create();
+    dialog.show();
+
+    // Scan common subnets for the server in background
+    new Thread(() -> {
+      List<String> found = scanForServers();
+      runOnUiThread(() -> {
+        if (found.isEmpty()) {
+          tvStatus.setText("No servers found on local network.");
+        } else {
+          tvStatus.setText("Found " + found.size() + " server(s) — tap to select:");
+        }
+        listContainer.removeAllViews();
+        for (String url : found) {
+          android.widget.Button btn = new android.widget.Button(this);
+          btn.setText(url);
+          btn.setTextSize(13);
+          btn.setAllCaps(false);
+          btn.setBackgroundColor(0xFF1E1E2E);
+          btn.setTextColor(0xFF4FC3F7);
+          btn.setPadding(16, 8, 16, 8);
+          android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(
+              android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+              android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
+          lp.setMargins(0, 4, 0, 4);
+          btn.setLayoutParams(lp);
+          btn.setOnClickListener(v -> {
+            input.setText(url);
+            prefs.edit().putString(ProcessingActivity.PREF_SERVER_URL, url).apply();
+            Toast.makeText(this, "Server: " + url, Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+          });
+          listContainer.addView(btn);
+        }
+      });
+    }).start();
+  }
+
+  private List<String> scanForServers() {
+    List<String> results = new ArrayList<>();
+    try {
+      // Get the device's local IPs to find which subnets to scan
+      java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
+      java.util.Set<String> subnets = new java.util.LinkedHashSet<>();
+      while (interfaces.hasMoreElements()) {
+        java.net.NetworkInterface ni = interfaces.nextElement();
+        if (ni.isLoopback() || !ni.isUp()) continue;
+        for (java.net.InterfaceAddress addr : ni.getInterfaceAddresses()) {
+          java.net.InetAddress inet = addr.getAddress();
+          if (inet instanceof java.net.Inet4Address) {
+            String ip = inet.getHostAddress();
+            String subnet = ip.substring(0, ip.lastIndexOf('.'));
+            subnets.add(subnet);
+          }
+        }
+      }
+
+      // Scan each subnet in parallel (common IPs first, then sweep .1-.254)
+      int port = 8000;
+      java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(50);
+      java.util.concurrent.CopyOnWriteArrayList<String> found = new java.util.concurrent.CopyOnWriteArrayList<>();
+      List<java.util.concurrent.Future<?>> futures = new ArrayList<>();
+
+      for (String subnet : subnets) {
+        for (int i = 1; i <= 254; i++) {
+          String ip = subnet + "." + i;
+          futures.add(executor.submit(() -> {
+            try {
+              java.net.Socket socket = new java.net.Socket();
+              socket.connect(new java.net.InetSocketAddress(ip, port), 300);
+              socket.close();
+              // Verify it's our server by hitting /health
+              String url = "http://" + ip + ":" + port;
+              okhttp3.OkHttpClient quick = new okhttp3.OkHttpClient.Builder()
+                  .connectTimeout(2, java.util.concurrent.TimeUnit.SECONDS)
+                  .readTimeout(2, java.util.concurrent.TimeUnit.SECONDS)
+                  .build();
+              okhttp3.Request req = new okhttp3.Request.Builder().url(url + "/health").build();
+              try (okhttp3.Response resp = quick.newCall(req).execute()) {
+                if (resp.isSuccessful()) {
+                  String body = resp.body() != null ? resp.body().string() : "";
+                  if (body.contains("ok")) {
+                    found.add(url);
+                  }
+                }
+              }
+            } catch (Exception ignored) {}
+          }));
+        }
+      }
+
+      // Wait for all scans (max 5 seconds)
+      executor.shutdown();
+      executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS);
+      results.addAll(found);
+    } catch (Exception e) {
+      Log.e(TAG, "Network scan error", e);
+    }
+    return results;
   }
 
   @Override
@@ -685,6 +807,10 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
                 startActivity(intent);
               }
             })
+            .setNeutralButton("Gallery", (d, w) -> {
+              Intent intent = new Intent(HelloArActivity.this, GalleryActivity.class);
+              startActivity(intent);
+            })
             .setNegativeButton("Close", null).show();
       });
 
@@ -916,6 +1042,25 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     updateQuality(frame, camera);
     // --- END POSE DUMP ---
 
+    // Update BackgroundRenderer state to match the depth settings.
+    try {
+      backgroundRenderer.setUseDepthVisualization(
+              render, depthSettings.depthColorVisualizationEnabled());
+      backgroundRenderer.setUseOcclusion(render, depthSettings.useDepthForOcclusion());
+    } catch (IOException e) {
+      Log.e(TAG, "Failed to read a required asset file", e);
+      messageSnackbarHelper.showError(this, "Failed to read a required asset file: " + e);
+      return;
+    }
+    // BackgroundRenderer.updateDisplayGeometry must be called every frame to update the coordinates
+    // used to draw the background camera image.
+    backgroundRenderer.updateDisplayGeometry(frame);
+
+    // Draw camera feed before the recording early-return so the screen stays live
+    if (frame.getTimestamp() != 0) {
+      backgroundRenderer.drawBackground(render);
+    }
+
     // During recording, skip demo rendering (planes, objects, lighting) to save GPU for capture
     if (isRecording) {
       camera.getProjectionMatrix(projectionMatrix, 0, Z_NEAR, Z_FAR);
@@ -936,20 +1081,6 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       }
       return;
     }
-
-    // Update BackgroundRenderer state to match the depth settings.
-    try {
-      backgroundRenderer.setUseDepthVisualization(
-              render, depthSettings.depthColorVisualizationEnabled());
-      backgroundRenderer.setUseOcclusion(render, depthSettings.useDepthForOcclusion());
-    } catch (IOException e) {
-      Log.e(TAG, "Failed to read a required asset file", e);
-      messageSnackbarHelper.showError(this, "Failed to read a required asset file: " + e);
-      return;
-    }
-    // BackgroundRenderer.updateDisplayGeometry must be called every frame to update the coordinates
-    // used to draw the background camera image.
-    backgroundRenderer.updateDisplayGeometry(frame);
 
     if (camera.getTrackingState() == TrackingState.TRACKING
             && (depthSettings.useDepthForOcclusion()
@@ -988,14 +1119,6 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       messageSnackbarHelper.hide(this);
     } else {
       messageSnackbarHelper.showMessage(this, message);
-    }
-
-    // -- Draw background
-
-    if (frame.getTimestamp() != 0) {
-      // Suppress rendering if the camera did not produce the first frame yet. This is to avoid
-      // drawing possible leftover data from previous sessions if the texture is reused.
-      backgroundRenderer.drawBackground(render);
     }
 
     // If not tracking, don't draw 3D objects.

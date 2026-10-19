@@ -10,7 +10,7 @@ assignees: ''
 
 ### SPECIFIC ISSUE ENCOUNTERED
 
-
+Yeas
 ### VERSIONS USED
 - Android Studio: 
 - ARCore SDK for Android: 

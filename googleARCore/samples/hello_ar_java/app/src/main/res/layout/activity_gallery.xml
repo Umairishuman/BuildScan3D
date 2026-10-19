@@ -3,8 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#121212"
-    android:padding="16dp">
+    android:background="#121212">
 
     <!-- Top Header -->
     <LinearLayout
@@ -12,7 +11,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="12dp">
+        android:padding="12dp">
 
         <ImageButton
             android:id="@+id/btn_back"
@@ -27,124 +26,40 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Recorded Dataset Gallery"
+            android:text="Scans"
             android:textColor="#FFFFFF"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:textStyle="bold"
             android:layout_marginStart="8dp" />
-    </LinearLayout>
-
-    <!-- Video Preview Frame -->
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="240dp"
-        android:background="#000000">
-
-        <VideoView
-            android:id="@+id/video_preview"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_centerInParent="true" />
-    </RelativeLayout>
-
-    <!-- Dataset Information -->
-    <TextView
-        android:id="@+id/tv_dataset_info"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="Loading dataset info..."
-        android:textColor="#CCCCCC"
-        android:textSize="14sp" />
-
-    <!-- Divider -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#333333"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="12dp" />
-
-    <!-- Trimming Section -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Trim Dataset &amp; Sensor Data"
-        android:textColor="#FFFFFF"
-        android:textSize="16sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/tv_trim_range"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:text="Start: 00:00  |  End: 00:00  |  Duration: 00:00"
-        android:textColor="#00E676"
-        android:textSize="14sp" />
-
-    <!-- Start Trim Slider -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginTop="8dp">
 
         <TextView
-            android:layout_width="50dp"
+            android:id="@+id/tv_scan_count"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Start:"
-            android:textColor="#AAAAAA"
-            android:textSize="13sp" />
-
-        <SeekBar
-            android:id="@+id/sb_trim_start"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
+            android:textColor="#78909C"
+            android:textSize="14sp" />
     </LinearLayout>
 
-    <!-- End Trim Slider -->
-    <LinearLayout
+    <!-- Scan list -->
+    <ListView
+        android:id="@+id/lv_scans"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginTop="4dp">
-
-        <TextView
-            android:layout_width="50dp"
-            android:layout_height="wrap_content"
-            android:text="End:"
-            android:textColor="#AAAAAA"
-            android:textSize="13sp" />
-
-        <SeekBar
-            android:id="@+id/sb_trim_end"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-    </LinearLayout>
-
-    <!-- Action Button -->
-    <Button
-        android:id="@+id/btn_trim_save"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Trim &amp; Save Dataset"
-        android:backgroundTint="#FF3B30"
-        android:textColor="#FFFFFF" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:divider="@android:color/transparent"
+        android:dividerHeight="0dp"
+        android:padding="8dp"
+        android:clipToPadding="false" />
 
     <TextView
-        android:id="@+id/tv_trim_status"
+        android:id="@+id/tv_empty"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:gravity="center"
-        android:textColor="#FFA726"
-        android:textSize="13sp"
+        android:text="No scans yet.\nRecord your first scan!"
+        android:textColor="#78909C"
+        android:textSize="16sp"
         android:visibility="gone" />
 
 </LinearLayout>

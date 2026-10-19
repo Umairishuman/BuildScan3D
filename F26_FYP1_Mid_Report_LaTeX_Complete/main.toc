@@ -1,0 +1,171 @@
+\babel@toc {english}{}\relax 
+\contentsline {chapter}{Students' Submission}{i}{chapter*.1}%
+\contentsline {chapter}{Anti-Plagiarism Statement}{ii}{chapter*.2}%
+\contentsline {chapter}{Authors' Declaration}{iii}{chapter*.3}%
+\contentsline {chapter}{Abstract}{iv}{chapter*.4}%
+\contentsline {chapter}{Acknowledgments}{v}{chapter*.5}%
+\contentsline {chapter}{Executive Summary}{vi}{chapter*.6}%
+\contentsline {paragraph}{Problem.}{vi}{chapter*.6}%
+\contentsline {paragraph}{Research.}{vi}{chapter*.6}%
+\contentsline {paragraph}{Solution.}{vi}{chapter*.6}%
+\contentsline {paragraph}{Current status (Iteration~1 complete).}{vi}{chapter*.6}%
+\contentsline {paragraph}{Risks.}{vii}{chapter*.6}%
+\contentsline {paragraph}{FYP-2 plan.}{vii}{chapter*.6}%
+\contentsline {chapter}{List of Abbreviations}{viii}{chapter*.7}%
+\contentsline {chapter}{\numberline {1}Introduction and Project Vision}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Project Overview}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Problem Statement}{1}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Problem Context and Motivation}{2}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Project Vision}{2}{section.1.4}%
+\contentsline {section}{\numberline {1.5}Project Objectives}{2}{section.1.5}%
+\contentsline {section}{\numberline {1.6}Project Scope}{3}{section.1.6}%
+\contentsline {paragraph}{In scope:}{3}{section.1.6}%
+\contentsline {paragraph}{Out of scope:}{3}{section.1.6}%
+\contentsline {section}{\numberline {1.7}Project Modules}{3}{section.1.7}%
+\contentsline {section}{\numberline {1.8}Stakeholders and User Classes}{4}{section.1.8}%
+\contentsline {section}{\numberline {1.9}Success Criteria}{4}{section.1.9}%
+\contentsline {section}{\numberline {1.10}Constraints and Assumptions}{4}{section.1.10}%
+\contentsline {section}{\numberline {1.11}Ethical, Legal and DEI Considerations}{5}{section.1.11}%
+\contentsline {chapter}{\numberline {2}Research and Existing Solutions}{6}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Research Method / Approach}{6}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Existing Solutions / Products}{6}{section.2.2}%
+\contentsline {paragraph}{Commercial products:}{6}{section.2.2}%
+\contentsline {paragraph}{Research systems:}{6}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Comparison of Existing Solutions}{7}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Limitations and Gaps}{7}{section.2.4}%
+\contentsline {section}{\numberline {2.5}Proposed Solution}{8}{section.2.5}%
+\contentsline {section}{\numberline {2.6}Complex Computing Problem}{8}{section.2.6}%
+\contentsline {section}{\numberline {2.7}Technical Challenges}{9}{section.2.7}%
+\contentsline {section}{\numberline {2.8}Research Findings and Design Decisions}{10}{section.2.8}%
+\contentsline {chapter}{\numberline {3}Proposal Feedback and Iteration Plan}{11}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Proposal Feedback Summary}{11}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Proposal Action Register}{11}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Iteration Strategy}{12}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Iteration 1 Plan}{12}{section.3.4}%
+\contentsline {section}{\numberline {3.5}Iteration 2 Plan}{13}{section.3.5}%
+\contentsline {section}{\numberline {3.6}Work Breakdown and Responsibilities}{13}{section.3.6}%
+\contentsline {section}{\numberline {3.7}Progress Against Plan}{13}{section.3.7}%
+\contentsline {section}{\numberline {3.8}Delays, Deviations and Recovery Plan}{13}{section.3.8}%
+\contentsline {chapter}{\numberline {4}Software Requirements}{15}{chapter.4}%
+\contentsline {section}{\numberline {4.1}User Interactions / Use Cases}{15}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Use Case Diagram}{15}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Detailed Use Cases}{15}{section.4.3}%
+\contentsline {paragraph}{UC-1: Record Indoor Scan}{15}{section.4.3}%
+\contentsline {paragraph}{UC-2: Upload and Process}{16}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Functional Requirements}{16}{section.4.4}%
+\contentsline {subsection}{\numberline {4.4.1}Mobile Capture Module}{16}{subsection.4.4.1}%
+\contentsline {subsection}{\numberline {4.4.2}Processing Server Module}{17}{subsection.4.4.2}%
+\contentsline {subsection}{\numberline {4.4.3}Reconstruction Pipeline Module}{17}{subsection.4.4.3}%
+\contentsline {section}{\numberline {4.5}Non-Functional Requirements}{18}{section.4.5}%
+\contentsline {subsection}{\numberline {4.5.1}Reliability}{18}{subsection.4.5.1}%
+\contentsline {subsection}{\numberline {4.5.2}Usability}{18}{subsection.4.5.2}%
+\contentsline {subsection}{\numberline {4.5.3}Performance}{18}{subsection.4.5.3}%
+\contentsline {subsection}{\numberline {4.5.4}Security}{18}{subsection.4.5.4}%
+\contentsline {section}{\numberline {4.6}Acceptance Criteria}{19}{section.4.6}%
+\contentsline {section}{\numberline {4.7}Requirements Traceability}{19}{section.4.7}%
+\contentsline {chapter}{\numberline {5}System Design}{20}{chapter.5}%
+\contentsline {section}{\numberline {5.1}System Architecture}{20}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Architectural Components}{20}{section.5.2}%
+\contentsline {paragraph}{Android App (\texttt {googleARCore/samples/hello\_ar\_java/})}{20}{section.5.2}%
+\contentsline {paragraph}{Processing Server (\texttt {server/})}{21}{section.5.2}%
+\contentsline {paragraph}{Reconstruction Pipeline (\texttt {src/arcore3dgs/})}{21}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Interfaces and Dependencies}{21}{section.5.3}%
+\contentsline {paragraph}{External dependencies:}{21}{table.5.1}%
+\contentsline {section}{\numberline {5.4}Architecture Decisions and Rationale}{22}{section.5.4}%
+\contentsline {section}{\numberline {5.5}Design Evolution}{22}{section.5.5}%
+\contentsline {section}{\numberline {5.6}Domain Model}{23}{section.5.6}%
+\contentsline {section}{\numberline {5.7}Data Design}{23}{section.5.7}%
+\contentsline {paragraph}{Capture data (per scan):}{23}{section.5.7}%
+\contentsline {paragraph}{Pipeline intermediate data:}{24}{section.5.7}%
+\contentsline {section}{\numberline {5.8}Process / Behavior Design}{24}{section.5.8}%
+\contentsline {chapter}{\numberline {6}Iteration 1: Design and Implementation}{25}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Iteration Objectives}{25}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Selected Use Cases / Features}{25}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Design}{25}{section.6.3}%
+\contentsline {section}{\numberline {6.4}Implementation}{26}{section.6.4}%
+\contentsline {section}{\numberline {6.5}Completed Features / Module}{26}{section.6.5}%
+\contentsline {paragraph}{Android Capture App (complete):}{26}{section.6.5}%
+\contentsline {paragraph}{Processing Server (complete):}{27}{section.6.5}%
+\contentsline {paragraph}{Reconstruction Pipeline (complete):}{27}{section.6.5}%
+\contentsline {paragraph}{CI/CD (complete):}{27}{section.6.5}%
+\contentsline {section}{\numberline {6.6}Technical Implementation Details}{28}{section.6.6}%
+\contentsline {paragraph}{Pose-to-video synchronization (\texttt {CaptureLogger.java}):}{28}{section.6.6}%
+\contentsline {paragraph}{Sim3 metric alignment (\texttt {sfm\_colmap.py}):}{28}{section.6.6}%
+\contentsline {paragraph}{Recording fast-path (\texttt {HelloArActivity.java}):}{28}{section.6.6}%
+\contentsline {paragraph}{RunPod lifecycle (\texttt {runpod\_client.py}):}{28}{section.6.6}%
+\contentsline {section}{\numberline {6.7}Algorithms and Technical Decisions}{28}{section.6.7}%
+\contentsline {section}{\numberline {6.8}Tools, Frameworks and Technologies}{29}{section.6.8}%
+\contentsline {section}{\numberline {6.9}Demonstration Evidence}{29}{section.6.9}%
+\contentsline {section}{\numberline {6.10}Iteration Outcome}{30}{section.6.10}%
+\contentsline {chapter}{\numberline {7}Testing and Early Validation}{31}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Testing Strategy}{31}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Test Levels and Techniques}{31}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Test Cases}{31}{section.7.3}%
+\contentsline {section}{\numberline {7.4}Test Results}{33}{section.7.4}%
+\contentsline {paragraph}{Unit and integration tests (CI):}{33}{section.7.4}%
+\contentsline {paragraph}{System-level results:}{33}{section.7.4}%
+\contentsline {section}{\numberline {7.5}Acceptance Testing / Validation}{33}{section.7.5}%
+\contentsline {section}{\numberline {7.6}Edge and Failure Cases}{34}{section.7.6}%
+\contentsline {section}{\numberline {7.7}Defects and Corrective Actions}{34}{section.7.7}%
+\contentsline {section}{\numberline {7.8}Current Validation Status}{35}{section.7.8}%
+\contentsline {chapter}{\numberline {8}Project Management and Development Evidence}{37}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Work Completed}{37}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Work Remaining}{37}{section.8.2}%
+\contentsline {section}{\numberline {8.3}Individual Responsibilities}{38}{section.8.3}%
+\contentsline {section}{\numberline {8.4}Contribution of Each Team Member}{38}{section.8.4}%
+\contentsline {paragraph}{Muhammad Umair (23I-0662):}{38}{section.8.4}%
+\contentsline {paragraph}{Zaid Fareed (23I-0829):}{39}{section.8.4}%
+\contentsline {paragraph}{Muhammad Tayyab (23I-0636):}{39}{section.8.4}%
+\contentsline {section}{\numberline {8.5}Repository and Version Control Evidence}{39}{section.8.5}%
+\contentsline {section}{\numberline {8.6}Milestones and Commit Evidence}{39}{section.8.6}%
+\contentsline {section}{\numberline {8.7}Tools and Tool-Assisted Development}{40}{section.8.7}%
+\contentsline {paragraph}{Statement of originality:}{40}{table.8.3}%
+\contentsline {paragraph}{Other development tools:}{40}{table.8.3}%
+\contentsline {section}{\numberline {8.8}External Components and Dependencies}{41}{section.8.8}%
+\contentsline {section}{\numberline {8.9}Risks and Mitigation}{41}{section.8.9}%
+\contentsline {section}{\numberline {8.10}Security and Privacy Considerations}{41}{section.8.10}%
+\contentsline {section}{\numberline {8.11}Current Limitations}{42}{section.8.11}%
+\contentsline {chapter}{\numberline {9}Remaining FYP Plan}{44}{chapter.9}%
+\contentsline {section}{\numberline {9.1}Remaining Scope}{44}{section.9.1}%
+\contentsline {section}{\numberline {9.2}Remaining Modules and Features}{44}{section.9.2}%
+\contentsline {section}{\numberline {9.3}Remaining Iterations}{45}{section.9.3}%
+\contentsline {section}{\numberline {9.4}Implementation Plan}{45}{section.9.4}%
+\contentsline {paragraph}{Iteration 2a: Optimization + Web Viewer (Weeks 1--4)}{45}{section.9.4}%
+\contentsline {paragraph}{Iteration 2b: Robustness + Semantic AI (Weeks 5--8)}{46}{Item.107}%
+\contentsline {paragraph}{Iteration 2c: Dashboard + Final Validation (Weeks 9--12)}{46}{Item.113}%
+\contentsline {section}{\numberline {9.5}Testing and Validation Plan}{46}{section.9.5}%
+\contentsline {section}{\numberline {9.6}Deployment Plan}{47}{section.9.6}%
+\contentsline {section}{\numberline {9.7}Tentative Timeline}{47}{section.9.7}%
+\contentsline {section}{\numberline {9.8}Expected Final Deliverables}{47}{section.9.8}%
+\contentsline {chapter}{\numberline {10}Conclusion}{49}{chapter.10}%
+\contentsline {paragraph}{Problem.}{49}{chapter.10}%
+\contentsline {paragraph}{Research.}{49}{chapter.10}%
+\contentsline {paragraph}{Design and implementation.}{49}{chapter.10}%
+\contentsline {paragraph}{Validation.}{49}{chapter.10}%
+\contentsline {paragraph}{Risks.}{50}{chapter.10}%
+\contentsline {paragraph}{FYP-2 plan.}{50}{chapter.10}%
+\contentsline {chapter}{\numberline {A}Proposal Action Register}{51}{appendix.A}%
+\contentsline {chapter}{\numberline {B}Detailed Requirements}{53}{appendix.B}%
+\contentsline {section}{\numberline {B.1}Extended Functional Requirements}{53}{section.B.1}%
+\contentsline {subsection}{\numberline {B.1.1}Mobile Capture Module --- Detailed}{53}{subsection.B.1.1}%
+\contentsline {subsection}{\numberline {B.1.2}Processing Server Module --- Detailed}{54}{subsection.B.1.2}%
+\contentsline {subsection}{\numberline {B.1.3}Reconstruction Pipeline Module --- Detailed}{54}{subsection.B.1.3}%
+\contentsline {section}{\numberline {B.2}Extended Non-Functional Requirements}{54}{section.B.2}%
+\contentsline {section}{\numberline {B.3}Full Traceability Matrix}{55}{section.B.3}%
+\contentsline {chapter}{\numberline {C}Detailed Test Cases}{57}{appendix.C}%
+\contentsline {chapter}{\numberline {D}Repository and Contribution Evidence}{60}{appendix.D}%
+\contentsline {section}{\numberline {D.1}Repository Structure}{60}{section.D.1}%
+\contentsline {section}{\numberline {D.2}Commit History Summary}{61}{section.D.2}%
+\contentsline {section}{\numberline {D.3}Branch Strategy}{61}{section.D.3}%
+\contentsline {section}{\numberline {D.4}CI/CD Evidence}{61}{section.D.4}%
+\contentsline {section}{\numberline {D.5}Task Tracking}{62}{section.D.5}%
+\contentsline {chapter}{\numberline {E}Additional Design Diagrams}{63}{appendix.E}%
+\contentsline {section}{\numberline {E.1}End-to-End Data Flow}{63}{section.E.1}%
+\contentsline {section}{\numberline {E.2}Pipeline Step Sequence}{63}{section.E.2}%
+\contentsline {section}{\numberline {E.3}Android App Architecture}{64}{section.E.3}%
+\contentsline {section}{\numberline {E.4}Sim3 Alignment Diagram}{65}{section.E.4}%
+\contentsline {section}{\numberline {E.5}Coverage Map Visualization}{65}{section.E.5}%
+\contentsline {chapter}{\numberline {F}Meeting and Progress Evidence}{66}{appendix.F}%
+\contentsline {section}{\numberline {F.1}Supervisor Meetings}{66}{section.F.1}%
+\contentsline {section}{\numberline {F.2}Progress Log}{67}{section.F.2}%
+\contentsline {section}{\numberline {F.3}Problems and Solutions Summary}{67}{section.F.3}%
