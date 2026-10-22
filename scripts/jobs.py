@@ -100,6 +100,14 @@ def show_logs(job_id):
 
 
 def do_retry(job_id):
+    cfg = api("GET", "/config")
+    if cfg and cfg["mode"] == "runpod":
+        print(f"\n  Current GPU: {BOLD}{cfg['runpod_gpu_type']}{RESET}")
+        ans = input(f"  Change GPU before retrying? [y/N]: ").strip().lower()
+        if ans in ("y", "yes"):
+            gpu = pick_gpu()
+            if gpu:
+                api("POST", "/config", {"runpod_gpu_type": gpu})
     r = api("POST", f"/retry/{job_id}")
     if r:
         print(f"\n  {GREEN}Retrying job {r['job_id']} in {r['mode']} mode{RESET}")
@@ -133,6 +141,46 @@ def do_watch(job_id):
             time.sleep(3)
     except KeyboardInterrupt:
         print(f"\n  {DIM}Stopped watching.{RESET}")
+
+
+def pick_gpu():
+    """Fetch available GPUs from RunPod and let user pick one."""
+    print(f"\n  {DIM}Fetching available GPUs from RunPod...{RESET}")
+    gpus = api("GET", "/gpus")
+    if not gpus:
+        return None
+    # Filter to GPUs that have pricing and are in stock
+    in_stock = [g for g in gpus if g.get("price_on_demand") is not None and g.get("stock_status", "None") != "None"]
+    all_priced = [g for g in gpus if g.get("price_on_demand") is not None]
+
+    if not in_stock:
+        print(f"\n  {RED}No GPUs currently in stock on RunPod.{RESET}")
+        if all_priced:
+            print(f"  {DIM}({len(all_priced)} GPU types exist but all show 'None' stock){RESET}")
+        return None
+
+    available = in_stock
+    stock_colors = {"High": GREEN, "Medium": YELLOW, "Low": RED}
+    print(f"\n  {BOLD}{'#':<4} {'GPU':<30} {'VRAM':>5} {'$/hr':>7} {'Stock':>8}{RESET}")
+    print(f"  {'-'*60}")
+    for i, g in enumerate(available, 1):
+        price_od = f"${g['price_on_demand']:.2f}" if g['price_on_demand'] else "N/A"
+        stock = g.get("stock_status", "?")
+        sc = stock_colors.get(stock, DIM)
+        print(f"  {BOLD}{i:<4}{RESET} {g['name']:<30} {g['vram_gb']:>3} GB {price_od:>7}  {sc}{stock}{RESET}")
+
+    print(f"  {BOLD}0{RESET})   Keep current / Cancel")
+    try:
+        choice = input(f"\n  Pick GPU [1-{len(available)}]: ").strip()
+        idx = int(choice) - 1
+        if 0 <= idx < len(available):
+            picked = available[idx]
+            print(f"\n  {GREEN}Selected: {picked['name']} (${picked['price_on_demand']:.2f}/hr)")
+            print(f"  GPU ID: {picked['id']}{RESET}")
+            return picked["id"]
+    except (ValueError, EOFError):
+        pass
+    return None
 
 
 def show_config():
@@ -172,7 +220,12 @@ def switch_mode():
             new_mode = modes[idx]
             config_data = {"mode": new_mode}
 
-            if new_mode == "remote":
+            if new_mode == "runpod":
+                gpu = pick_gpu()
+                if gpu:
+                    config_data["runpod_gpu_type"] = gpu
+
+            elif new_mode == "remote":
                 host = input(f"  Remote GPU host (IP or hostname): ").strip()
                 port = input(f"  SSH port [22]: ").strip() or "22"
                 user = input(f"  SSH user [root]: ").strip() or "root"
@@ -202,7 +255,10 @@ def menu():
   {BOLD}5{RESET}) Full logs
   {BOLD}6{RESET}) Reprocess existing scan
   {BOLD}7{RESET}) Processing mode
-  {BOLD}8{RESET}) Server health
+  {BOLD}8{RESET}) Browse RunPod GPUs
+  {BOLD}9{RESET}) Run on existing pod {DIM}(create pod on RunPod website first){RESET}
+  {BOLD}C{RESET}) Cancel stuck job
+  {BOLD}H{RESET}) Server health
   {BOLD}0{RESET}) Exit
 """)
         try:
@@ -287,7 +343,13 @@ def menu():
                     if 0 <= idx < len(datasets):
                         ds = datasets[idx]
                         iters = input(f"  Iterations [30000]: ").strip() or "30000"
-                        # Use form-encoded POST
+                        change_gpu = input(f"  Change GPU? (current: from config) [y/N]: ").strip().lower()
+                        gpu_param = {}
+                        if change_gpu == "y":
+                            gpu = pick_gpu()
+                            if gpu:
+                                api("POST", "/config", {"runpod_gpu_type": gpu})
+                                print(f"  {GREEN}GPU set to {gpu}{RESET}")
                         import urllib.parse
                         form_data = urllib.parse.urlencode({"dataset_name": ds["name"], "iterations": int(iters)}).encode()
                         url = f"{SERVER}/reprocess"
@@ -312,6 +374,102 @@ def menu():
             pause()
 
         elif choice == "8":
+            gpu = pick_gpu()
+            if gpu:
+                ans = input(f"\n  Set as default GPU for RunPod? [Y/n]: ").strip().lower()
+                if ans != "n":
+                    api("POST", "/config", {"runpod_gpu_type": gpu})
+                    print(f"\n  {GREEN}GPU updated.{RESET}")
+            pause()
+
+        elif choice == "9":
+            # Run on existing RunPod pod
+            datasets = api("GET", "/datasets")
+            if datasets is None:
+                pause()
+                continue
+            if not datasets:
+                print(f"\n  {DIM}No datasets on disk. Upload a scan from the app first.{RESET}")
+                pause()
+                continue
+
+            print(f"\n  {BOLD}Step 1:{RESET} Create a pod on {CYAN}https://runpod.io/console/pods{RESET}")
+            print(f"  {DIM}Pick any GPU, use template 'RunPod Pytorch 2.4.0' or similar{RESET}")
+            print(f"  {DIM}Once it shows 'Running', copy the Pod ID{RESET}")
+            pod_id = input(f"\n  Enter Pod ID: ").strip()
+            if not pod_id:
+                pause()
+                continue
+
+            print(f"\n  {BOLD}Step 2:{RESET} Pick a scan to process:\n")
+            for i, ds in enumerate(datasets, 1):
+                status_str = ""
+                if ds["job_status"]:
+                    jcolor = {"completed": GREEN, "failed": RED, "processing": YELLOW, "queued": CYAN}.get(ds["job_status"], "")
+                    status_str = f"  {jcolor}[{ds['job_status'].upper()}]{RESET}"
+                print(f"  {BOLD}{i}{RESET}) {ds['name']}  {DIM}{ds['size_mb']} MB{RESET}{status_str}")
+            print(f"  {BOLD}0{RESET}) Cancel")
+            try:
+                pick = input(f"\n  Which scan? [1-{len(datasets)}]: ").strip()
+                idx = int(pick) - 1
+                if 0 <= idx < len(datasets):
+                    ds = datasets[idx]
+                    iters = input(f"  Iterations [30000]: ").strip() or "30000"
+                    import urllib.parse
+                    form_data = urllib.parse.urlencode({
+                        "dataset_name": ds["name"],
+                        "pod_id": pod_id,
+                        "iterations": int(iters),
+                    }).encode()
+                    url = f"{SERVER}/run-on-pod"
+                    req = urllib.request.Request(url, data=form_data, method="POST")
+                    req.add_header("Content-Type", "application/x-www-form-urlencoded")
+                    try:
+                        with urllib.request.urlopen(req, timeout=10) as resp:
+                            r = json.loads(resp.read())
+                        print(f"\n  {GREEN}Running on pod {pod_id} — job {r['job_id']}{RESET}")
+                        print(f"  {DIM}Pod will be auto-terminated when done or on failure{RESET}")
+                        ans = input(f"\n  Watch live? [Y/n]: ").strip().lower()
+                        if ans != "n":
+                            do_watch(r["job_id"])
+                    except urllib.error.HTTPError as e:
+                        err = json.loads(e.read()) if e.fp else {}
+                        print(f"\n  {RED}ERROR: {err.get('detail', e.reason)}{RESET}")
+            except (ValueError, EOFError):
+                pass
+            pause()
+
+        elif choice.lower() == "c":
+            job_list = api("GET", "/jobs")
+            if job_list is None:
+                pause()
+                continue
+            stuck = [j for j in job_list if j["status"] in ("processing", "queued", "uploading")]
+            if not stuck:
+                print(f"\n  {DIM}No stuck jobs.{RESET}")
+            else:
+                print(f"\n  {BOLD}Running/queued jobs:{RESET}\n")
+                for i, j in enumerate(stuck, 1):
+                    print(f"  {BOLD}{i}{RESET}) {j['job_id']}  [{j['status']}]  {j.get('current_step_label', '')}")
+                print(f"  {BOLD}0{RESET}) Cancel")
+                try:
+                    pick = input(f"\n  Cancel which job? [1-{len(stuck)}]: ").strip()
+                    idx = int(pick) - 1
+                    if 0 <= idx < len(stuck):
+                        jid = stuck[idx]["job_id"]
+                        req = urllib.request.Request(f"{SERVER}/jobs/{jid}/cancel", method="POST")
+                        try:
+                            with urllib.request.urlopen(req, timeout=10) as resp:
+                                json.loads(resp.read())
+                            print(f"\n  {GREEN}Job {jid} cancelled.{RESET}")
+                        except urllib.error.HTTPError as e:
+                            err = json.loads(e.read()) if e.fp else {}
+                            print(f"\n  {RED}ERROR: {err.get('detail', e.reason)}{RESET}")
+                except (ValueError, EOFError):
+                    pass
+            pause()
+
+        elif choice.lower() == "h":
             h = api("GET", "/health")
             if h:
                 print(f"\n  {GREEN}Server is running{RESET}")
