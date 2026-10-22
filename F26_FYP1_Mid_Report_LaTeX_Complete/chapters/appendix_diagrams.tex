@@ -7,15 +7,15 @@ The main design diagrams are in the body of the report: the use case diagram (Fi
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[font=\footnotesize, >=latex,
-  step/.style={draw, rectangle, rounded corners=2pt, align=center, text width=4.2cm, inner sep=3pt, minimum height=0.9cm},
+  pstep/.style={draw, rectangle, rounded corners=2pt, align=center, text width=4.2cm, inner sep=3pt, minimum height=0.9cm},
   note/.style={font=\scriptsize, anchor=west, align=left, text width=5.2cm}]
   \node[draw, rectangle, align=center, text width=4.2cm, inner sep=3pt] (in) at (-2.4,1.5) {\texttt{dataset.mp4}, \texttt{poses.csv}, \texttt{tracking.csv}, \texttt{points.csv}};
-  \node[step] (s1) at (-2.4,0)    {\textbf{1. fallback.py}\\IMU gap bridging};
-  \node[step] (s2) at (-2.4,-1.5) {\textbf{2. prepare.py}\\keyframes (sharpest per 8 frames)};
-  \node[step] (s3) at (-2.4,-3.0) {\textbf{3. sfm\_colmap.py}\\SIFT, exhaustive matching, global mapper, undistortion, Sim3};
-  \node[step] (s4) at (-2.4,-4.5) {\textbf{4. export\_nerfstudio.py}\\\texttt{transforms.json}};
-  \node[step] (s5) at (-2.4,-6.0) {\textbf{5. ns-train splatfacto}\\30k iterations, bilateral grid};
-  \node[step] (s6) at (-2.4,-7.5) {\textbf{6. ns-export}\\gaussian-splat};
+  \node[pstep] (s1) at (-2.4,0)    {\textbf{1. fallback.py}\\IMU gap bridging};
+  \node[pstep] (s2) at (-2.4,-1.5) {\textbf{2. prepare.py}\\keyframes (sharpest per 8 frames)};
+  \node[pstep] (s3) at (-2.4,-3.0) {\textbf{3. sfm\_colmap.py}\\SIFT, exhaustive matching, global mapper, undistortion, Sim3};
+  \node[pstep] (s4) at (-2.4,-4.5) {\textbf{4. export\_nerfstudio.py}\\\texttt{transforms.json}};
+  \node[pstep] (s5) at (-2.4,-6.0) {\textbf{5. ns-train splatfacto}\\30k iterations, bilateral grid};
+  \node[pstep] (s6) at (-2.4,-7.5) {\textbf{6. ns-export}\\gaussian-splat};
   \node[draw, very thick, rectangle, rounded corners=2pt, inner sep=4pt] (out) at (-2.4,-8.9) {\texttt{splat.ply} (metric scale)};
   \draw[->] (in) -- (s1);
   \draw[->] (s1) -- (s2);

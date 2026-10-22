@@ -14,7 +14,7 @@ The data flow is strictly sequential: Capture $\rightarrow$ Upload $\rightarrow$
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[font=\footnotesize, >=latex,
-  comp/.style={draw, rectangle, rounded corners=2pt, fill=white, align=center, text width=3.2cm, inner sep=3pt, minimum height=0.8cm},
+  comp/.style={draw, rectangle, rounded corners=2pt, fill=white, align=center, text width=3.5cm, inner sep=3pt, minimum height=0.8cm},
   tier/.style={draw, dashed, rounded corners=4pt},
   lbl/.style={font=\scriptsize, fill=white, inner sep=1pt}]
   % tiers
@@ -25,11 +25,11 @@ The data flow is strictly sequential: Capture $\rightarrow$ Upload $\rightarrow$
   \node[font=\small\bfseries] at (0,3.9) {Server tier};
   \node[font=\small\bfseries] at (5.15,3.9) {Compute tier};
   % client tier
-  \node[comp] (ar)     at (-5.15,3.0)  {\textbf{HelloArActivity}\\ARCore session, recording};
-  \node[comp] (log)    at (-5.15,1.75) {\textbf{CaptureLogger}\\poses, tracking, points, quality, depth, meta};
-  \node[comp] (iqa)    at (-5.15,0.3)  {\textbf{QualityMonitor}\\\textbf{CoverageMap}\\live IQA, coverage dots};
-  \node[comp] (proc)   at (-5.15,-1.05) {\textbf{ProcessingActivity}\\OkHttp upload, polling};
-  \node[comp] (viewer) at (-5.15,-2.4) {\textbf{Desktop viewer}\\\texttt{view\_splat.bat}};
+  \node[comp] (ar)     at (-5.15,2.9)  {\textbf{HelloArActivity}\\ARCore session};
+  \node[comp] (log)    at (-5.15,1.8) {\textbf{CaptureLogger}\\poses, tracking, points, depth};
+  \node[comp] (iqa)    at (-5.15,0.55)  {\textbf{QualityMonitor}\\\textbf{CoverageMap}\\live IQA, coverage};
+  \node[comp] (proc)   at (-5.15,-0.7) {\textbf{ProcessingActivity}\\OkHttp upload};
+  \node[comp] (viewer) at (-5.15,-1.8) {\textbf{Desktop viewer}\\\texttt{view\_splat.bat}};
   % server tier
   \node[comp] (api)   at (0,2.75) {\textbf{main.py} (FastAPI)\\/upload, /status, /jobs, /download, /config, /retry, /health};
   \node[comp] (pipe)  at (0,1.0)  {\textbf{pipeline.py}\\Job, StepConfig timeouts, local runner};
@@ -43,7 +43,7 @@ The data flow is strictly sequential: Capture $\rightarrow$ Upload $\rightarrow$
   % client-side links
   \draw[->] (ar) -- (log);
   \draw[->] (log) -- (iqa);
-  \draw[->] (log.west) -- (-7.05,1.75) -- (-7.05,-1.05) -- (proc.west);
+  \draw[->] (log.west) -- (-7.2,1.8) -- (-7.2,-0.7) -- (proc.west);
   % client <-> server
   \draw[<->] (proc.east) -- node[lbl, sloped, above] {HTTP} (api.west);
   \draw[->] (api.south west) -- node[lbl, sloped, below] {GET /download} (viewer.east);
@@ -205,7 +205,7 @@ Figure~\ref{fig:dataflow} traces the capture files through the six pipeline step
 \centering
 \begin{tikzpicture}[font=\footnotesize, >=latex,
   file/.style={draw, rectangle, align=center, text width=2.6cm, inner sep=3pt, minimum height=0.6cm},
-  step/.style={draw, rectangle, rounded corners=2pt, align=center, text width=3.4cm, inner sep=3pt, minimum height=0.8cm, fill=white},
+  pstep/.style={draw, rectangle, rounded corners=2pt, align=center, text width=3.4cm, inner sep=3pt, minimum height=0.8cm, fill=white},
   lbl/.style={font=\scriptsize, anchor=west}]
   % capture files
   \node[font=\small\bfseries] at (-5.2,3.5) {Capture files};
@@ -216,12 +216,12 @@ Figure~\ref{fig:dataflow} traces the capture files through the six pipeline step
   \node[file, dashed] (unused) at (-5.2,-1.6) {\texttt{quality.csv}, \texttt{meta.json}, \texttt{depth/}\\stored, not read by the six steps};
   % steps
   \node[font=\small\bfseries] at (0.4,3.5) {Pipeline steps};
-  \node[step] (s1) at (0.4,2.6)  {\textbf{1. fallback.py}\\IMU gap bridging};
-  \node[step] (s2) at (0.4,1.1)  {\textbf{2. prepare.py}\\keyframe extraction};
-  \node[step] (s3) at (0.4,-0.4) {\textbf{3. sfm\_colmap.py}\\SfM, undistortion, Sim3};
-  \node[step] (s4) at (0.4,-1.9) {\textbf{4. export\_nerfstudio.py}};
-  \node[step] (s5) at (0.4,-3.4) {\textbf{5. ns-train splatfacto}};
-  \node[step] (s6) at (0.4,-4.9) {\textbf{6. ns-export}};
+  \node[pstep] (s1) at (0.4,2.6)  {\textbf{1. fallback.py}\\IMU gap bridging};
+  \node[pstep] (s2) at (0.4,1.1)  {\textbf{2. prepare.py}\\keyframe extraction};
+  \node[pstep] (s3) at (0.4,-0.4) {\textbf{3. sfm\_colmap.py}\\SfM, undistortion, Sim3};
+  \node[pstep] (s4) at (0.4,-1.9) {\textbf{4. export\_nerfstudio.py}};
+  \node[pstep] (s5) at (0.4,-3.4) {\textbf{5. ns-train splatfacto}};
+  \node[pstep] (s6) at (0.4,-4.9) {\textbf{6. ns-export}};
   \node[draw, very thick, rectangle, rounded corners=2pt, inner sep=4pt] (out) at (0.4,-6.2) {\texttt{work\_sfm/gs\_sfm/splat.ply}};
   % inputs
   \draw[->] (mp4.east)  -- (s1.west);
