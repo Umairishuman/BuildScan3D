@@ -78,7 +78,7 @@ This involves:
 \begin{enumerate}
     \item \textbf{ARCore silent re-anchoring}: ARCore silently corrects its world frame during SLAM loop closures, causing pose discontinuities of up to 1\,m / 28\textdegree. These must be detected and handled to avoid ghosting in the 3D model. Solved via anchor logging and IMU-bridged tracking-gap recovery (\texttt{fallback.py}).
 
-    \item \textbf{Lens distortion}: ARCore's reported camera intrinsics lack lens distortion coefficients. COLMAP's self-calibration recovers radial distortion ($k_1 \approx 0.08$, $k_2 \approx -0.2$), which is essential for sub-pixel SfM accuracy.
+    \item \textbf{Lens distortion}: ARCore's reported camera intrinsics lack lens distortion coefficients. COLMAP's self-calibration recovers radial distortion ($k_1 \approx 0.09$, $k_2 \approx -0.22$), which is essential for sub-pixel SfM accuracy.
 
     \item \textbf{Degenerate Gaussian splats}: Our initial training recipe produced zero-thickness, half-transparent splats (``cotton texture'') due to a flattening regularizer interacting pathologically with Adam's gradient normalization. Root-cause analysis (documented in \texttt{Training\_Analysis.md}) led to adopting Nerfstudio splatfacto with measured-point initialization.
 
@@ -91,11 +91,11 @@ This involves:
 Key research findings that shaped our design:
 
 \begin{enumerate}
-    \item \textbf{SfM poses outperform ARCore poses for 3DGS}: COLMAP SfM with lens self-calibration reduced reprojection error from 2.32\,px (ARCore raw) to 0.62\,px, improving held-out PSNR from 22.7\,dB to 27.8\,dB. \textit{Decision}: Use COLMAP SfM for training poses; ARCore provides metric scale via Sim3 alignment.
+    \item \textbf{SfM poses outperform ARCore poses for 3DGS}: Raw ARCore poses have a 2.32\,px median reprojection error; bundle adjustment reduces it to 0.62\,px (626k observations), but cannot remove ARCore's silent $\sim$1\,m\,/\,28\textdegree\ re-anchor or its missing lens model. Switching to image-based COLMAP poses with lens self-calibration raised the training-view fit from 21.9\,dB (12--30\,px misaligned) to $\sim$28\,dB (2--3\,px), raised held-out SSIM from 0.78 to 0.86 (0.91 on a second room), and cut badly placed surfaces from 7--23\% to 3\% (1\% on the second room). For reference, the best model trained on the earlier poses was our own trainer with COLMAP depth (\texttt{gs\_colmap\_nc}, 22.67\,dB / 0.782 held-out). \textit{Decision}: Use COLMAP SfM for training poses; ARCore provides metric scale via Sim3 alignment.
 
     \item \textbf{Dense initialization is critical}: PocketGS~\cite{pocketgs} demonstrated that dense multi-view stereo points (vs.\ sparse SfM points) significantly improve reconstruction quality (SSIM 0.834 vs.\ 0.791). \textit{Decision}: Initialize from MVS-measured points voxel-downsampled at 1\,cm.
 
-    \item \textbf{Regularization can be harmful}: Our flattening loss, depth loss, and pose refinement each degraded quality when applied together. The plain splatfacto recipe (photometric loss only, fixed poses) outperformed every combination. \textit{Decision}: Use standard splatfacto; keep custom preprocessing.
+    \item \textbf{Regularization can be harmful}: Our flattening loss, depth loss, and pose refinement each degraded quality when applied together. The plain splatfacto recipe (photometric loss only, fixed poses) outperformed every combination. In a separate comparison on a different scene (\texttt{roomAttemptSadness2}), splatfacto on our preprocessed inputs reached 27.81\,dB held-out (28.08\,dB on training views), against 24.70\,dB held-out for our own trainer with the corrected recipe. \textit{Decision}: Use standard splatfacto; keep custom preprocessing.
 
     \item \textbf{Gyro-aware frame selection improves sharpness}: Selecting frames by predicted motion blur (from IMU angular velocity and exposure time) instead of texture content improved PSNR by 0.26\,dB. \textit{Decision}: Implemented \texttt{select\_sharp.py} using per-frame exposure metadata logged by the app.
 \end{enumerate}

@@ -32,7 +32,7 @@ Detailed development progress is maintained in \texttt{docs/progress/TODO.md}. K
 \begin{itemize}
     \item \textbf{ARCore capture app}: Basic recording $\rightarrow$ pose sync validation $\rightarrow$ IQA $\rightarrow$ coverage overlay $\rightarrow$ upload UI. Incremental feature additions documented with timestamps.
 
-    \item \textbf{Reconstruction pipeline}: Initial ARCore-pose training (22.7\,dB PSNR) $\rightarrow$ COLMAP SfM integration (27.8\,dB) $\rightarrow$ Sim3 alignment (0.3\% scale) $\rightarrow$ gyro-aware frame selection (+0.26\,dB). Each improvement documented with before/after metrics.
+    \item \textbf{Reconstruction pipeline}: Best custom-trainer model on ARCore-derived poses (\texttt{gs\_colmap\_nc}, 22.67\,dB / 0.782 held-out) $\rightarrow$ image-based COLMAP poses (training-view fit 21.9 $\rightarrow$ $\sim$28\,dB; held-out SSIM 0.78 $\rightarrow$ 0.86) $\rightarrow$ v3 (26.04\,dB / 0.8756 on the 42-frame held-out set) $\rightarrow$ gyro-aware frame selection (+0.26\,dB / +0.009 SSIM) $\rightarrow$ dense MVS initialisation (+0.21\,dB / +0.003 SSIM) $\rightarrow$ v6 (26.52\,dB / 0.8886). Each improvement documented with before/after metrics.
 
     \item \textbf{Quality debugging}: Two-week root-cause analysis documented in \texttt{Training\_Analysis.md} covering 6 identified causes of degenerate splats, with per-cause experiments and metrics.
 

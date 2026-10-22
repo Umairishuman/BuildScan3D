@@ -73,9 +73,9 @@ Pipeline steps & Next step & Filesystem (dataset directory) \\
 \section{Architecture Decisions and Rationale}
 
 \begin{enumerate}
-    \item \textbf{COLMAP SfM over ARCore poses for training}: ARCore's visual-inertial odometry has 2.3\,px median reprojection error (drift over time). COLMAP's global SfM with self-calibrated lens distortion achieves 0.62\,px. This single change improved held-out PSNR from 22.7 to 27.8\,dB.
+    \item \textbf{COLMAP SfM over ARCore poses for training}: Raw ARCore poses have a 2.32\,px median reprojection error (slow drift); bundle adjustment reduces this to 0.62\,px, but ARCore also re-anchors silently (every pose before $\sim$60\,s was off by $\sim$1\,m and 28\textdegree) and reports no lens distortion. COLMAP's SfM with self-calibrated lens distortion ($k_1 \approx 0.09$, $k_2 \approx -0.22$) removes both. On the same recording, training-view fit rose from 21.9\,dB to $\sim$28\,dB, held-out SSIM from 0.78 to 0.86, and badly placed surfaces fell from 7--23\% to 3\%.
 
-    \item \textbf{Splatfacto over custom trainer}: After extensive analysis showing our custom training recipe produced degenerate splats, we adopted Nerfstudio's battle-tested splatfacto implementation. Our value-add is in the preprocessing (ARCore integration, metric alignment, IMU fallback, quality guidance).
+    \item \textbf{Splatfacto over custom trainer}: After extensive analysis showing our custom training recipe produced degenerate splats, we adopted Nerfstudio's battle-tested splatfacto implementation. On a separate scene (\texttt{roomAttemptSadness2}), splatfacto reached 27.81\,dB held-out against 24.70\,dB for our corrected custom trainer on the same inputs. Our value-add is in the preprocessing (ARCore integration, metric alignment, IMU fallback, quality guidance).
 
     \item \textbf{RunPod on-demand over serverless}: On-demand pods allow full SSH control of the pipeline, suit long-running jobs (about 75\,min end-to-end measured on an RTX 3070), and support arbitrary software installation. Serverless endpoints have cold-start latency and timeout limits that conflict with COLMAP's variable runtime.
 

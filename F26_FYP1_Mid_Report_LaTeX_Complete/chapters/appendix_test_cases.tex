@@ -29,7 +29,7 @@ TC-11 & E2E Room~A & Capture 4.2$\times$3.1\,m bedroom $\rightarrow$ upload $\ri
 \midrule
 TC-12 & E2E Room~B & Capture 5.0$\times$3.5\,m living room $\rightarrow$ upload $\rightarrow$ process & splat.ply produced; dimensions within 2\,cm of tape measure & System & Pass \\
 \midrule
-TC-13 & Reconstruction quality & Evaluate held-out views from Room~A model (v6) & PSNR $\geq$ 25\,dB (actual: 27.8); SSIM $\geq$ 0.85 (actual: 0.889) & Accept. & Pass \\
+TC-13 & Reconstruction quality & Evaluate the v6 model on the 42 held-out frames of the first room (\texttt{fair\_compare.py}) & PSNR $\geq$ 25\,dB (actual: 26.52); SSIM $\geq$ 0.85 (actual: 0.8886) & Accept. & Pass \\
 \midrule
 TC-14 & Processing timeout & Set prepare step timeout to 1\,s; run pipeline & Prepare step killed after 1\,s; job status = ``failed''; error message mentions timeout & Integ. & Pass \\
 \bottomrule

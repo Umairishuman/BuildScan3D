@@ -8,7 +8,7 @@ Our testing strategy combines automated unit/integration tests (CI-enforced) wit
     \item \textbf{Lint}: ruff static analysis enforced in CI; blocks merge on violations.
     \item \textbf{Integration tests}: Server endpoint tests (upload, status polling, config switching).
     \item \textbf{System tests}: Manual end-to-end validation: phone capture $\rightarrow$ upload $\rightarrow$ cloud processing $\rightarrow$ model viewing $\rightarrow$ metric verification.
-    \item \textbf{Regression tests}: Each pipeline change is validated against the same two reference scans (Room~A: 4.2$\times$3.1\,m bedroom, Room~B: 5.0$\times$3.5\,m living room) to detect quality regressions.
+    \item \textbf{Regression tests}: Each pipeline change is compared on the same two reference recordings (the first room, \texttt{newRoomAttemptSadness}, and a second room, \texttt{roomAttemptSadness2}) to detect quality regressions. This comparison is run by hand with the evaluation scripts, not in CI.
 \end{itemize}
 
 \section{Test Levels and Techniques}
@@ -62,19 +62,44 @@ All 14 test cases pass on Python 3.10, 3.11, and 3.12. The CI pipeline runs in a
 
 \begin{table}[h]
 \centering
-\caption{Reconstruction quality results}
+\caption{Reconstruction quality on the first room: 42 held-out frames that no model was trained on (\texttt{fair\_compare.py})}
 \label{tab:quality}
-\begin{tabular}{p{2.5cm}cccc}
+\begin{tabular}{p{4.2cm}cccc}
 \toprule
-\textbf{Metric} & \textbf{Target} & \textbf{Room A} & \textbf{Room B} & \textbf{Status} \\
+\textbf{Model} & \textbf{Frames} & \textbf{Initialisation} & \textbf{PSNR (dB)} & \textbf{SSIM} \\
 \midrule
-Held-out PSNR & $\geq$25\,dB & 27.8\,dB & 26.4\,dB & Pass \\
-SSIM & $\geq$0.85 & 0.889 & 0.862 & Pass \\
-Scale accuracy & $<$1\% & 0.3\% & 0.5\% & Pass \\
-Wall-to-wall error & $<$2\,cm & 1.2\,cm & 1.7\,cm & Pass \\
+v3 (image-based poses) & 574 & SfM points & 26.04 & 0.8756 \\
+v4\_sharp (+ gyro-selected frames) & 1108 & SfM points & 26.30 & 0.8849 \\
+v5 (+ dense MVS initialisation) & 1108 & dense MVS & 26.51 & 0.8879 \\
+\textbf{v6 (+ finer densification)} & 1108 & dense MVS & \textbf{26.52} & \textbf{0.8886} \\
+\midrule
+Acceptance target & & & $\geq$25 & $\geq$0.85 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+The current best model, v6, clears both acceptance thresholds. Gyro-aware frame selection (1166 candidate frames, 1108 kept) contributed the largest single gain (+0.26\,dB / +0.009 SSIM); dense MVS initialisation (1.15M fused points reduced to $\sim$460k at 1\,cm) added +0.21\,dB / +0.003 SSIM.
+
+\paragraph{Effect of the pose fix.} Table~\ref{tab:posefix} compares the earlier ARCore-pose pipeline with the image-based pipeline on the same recording.
+
+\begin{table}[h]
+\centering
+\caption{Before and after replacing ARCore poses with image-based (COLMAP) poses}
+\label{tab:posefix}
+\begin{tabular}{p{4cm}p{4cm}p{4cm}}
+\toprule
+\textbf{Measure} & \textbf{Before (ARCore poses)} & \textbf{After (v3)} \\
+\midrule
+Training-view fit & 21.9\,dB, 12--30\,px misaligned & $\sim$28\,dB, 2--3\,px \\
+Held-out SSIM & 0.78 & 0.86 (second room: 0.91) \\
+Badly placed surfaces & 7--23\% & 3\% (second room: 1\%) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Second room.} The image-based pipeline was also run on a second room (\texttt{roomAttemptSadness2}), measured by Muhammad Tayyab: held-out SSIM 0.91 with 1\% badly placed surfaces. A held-out PSNR for the second room has not yet been measured.
+
+\paragraph{Splatfacto versus our own trainer (different scene).} On \texttt{roomAttemptSadness2}, Nerfstudio splatfacto trained on our preprocessed inputs reached 27.81\,dB on held-out views and 28.08\,dB on training views, against 24.70\,dB held-out for our own trainer with the corrected recipe. This comparison motivated the switch to splatfacto. It is a different scene and protocol from Table~\ref{tab:quality} and is not v6's score.
 
 \section{Acceptance Testing / Validation}
 Acceptance testing validates the system against the success criteria defined in Section~1.9:
