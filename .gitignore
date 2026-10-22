@@ -57,3 +57,8 @@ saved_models/
 *.synctex.gz
 *.fls
 *.fdb_latexmk
+
+# Local environment / secrets — never commit
+.env
+.env.*
+!.env.example
