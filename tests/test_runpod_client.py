@@ -58,7 +58,9 @@ def test_create_pod_requests_the_gpu_and_parses_the_answer(post):
         "id": "pod42", "desiredStatus": "RUNNING", "machine": {"gpuDisplayName": "RTX 3090"}}}})
     info = rc.RunPodClient("k").create_pod(gpu_type="NVIDIA RTX 3090", disk_gb=80)
     assert (info.pod_id, info.status, info.gpu_type) == ("pod42", "RUNNING", "RTX 3090")
-    sent = post.calls[0].json["variables"]["input"]
+    # create_pod first resolves the GPU name, so the mutation is not necessarily calls[0].
+    sent = next(c.json["variables"]["input"] for c in post.calls
+                if "podFindAndDeployOnDemand" in c.json.get("query", ""))
     assert sent["gpuTypeId"] == "NVIDIA RTX 3090" and sent["containerDiskInGb"] == 80 and sent["startSsh"] is True
 
 
