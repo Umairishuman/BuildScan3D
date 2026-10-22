@@ -2,10 +2,10 @@
 \label{ch:evidence}
 
 \section{Work Completed}
-The team has built the Android capture app (ARCore pose, depth and quality logging, live IQA, coverage overlay, upload UI); the reconstruction pipeline (IMU fallback, keyframe extraction, COLMAP SfM with Sim3 metric alignment, Nerfstudio splatfacto training, model export, with gyro-aware frame selection validated but not yet in the one-command pipeline); the FastAPI processing server with local and RunPod cloud GPU modes and pod termination in \texttt{finally} blocks; the CI/CD pipeline (lint, unit tests, APK and web builds, hygiene checks); the server launcher (\texttt{start\_server.bat}) with \texttt{.env} support; and a root-cause analysis of degenerate splat geometry (six causes, documented in \texttt{Training\_Analysis.md}).
+The Android capturing application has been developed (including ARCore pose, depth and quality logging features, live IQA, coverage overlay and upload interface), the reconstruction mechanism has been implemented (including IMU fallback, key frame extraction, COLMAP SfM with Sim3 metric alignment and Nerfstudio splatfacto training mechanism, model export, with gyro-aware frame selection validated but not yet in the one-command pipeline), the processing server (introducing FastAPI with local and RunPod cloud GPU options and with pod termination function), the CI/CD system (including lint, unit testing, apk and web build and hygiene testing functions), the server launcher (\texttt{start\_server.bat}, which supports \texttt{.env} files), and root-cause investigation of degenerate splat geometry (six causes, documented in \texttt{Training\_Analysis.md}).
 
 \section{Work Remaining}
-Scheduled in Chapter~\ref{ch:plan}: the Three.js/WebGPU splat viewer with orbit controls; point-to-point measurement; completing the structural layer (wall-to-wall dimensions, doors and openings, ceiling-height detection, floor-plan export) with wall snapping and a floor-plan view; 3DGS refinement (one-command v6 pipeline, second-room validation, IMU-driven motion-blur modelling); field validation on $\geq$3 more rooms; and usability evaluation with external users. 3D mesh creation is in scope as planned work but not yet scheduled.
+Scheduled in Chapter~\ref{ch:plan}: the Three.js/WebGPU Splat viewer with orbit controllers, point-to-point measurement, completion of the structural layer (wall-to-wall dimensions of the walls, doors and openings, ceiling height identification and floor plan export), wall snapping and floor-plan display, improvement of 3DGS (one-click pipeline of v6 version, verification of the second room, motion blur modeling based on IMU); validation in the field is to be done in 3 or more rooms, usability check will involve outside users; 3D mesh creation is in scope as planned work but not yet scheduled.
 
 \section{Individual Responsibilities}
 
@@ -32,30 +32,30 @@ Muhammad Tayyab (23I-0636) & Reconstruction pipeline (\texttt{src/arcore3dgs/}):
 \section{Contribution of Each Team Member}
 
 \paragraph{Muhammad Umair (23I-0662):}
-Project lead. Built the processing server (FastAPI endpoints, job model with per-step timeouts, local pipeline runner) and the RunPod integration (pod creation, SSH readiness, remote pipeline, termination in \texttt{finally} blocks). Built the app's upload and progress screen and the scan gallery/detail screens, worked on the main AR activity and coverage overlay, built the web UI prototype, and wrote the proposal and report.
+Project lead. Developed the processing server (FastAPI endpoints, job model with per-step timeouts, local pipeline runner) and RunPod integration (pod creation, SSH readiness, remote pipeline, termination in \texttt{finally} blocks). Developed the application's upload and progress screen with the scan gallery/detail screens, executed the main AR activity and coverage overlay work, created the web UI prototype, and wrote the proposal and a report.
 
 \paragraph{Zaid Fareed (23I-0829):}
-Built the CI/CD infrastructure (lint, test and build workflows on three Python versions, Android build and signing checks, repository hygiene, releases) and wrote the entire automated test suite that backs the ``Pass (CI)'' results in Chapter~\ref{ch:testing}. Also contributed trainer fixes and the ARKitScenes trainer experiments.
+Developed the CI/CD infrastructure (lint, test and build workflows on three versions of Python, Android build and signing checks, repository hygiene, releases) and wrote the entire automated test suite that backs the ``Pass (CI)'' results in Chapter~\ref{ch:testing}. Provided contributions pertaining to trainer fixes and ARKitScenes trainer experiments.
 
 \paragraph{Muhammad Tayyab (23I-0636):}
-Built the reconstruction pipeline: IMU fallback and re-alignment, keyframe and gyro-aware frame selection, bundle adjustment, the COLMAP SfM stage with Sim3 metric alignment, dense MVS initialisation, the structural layer, and the evaluation tools. Wrote the app's capture logging and live IQA, ran the training analysis, and produced the v6 model, the tape-measure validation and the second-room result.
+Constructed the reconstruction pipeline: IMU fallback and re-alignment, keyframe and gyro-aware frame selection, bundle adjustment, the COLMAP SfM stages with Sim3 metric alignment, dense MVS initialisation, the structural layer, and the evaluation tools. Wrote the app's capture logging and live IQA, performed training analysis, and produced the v6 model, the tape-measure validation, and the result of the second room.
 
 \paragraph{Commit counts.}
-The repository has \textbf{133} commits: Muhammad Umair 85, Zaid Fareed 26, Muhammad Tayyab 20 (committing as ``BlazingBeam''), and 2 automated commits by the GitHub Actions bot. \textbf{These counts reflect differing commit granularity, not differing effort.} Umair commits each small change separately; Tayyab works in large batches, so a single commit of his often carries a whole pipeline stage (for example, the commit that introduced image-based SfM poses and lens self-calibration, or the one that introduced gyro-aware frames, dense MVS initialisation and the structural layer). The owned modules above, not the commit counts, are the evidence of contribution.
+In total, there are \textbf{133} commits divided among four contributors: 85 by Muhammad Umair, 26 by Zaid Fareed, 20 by Muhammad Tayyab (under the alias of ``BlazingBeam'') and two automated commits from the GitHub Actions bot. These numbers are not an indicator of effort levels by the contributors; rather, they reflect the way each of them commits their changes. For example, Umair commits every little change separately, Tayyab aggregates many changes together, and thus a single commit of his typically represents a significant stage of development. Therefore, the owned modules listed above are more reliable evidence of participation in the project than the number of commits.
 
 \section{Repository and Version Control Evidence}
-The project repository is hosted on GitHub. Key statistics:
+The GitHub is used to host a project repository that has the following statistics --
 \begin{itemize}
-    \item \textbf{Repository}: \texttt{github.com/Umairishuman/FYP} (private)
-    \item \textbf{Branches}: \texttt{master} (stable) and work branches such as \texttt{ci/github-actions}, \texttt{ci/pipeline-updates} and \texttt{exp/trainer-arkitscenes}
-    \item \textbf{Commit history}: 133 commits (85 / 26 / 20, plus 2 bot commits)
-    \item \textbf{CI}: GitHub Actions runs on work branches, pull requests and (through the CD workflow) \texttt{master}: ruff lint and pytest on Python 3.10, 3.11 and 3.12; a Node.js build of the web UI (a placeholder for FYP-2); a Gradle APK build with signing and manifest checks; and repository hygiene (file-size limits, a secrets check, workflow lint).
-    \item \textbf{CD}: on push to \texttt{master}, build artefacts; on a version tag, a GitHub Release with the APK and web bundle.
-    \item \textbf{Code review}: Pull request template with area checkboxes and a testing checklist
-    \item \textbf{Task tracking}: \texttt{docs/progress/TODO.md} is the dated task log, with status markers and links to commits and analysis documents.
+    \item \textbf{Repository} -- \texttt{github.com/Umairishuman/FYP} (private)
+    \item \textbf{Branches} -- \texttt{master} branch (stable) including work branches such as \texttt{ci/github-actions}, \texttt{ci/pipeline-updates} and \texttt{exp/trainer-arkitscenes}
+    \item \textbf{Commits history} -- 133 commits (85/26/20, including 2 other bot commits)
+    \item \textbf{CI} -- GitHub Actions runs on work branches, pull requests and (through the CD process) on the \texttt{master} branch: ruff lint and pytest in Python versions 3.10, 3.11, and 3.12; Node.js build of the web UI (this is just a placeholder of FYP-2); Gradle APK build checking signing and the manifest; repository hygiene including limitation of files' sizes, secrets checking, and workflow's linting
+    \item \textbf{CD} -- on a push to \texttt{master}, build artifacts; on a version tag, a GitHub release with the APK and web app bundle
+    \item \textbf{Code review} -- there is a pull request template with area checkboxes as well as testing checklist
+    \item \textbf{Task monitoring} -- there is \texttt{docs/progress/TODO.md}, which is a dated task log of various statuses marked with links to commits and analysis documents
 \end{itemize}
 
-Table~\ref{tab:repo} maps the repository layout to the modules described in this report.
+Table~\ref{tab:repo} matches repository layout with the modules mentioned in this report.
 
 {\footnotesize
 \begin{longtable}{p{0.47\textwidth}p{0.49\textwidth}}
@@ -136,9 +136,9 @@ ChatGPT (OpenAI) & Research queries, algorithm explanations & Used to understand
 \end{table}
 
 \paragraph{Statement of originality:}
-All core algorithms (Sim3 alignment, gyro-aware frame selection, coverage map, IQA pipeline, RunPod lifecycle management) were designed by the team. AI tools were used as assistants for code generation, debugging, explanation and report drafting, as disclosed in Table~\ref{tab:aitools}. The system architecture, experimental methodology, root-cause analysis, and design decisions are entirely our own work. All AI-generated code was reviewed, understood, tested, and adapted by team members before integration into the codebase.
+The team developed all the algorithms involved in the project, which includes Sim3 alignment, application of the gyro-aware frame selection method, building coverage maps, IQA methods, and managing the entire RunPod lifecycle. The AI applications were utilized for creating the initial program code, debugging, giving explanations, and making reports, as disclosed in Table~\ref{tab:aitools}. The rest of material including architecture development, experimental design and data interpretation, and the reasons behind making particular design decisions were produced by the team. The output of AI software was well-studied by the members of the team before being integrated into the main system code.
 
-\paragraph{Other development tools:} Android Studio (Ladybug) with the Android Gradle Plugin, Visual Studio Code with Python and Java extensions, Git and GitHub, Postman for API testing, ADB for device-level debugging, and NVIDIA Nsight for GPU profiling during training experiments.
+\paragraph{Other development tools:} The software tools that were used by the team included Android Studio (Ladybug) with Android Gradle plug-in, Visual Studio Code with Python and Java plug-ins, Git and GitHub, Postman for testing API, ADB for debugging, and NVIDIA Nsight for profiling GPU during training experiments.
 
 \section{External Components and Dependencies}
 
@@ -197,18 +197,18 @@ R12 & Team member unavailability & Low & Medium & One shared repository; owned m
 
 \section{Security and Privacy Considerations}
 \begin{itemize}
-    \item \textbf{API key management}: The RunPod API key is loaded at runtime from environment variables or a \texttt{.env} file, never hardcoded in source. However, \texttt{.env} is not in \texttt{.gitignore} and was committed to the repository on 18~October~2026, so NFR-S2 is not met; the key must be rotated and the file removed from version control.
-    \item \textbf{CI secrets scanning}: The CI hygiene job fails if a \texttt{.env}, key or certificate file is tracked, and scans tracked files for private keys, AWS keys and GitHub tokens (it has no pattern for RunPod keys). CI last ran (run \#6) before \texttt{.env} was committed; by the job's own rule, the next CI run on \texttt{master} will fail until the file is removed.
-    \item \textbf{Data privacy}: Captured scan data (video, depth, poses) is transmitted to the processing server over the local network. In production, HTTPS would be required. Scan data is stored only for the duration of processing and can be deleted via the API.
-    \item \textbf{Cloud GPU security}: RunPod pods are created on-demand, used for a single job, and terminated immediately after. No persistent data remains on the cloud GPU.
+    \item \textbf{API credential management}: The RunPod API credential is loaded at runtime from environment variables or a \texttt{.env} file and is never mentioned in the source code directly. Nonetheless, the \texttt{.env} file was not in \texttt{.gitignore} and was uploaded to the repository on the 18th of October, 2026, contrary to NFR-S2. It was untracked and added to \texttt{.gitignore} on the 22nd of October, 2026; the key committed earlier is still in the repository history and must be rotated.
+    \item \textbf{CI secret scanning}: The CI hygiene job cannot pass if it keeps a \texttt{.env} file or key or certificate documents; also, it scans tracked files for private keys, AWS keys and GitHub tokens (it has no pattern for RunPod keys). The last time CI ran (run \#6) was before \texttt{.env} was committed; the file has since been untracked, so this rule no longer blocks the next CI run on \texttt{master}.
+    \item \textbf{Data privacy}: The gathered scanning data is sent to the processing server via a local network. When in production, an HTTPS mode will need to be applied. Collected data can be processed and deleted via the API.
+    \item \textbf{Cloud GPU security}: the RunPod pods are formed when they are needed and can only be used in a single operation; no data can be kept on the cloud GPU after.
 \end{itemize}
 
 \section{Current Limitations}
 \begin{enumerate}
-    \item \textbf{Mirrors and glass}: Highly reflective and transparent surfaces cause SfM outliers and incorrect depth. The model shows artifacts in these regions. Planned FYP-2 investigation: detect and mask reflective regions.
-    \item \textbf{Large rooms}: Rooms exceeding approximately 8$\times$8\,m may exceed GPU memory during training on the RTX 3070 (8\,GB). A 24\,GB cloud GPU (RTX 4090, the RunPod default) is expected to handle larger scenes; this has not yet been measured.
-    \item \textbf{Outdoor scenes}: The system is designed for indoor environments. Outdoor scenes with sky, vegetation, and long-range views are out of scope.
-    \item \textbf{Real-time processing}: Processing takes approximately 75 minutes on the development RTX 3070; no cloud-GPU timing has been measured yet. Real-time reconstruction is not feasible with current 3DGS training times.
-    \item \textbf{Single-floor only}: The current coverage map and measurement tools assume a single-floor environment. Multi-floor buildings require manual segmentation.
-    \item \textbf{No web viewer yet}: The 3D model can currently only be viewed in a local desktop viewer. The web-based Three.js viewer is planned for FYP-2.
+    \item \textbf{Mirrors and Glass}: The presence of highly reflective surfaces results in SfM outliers with an inaccurate depth model found in those areas. The planned FYP-2 experiment will attempt to detect and mask reflective surfaces.
+    \item \textbf{Large Rooms}: Rooms that exceed roughly 8$\times$8 meters may exceed the GPU capacity limit when training takes place on an RTX 3070 (8\,GB). It is expected that a cloud GPU with 24\,GB of memory can handle larger scenes. However, this fact has yet to be confirmed.
+    \item \textbf{Outdoor Scenes}: The system has been designed for indoor use; outdoor scenes with sky, vegetation, and long distances are beyond the system capabilities.
+    \item \textbf{Real-Time Processing}: Processing takes 75 minutes on the developing RTX 3070, whereas cloud-GPU timing has yet to be carried out. Real-time processing is not possible using existing 3DGS training times.
+    \item \textbf{Single-Floor Only}: The current coverage map and measurement tools rely on a single-floor environment. Multi-floor buildings require manual editing.
+    \item \textbf{No Web Viewer Yet}: At the moment, 3D models can be viewed only in a desktop program. A web-based viewer based on Three.js will be developed for FYP-2.
 \end{enumerate}
