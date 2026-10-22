@@ -55,7 +55,7 @@ Implementation was carried out in Java (Android app) and Python (server and pipe
 \paragraph{Reconstruction Pipeline (core complete, refinement ongoing):}
 \begin{itemize}
     \item IMU-bridged tracking-gap recovery (\texttt{fallback.py}).
-    \item Gyro-aware sharp frame selection (\texttt{prepare.py} using per-frame exposure metadata).
+    \item Keyframe extraction (\texttt{prepare.py}, sharpest frame per window) in the one-command pipeline; gyro-aware sharp frame selection (\texttt{select\_sharp.py}, using per-frame exposure metadata) validated for v4--v6 but not yet in the one-command pipeline.
     \item COLMAP SfM with SIFT features, exhaustive matching, global mapper, lens self-calibration (radial distortion $k_1, k_2$), and undistortion.
     \item Sim3 alignment to ARCore metric frame (tape-measure error: mean 0.19\%, worst case 0.29\%).
     \item Nerfstudio splatfacto training with bilateral grid exposure compensation.

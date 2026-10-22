@@ -4,10 +4,11 @@
 Our testing strategy combines automated unit/integration tests (CI-enforced) with manual system-level validation on real indoor scans. The rationale is that unit tests verify algorithmic correctness (coordinate transforms, file parsing, API contracts), while end-to-end validation on real data verifies reconstruction quality and metric accuracy---properties that cannot be unit-tested.
 
 \begin{itemize}
-    \item \textbf{Unit tests}: Python pipeline modules tested with pytest (3 Python versions: 3.10, 3.11, 3.12). Run on every push and pull request via GitHub Actions CI.
-    \item \textbf{Lint}: ruff static analysis enforced in CI; blocks merge on violations.
-    \item \textbf{Integration tests}: Server endpoint tests (upload, status polling, config switching).
-    \item \textbf{System tests}: Manual end-to-end validation: phone capture $\rightarrow$ upload $\rightarrow$ cloud processing $\rightarrow$ model viewing $\rightarrow$ metric verification.
+    \item \textbf{Unit tests}: Python pipeline modules tested with pytest on small synthetic capture folders (Python 3.10, 3.11, 3.12; no GPU, network or phone needed). Run by GitHub Actions CI on pushes to non-master branches, on pull requests, and from the CD workflow.
+    \item \textbf{Lint}: ruff in CI; real errors fail the run, unused-code findings are informational only.
+    \item \textbf{Integration tests}: Server endpoint tests through the FastAPI test client with the job starters replaced by recorders (upload, status, download, config), and RunPod client tests with the network faked. No test runs against a live RunPod pod.
+    \item \textbf{Android}: There are \textbf{no Android (Java) unit tests}. The capture app is checked by using it on a phone, and its packaging by the APK/manifest checker tests.
+    \item \textbf{System tests}: Manual runs of the reconstruction pipeline on real recordings, followed by held-out evaluation and tape-measure comparison. The full app upload $\rightarrow$ server $\rightarrow$ RunPod $\rightarrow$ download path has not yet been run as a recorded test.
     \item \textbf{Regression tests}: Each pipeline change is compared on the same two reference recordings (the first room, \texttt{newRoomAttemptSadness}, and a second room, \texttt{roomAttemptSadness2}) to detect quality regressions. This comparison is run by hand with the evaluation scripts, not in CI.
 \end{itemize}
 
@@ -21,42 +22,54 @@ Our testing strategy combines automated unit/integration tests (CI-enforced) wit
 \toprule
 \textbf{Level} & \textbf{Scope} & \textbf{Technique} & \textbf{Automation} \\
 \midrule
-Unit & Pipeline modules & pytest assertions & CI (GitHub Actions) \\
-Static analysis & All Python code & ruff linting & CI (GitHub Actions) \\
-Integration & Server API & HTTP request/response & CI (GitHub Actions) \\
-System & End-to-end flow & Manual walkthrough & Manual \\
-Acceptance & Metric accuracy & Tape-measure comparison & Manual \\
+Unit & Python pipeline modules & pytest on synthetic captures & CI (GitHub Actions) \\
+Static analysis & All Python code & ruff; every file compiles & CI (GitHub Actions) \\
+Integration & Server API, RunPod client & FastAPI test client; faked network & CI (GitHub Actions) \\
+Packaging & Android APK and manifest & APK checker tests & CI (GitHub Actions) \\
+Device & Android capture app & On-device use & Manual; no Java unit tests \\
+System & Capture to model & Pipeline runs on real recordings & Manual \\
+Acceptance & Quality and metric accuracy & Held-out frames; tape measure & Manual \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \section{Test Cases}
 
-\begin{longtable}{p{0.06\textwidth}p{0.22\textwidth}p{0.32\textwidth}p{0.12\textwidth}p{0.12\textwidth}}
+Table~\ref{tab:testcases} summarises the test cases; Appendix~\ref{app:testcases} gives the input, expected result and evidence for each, and lists what each pytest file covers. ``Pass (CI)'' refers to GitHub Actions CI run \#6 (12~October~2026, commit \texttt{c3bfcc9}), whose unit-test step succeeded on Python 3.10, 3.11 and 3.12 with the same \texttt{tests/} folder as today. ``Pass (manual)'' means a recorded run whose numbers are in \texttt{docs/progress/}.
+
+\begin{longtable}{p{0.06\textwidth}p{0.24\textwidth}p{0.30\textwidth}p{0.11\textwidth}p{0.15\textwidth}}
+\caption{Test cases and their status}\label{tab:testcases}\\
 \toprule
-\textbf{ID} & \textbf{Description} & \textbf{Expected Result} & \textbf{Level} & \textbf{Status} \\
+\textbf{ID} & \textbf{Description} & \textbf{Evidence} & \textbf{Level} & \textbf{Status} \\
 \midrule
-TC-1 & Pose logging completeness & Row count in \texttt{poses.csv} equals video frame count ($\pm$1) & Unit & Pass \\
-TC-2 & IQA blur detection & Blur metric exceeds threshold on synthetically blurred frames & Unit & Pass \\
-TC-3 & Coverage voxel counting & 10\,cm voxel grid correctly counts observation directions & Unit & Pass \\
-TC-4 & IMU fallback bridging & Tracking gaps $>0.12$\,s are bridged with interpolated poses & Unit & Pass \\
-TC-5 & COLMAP SfM convergence & All keyframes registered; reprojection error $<1.0$\,px & System & Pass \\
-TC-6 & Sim3 scale accuracy & Scale factor 1.000--1.003$\times$ vs.\ ARCore trajectory & System & Pass \\
-TC-7 & RunPod pod lifecycle & Pod created, pipeline runs, pod terminated in finally block & Integration & Pass \\
-TC-8 & Upload endpoint & \texttt{POST /upload} returns job ID; files saved to dataset dir & Integration & Pass \\
-TC-9 & Status polling & \texttt{GET /status/\{id\}} returns step name, percentage, logs & Integration & Pass \\
-TC-10 & Config switching & \texttt{POST /config} switches between local and RunPod modes & Integration & Pass \\
-TC-11 & End-to-end Room~A & Capture $\rightarrow$ upload $\rightarrow$ process $\rightarrow$ model with room dimensions within 2\,cm & System & Pass \\
-TC-12 & End-to-end Room~B & Same as TC-11 on a different room geometry & System & Pass \\
-TC-13 & Reconstruction quality & Held-out PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85 & Acceptance & Pass \\
-TC-14 & Processing timeout & Pipeline step exceeding timeout is killed; job marked failed & Integration & Pass \\
+\endhead
+TC-1 & Pose logging (Android) & No Java unit test & Device & Not yet automated \\
+TC-2 & IQA blur detection (Android) & No Java unit test; no recorded run & Device & Not yet automated \\
+TC-3 & Coverage voxel counting (Android) & No Java unit test; no recorded run & Device & Not yet automated \\
+TC-4 & IMU fallback bridging & \texttt{test\_fallback}, \texttt{test\_common\_fallback}, \texttt{test\_imu} & Unit & Pass (CI) \\
+TC-5 & COLMAP SfM convergence & 574-frame v3 model; 1166 gyro-selected frames registered, 1108 kept, BA 0.97 $\rightarrow$ 0.88\,px & System & Pass (manual) \\
+TC-6 & Sim3 scale & \texttt{test\_relocalize\_and\_sfm}; tape measure (Table~\ref{tab:tape}) & Unit + Accept. & Pass (CI, manual) \\
+TC-7 & RunPod client & \texttt{test\_runpod\_client} (faked network); no live-pod test & Unit / Integ. & Pass (CI); live run not yet executed \\
+TC-8 & Upload endpoint & \texttt{test\_server\_api} & Integ. & Pass (CI) \\
+TC-9 & Status polling & \texttt{test\_server\_api}, \texttt{test\_server\_pipeline} & Integ. & Pass (CI) \\
+TC-10 & Config switching & \texttt{test\_server\_api} & Integ. & Pass (CI) \\
+TC-11 & End-to-end, first room & Local pipeline + tape measure; app$\rightarrow$server$\rightarrow$RunPod path not recorded & System & Partial \\
+TC-12 & End-to-end, second room & SSIM 0.91, 1\% badly placed; no tape measurement & System & Partial \\
+TC-13 & Reconstruction quality & v6: 26.52\,dB / 0.8886 on 42 held-out frames & Accept. & Pass (manual) \\
+TC-14 & Processing timeout & Kill path never exercised & Integ. & Not yet executed \\
+TC-15 & Pipeline consistency & \texttt{test\_server\_pipeline} & Unit & Pass (CI) \\
+TC-16 & Download endpoint & \texttt{test\_server\_api} & Integ. & Pass (CI) \\
+TC-17 & APK and manifest checks & \texttt{test\_apk\_checks} & Unit & Pass (CI) \\
+TC-18 & Coordinate conventions & \texttt{test\_common\_project}, \texttt{test\_common\_capture} & Unit & Pass (CI) \\
+TC-19 & Dataset export & \texttt{test\_process\_dataset} & Unit & Pass (CI) \\
+TC-20 & Source compilation & \texttt{test\_sources\_compile} & Static & Pass (CI) \\
 \bottomrule
 \end{longtable}
 
 \section{Test Results}
 
-\paragraph{Unit and integration tests (CI):}
-All 14 test cases pass on Python 3.10, 3.11, and 3.12. The CI pipeline runs in approximately 3 minutes per push. Ruff reports zero lint violations on the current codebase.
+\paragraph{Automated tests (CI):}
+The pytest suite has 128 test functions in 12 files (one of them parametrised over every Python file). In CI run \#6 the unit-test step succeeded on Python 3.10, 3.11 and 3.12, the blocking ruff lint (real errors only) passed, and the whole run took about two minutes. Of the 20 test cases above, 12 are backed by these automated tests (TC-6 is also checked by tape measure), 2 by recorded manual runs (TC-5, TC-13), 2 are only partly executed (TC-11, TC-12), 3 Android cases have no automated test (TC-1 to TC-3), and TC-14 has not been executed. CI runs on every push to non-master branches, on pull requests, and from the CD workflow on \texttt{master}; it has not yet been re-run on the current \texttt{master} head.
 
 \paragraph{System-level results:}
 
@@ -108,7 +121,7 @@ Acceptance testing validates the system against the success criteria defined in 
     \item \textbf{Metric accuracy}: Four rigid-object distances measured in the model agree with a tape measure to a mean of 4.8\,mm (0.19\%) and a worst case of 0.29\% (Table~\ref{tab:tape}), against a 5\% target.
     \item \textbf{Reconstruction quality}: v6 scores 26.52\,dB PSNR / 0.8886 SSIM on 42 held-out frames of the first room, clearing the 25\,dB / 0.85 thresholds; the second room reaches held-out SSIM 0.91 (its PSNR is not yet measured). Views from the room centre, where no camera stood, are coherent, and the earlier ghosts and floating splats are gone.
     \item \textbf{Processing time}: The measured end-to-end time is approximately 75 minutes on the development RTX 3070 (feature matching 23\,min, mapping 6\,min, training 45\,min). The NFR-P1 target of under 35 minutes on an RTX 4090 is a projection for FYP-2 and has not yet been measured, so NFR-P1 is not yet verified.
-    \item \textbf{Capture usability}: Three users (team members) successfully captured rooms on first attempt using only the app's live IQA guidance, with no prior training.
+    \item \textbf{Capture usability}: Not yet formally evaluated. Usability testing with external users is planned for FYP-2.
 \end{enumerate}
 
 
@@ -143,9 +156,9 @@ The worst case is 0.29\%, far inside the 5\% accuracy target. The error does not
 
     \item \textbf{Mirrors and glass}: Highly reflective surfaces cause incorrect depth estimates and SfM outliers. \textit{Status}: Known limitation; documented for FYP-2 investigation.
 
-    \item \textbf{Network interruption during upload}: If the HTTP connection drops mid-upload, the app displays an error with a retry button. The server discards the partial upload. \textit{Status}: Handled; no data corruption.
+    \item \textbf{Network interruption during upload}: If the HTTP connection drops mid-upload, the app (\texttt{ProcessingActivity}) displays an error with a retry button. On the server, an upload missing a required file or carrying a corrupt depth zip is rejected cleanly (TC-8). \textit{Status}: Partly handled; an interrupted upload has not been tested end to end.
 
-    \item \textbf{RunPod pod failure}: If SSH never becomes ready (pod crash, GPU unavailable), the 60\,s SSH polling timeout triggers, the pod is terminated in the \texttt{finally} block, and the job is marked failed. \textit{Status}: Handled; no billing leak.
+    \item \textbf{RunPod pod failure}: If SSH never becomes ready (pod crash, GPU unavailable), \texttt{wait\_for\_ready} gives up after 300\,s (polling every 10\,s), the pod is terminated in the \texttt{finally} block, and the job is marked failed. \textit{Status}: Implemented; the timeout is unit-tested with a faked API (TC-7), but the termination path has not yet been exercised on a live pod.
 \end{enumerate}
 
 \section{Defects and Corrective Actions}
@@ -157,7 +170,7 @@ The worst case is 0.29\%, far inside the 5\% accuracy target. The error does not
 D-1 & Degenerate splats (zero thickness, half-transparent) & Flattening regularizer $\times$ Adam interaction; depth loss gradient conflicts & Switched to splatfacto; removed custom regularizers & Fixed \\
 D-2 & 5\,dB PSNR drop vs.\ reference implementations & ARCore poses used directly for training (2.3\,px reprojection error) & Switched to COLMAP SfM poses (0.62\,px) & Fixed \\
 D-3 & Ghosting artifacts near doorways & ARCore silent re-anchoring events creating pose discontinuities & Added anchor correction logging and IMU-bridged gap recovery & Fixed \\
-D-4 & SfM failure on 30\,FPS input & Too many similar frames overwhelm COLMAP exhaustive matching & Gyro-aware keyframe selection (1 frame per 0.2\,s window, sharpest) & Fixed \\
+D-4 & SfM failure on 30\,FPS input & Too many similar frames overwhelm COLMAP exhaustive matching & Keyframe selection: one sharp frame per window (\texttt{prepare.py}); gyro-aware selection (\texttt{select\_sharp.py}) for v4--v6 & Fixed \\
 D-5 & Barrel distortion visible at frame edges & ARCore intrinsics lack lens distortion coefficients & COLMAP self-calibration recovers $k_1$, $k_2$; undistort before training & Fixed \\
 \bottomrule
 \end{longtable}
@@ -168,8 +181,9 @@ Status of the Iteration~1 acceptance criteria (core pipeline complete, refinemen
     \item \checkmark\ Reconstruction quality: v6 scores 26.52\,dB / 0.8886 on the first room ($\geq$25\,dB, $\geq$0.85). Second room: SSIM 0.91; PSNR not yet measured.
     \item \checkmark\ Metric accuracy: mean 0.19\%, worst case 0.29\% against the 5\% target (Table~\ref{tab:tape}).
     \item Processing time: \textit{not yet verified}. Measured $\sim$75\,min on RTX 3070; the $<$35\,min RTX 4090 target (NFR-P1) is projected and not yet measured.
-    \item \checkmark\ Pod lifecycle: Guaranteed termination verified in all code paths.
-    \item \checkmark\ CI pipeline: All tests pass on 3 Python versions; zero lint violations.
+    \item Pod lifecycle: \textit{partly verified}. \texttt{terminate\_pod()} is called from \texttt{finally} blocks and the client calls are unit-tested with a faked API; a live-pod test is not yet executed.
+    \item \checkmark\ CI pipeline: all automated tests passed in CI run \#6 on Python 3.10--3.12; blocking ruff lint passed.
+    \item Not yet automated or executed: Android unit tests (TC-1 to TC-3), processing timeout (TC-14), app-to-RunPod end-to-end run.
 \end{itemize}
 
 Remaining validation for FYP-2:

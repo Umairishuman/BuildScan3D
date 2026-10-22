@@ -42,7 +42,7 @@ FR-S7 & Always terminate RunPod pod after processing & Must & FR-S4 & Done \\
 \toprule
 \textbf{ID} & \textbf{Description} & \textbf{Priority} & \textbf{Dependency} & \textbf{Status} \\
 \midrule
-FR-P1 & Extract keyframes using gyro-aware sharpness prediction & Must & Exposure metadata & Done \\
+FR-P1 & Extract keyframes using gyro-aware sharpness prediction & Must & Exposure metadata & Partial: \texttt{select\_sharp.py} validated (v4--v6), not yet in the one-command pipeline \\
 FR-P2 & Run COLMAP SfM with SIFT, self-calibration, global mapper & Must & COLMAP 4.2 & Done \\
 FR-P3 & Compute Sim3 alignment to ARCore metric frame & Must & FR-P2, FR-M1 & Done \\
 FR-P4 & Train splatfacto and export splat.ply & Must & Nerfstudio 1.1.5 & Done \\
@@ -58,7 +58,7 @@ FR-P5 & Bridge tracking gaps using IMU dead reckoning & Should & FR-M2 & Done \\
 \midrule
 NFR-R1 & Reliability & Pod terminated within 60\,s of completion/failure & Server log timestamps \\
 NFR-R2 & Reliability & Each step has timeout watchdog & Pipeline config file \\
-NFR-U1 & Usability & Real-time visual feedback without 3D knowledge & User testing (3 users) \\
+NFR-U1 & Usability & Real-time visual feedback without 3D knowledge & User testing with external users (planned for FYP-2; not yet executed) \\
 NFR-U2 & Usability & Progress display with step, \%, elapsed time & UI inspection \\
 NFR-P1 & Performance & E2E processing $<$ 35\,min on RTX 4090 (projected FYP-2 target) & Elapsed time on an RTX 4090 pod; not yet measured (75\,min measured on RTX 3070) \\
 NFR-P2 & Performance & 30\,FPS during recording, no drops & logcat frame timing \\
@@ -85,13 +85,13 @@ FR-M8 & Mobile & SettingsMenu & HelloArActivity.java & -- \\
 FR-M9 & Mobile & ProcessingActivity & ProcessingActivity.java & TC-9 \\
 FR-S1 & Server & /upload endpoint & main.py & TC-8 \\
 FR-S2 & Server & Job dataclass & pipeline.py & TC-9 \\
-FR-S3 & Server & StepConfig timeouts & pipeline.py & TC-14 \\
+FR-S3 & Server & StepConfig timeouts & pipeline.py & TC-15, TC-14 \\
 FR-S4 & Server & RunPodClient & runpod\_client.py & TC-7 \\
 FR-S5 & Server & /status endpoint & main.py & TC-9 \\
-FR-S6 & Server & /download endpoint & main.py & -- \\
+FR-S6 & Server & /download endpoint & main.py & TC-16 \\
 FR-S7 & Server & try/finally termination & runpod\_client.py & TC-7 \\
-FR-P1 & Pipeline & prepare.py & prepare.py & TC-4 \\
-FR-P2 & Pipeline & sfm\_colmap.py & sfm\_colmap.py & TC-5 \\
+FR-P1 & Pipeline & prepare.py / select\_sharp.py & prepare.py, select\_sharp.py & TC-5 \\
+FR-P2 & Pipeline & sfm\_colmap.py & sfm\_colmap.py & TC-5, TC-18 \\
 FR-P3 & Pipeline & Sim3 alignment & sfm\_colmap.py & TC-6 \\
 FR-P4 & Pipeline & ns-train + ns-export & pipeline.py & TC-13 \\
 FR-P5 & Pipeline & fallback.py & fallback.py & TC-4 \\

@@ -33,7 +33,8 @@ The data flow is strictly sequential: Capture $\rightarrow$ Upload $\rightarrow$
 \paragraph{Reconstruction Pipeline (\texttt{src/arcore3dgs/})}
 \begin{itemize}
     \item \texttt{fallback.py}: IMU-bridged tracking-gap recovery.
-    \item \texttt{prepare.py}: Gyro-aware keyframe extraction from video.
+    \item \texttt{prepare.py}: Keyframe extraction from video (sharpest frame by Laplacian variance in each window of 8 frames).
+    \item \texttt{select\_sharp.py}: Gyro-aware keyframe selection (least predicted motion blur per 0.2\,s window). Used for the v4--v6 models; not yet part of the one-command pipeline.
     \item \texttt{sfm\_colmap.py}: COLMAP SIFT matching + global mapper + lens self-calibration + Sim3 alignment to ARCore metric frame.
     \item \texttt{export\_nerfstudio.py}: Convert COLMAP output to Nerfstudio data format.
     \item Nerfstudio \texttt{ns-train splatfacto}: 3DGS training (30k iterations).
@@ -128,7 +129,7 @@ The end-to-end pipeline follows a sequential six-step process:
 
 \begin{enumerate}
     \item \textbf{Fallback} (2\,min timeout): Parse IMU data from \texttt{poses.csv}, detect tracking gaps in \texttt{tracking.csv}, bridge gaps using IMU dead reckoning.
-    \item \textbf{Prepare} (5\,min timeout): Decode video, select keyframes using gyro-aware blur prediction (least predicted blur per 0.2\,s window), extract to JPEG.
+    \item \textbf{Prepare} (5\,min timeout): Decode video, keep the sharpest frame (Laplacian variance) in each window of 8 frames, extract to JPEG (\texttt{prepare.py}). The gyro-aware selection of \texttt{select\_sharp.py} that produced v6 is not yet in this step.
     \item \textbf{SfM} (40\,min timeout): COLMAP feature extraction (SIFT), exhaustive matching, global mapper, lens self-calibration, image undistortion, Sim3 alignment to ARCore metric frame.
     \item \textbf{Export} (2\,min timeout): Convert COLMAP output to Nerfstudio \texttt{transforms.json} format.
     \item \textbf{Train} (60\,min timeout): Nerfstudio splatfacto training (30k iterations) with bilateral grid exposure compensation, scale regularization, and fixed poses.
