@@ -38,3 +38,10 @@ saved_models/
 *.sty
 *.bib
 *.cls
+# FYP report source (LaTeX) — must be versioned so cloud/CI sessions
+# and teammates get the chapters, not just the built PDF.
+!*.tex
+!*.cls
+!*.sty
+!*.bib
+!F26_FYP1_Mid_Report_LaTeX_Complete/ThesisFigs/*.jpg

@@ -1,0 +1,90 @@
+\chapter{Proposal Feedback and Iteration Plan}
+
+\section{Proposal Feedback Summary}
+During the proposal defense, the panel provided the following key feedback:
+\begin{itemize}
+    \item Clarify the distinction between BuildScan~3D and existing consumer scanning apps (Polycam, Luma AI).
+    \item Demonstrate metric accuracy with quantitative comparisons to ground truth measurements.
+    \item Drop the X-ray / through-wall scanning concept as infeasible for the project scope.
+    \item Focus on measurement accuracy and the automated pipeline rather than feature-rich UI.
+    \item Define clear acceptance criteria for reconstruction quality (PSNR, SSIM thresholds).
+\end{itemize}
+
+\section{Proposal Action Register}
+\begin{longtable}{p{0.04\textwidth}p{0.26\textwidth}p{0.28\textwidth}p{0.12\textwidth}p{0.20\textwidth}}
+\toprule
+No. & Feedback / Required Change & Action Taken & Status & Evidence \\
+\midrule
+1 & Differentiate from consumer apps & Added metric scale via ARCore Sim3, live IQA, and measurement capability & Done & Chapter~2, Table~\ref{tab:comparison} \\
+2 & Quantitative metric accuracy & Validated Sim3 scale at 0.3\%; room dimensions match tape measure & Done & Section~7.5 \\
+3 & Remove X-ray functionality & Removed from scope; refocused on measurement and MEP semantics & Done & Section~1.6 \\
+4 & Define quality thresholds & Set acceptance: PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85, scale error $<$ 1\% & Done & Section~1.9 \\
+5 & Show automated pipeline & Built FastAPI server with RunPod cloud GPU integration & Done & Chapter~6, Section~6.6 \\
+\bottomrule
+\end{longtable}
+
+\section{Iteration Strategy}
+We follow a two-iteration strategy aligned with FYP-1 and FYP-2:
+
+\begin{itemize}
+    \item \textbf{Iteration 1 (FYP-1, Weeks 1--8)}: Complete model implementation---capture app, reconstruction pipeline, processing server, cloud GPU integration, and validated end-to-end system. Deliverables: working Android APK, FastAPI server, RunPod integration, metric-accurate 3D reconstruction.
+    \item \textbf{Iteration 2 (FYP-2, Weeks 9--16)}: Optimization, performance tuning, and feature enrichment. Deliverables: reduced processing time, pipeline robustness improvements, Three.js web viewer with measurement tools, YOLOv8-Seg MEP detection, field validation on multiple rooms.
+\end{itemize}
+
+\section{Iteration 1 Plan}
+\begin{itemize}
+    \item \textbf{Objective}: Build the end-to-end pipeline from phone capture to 3D model.
+    \item \textbf{Features}: ARCore capture with IQA + coverage overlay; COLMAP SfM + splatfacto training; FastAPI server with RunPod dispatch; upload UI in the Android app.
+    \item \textbf{Deliverables}: Working Android APK, processing server, cloud GPU integration, reconstruction quality validation on two rooms.
+    \item \textbf{Evidence}: Live demo of phone capture $\rightarrow$ upload $\rightarrow$ cloud processing $\rightarrow$ 3D model viewing.
+\end{itemize}
+
+\section{Iteration 2 Plan}
+\begin{itemize}
+    \item \textbf{Objective}: Optimize processing time, improve pipeline robustness, add semantic understanding and measurement tools.
+    \item \textbf{Features}: Pipeline optimization (target $<$5\,min on RTX 4090); improved handling of edge cases (mirrors, textureless walls, large rooms); Three.js/WebGPU splat viewer; point-to-point measurement tool; YOLOv8-Seg MEP segmentation projected to 3D; semantic system toggles (pipes, conduits, HVAC).
+    \item \textbf{Deliverables}: Optimized pipeline with reduced processing time, web viewer with measurement tools, semantic labels on 3D model, field validation report across $\geq$5 rooms.
+    \item \textbf{Evidence}: Processing time benchmarks; measurement accuracy comparison with tape-measure ground truth across $\geq$5 rooms.
+\end{itemize}
+
+\section{Work Breakdown and Responsibilities}
+
+\begin{table}[h]
+\centering
+\caption{Work breakdown and ownership}
+\label{tab:workbreakdown}
+\begin{tabular}{p{4cm}p{3.5cm}p{3cm}}
+\toprule
+\textbf{Task} & \textbf{Owner} & \textbf{Status} \\
+\midrule
+ARCore capture app & Umair, Zaid & Complete \\
+Live IQA + coverage overlay & Umair & Complete \\
+Upload UI (ProcessingActivity) & Umair & Complete \\
+Reconstruction pipeline (SfM) & Umair, Tayyab & Complete \\
+3DGS training \& analysis & Umair, Tayyab & Complete \\
+FastAPI processing server & Umair & Complete \\
+RunPod cloud GPU integration & Umair & Complete \\
+CI/CD (GitHub Actions) & Zaid & Complete \\
+Unit tests (pytest) & Zaid & Complete \\
+Pipeline optimization (FYP-2) & Umair, Tayyab & Planned \\
+Web viewer (FYP-2) & Zaid, Tayyab & Planned \\
+Semantic AI (FYP-2) & Umair, Tayyab & Planned \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Progress Against Plan}
+All Iteration~1 milestones have been met:
+\begin{itemize}
+    \item \textbf{Week 1--2}: ARCore capture app with basic recording $\rightarrow$ \textit{Completed}.
+    \item \textbf{Week 3--4}: COLMAP SfM pipeline with ARCore Sim3 alignment $\rightarrow$ \textit{Completed}. Also resolved root causes of poor reconstruction quality (tracking gaps, lens distortion, degenerate splats).
+    \item \textbf{Week 5--6}: Live IQA, coverage overlay, quality improvements (gyro-aware frame selection, MVS initialization) $\rightarrow$ \textit{Completed}.
+    \item \textbf{Week 7--8}: Processing server, RunPod integration, upload UI, CI/CD $\rightarrow$ \textit{Completed}.
+\end{itemize}
+
+\section{Delays, Deviations and Recovery Plan}
+\begin{itemize}
+    \item \textbf{Deviation}: We initially built a custom training script (\texttt{train.py}) with depth supervision, flattening regularization, and pose refinement. After extensive analysis (documented in \texttt{Training\_Analysis.md}), we found this produced worse results than standard splatfacto. We pivoted to using splatfacto for training and keeping our custom preprocessing. This analysis consumed approximately 2 weeks but resulted in a better-informed design decision.
+    \item \textbf{Deviation}: The X-ray / through-wall scanning concept from the original proposal was dropped as infeasible. The scope was redirected to metric measurements and MEP semantic segmentation.
+    \item \textbf{Recovery}: No recovery plan needed---Iteration 1 deliverables are complete and on schedule.
+\end{itemize}

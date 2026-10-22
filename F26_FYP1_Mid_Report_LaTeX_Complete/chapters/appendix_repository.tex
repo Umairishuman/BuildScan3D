@@ -1,0 +1,68 @@
+\chapter{Repository and Contribution Evidence}
+
+\section{Repository Structure}
+\begin{verbatim}
+FYP/
+├── googleARCore/samples/hello_ar_java/  # Android capture app
+│   └── app/src/main/java/.../
+│       ├── HelloArActivity.java         # Main AR activity
+│       ├── CaptureLogger.java           # Sensor data recording
+│       ├── QualityMonitor.java          # Live IQA analysis
+│       ├── CoverageMap.java             # Voxel coverage tracker
+│       ├── CoverageOverlayView.java     # Coverage dot overlay
+│       └── ProcessingActivity.java      # Upload + progress UI
+├── src/arcore3dgs/                      # Reconstruction pipeline
+│   ├── fallback.py                      # IMU tracking-gap recovery
+│   ├── prepare.py                       # Gyro-aware frame selection
+│   ├── sfm_colmap.py                    # COLMAP SfM + Sim3 alignment
+│   └── export_nerfstudio.py             # Nerfstudio data export
+├── server/                              # Processing server
+│   ├── main.py                          # FastAPI endpoints
+│   ├── pipeline.py                      # Local pipeline runner
+│   ├── runpod_client.py                 # RunPod GPU integration
+│   └── requirements.txt                 # Python dependencies
+├── .github/workflows/                   # CI/CD
+│   ├── ci.yml                           # Lint, test, build
+│   └── cd.yml                           # Deploy on push/tag
+├── scripts/
+│   ├── start_server.bat                 # Server launcher
+│   └── view_splat.bat                   # Model viewer launcher
+├── tests/                               # pytest unit tests
+├── docs/                                # Project documentation
+│   ├── Flow.md                          # System flow
+│   └── progress/
+│       ├── TODO.md                      # Development log
+│       ├── Training_Analysis.md         # Splat quality analysis
+│       └── Problems_and_Solutions.md    # Issue tracker
+└── .env                                 # API keys (gitignored)
+\end{verbatim}
+
+\section{Commit History Summary}
+
+The repository contains 40+ commits across all team members. Key commit categories:
+
+\begin{itemize}
+    \item \textbf{Muhammad Umair}: ARCore capture features, pipeline scripts, server endpoints, RunPod integration, quality analysis, documentation.
+    \item \textbf{Zaid Fareed}: CI/CD workflows (ci.yml, cd.yml), pytest configuration, ruff setup, pull request template, repo hygiene checks.
+    \item \textbf{Muhammad Tayyab}: COLMAP experiment configurations, training parameter sweeps, documentation contributions.
+\end{itemize}
+
+\section{Branch Strategy}
+\begin{itemize}
+    \item \texttt{master}: Stable, CI-passing code. All merges go through pull requests.
+    \item Feature branches (e.g., \texttt{ci/github-actions}): Short-lived branches for specific work items, merged via PR with CI checks.
+\end{itemize}
+
+\section{CI/CD Evidence}
+The GitHub Actions CI pipeline runs on every push and pull request:
+\begin{enumerate}
+    \item \textbf{Python checks}: ruff lint + pytest on Python 3.10, 3.11, 3.12.
+    \item \textbf{Web build}: Node.js build of the web UI (placeholder for FYP-2).
+    \item \textbf{Android build}: Gradle APK build.
+    \item \textbf{Hygiene}: File size limits, secrets detection, workflow lint.
+\end{enumerate}
+
+The CD pipeline triggers on push to master (build artifacts) and on version tags (GitHub Release with APK and web bundle).
+
+\section{Task Tracking}
+Development progress is tracked in \texttt{docs/progress/TODO.md}, which serves as the project's task log with dated entries, status markers, and links to relevant commits and analysis documents.

@@ -1,0 +1,138 @@
+\chapter{Iteration 1: Design and Implementation}
+
+\section{Iteration Objectives}
+Build the complete end-to-end pipeline: phone capture $\rightarrow$ automated upload $\rightarrow$ cloud GPU reconstruction $\rightarrow$ metric-scale 3D model. Validate reconstruction quality and metric accuracy on real indoor scans.
+
+\section{Selected Use Cases / Features}
+\begin{itemize}
+    \item UC-1: Record Indoor Scan (with live IQA and coverage guidance)
+    \item UC-2: Upload and Process (with progress tracking)
+    \item UC-3: View finished model (via local viewer; web viewer deferred to FYP-2)
+\end{itemize}
+
+\section{Design}
+The Iteration~1 design focused on three subsystems:
+\begin{enumerate}
+    \item \textbf{Capture subsystem}: ARCore session $\rightarrow$ CaptureLogger (background I/O) $\rightarrow$ QualityMonitor (frame analysis at 6\,FPS) $\rightarrow$ CoverageMap (depth $\rightarrow$ voxels $\rightarrow$ overlay).
+    \item \textbf{Upload subsystem}: OkHttp multipart POST $\rightarrow$ FastAPI \texttt{/upload} $\rightarrow$ Job creation $\rightarrow$ Pipeline dispatch (local or RunPod).
+    \item \textbf{Pipeline subsystem}: Six sequential steps (fallback $\rightarrow$ prepare $\rightarrow$ sfm\_colmap $\rightarrow$ export\_nerfstudio $\rightarrow$ ns-train $\rightarrow$ ns-export), each with timeout watchdog.
+\end{enumerate}
+
+\section{Implementation}
+Implementation was carried out in Java (Android app) and Python (server and pipeline). Key implementation milestones:
+
+\begin{enumerate}
+    \item \textbf{Weeks 1--2}: Extended the ARCore hello\_ar\_java sample with \texttt{CaptureLogger} for sensor data recording, verified pose-to-video synchronization ($r = 0.76$--$0.79$ at 0.00\,s offset).
+    \item \textbf{Weeks 3--4}: Built the COLMAP SfM pipeline (\texttt{sfm\_colmap.py}), resolved coordinate alignment issues (OpenGL $\rightarrow$ OpenCV), implemented Sim3 metric alignment, debugged lens distortion.
+    \item \textbf{Weeks 5--6}: Diagnosed and fixed degenerate splat geometry (6 root causes documented in \texttt{Training\_Analysis.md}), added gyro-aware frame selection, live IQA, and coverage overlay.
+    \item \textbf{Weeks 7--8}: Built the FastAPI server, RunPod cloud GPU integration, Android upload UI (\texttt{ProcessingActivity}), CI/CD pipeline.
+\end{enumerate}
+
+\section{Completed Features / Module}
+
+\paragraph{Android Capture App (complete):}
+\begin{itemize}
+    \item 30\,FPS video recording with per-frame pose, tracking state, feature points, depth, quality metrics, and device metadata.
+    \item Live IQA with colour-coded banner: tracking lost (red), moving too fast (orange), blurry (yellow), too dark (yellow), low texture (yellow).
+    \item Haptic feedback (vibration) on quality degradation during recording.
+    \item Coverage overlay: red (1 direction), yellow (2--3), green (4+) dots at 2\,Hz.
+    \item Per-frame exposure time, rolling-shutter readout, and anchor correction logging.
+    \item End-of-recording quality summary dialog.
+    \item Upload \& Process button launching \texttt{ProcessingActivity}.
+    \item Configurable server URL via settings menu (persisted in SharedPreferences).
+    \item Performance optimization: recording fast-path skips all demo rendering.
+\end{itemize}
+
+\paragraph{Processing Server (complete):}
+\begin{itemize}
+    \item FastAPI with endpoints: \texttt{POST /upload}, \texttt{GET /status/\{id\}}, \texttt{GET /jobs}, \texttt{GET /download/\{id\}}, \texttt{GET/POST /config}, \texttt{GET /health}.
+    \item Local and RunPod processing modes switchable at runtime.
+    \item Per-step timeout watchdogs (fallback 2\,min, prepare 5\,min, SfM 40\,min, export 2\,min, train 60\,min, export\_splat 5\,min).
+    \item RunPod integration: pod creation, SSH readiness polling, dependency installation, SCP upload/download, guaranteed pod termination.
+    \item \texttt{.env} file support for API key management.
+\end{itemize}
+
+\paragraph{Reconstruction Pipeline (complete):}
+\begin{itemize}
+    \item IMU-bridged tracking-gap recovery (\texttt{fallback.py}).
+    \item Gyro-aware sharp frame selection (\texttt{prepare.py} using per-frame exposure metadata).
+    \item COLMAP SfM with SIFT features, exhaustive matching, global mapper, lens self-calibration (radial distortion $k_1, k_2$), and undistortion.
+    \item Sim3 alignment to ARCore metric frame (scale accuracy 0.3\%).
+    \item Nerfstudio splatfacto training with bilateral grid exposure compensation.
+    \item Model export to \texttt{splat.ply}.
+\end{itemize}
+
+\paragraph{CI/CD (complete):}
+\begin{itemize}
+    \item GitHub Actions CI: Python lint (ruff) + unit tests (pytest, 3 Python versions), web UI build, Android APK build, repo hygiene (file size, secrets, workflow lint).
+    \item GitHub Actions CD: on push to master, full CI gate $\rightarrow$ web bundle + APK artifacts; on version tag, GitHub Release.
+    \item Pull request template with area checkboxes and CI checklist.
+\end{itemize}
+
+\section{Technical Implementation Details}
+
+\paragraph{Pose-to-video synchronization (\texttt{CaptureLogger.java}):} ARCore's recording API writes video and poses from the same frames, but poses are only logged during \texttt{TRACKING} state, creating gaps. The pipeline interpolates poses at each frame's PTS (linear position, slerp rotation) and skips frames inside tracking gaps $> 0.12$\,s.
+
+\paragraph{Sim3 metric alignment (\texttt{sfm\_colmap.py}):} COLMAP's global mapper produces an arbitrary-scale coordinate system. We compute a 7-DOF similarity transform (rotation + translation + scale) from matched COLMAP and ARCore camera positions using RANSAC with an inlier threshold of 5\,cm. The resulting scale factor is validated against ARCore's trajectory length (1.000--1.003$\times$).
+
+\paragraph{Recording fast-path (\texttt{HelloArActivity.java}):} During recording, the \texttt{onDrawFrame()} method exits early after camera feed rendering and quality overlay (at 2\,Hz). All plane detection rendering, virtual object placement, PBR lighting, cubemap filtering, and tap handling are skipped, reducing GL thread load significantly.
+
+\paragraph{RunPod lifecycle (\texttt{runpod\_client.py}):} The \texttt{run\_pipeline\_on\_runpod()} function wraps the entire pod lifecycle in a try/finally block. The \texttt{finally} clause calls \texttt{terminate\_pod()} unconditionally, ensuring that even exceptions, timeouts, or SSH failures do not leave a pod running and accumulating charges.
+
+\section{Algorithms and Technical Decisions}
+
+\begin{enumerate}
+    \item \textbf{Gyro-aware frame selection}: For each 0.2\,s window, compute predicted motion blur as $\text{blur\_px} = \omega \times t_{\text{exp}} \times f$, where $\omega$ is IMU angular velocity (rad/s), $t_{\text{exp}}$ is exposure time, and $f$ is focal length in pixels. Select the frame with minimum predicted blur. This outperforms Laplacian-based sharpness ($r = 0.20$ correlation with true blur).
+
+    \item \textbf{Coverage map}: Discretize 3D space into 10\,cm voxels. For each voxel, track from how many of 16 directions (8 azimuth $\times$ 2 elevation) it has been observed. Display as dots: red (1 direction), yellow (2--3), green (4+). Cap processing at 5{,}000 voxels and 2{,}000 drawn dots for performance.
+
+    \item \textbf{Degenerate splat diagnosis}: Computed per-model statistics (thickness/width median, opacity histogram, splat count) and compared against reference implementations. Identified flattening regularizer $\times$ Adam interaction as the primary cause of zero-thickness splats.
+\end{enumerate}
+
+\section{Tools, Frameworks and Technologies}
+
+\begin{table}[h]
+\centering
+\caption{Tools and technologies used}
+\label{tab:tools}
+\begin{tabular}{p{3.5cm}p{3cm}p{4.5cm}}
+\toprule
+\textbf{Tool} & \textbf{Version} & \textbf{Purpose} \\
+\midrule
+Android Studio & Ladybug & Android app development \\
+ARCore SDK & 1.44+ & Camera pose tracking, depth \\
+OkHttp & 4.12.0 & HTTP client for upload \\
+Python & 3.10--3.12 & Server and pipeline \\
+FastAPI & 0.110+ & REST API server \\
+COLMAP & 4.2 & Structure from Motion \\
+Nerfstudio & 1.1.5 & 3DGS training (splatfacto) \\
+PyTorch & 2.1+ & GPU computation \\
+OpenCV & 4.9+ & Image processing \\
+GitHub Actions & -- & CI/CD \\
+RunPod API & -- & Cloud GPU provisioning \\
+ruff & 0.6+ & Python linting \\
+pytest & 8+ & Unit testing \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Demonstration Evidence}
+The following can be demonstrated live:
+\begin{enumerate}
+    \item \textbf{Android app}: Record a room scan with live IQA feedback and coverage overlay.
+    \item \textbf{Upload flow}: Tap ``Upload \& Process,'' watch progress screen update.
+    \item \textbf{Server}: Start server with \texttt{scripts/start\_server.bat}, show API docs at \texttt{/docs}.
+    \item \textbf{3D model}: View the reconstructed \texttt{splat.ply} in the local viewer (\texttt{scripts/view\_splat.bat}).
+    \item \textbf{Metric accuracy}: Navigate the model; room dimensions match tape-measure measurements.
+    \item \textbf{CI/CD}: Show GitHub Actions passing on the repository.
+\end{enumerate}
+
+\section{Iteration Outcome}
+Iteration~1 is \textbf{complete}. All planned features are implemented and validated:
+\begin{itemize}
+    \item Reconstruction quality exceeds the 25\,dB PSNR target: 27.8\,dB held-out PSNR, 0.889 SSIM on the best model (v6).
+    \item Metric scale accuracy is 0.3\% (target: $<$1\%).
+    \item Processing time is approximately 75 minutes on the local RTX 3070; expected $<$15 minutes on RTX 4090 (RunPod).
+    \item The app provides live quality guidance and coverage visualization.
+    \item The server supports both local and cloud GPU processing with automatic lifecycle management.
+\end{itemize}

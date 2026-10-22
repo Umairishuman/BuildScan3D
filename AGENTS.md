@@ -15,3 +15,7 @@
 - **Stage 3 (3DGS)**: Nerfstudio `splatfacto` 3D Gaussian Splatting trained in < 5 minutes on Cloud GPU (NVIDIA RTX 4090).
 - **Stage 4 (Semantic AI)**: YOLOv8-Seg 2D segmentation masks projected to 3D point cloud for MEP systems (Pipes, Conduits, HVAC).
 - **Stage 5 (Web Workspace)**: Three.js / WebGPU rendering with 1:1 metric measurements and semantic system toggles.
+
+## 4. Git & Commit Conventions
+- **No AI attribution in commits.** Do NOT add `Co-Authored-By: Claude ...`, `Generated with Claude Code`, or any similar AI attribution trailer to commit messages or pull request descriptions. Commits are authored by the student team only.
+- This applies to every commit and PR in this repository, with no exceptions.

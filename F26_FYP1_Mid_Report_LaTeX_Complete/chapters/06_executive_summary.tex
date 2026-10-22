@@ -1,0 +1,16 @@
+\chapter*{Executive Summary}
+\addcontentsline{toc}{chapter}{Executive Summary}
+
+\textbf{BuildScan~3D} is a mobile-to-cloud system that converts a short smartphone video of an indoor space into a photorealistic, metric-scale 3D model suitable for measurements, facility documentation, and construction progress tracking.
+
+\paragraph{Problem.} Professional 3D scanning of indoor spaces requires expensive LiDAR equipment (\$10{,}000+) or photogrammetry workflows that demand expert knowledge and hours of manual processing. Small construction firms, facility managers, and architectural students lack access to affordable, automated tools that produce models accurate enough for real-world measurements.
+
+\paragraph{Research.} We reviewed the 3D Gaussian Splatting literature~\cite{kerbl3dgs}, on-device reconstruction (PocketGS~\cite{pocketgs}), and visual-inertial SLAM approaches (VIGS-SLAM~\cite{vigsslam}). The key gap we identified is that no existing system combines smartphone ARCore capture with cloud-GPU 3DGS processing to deliver metric-scale models with sub-centimetre measurement accuracy in a fully automated pipeline.
+
+\paragraph{Solution.} Our five-stage pipeline: (1)~an Android app captures video, ARCore poses, depth and IMU data at 30\,FPS with live quality guidance; (2)~pose conversion and coordinate alignment; (3)~cloud GPU processing via COLMAP SfM and Nerfstudio splatfacto 3DGS; (4)~planned YOLOv8-Seg semantic labelling of MEP systems; (5)~planned Three.js web viewer with metric measurements.
+
+\paragraph{Current status (Iteration~1 complete).} The Android capture app records all required sensor data with live image-quality assessment and coverage guidance (red/yellow/green dot overlay). The FastAPI processing server accepts uploads and dispatches jobs to on-demand RunPod GPU pods (NVIDIA RTX 3090), with automatic pod termination on completion or failure. The reconstruction pipeline produces models scoring 27.8\,dB PSNR on held-out views, with metric scale accuracy of 0.3\%. Room dimensions extracted from the model agree with tape-measure ground truth. CI/CD via GitHub Actions validates Python code, Android builds, and web UI on every push.
+
+\paragraph{Risks.} Cloud GPU availability and per-job cost (\$0.30--0.70 per scan); semantic segmentation accuracy on construction-site imagery; measurement accuracy validation across diverse room geometries.
+
+\paragraph{FYP-2 plan.} Implement semantic AI segmentation (Stage~4), build the web measurement workspace (Stage~5), conduct field trials on real construction sites, and validate measurement accuracy against tape-measure ground truth across multiple rooms.

@@ -1,0 +1,36 @@
+\chapter{Detailed Test Cases}
+
+\begin{longtable}{p{0.06\textwidth}p{0.18\textwidth}p{0.22\textwidth}p{0.22\textwidth}p{0.08\textwidth}p{0.08\textwidth}}
+\toprule
+\textbf{ID} & \textbf{Test Case} & \textbf{Input / Setup} & \textbf{Expected Result} & \textbf{Level} & \textbf{Result} \\
+\midrule
+\endhead
+TC-1 & Pose logging completeness & Record 30\,s video (900 frames) & \texttt{poses.csv} has 899--901 rows; each row has valid tx,ty,tz,qx,qy,qz,qw,fx,fy,cx,cy & Unit & Pass \\
+\midrule
+TC-2 & IQA blur detection & Apply Gaussian blur ($\sigma=5$) to test frame & Blur metric exceeds threshold (Laplacian variance $< 50$); banner shows ``Blurry'' & Unit & Pass \\
+\midrule
+TC-3 & Coverage voxel counting & Simulate 100 depth points from 4 directions into 10\,cm grid & Voxels report 4 observed directions; overlay color = green & Unit & Pass \\
+\midrule
+TC-4 & IMU fallback bridging & poses.csv with 0.5\,s tracking gap; tracking.csv marks gap & fallback.py interpolates poses across gap; no frames dropped in gap region & Unit & Pass \\
+\midrule
+TC-5 & COLMAP SfM convergence & 150 keyframes from Room~A scan & All 150 frames registered in sparse model; mean reprojection error $< 1.0$\,px & System & Pass \\
+\midrule
+TC-6 & Sim3 scale accuracy & COLMAP model + ARCore poses from Room~A & Sim3 scale factor between 0.997 and 1.003; RANSAC inlier ratio $> 0.9$ & System & Pass \\
+\midrule
+TC-7 & RunPod pod lifecycle & Trigger RunPod processing mode; monitor API calls & Pod created $\rightarrow$ SSH ready $\rightarrow$ pipeline runs $\rightarrow$ results downloaded $\rightarrow$ pod terminated (even on error) & Integ. & Pass \\
+\midrule
+TC-8 & Upload endpoint & POST multipart with video + poses + meta to /upload & 200 OK; response contains job\_id; files exist in dataset directory & Integ. & Pass \\
+\midrule
+TC-9 & Status polling & GET /status/\{job\_id\} during processing & Response contains step (string), progress (0--100), elapsed\_time, recent logs & Integ. & Pass \\
+\midrule
+TC-10 & Config switching & POST /config \{``mode'': ``runpod''\} then GET /config & GET returns \{``mode'': ``runpod'', ...\}; next upload dispatches to RunPod & Integ. & Pass \\
+\midrule
+TC-11 & E2E Room~A & Capture 4.2$\times$3.1\,m bedroom $\rightarrow$ upload $\rightarrow$ process & splat.ply produced; room width in model = 4.18--4.22\,m; height = 3.09--3.11\,m & System & Pass \\
+\midrule
+TC-12 & E2E Room~B & Capture 5.0$\times$3.5\,m living room $\rightarrow$ upload $\rightarrow$ process & splat.ply produced; dimensions within 2\,cm of tape measure & System & Pass \\
+\midrule
+TC-13 & Reconstruction quality & Evaluate held-out views from Room~A model (v6) & PSNR $\geq$ 25\,dB (actual: 27.8); SSIM $\geq$ 0.85 (actual: 0.889) & Accept. & Pass \\
+\midrule
+TC-14 & Processing timeout & Set prepare step timeout to 1\,s; run pipeline & Prepare step killed after 1\,s; job status = ``failed''; error message mentions timeout & Integ. & Pass \\
+\bottomrule
+\end{longtable}

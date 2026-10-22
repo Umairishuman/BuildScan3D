@@ -1,0 +1,53 @@
+\chapter{Meeting and Progress Evidence}
+
+\section{Supervisor Meetings}
+
+\begin{longtable}{p{0.12\textwidth}p{0.35\textwidth}p{0.35\textwidth}p{0.10\textwidth}}
+\toprule
+\textbf{Date} & \textbf{Agenda} & \textbf{Outcome / Action Items} & \textbf{Attendees} \\
+\midrule
+\endhead
+Week 1 & Project kickoff; discuss ARCore capture approach & Proceed with ARCore hello\_ar\_java sample as base; log all sensor data & All + Supervisor \\
+\midrule
+Week 2 & Demo basic capture; discuss pose synchronization & Verified pose-to-video sync ($r=0.76$--$0.79$); proceed to SfM pipeline & All + Supervisor \\
+\midrule
+Week 3 & SfM pipeline progress; coordinate alignment issues & Identified OpenGL$\rightarrow$OpenCV transform needed; continue debugging & All + Supervisor \\
+\midrule
+Week 4 & Degenerate splat quality; show Training\_Analysis.md & Approved switch from custom trainer to splatfacto; document root causes & All + Supervisor \\
+\midrule
+Week 5 & Demo improved reconstruction; discuss IQA approach & Add live quality feedback to app; implement coverage overlay & All + Supervisor \\
+\midrule
+Week 6 & Demo IQA + coverage overlay; discuss server architecture & Proceed with FastAPI; add RunPod for cloud GPU support & All + Supervisor \\
+\midrule
+Week 7 & Server demo; CI/CD pipeline review & CI/CD approved; add server/ to CI detection paths & All + Supervisor \\
+\midrule
+Week 8 & End-to-end demo; metric accuracy validation & All acceptance criteria met; prepare mid-evaluation report & All + Supervisor \\
+\bottomrule
+\end{longtable}
+
+\section{Progress Log}
+
+Detailed development progress is maintained in \texttt{docs/progress/TODO.md}. Key milestones:
+
+\begin{itemize}
+    \item \textbf{ARCore capture app}: Basic recording $\rightarrow$ pose sync validation $\rightarrow$ IQA $\rightarrow$ coverage overlay $\rightarrow$ upload UI. Incremental feature additions documented with timestamps.
+
+    \item \textbf{Reconstruction pipeline}: Initial ARCore-pose training (22.7\,dB PSNR) $\rightarrow$ COLMAP SfM integration (27.8\,dB) $\rightarrow$ Sim3 alignment (0.3\% scale) $\rightarrow$ gyro-aware frame selection (+0.26\,dB). Each improvement documented with before/after metrics.
+
+    \item \textbf{Quality debugging}: Two-week root-cause analysis documented in \texttt{Training\_Analysis.md} covering 6 identified causes of degenerate splats, with per-cause experiments and metrics.
+
+    \item \textbf{Server and cloud}: FastAPI server $\rightarrow$ local pipeline runner $\rightarrow$ RunPod integration $\rightarrow$ guaranteed pod lifecycle. Problem-solution pairs documented in \texttt{Problems\_and\_Solutions.md}.
+\end{itemize}
+
+\section{Problems and Solutions Summary}
+
+Over 20 problems were encountered and resolved during development, documented in \texttt{docs/progress/Problems\_and\_Solutions.md}. The most significant:
+
+\begin{enumerate}
+    \item ARCore silent re-anchoring causing pose discontinuities (solved: anchor logging + IMU fallback)
+    \item COLMAP lens distortion not matching ARCore intrinsics (solved: self-calibration)
+    \item Degenerate splat geometry from custom training recipe (solved: adopted splatfacto)
+    \item 30\,FPS input overwhelming COLMAP matching (solved: gyro-aware keyframe selection)
+    \item RunPod SSH connection timing out (solved: polling with exponential backoff)
+    \item GPU memory overflow on RTX 3070 (solved: cloud GPU support, image pinning)
+\end{enumerate}

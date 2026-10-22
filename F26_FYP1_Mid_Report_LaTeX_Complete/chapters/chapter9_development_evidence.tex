@@ -1,0 +1,176 @@
+\chapter{Project Management and Development Evidence}
+
+\section{Work Completed}
+\begin{enumerate}
+    \item Android capture app with ARCore pose/depth/quality logging, live IQA, coverage overlay, upload UI.
+    \item Reconstruction pipeline: IMU fallback, gyro-aware frame selection, COLMAP SfM with Sim3 metric alignment, Nerfstudio splatfacto training, model export.
+    \item FastAPI processing server with local and RunPod cloud GPU modes.
+    \item RunPod integration with guaranteed pod lifecycle management.
+    \item CI/CD pipeline (GitHub Actions): lint, unit tests, APK build, web build, hygiene checks.
+    \item Extensive root-cause analysis of degenerate splat geometry (6 causes, documented in \texttt{Training\_Analysis.md}).
+    \item Server launcher script (\texttt{start\_server.bat}) with \texttt{.env} support.
+\end{enumerate}
+
+\section{Work Remaining}
+\begin{enumerate}
+    \item \textbf{Web viewer}: Three.js/WebGPU Gaussian splat viewer with orbit controls and measurement tools.
+    \item \textbf{Measurement tool}: Point-to-point distance measurement in the metric 3D model.
+    \item \textbf{Semantic AI}: YOLOv8-Seg 2D segmentation of MEP components (pipes, conduits, HVAC) projected to 3D point cloud.
+    \item \textbf{Semantic toggles}: System-level visibility controls (show/hide pipes, conduits, HVAC) in the web viewer.
+    \item \textbf{Field validation}: Metric accuracy validation on $\geq$3 additional rooms with varied geometry.
+    \item \textbf{User testing}: Usability evaluation with external users (non-team members).
+\end{enumerate}
+
+\section{Individual Responsibilities}
+
+\begin{table}[h]
+\centering
+\caption{Individual responsibilities and contributions}
+\label{tab:responsibilities}
+\begin{tabular}{p{3.5cm}p{7.5cm}}
+\toprule
+\textbf{Team Member} & \textbf{Responsibilities} \\
+\midrule
+Muhammad Umair (23I-0662) & Project lead. ARCore capture app (IQA, coverage overlay, upload UI). Reconstruction pipeline (SfM, Sim3 alignment, splatfacto integration). FastAPI server. RunPod cloud GPU integration. Root-cause analysis of degenerate splats. \\
+\midrule
+Zaid Fareed (23I-0829) & Android app co-development (ARCore session, recording controls). CI/CD pipeline (GitHub Actions workflows, ruff, pytest). Unit test suite. Pull request template and repo hygiene. \\
+\midrule
+Muhammad Tayyab (23I-0636) & Reconstruction pipeline co-development (COLMAP experiments, training configurations). 3DGS training analysis and parameter tuning. Documentation. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Contribution of Each Team Member}
+
+\paragraph{Muhammad Umair (23I-0662):}
+Led the system architecture, implemented the majority of the Android capture features (CaptureLogger, QualityMonitor, CoverageMap, CoverageOverlayView, ProcessingActivity), the complete server backend (FastAPI, RunPod client), and the SfM pipeline (sfm\_colmap.py, export\_nerfstudio.py, fallback.py). Conducted the root-cause analysis of degenerate splat geometry and made the decision to adopt splatfacto.
+
+\paragraph{Zaid Fareed (23I-0829):}
+Built the CI/CD infrastructure (ci.yml, cd.yml, pytest.ini, ruff.toml), wrote unit tests, co-developed the ARCore capture session and recording controls, and established the pull request workflow with automated checks.
+
+\paragraph{Muhammad Tayyab (23I-0636):}
+Worked on COLMAP pipeline experiments (varying feature types, matching strategies, mapper configurations), 3DGS training parameter sweeps (learning rates, regularization weights, initialization strategies), and contributed to project documentation.
+
+\section{Repository and Version Control Evidence}
+The project repository is hosted on GitHub. Key statistics:
+\begin{itemize}
+    \item \textbf{Repository}: \texttt{github.com/Umairishuman/FYP} (private)
+    \item \textbf{Branches}: \texttt{master} (stable), feature branches for each work item
+    \item \textbf{Commit history}: 40+ commits across all team members
+    \item \textbf{Pull requests}: Feature branches merged via pull requests with CI checks
+    \item \textbf{Code review}: Pull request template enforces area checkboxes and testing checklist
+\end{itemize}
+
+\section{Milestones and Commit Evidence}
+
+\begin{table}[h]
+\centering
+\caption{Key milestones with commit evidence}
+\label{tab:milestones}
+\begin{tabular}{p{2.5cm}p{5cm}p{3.5cm}}
+\toprule
+\textbf{Milestone} & \textbf{Description} & \textbf{Evidence} \\
+\midrule
+M1: Capture & ARCore recording with pose/depth logging & Commits by Umair, Zaid \\
+M2: Pipeline & COLMAP SfM + splatfacto training & Commits by Umair, Tayyab \\
+M3: Quality & IQA, coverage overlay, gyro-aware selection & Commits by Umair \\
+M4: Server & FastAPI + RunPod integration & Commits by Umair \\
+M5: CI/CD & GitHub Actions workflows & Commits by Zaid \\
+M6: Validation & Quality metrics on two rooms & Documented in TODO.md \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Tools and Tool-Assisted Development}
+
+\textbf{IMPORTANT: Generative AI Tool Disclosure}
+
+In compliance with university policy, we disclose the use of the following AI-assisted development tools:
+
+\begin{table}[h]
+\centering
+\caption{AI and automated tools used during development}
+\label{tab:aitools}
+\begin{tabular}{p{3cm}p{4cm}p{4cm}}
+\toprule
+\textbf{Tool} & \textbf{Usage} & \textbf{Scope / Boundaries} \\
+\midrule
+Claude (Anthropic) & Code assistance, debugging, documentation drafting & Used for boilerplate generation, error diagnosis, and report drafting. All generated code was reviewed, tested, and modified by team members before integration. \\
+GitHub Copilot & Inline code completion & Used for auto-completion in Android Studio and VS Code. All suggestions were reviewed before acceptance. \\
+ChatGPT (OpenAI) & Research queries, algorithm explanations & Used to understand COLMAP parameters, quaternion math, and coordinate system conventions. No code directly copied. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Statement of originality:}
+All core algorithms (Sim3 alignment, gyro-aware frame selection, coverage map, IQA pipeline, RunPod lifecycle management) were designed and implemented by the team. AI tools were used as assistants for code generation, debugging, and explanation---not as primary authors. The system architecture, experimental methodology, root-cause analysis, and design decisions are entirely our own work. All AI-generated code was reviewed, understood, tested, and adapted by team members before integration into the codebase.
+
+\paragraph{Other development tools:}
+\begin{itemize}
+    \item Android Studio (Ladybug) with Android Gradle Plugin
+    \item Visual Studio Code with Python and Java extensions
+    \item Git + GitHub for version control
+    \item Postman for API testing during server development
+    \item ADB (Android Debug Bridge) for device-level debugging
+    \item NVIDIA Nsight for GPU profiling during training experiments
+\end{itemize}
+
+\section{External Components and Dependencies}
+
+\begin{table}[h]
+\centering
+\caption{External components and their licenses}
+\label{tab:dependencies}
+\begin{tabular}{p{3.5cm}p{2cm}p{2.5cm}p{3cm}}
+\toprule
+\textbf{Component} & \textbf{Version} & \textbf{License} & \textbf{Usage} \\
+\midrule
+ARCore SDK & 1.44+ & Apache 2.0 & Pose tracking, depth \\
+COLMAP & 4.2 & BSD-3 & Structure from Motion \\
+Nerfstudio & 1.1.5 & Apache 2.0 & 3DGS training \\
+FastAPI & 0.110+ & MIT & REST API server \\
+OkHttp & 4.12.0 & Apache 2.0 & HTTP client \\
+PyTorch & 2.1+ & BSD-3 & GPU computation \\
+OpenCV & 4.9+ & Apache 2.0 & Image processing \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+All external components are used under permissive open-source licenses compatible with academic use. No proprietary or restrictively-licensed code is included.
+
+\section{Risks and Mitigation}
+
+\begin{table}[h]
+\centering
+\caption{Risk register}
+\label{tab:risks}
+\begin{tabular}{p{3cm}p{1.5cm}p{1.5cm}p{5cm}}
+\toprule
+\textbf{Risk} & \textbf{Likelihood} & \textbf{Impact} & \textbf{Mitigation} \\
+\midrule
+Cloud GPU costs exceed budget & Medium & High & Per-step timeouts; guaranteed pod termination in finally block; RTX 3090 (cheaper than 4090) as default \\
+ARCore API deprecation & Low & High & Abstracted behind CaptureLogger interface; can swap to AREngine \\
+COLMAP SfM fails on difficult scenes & Medium & Medium & IMU fallback for tracking gaps; live IQA reduces bad input; manual SfM parameter overrides available \\
+Nerfstudio breaking changes & Low & Medium & Pinned to version 1.1.5; tested upgrade path \\
+Team member unavailability & Low & Medium & All code in shared repo; documented in Flow.md and TODO.md \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Security and Privacy Considerations}
+\begin{itemize}
+    \item \textbf{API key management}: The RunPod API key is stored in a \texttt{.env} file excluded from version control via \texttt{.gitignore}. The key is loaded at runtime from environment variables, never hardcoded.
+    \item \textbf{CI secrets scanning}: The GitHub Actions CI pipeline includes a secrets detection check that blocks merges if API keys, tokens, or credentials are found in committed files.
+    \item \textbf{Data privacy}: Captured scan data (video, depth, poses) is transmitted to the processing server over the local network. In production, HTTPS would be required. Scan data is stored only for the duration of processing and can be deleted via the API.
+    \item \textbf{Cloud GPU security}: RunPod pods are created on-demand, used for a single job, and terminated immediately after. No persistent data remains on the cloud GPU.
+\end{itemize}
+
+\section{Current Limitations}
+\begin{enumerate}
+    \item \textbf{Mirrors and glass}: Highly reflective and transparent surfaces cause SfM outliers and incorrect depth. The model shows artifacts in these regions. Planned mitigation in FYP-2: mask reflective surfaces using semantic segmentation.
+    \item \textbf{Large rooms}: Rooms exceeding approximately 8$\times$8\,m may exceed GPU memory during training on the RTX 3070 (8\,GB). Cloud GPUs (RTX 3090/4090, 24\,GB) handle larger scenes.
+    \item \textbf{Outdoor scenes}: The system is designed for indoor environments. Outdoor scenes with sky, vegetation, and long-range views are out of scope.
+    \item \textbf{Real-time processing}: Processing takes 12--15 minutes on an RTX 3090. Real-time reconstruction is not feasible with current 3DGS training times.
+    \item \textbf{Single-floor only}: The current coverage map and measurement tools assume a single-floor environment. Multi-floor buildings require manual segmentation.
+    \item \textbf{No web viewer yet}: The 3D model can currently only be viewed in a local desktop viewer. The web-based Three.js viewer is planned for FYP-2.
+\end{enumerate}

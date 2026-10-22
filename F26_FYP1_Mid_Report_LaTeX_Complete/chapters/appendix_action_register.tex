@@ -1,0 +1,22 @@
+\chapter{Proposal Action Register}
+
+The following table records all feedback received during the FYP proposal defense and the actions taken in response.
+
+\begin{longtable}{p{0.04\textwidth}p{0.18\textwidth}p{0.18\textwidth}p{0.20\textwidth}p{0.10\textwidth}p{0.16\textwidth}}
+\toprule
+\textbf{No.} & \textbf{Panel Feedback} & \textbf{Required Change} & \textbf{Action Taken} & \textbf{Status} & \textbf{Evidence} \\
+\midrule
+\endhead
+1 & How does this differ from Polycam or Luma AI? & Clearly differentiate from consumer apps & Added metric scale via ARCore Sim3 alignment (0.3\% accuracy), live IQA capture guidance, and measurement tools. Created comparison table. & Done & Chapter~2, Table~2.1 \\
+\midrule
+2 & Show quantitative accuracy, not just visual quality & Provide metric accuracy measurements & Validated Sim3 scale at 0.3\% error; wall-to-wall measurements match tape measure within 2\,cm. PSNR/SSIM reported. & Done & Chapter~8, Table~8.3 \\
+\midrule
+3 & X-ray / see-through-wall is infeasible & Remove X-ray from scope & Removed entirely. Scope redirected to metric measurements and MEP semantic segmentation (FYP-2). & Done & Section~1.6 \\
+\midrule
+4 & Define measurable acceptance criteria & Set quality thresholds & Acceptance criteria: PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85, scale error $<$ 1\%, processing $<$ 15\,min on RTX 3090 & Done & Section~1.9, Table~4.3 \\
+\midrule
+5 & The pipeline should be automated, not manual & Show fully automated pipeline & Built FastAPI server with RunPod cloud GPU integration; one-tap upload from Android app triggers entire pipeline automatically & Done & Chapter~6, Section~6.5 \\
+\midrule
+6 & Consider cost implications of cloud GPU & Address cloud compute costs & Per-step timeouts prevent unbounded billing; guaranteed pod termination in try/finally; default to RTX 3090 (cheaper) & Done & Section~9.10, Table~9.4 \\
+\bottomrule
+\end{longtable}

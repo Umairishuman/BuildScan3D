@@ -1,0 +1,134 @@
+\chapter{Software Requirements}
+
+\section{User Interactions / Use Cases}
+The system supports three primary user interactions:
+\begin{enumerate}
+    \item \textbf{Capture}: The user opens the Android app, starts recording, walks through the room while receiving live quality feedback, stops recording, and taps ``Upload \& Process.''
+    \item \textbf{Monitor}: The user watches the processing progress screen showing current step, percentage, elapsed time, and log output.
+    \item \textbf{View/Measure}: The user opens the finished 3D model in the web viewer and takes point-to-point measurements (FYP-2).
+\end{enumerate}
+
+\section{Use Case Diagram}
+The system involves three actors: the \textit{End User} (captures and views), the \textit{Processing Server} (manages jobs), and the \textit{Cloud GPU} (runs reconstruction). Use cases include: Record Scan, Upload Dataset, Monitor Progress, View Model, Take Measurement, and Configure Server.
+
+\section{Detailed Use Cases}
+
+\paragraph{UC-1: Record Indoor Scan}
+\begin{itemize}
+    \item \textbf{Actor}: End User
+    \item \textbf{Precondition}: App installed on ARCore-compatible Android device
+    \item \textbf{Main flow}: User opens app $\rightarrow$ taps Record $\rightarrow$ walks through room $\rightarrow$ receives live IQA feedback (blur, speed, darkness, texture warnings) and coverage overlay (red/yellow/green dots) $\rightarrow$ taps Stop $\rightarrow$ sees quality summary
+    \item \textbf{Postcondition}: Dataset saved locally (video, poses, depth, quality, meta)
+\end{itemize}
+
+\paragraph{UC-2: Upload and Process}
+\begin{itemize}
+    \item \textbf{Actor}: End User
+    \item \textbf{Precondition}: Recording completed; server URL configured
+    \item \textbf{Main flow}: User taps ``Upload \& Process'' $\rightarrow$ app zips depth folder, uploads all files $\rightarrow$ server creates job, dispatches to GPU $\rightarrow$ app polls progress every 3\,s showing step, percentage, logs $\rightarrow$ completion or failure reported
+    \item \textbf{Postcondition}: 3D model (splat.ply) available for download
+    \item \textbf{Exception}: Upload fails $\rightarrow$ retry button; pipeline step fails $\rightarrow$ error message with step name
+\end{itemize}
+
+\section{Functional Requirements}
+
+\subsection{Mobile Capture Module}
+\begin{itemize}
+    \item \textbf{FR-M1}: The app shall record video at 30\,FPS alongside per-frame camera poses (position + quaternion + intrinsics) in \texttt{poses.csv}.
+    \item \textbf{FR-M2}: The app shall log ARCore tracking state and failure reasons in \texttt{tracking.csv}.
+    \item \textbf{FR-M3}: The app shall save ARCore feature points in \texttt{points.csv}.
+    \item \textbf{FR-M4}: The app shall save raw depth maps at 5\,Hz in \texttt{depth/} with confidence maps.
+    \item \textbf{FR-M5}: The app shall compute and display live IQA metrics: blur, brightness, motion speed, texture level.
+    \item \textbf{FR-M6}: The app shall display a coverage overlay showing scanned (green), partially scanned (yellow), and unscanned (red) surfaces.
+    \item \textbf{FR-M7}: The app shall upload the complete dataset to the processing server via multipart HTTP POST.
+    \item \textbf{FR-M8}: The app shall allow the user to configure the server URL via the settings menu.
+    \item \textbf{FR-M9}: The app shall display upload and processing progress with step name, percentage, elapsed time, and recent log lines.
+\end{itemize}
+
+\subsection{Processing Server Module}
+\begin{itemize}
+    \item \textbf{FR-S1}: The server shall accept multipart dataset uploads (video, poses, tracking, points, quality, meta, depth.zip).
+    \item \textbf{FR-S2}: The server shall create a unique job ID for each upload and track its status.
+    \item \textbf{FR-S3}: The server shall run the reconstruction pipeline with per-step timeout watchdogs.
+    \item \textbf{FR-S4}: The server shall support two processing modes: local GPU and RunPod cloud GPU.
+    \item \textbf{FR-S5}: The server shall expose a progress-polling endpoint returning current step, percentage, elapsed time, and recent log lines.
+    \item \textbf{FR-S6}: The server shall provide a download endpoint for the finished \texttt{splat.ply}.
+    \item \textbf{FR-S7}: In RunPod mode, the server shall always terminate the GPU pod after processing (even on failure).
+\end{itemize}
+
+\subsection{Reconstruction Pipeline Module}
+\begin{itemize}
+    \item \textbf{FR-P1}: The pipeline shall extract keyframes from the video based on gyro-aware sharpness prediction.
+    \item \textbf{FR-P2}: The pipeline shall run COLMAP SfM with SIFT features, lens self-calibration, and global mapping.
+    \item \textbf{FR-P3}: The pipeline shall compute a Sim3 alignment from COLMAP's coordinate system to ARCore's metric frame.
+    \item \textbf{FR-P4}: The pipeline shall train a splatfacto 3DGS model and export \texttt{splat.ply}.
+    \item \textbf{FR-P5}: The pipeline shall bridge ARCore tracking gaps using IMU data (\texttt{fallback.py}).
+\end{itemize}
+
+\section{Non-Functional Requirements}
+\subsection{Reliability}
+\begin{itemize}
+    \item \textbf{NFR-R1}: The cloud GPU pod shall be terminated within 60\,s of job completion or failure (prevent billing leaks).
+    \item \textbf{NFR-R2}: Each pipeline step shall have a timeout watchdog; if exceeded, the step is killed and the job marked failed.
+\end{itemize}
+
+\subsection{Usability}
+\begin{itemize}
+    \item \textbf{NFR-U1}: The capture app shall provide real-time visual feedback without requiring the user to understand 3D reconstruction concepts.
+    \item \textbf{NFR-U2}: Processing progress shall be displayed with a progress bar, step name, and elapsed time.
+\end{itemize}
+
+\subsection{Performance}
+\begin{itemize}
+    \item \textbf{NFR-P1}: End-to-end processing time shall be under 15 minutes on an NVIDIA RTX 3090 or better.
+    \item \textbf{NFR-P2}: The capture app shall maintain 30\,FPS camera preview during recording (no frame drops from logging overhead).
+    \item \textbf{NFR-P3}: The app's recording fast-path shall skip all non-essential rendering (planes, virtual objects, PBR lighting) to minimize GL thread load.
+\end{itemize}
+
+\subsection{Security}
+\begin{itemize}
+    \item \textbf{NFR-S1}: The RunPod API key shall be loaded from environment variables or a \texttt{.env} file, never hardcoded.
+    \item \textbf{NFR-S2}: The \texttt{.env} file shall be excluded from version control via \texttt{.gitignore}.
+\end{itemize}
+
+\section{Acceptance Criteria}
+
+\begin{table}[h]
+\centering
+\caption{Acceptance criteria for key requirements}
+\label{tab:acceptance}
+\begin{tabular}{p{1.5cm}p{4.5cm}p{5cm}}
+\toprule
+\textbf{Req.} & \textbf{Criterion} & \textbf{Measurement} \\
+\midrule
+FR-M1 & Pose logged for every video frame & Row count in poses.csv equals frame count in video \\
+FR-P3 & Metric scale accuracy $<$ 1\% & Sim3 trajectory scale vs.\ ARCore = 1.000--1.003 \\
+FR-P4 & Reconstruction quality & Held-out PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85 \\
+FR-S7 & Pod always terminated & Server logs confirm \texttt{terminate\_pod()} in all paths \\
+NFR-P1 & Processing under 15\,min & Elapsed time on RTX 3090 for a 5-minute scan \\
+NFR-P2 & 30\,FPS during recording & No frame drops in logcat during 3-minute recording \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Requirements Traceability}
+
+\begin{table}[h]
+\centering
+\caption{Requirements traceability matrix (selected)}
+\label{tab:traceability}
+\small
+\begin{tabular}{p{1.2cm}p{2.5cm}p{2.5cm}p{2.5cm}p{2.5cm}}
+\toprule
+\textbf{Req.} & \textbf{Module} & \textbf{Design} & \textbf{Implementation} & \textbf{Test} \\
+\midrule
+FR-M1 & Mobile Capture & CaptureLogger & CaptureLogger.java & TC-1 \\
+FR-M5 & Mobile Capture & QualityMonitor & QualityMonitor.java & TC-2 \\
+FR-M6 & Mobile Capture & CoverageMap & CoverageMap.java & TC-3 \\
+FR-S4 & Processing Server & RunPodClient & runpod\_client.py & TC-7 \\
+FR-P2 & Recon.\ Pipeline & COLMAP SfM & sfm\_colmap.py & TC-5 \\
+FR-P3 & Recon.\ Pipeline & Sim3 Alignment & sfm\_colmap.py & TC-6 \\
+FR-P5 & Recon.\ Pipeline & IMU Fallback & fallback.py & TC-4 \\
+\bottomrule
+\end{tabular}
+\end{table}

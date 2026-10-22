@@ -1,0 +1,112 @@
+\chapter{Additional Design Diagrams}
+
+\section{End-to-End Data Flow}
+
+\begin{verbatim}
+┌─────────────┐    multipart     ┌──────────────┐    SSH/SCP     ┌──────────────┐
+│  Android App │───── POST ─────>│ FastAPI Server│──────────────>│  RunPod GPU  │
+│              │                 │              │               │    Pod       │
+│  - ARCore    │    poll /status │  - Job mgmt  │   pipeline    │  - COLMAP    │
+│  - Camera    │<───── GET ─────│  - Dispatch   │<── results ──│  - splatfacto│
+│  - IQA       │                │  - Progress   │               │  - export    │
+│  - Coverage  │  download .ply │  - Download   │  terminate    │              │
+│  - Upload    │<───── GET ─────│              │──────────────>│  (killed)    │
+└─────────────┘                 └──────────────┘               └──────────────┘
+\end{verbatim}
+
+\section{Pipeline Step Sequence}
+
+\begin{verbatim}
+ dataset.mp4 + poses.csv + tracking.csv
+          │
+          ▼
+ ┌─────────────────┐
+ │  1. fallback.py  │  Bridge tracking gaps with IMU
+ └────────┬────────┘
+          ▼
+ ┌─────────────────┐
+ │  2. prepare.py   │  Gyro-aware keyframe extraction
+ └────────┬────────┘
+          ▼
+ ┌─────────────────┐
+ │ 3. sfm_colmap.py │  SIFT + global SfM + Sim3 alignment
+ └────────┬────────┘
+          ▼
+ ┌──────────────────────┐
+ │ 4. export_nerfstudio  │  COLMAP → transforms.json
+ └────────┬─────────────┘
+          ▼
+ ┌─────────────────┐
+ │ 5. ns-train      │  splatfacto 30k iterations
+ └────────┬────────┘
+          ▼
+ ┌─────────────────┐
+ │ 6. ns-export     │  → splat.ply (metric scale)
+ └─────────────────┘
+\end{verbatim}
+
+\section{Android App Architecture}
+
+\begin{verbatim}
+ HelloArActivity (Main AR Activity)
+  ├── ARCore Session (pose tracking, depth, feature points)
+  ├── CaptureLogger (background I/O thread)
+  │    ├── poses.csv writer
+  │    ├── tracking.csv writer
+  │    ├── points.csv writer
+  │    ├── quality.csv writer
+  │    ├── depth/ writer (5 Hz)
+  │    └── meta.json writer
+  ├── QualityMonitor (6 FPS analysis)
+  │    ├── Blur detection (Laplacian variance)
+  │    ├── Brightness check (mean luminance)
+  │    ├── Motion speed (pose delta)
+  │    └── Texture level (gradient magnitude)
+  ├── CoverageMap (10cm voxels, 16 directions)
+  │    └── CoverageOverlayView (red/yellow/green dots)
+  └── Settings Menu (server URL, preferences)
+
+ ProcessingActivity (Upload + Progress)
+  ├── OkHttp multipart upload
+  ├── Progress polling (3s interval)
+  └── Status display (step, %, time, logs)
+\end{verbatim}
+
+\section{Sim3 Alignment Diagram}
+
+\begin{verbatim}
+  ARCore Frame (metric, m)          COLMAP Frame (arbitrary scale)
+  ┌────────────────────┐            ┌────────────────────┐
+  │  Pose 1 (x,y,z)   │◄── match ──│  Pose 1 (x',y',z') │
+  │  Pose 2 (x,y,z)   │◄── match ──│  Pose 2 (x',y',z') │
+  │  ...               │            │  ...                │
+  │  Pose N (x,y,z)   │◄── match ──│  Pose N (x',y',z') │
+  └────────────────────┘            └────────────────────┘
+           │                                  │
+           └────── RANSAC Sim3 (7-DOF) ───────┘
+                   R (3x3) + t (3x1) + s (scalar)
+
+  Result: s = 1.000 - 1.003 (0.3% scale accuracy)
+          Inlier threshold: 5 cm
+          Inlier ratio: > 90%
+\end{verbatim}
+
+\section{Coverage Map Visualization}
+
+\begin{verbatim}
+  3D Space (10 cm voxels)        16 Observation Directions
+  ┌───┬───┬───┬───┐             8 azimuth × 2 elevation
+  │ R │ Y │ G │ G │
+  ├───┼───┼───┼───┤             ● = observed from this direction
+  │ R │ R │ Y │ G │             ○ = not yet observed
+  ├───┼───┼───┼───┤
+  │   │ R │ Y │ Y │             Example voxel (Green):
+  └───┴───┴───┴───┘             ● ● ● ● ● ○ ○ ○  (azimuth)
+                                 ● ● ● ○ ○ ○ ○ ○  (elevation)
+  R = 1 direction (red)          = 6 directions → Green (≥4)
+  Y = 2-3 directions (yellow)
+  G = 4+ directions (green)
+
+  Performance caps: 5,000 voxels, 2,000 drawn dots
+  Update rate: 2 Hz
+\end{verbatim}
