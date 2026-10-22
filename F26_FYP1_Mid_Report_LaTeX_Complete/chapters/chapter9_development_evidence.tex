@@ -150,7 +150,8 @@ All external components are used under permissive open-source licenses compatibl
 
 Table~\ref{tab:risks} is the project's risk register. Likelihood and impact are rated Low, Medium or High by the team; the owner is the member whose modules the risk mainly affects (Table~\ref{tab:responsibilities}). The register is reviewed at the start of each FYP-2 iteration.
 
-\begin{longtable}{p{0.04\textwidth}p{0.20\textwidth}p{0.07\textwidth}p{0.07\textwidth}p{0.42\textwidth}p{0.08\textwidth}}
+{\small\setlength{\tabcolsep}{3pt}
+\begin{longtable}{p{0.04\textwidth}p{0.19\textwidth}p{0.08\textwidth}p{0.08\textwidth}p{0.42\textwidth}p{0.08\textwidth}}
 \caption{Risk register}\label{tab:risks}\\
 \toprule
 \textbf{ID} & \textbf{Risk} & \textbf{Likel.} & \textbf{Impact} & \textbf{Mitigation} & \textbf{Owner} \\
@@ -166,7 +167,7 @@ R4 & Mirrors and glass produce SfM outliers and artefacts & Medium & Medium & Do
 \midrule
 R5 & Large rooms exceed GPU memory & Medium & Medium & The 8\,GB RTX 3070 already needs default densification thresholds and no page-locked caching above 4\,GB. Train large rooms on a 24\,GB RTX 4090 (not yet measured); fewer keyframes on slow walks. & Tayyab \\
 \midrule
-R6 & RTX 4090 performance is unmeasured; the $<$35\,min target may not be met & High & Medium & The target is a projection. Benchmark on an RTX 4090 at the start of Iteration~2a; attack feature matching first (23 of the 75\,min measured on the RTX 3070) with ARCore-pose-guided or sequential pairs; report the measured time whatever it is. & Umair \\
+R6 & RTX 4090 performance is unmeasured; the $<$35\,min target may not be met & High & Medium & The target is a projection. Benchmark on an RTX 4090 at the start of Iteration~2a; attack feature matching first (23 of the 75\,min measured on the RTX 3070) with ARCore-pose-guided or sequential pairs; report the measured time whatever it is. Note that the RunPod pod watchdog's default hard limit (\texttt{MAX\_POD\_LIFETIME}) is 60\,min, shorter than the only measured run; raise it, or confirm the run fits, before the first full RunPod job. & Umair \\
 \midrule
 R7 & FYP-2 scope not delivered in time (3DGS refinement, structural layer, web workspace, 3D mesh creation) & Medium & High & Fixed order of work: one-command v6 pipeline $\rightarrow$ web viewer with measurement $\rightarrow$ structural layer and floor plans $\rightarrow$ dashboard. The dashboard is cut first if time runs short. 3D mesh creation stays unscheduled until the core items are done. & Team \\
 \midrule
@@ -181,6 +182,7 @@ R11 & ARCore API changes or deprecation & Low & High & ARCore is used only in th
 R12 & Team member unavailability & Low & Medium & All code in one shared repository; owned modules documented; progress logs in \texttt{docs/progress/}; automated tests guard the Python code. & Team \\
 \bottomrule
 \end{longtable}
+}
 
 \section{Security and Privacy Considerations}
 \begin{itemize}

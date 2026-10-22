@@ -29,7 +29,8 @@ The automated tests are the pytest suite in \texttt{tests/}: 12 test files plus 
 
 \section{Test cases}
 
-\begin{longtable}{p{0.06\textwidth}p{0.16\textwidth}p{0.25\textwidth}p{0.23\textwidth}p{0.08\textwidth}p{0.10\textwidth}}
+{\small\setlength{\tabcolsep}{3pt}
+\begin{longtable}{p{0.06\textwidth}p{0.15\textwidth}p{0.25\textwidth}p{0.23\textwidth}p{0.09\textwidth}p{0.12\textwidth}}
 \toprule
 \textbf{ID} & \textbf{Test Case} & \textbf{Input / Setup} & \textbf{Expected Result} & \textbf{Level} & \textbf{Result} \\
 \midrule
@@ -76,3 +77,4 @@ TC-19 & Dataset export & \texttt{test\_process\_dataset.py} & PLY written with h
 TC-20 & Source compilation & \texttt{test\_sources\_compile.py} & Every Python file compiles & Static & Pass (CI) \\
 \bottomrule
 \end{longtable}
+}

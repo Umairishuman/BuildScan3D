@@ -9,7 +9,44 @@ The system supports three primary user interactions:
 \end{enumerate}
 
 \section{Use Case Diagram}
-The system involves three actors: the \textit{End User} (captures and views), the \textit{Processing Server} (manages jobs), and the \textit{Cloud GPU} (runs reconstruction). Use cases include: Record Scan, Upload Dataset, Monitor Progress, View Model, Take Measurement, and Configure Server.
+The system involves three actors (Figure~\ref{fig:usecase}): the \textit{End User} (captures and views), the \textit{Processing Server} (manages jobs), and the \textit{Cloud GPU} (runs reconstruction). The use cases are Record Scan, Upload Dataset, Monitor Progress, View Model, Take Measurement, and Configure Server. Each maps to code: Record Scan to \texttt{HelloArActivity} and \texttt{CaptureLogger}; Upload Dataset and Monitor Progress to \texttt{ProcessingActivity} and the \texttt{/upload} and \texttt{/status} endpoints of \texttt{server/main.py}; Configure Server to the app's settings menu (server URL) and \texttt{/config}; View Model and Take Measurement to the desktop viewer today and the web workspace in FYP-2.
+
+% Stick-figure actor for the use case diagram: \bsactor{x}{y}{label}
+\newcommand{\bsactor}[3]{%
+  \begin{scope}[shift={(#1,#2)}]
+    \draw (0,0.95) circle (0.2);
+    \draw (0,0.75) -- (0,0.05);
+    \draw (-0.35,0.5) -- (0.35,0.5);
+    \draw (0,0.05) -- (-0.3,-0.45);
+    \draw (0,0.05) -- (0.3,-0.45);
+    \node[align=center] at (0,-0.85) {#3};
+  \end{scope}}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\footnotesize,
+  uc/.style={draw, ellipse, minimum width=3.6cm, minimum height=0.85cm, align=center}]
+  \draw[rounded corners=4pt] (-2.6,-3.6) rectangle (2.6,4.0);
+  \node[font=\small\bfseries] at (0,3.6) {BuildScan 3D};
+  \node[uc] (rec)  at (0,2.7)  {Record Scan};
+  \node[uc] (upl)  at (0,1.6)  {Upload Dataset};
+  \node[uc] (mon)  at (0,0.5)  {Monitor Progress};
+  \node[uc] (view) at (0,-0.6) {View Model};
+  \node[uc] (meas) at (0,-1.7) {Take Measurement};
+  \node[uc] (conf) at (0,-2.8) {Configure Server};
+  \bsactor{-5.2}{-0.2}{End User}
+  \bsactor{5.2}{1.4}{Processing\\Server}
+  \bsactor{5.2}{-2.4}{Cloud GPU}
+  \coordinate (user) at (-4.8,0.3);
+  \coordinate (srv)  at (4.8,1.9);
+  \coordinate (gpu)  at (4.8,-1.9);
+  \foreach \n in {rec,upl,mon,view,meas,conf} {\draw (user) -- (\n.west);}
+  \foreach \n in {upl,mon,conf} {\draw (srv) -- (\n.east);}
+  \draw (gpu) -- (upl.east);
+\end{tikzpicture}
+\caption{Use case diagram. The End User is the primary actor; the Processing Server (\texttt{server/main.py}) and the Cloud GPU (RunPod pod, or the local GPU) are secondary actors. Take Measurement currently runs in the desktop viewer; the web version is FYP-2 work.}
+\label{fig:usecase}
+\end{figure}
 
 \section{Detailed Use Cases}
 
