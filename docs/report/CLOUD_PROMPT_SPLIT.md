@@ -5,7 +5,7 @@ blocks yourself over time. Run **Prompt B** later to apply them.
 
 ---
 
-# Prompt A — split the report into chunks
+# Prompt A — split the report prose into chunks
 
 Paste everything in this section below the line.
 
@@ -38,8 +38,23 @@ appendix_meetings.tex
 Note `chapter8_testing.tex` renders as Chapter 7 and `chapter9_development_evidence.tex`
 as Chapter 8. Label chunks by **filename**, not by rendered chapter number.
 
-There are roughly 11,150 prose words, so expect **about 56 chunks**. If you produce
-wildly more or fewer, something is wrong with your chunking — stop and say so.
+There are roughly 10,100 words of body prose, so expect **about 50 chunks**. If you
+produce wildly more or fewer, something is wrong with your chunking — stop and say so.
+
+## What counts as prose
+
+**Include only running body text**: paragraphs, and the text of list items.
+
+**Exclude completely** — do not chunk these, and do not emit placeholders or skip markers
+for them either. They simply do not appear in the output:
+
+- all headings (`\chapter`, `\section`, `\subsection`, `\paragraph`)
+- every `table`, `longtable`, `figure` and `tikzpicture` environment, **including their
+  captions**
+- the preamble, `\label`-only lines, and comment lines
+
+Headings are still used as the `section:` label on each chunk, so the reader knows where
+they are. They are never chunk content.
 
 ## Output
 
@@ -49,17 +64,13 @@ the source: `04_abstract.md`, `chapter1_introduction.md`, and so on. Also write
 
 ## Chunking rules
 
-- Chunk **prose only**. Target 200 words, accept 150–250 to land on a natural boundary.
+- Target 200 words, accept 150–250 to land on a natural boundary.
 - **Never split mid-sentence, mid-paragraph or mid-list-item.** Prefer a paragraph
-  boundary. If a single paragraph exceeds 250 words, split it at a sentence boundary.
-- Chunks must be **contiguous and non-overlapping**, and together must cover all prose in
-  the file in source order. No gaps.
-- **Do not chunk** `tikzpicture` environments, `tabular`/`longtable` bodies, the
-  `\begin{document}` preamble, or `\label`-only lines. Where one of these sits between
-  two prose chunks, emit a skip marker (format below) so the reader knows content lives
-  there. A table's **caption** is prose and belongs in a chunk; its **rows** do not.
-- Section headings (`\section{}`, `\subsection{}`) are not prose; use them to label
-  chunks, and start a new chunk at every heading even if the previous one is short.
+  boundary. If a single paragraph exceeds 250 words, split at a sentence boundary.
+- Chunks must be **contiguous and non-overlapping** within a file and cover all body prose
+  in source order, with no gaps. Skipped tables and headings simply break the run; a chunk
+  never spans across one, so start a new chunk after each.
+- Start a new chunk at every heading even if the previous one is short.
 
 ## Chunk format
 
@@ -74,31 +85,29 @@ Use exactly this, with no extra commentary between chunks:
 
 original:
 
-> <the raw LaTeX of this span, verbatim, every line prefixed with "> ">
+ARCore silently corrects its world frame during SLAM loop closures, causing pose
+discontinuities of up to 1 m and 28 degrees. These must be detected and handled to avoid
+ghosting in the 3D model.
 
 rewrite:
 
-<!-- leave empty to keep the original unchanged -->
-
----
-```
-
-Skip markers look like this and carry no `rewrite:` block:
-
-```
-### SKIP — table `tab:comparison` (chapters/chapter2_research.tex lines 24-45)
-Comparison of existing 3D scanning solutions. 9 rows, 6 columns.
 
 ---
 ```
 
 ## Rules
 
-- **`original:` is the raw LaTeX, copied exactly**, including `\texttt{}`, `\ref{}`,
-  `\cite{}`, maths and escapes. Do not clean it up, do not reflow it, do not "fix"
-  anything you think is wrong. It is the key the apply pass matches on.
-- **`lines:` must be the true 1-indexed inclusive span** in the current file. Verify each
-  one by re-reading the file; a wrong span makes the chunk unapplicable.
+- **`original:` is plain readable text.** Strip the LaTeX: no backslash commands, no
+  braces. Render `\texttt{poses.csv}` as `poses.csv`, `\textbf{x}` as `x`, `\%` as `%`,
+  `\&` as `&`, `~` as a space, `---` as an em dash, `$\geq$` as `>=`, `\\` as a line
+  break. Replace a `\ref{}` or `\cite{}` with a readable placeholder such as
+  `[see Figure 5.2]` or `[citation]`. The point is that it reads as normal English.
+- **Do not reword, correct, summarise or improve the text while extracting.** Strip the
+  markup and nothing else. The wording must be the report's wording.
+- **`lines:` must be the true 1-indexed inclusive span** in the current `.tex` file, and
+  must cover exactly the LaTeX that produced the plain text you printed. Verify each span
+  by re-reading the file. This span is how the apply pass finds the text again — a wrong
+  span makes the chunk unapplicable.
 - Number chunks **continuously across the whole report**, starting at 001, in the reading
   order above — not restarting per file.
 - Leave every `rewrite:` block empty. You are not rewriting anything in this pass.
@@ -128,20 +137,41 @@ every figure in this report.
 
 ## What to apply
 
-- Process **only** chunks whose `rewrite:` block has real content. A block that is empty,
-  whitespace, or still holds the HTML comment is **unchanged — skip it silently.**
-- For each one, replace the source span given by that chunk's `file` and `lines` with the
-  rewritten text, converted to LaTeX in the style of the surrounding document.
-- The `rewrite:` text is plain English. Restore markup by reference to the chunk's
-  `original:` — if a filename was `\texttt{}` there, it stays `\texttt{}`; if a figure was
-  cited with `\ref{}`, keep the same `\ref{}`.
+- Process **only** chunks whose `rewrite:` block has real content. A block that is empty
+  or whitespace is **unchanged — skip it silently.**
+- For each one, open the chunk's `file`, read the LaTeX at its `lines` span, and replace
+  that span with the rewritten wording.
+
+## Formatting must be preserved exactly
+
+The `rewrite:` text is plain English, because the `original:` shown to the author had its
+markup stripped. **Your job is to put the markup back.** The rewritten span must match the
+original's formatting conventions in every respect:
+
+- A filename, path, command, endpoint, class or identifier that was `\texttt{}` in the
+  original stays `\texttt{}`. Apply the same treatment to any new one the rewrite
+  introduces.
+- Bold and italic emphasis, `\paragraph{}` lead-ins, `itemize`/`enumerate` structure and
+  `\item` boundaries all stay as they were, unless the rewrite clearly restructures the
+  passage.
+- Every `\label{}` inside the span is preserved. Every `\ref{}` and `\cite{}` is restored
+  in place of the readable placeholder it was rendered as — pointing at the **same** label
+  or key as before.
+- LaTeX escaping is reapplied: `%` becomes `\%`, `&` becomes `\&`, `_` becomes `\_`, `#`
+  becomes `\#`, and maths such as `>=` returns to `$\geq$`.
+- Units keep their thin spaces (`30\,FPS`, `26.52\,dB`, `0.2\,s`), and em dashes stay
+  `---`.
+- Indentation and line-wrapping style match the surrounding file.
+
+If the rewrite does not clearly indicate how a piece of markup should be placed, keep what
+the original had.
 
 ## Critical: apply bottom-up
 
 Apply chunks in **descending line order within each file** (highest line number first).
 Editing earlier lines shifts every later line number, so top-down application silently
-corrupts spans. Before each replacement, verify the span still begins and ends with the
-text shown in `original:`; if it does not, **stop and report** rather than guessing.
+corrupts spans. Before each replacement, verify the span still renders to the plain text
+shown in `original:`; if it does not, **stop and report** rather than guessing.
 
 ## Rules that override the pasted text
 
@@ -151,14 +181,13 @@ text shown in `original:`; if it does not, **stop and report** rather than guess
 2. **Never weaken an honesty marker.** "Not yet measured", "Not yet executed", "Not yet
    automated", "Partial", "projected" and "not yet scheduled" must survive. If a rewrite
    turns one into a pass or a measured result, **do not apply that part** — record it.
-3. **Preserve every `\label{}`** inside the replaced span, and keep all `\ref`s resolving.
-4. Keep section headings unless the rewrite clearly supplies a new title.
-5. Do not compile. Do not touch `scripts/`, `server/`, `src/` or `tests/`.
-6. No AI-attribution trailers in commits.
+3. Keep section headings as they are; they were never part of the chunks.
+4. Do not compile. Do not touch `scripts/`, `server/`, `src/` or `tests/`.
+5. No AI-attribution trailers in commits.
 
 ## Finish
 
-Commit per source file, not per chunk. Then write
-`docs/report/rewrite/APPLY_LOG.md` recording: which chunks were applied, which were
-skipped as empty, every number or honesty marker you refused and why, any `\ref` you
-repointed, and any span that no longer matched.
+Commit per source file, not per chunk. Then write `docs/report/rewrite/APPLY_LOG.md`
+recording: which chunks were applied, which were skipped as empty, every number or honesty
+marker you refused and why, every `\ref`/`\cite` you restored, and any span that no longer
+matched.
