@@ -100,7 +100,7 @@ FR-S5 & Expose a progress-polling endpoint (FR-S2) & Must & Done & \texttt{GET /
 FR-S6 & Provide a download endpoint for \texttt{splat.ply} (FR-S3) & Must & Done & 404 unknown, 409 unfinished, file when done & \texttt{main.py}; TC-16 \\
 FR-S7 & In RunPod mode, always terminate the pod after processing, even on failure (FR-S4) & Must & Done & \texttt{terminate\_pod()} on every path where a pod exists & \texttt{runpod\_client.py}; TC-7 \\
 \multicolumn{6}{l}{\textit{Reconstruction pipeline module}} \\
-FR-P1 & Extract keyframes by gyro-aware sharpness prediction (exposure metadata) & Must & Partial: \texttt{select\_sharp.py} validated (v4--v6), not yet in the one-command pipeline & Least predicted blur per 0.2\,s window & \texttt{prepare.py}, \texttt{select\_sharp.py}; TC-5 \\
+FR-P1 & Extract keyframes by gyro-aware sharpness prediction (exposure metadata) & Must & Partial: validated in v4--v6, not yet in the one-command pipeline & Least predicted blur per 0.2\,s window & \texttt{prepare.py}, \texttt{select\_sharp.py}; TC-5 \\
 FR-P2 & Run COLMAP SfM with SIFT, lens self-calibration and global mapping (COLMAP 4.2) & Must & Done & Frames register; reprojection error $<$1\,px & \texttt{sfm\_colmap.py}; TC-5, TC-18 \\
 FR-P3 & Compute a Sim3 alignment from COLMAP to ARCore's metric frame (FR-P2, FR-M1) & Must & Done & Model distances within 5\% of tape measure; measured mean 0.19\%, worst 0.29\% (Table~\ref{tab:tape}) & \texttt{sfm\_colmap.py}; TC-6 \\
 FR-P4 & Train splatfacto and export \texttt{splat.ply} (Nerfstudio 1.1.5) & Must & Done & Held-out PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85; v6: 26.52\,dB / 0.8886 & \texttt{pipeline.py}; TC-13 \\
