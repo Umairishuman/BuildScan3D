@@ -56,9 +56,10 @@
 \input{chapters/04_abstract}
 \input{chapters/05_acknowledgments}
 \input{chapters/06_executive_summary}
-\tableofcontents
-\listoftables
-\listoffigures
+% Contents, List of Figures and List of Tables are emitted by the document
+% class (fast-nuces-bs.cls) straight after the title page. Repeating them
+% here printed three empty headings: \@starttoc reopens the .toc/.lof/.lot
+% for writing after the first read, so the second call finds nothing.
 \input{chapters/07_abbreviations}
 
 \cleardoublepage
