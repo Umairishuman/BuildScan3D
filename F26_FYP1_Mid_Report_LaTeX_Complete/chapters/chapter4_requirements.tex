@@ -1,15 +1,15 @@
 \chapter{Software Requirements}
 
 \section{User Interactions / Use Cases}
-The system supports three primary user interactions:
+The system operates with three main types of interaction of the user:
 \begin{enumerate}
-    \item \textbf{Capture}: The user opens the Android app, starts recording, walks through the room while receiving live quality feedback, stops recording, and taps ``Upload \& Process.''
-    \item \textbf{Monitor}: The user watches the processing progress screen showing current step, percentage, elapsed time, and log output.
-    \item \textbf{View/Measure}: The user opens the finished 3D model in the web viewer and takes point-to-point measurements (FYP-2).
+    \item \textbf{Capture}: The user starts the application on Android, initiates recording operation, then walks around the room being shown feedback on the recording quality, and stops recording after this and taps ``Upload \& Process.''
+    \item \textbf{Monitor}: The user monitors the processing progress showing the current phase, percentage completed, time elapsed, and logs.
+    \item \textbf{View/Measure}: The user checks the resultant 3D model on the web viewer and can calculate certain distances (FYP-2).
 \end{enumerate}
 
 \section{Use Case Diagram}
-The system involves three actors (Figure~\ref{fig:usecase}): the \textit{End User} (captures and views), the \textit{Processing Server} (manages jobs), and the \textit{Cloud GPU} (runs reconstruction). The use cases are Record Scan, Upload Dataset, Monitor Progress, View Model, Take Measurement, and Configure Server. Each maps to code: Record Scan to \texttt{HelloArActivity} and \texttt{CaptureLogger}; Upload Dataset and Monitor Progress to \texttt{ProcessingActivity} and the \texttt{/upload} and \texttt{/status} endpoints of \texttt{server/main.py}; Configure Server to the app's settings menu (server URL) and \texttt{/config}; View Model and Take Measurement to the desktop viewer today and the web workspace in FYP-2.
+The implementation of the system consists of three actors (See Figure~\ref{fig:usecase}): \emph{End User} (perform captures and views), \emph{Processing Server} (executes jobs), and the \emph{Cloud GPU} (carries-out reconstruction). The use cases are Record Scan, Upload Dataset, Monitor Progress, View Model, Take Measurements and Configure Server. Each of them has the relevant code: Record Scan corresponds to \texttt{HelloArActivity} and \texttt{CaptureLogger}; Upload Dataset and Monitor Progress refer to \texttt{ProcessingActivity} and the \texttt{/upload} and \texttt{/status} endpoints of \texttt{server/main.py}; Configure Server links to the settings menu of the app (server URL) and \texttt{/config}; View Model and Take Measurements correspond to the desktop viewer today and web workspace in phase FYP-2.
 
 % Stick-figure actor for the use case diagram: \bsactor{x}{y}{label}
 \newcommand{\bsactor}[3]{%
@@ -52,19 +52,19 @@ The system involves three actors (Figure~\ref{fig:usecase}): the \textit{End Use
 
 \paragraph{UC-1: Record Indoor Scan}
 \begin{itemize}
-    \item \textbf{Actor}: End User
-    \item \textbf{Precondition}: App installed on ARCore-compatible Android device
-    \item \textbf{Main flow}: User opens app $\rightarrow$ taps Record $\rightarrow$ walks through room $\rightarrow$ receives live IQA feedback (blur, speed, darkness, texture warnings) and coverage overlay (red/yellow/green dots) $\rightarrow$ taps Stop $\rightarrow$ sees quality summary
-    \item \textbf{Postcondition}: Dataset saved locally (video, poses, depth, quality, meta)
+    \item \textbf{Actor}: User
+    \item \textbf{Precondition}: Application downloaded on Android device compatible with ARCore.
+    \item \textbf{Flow of Events}: The User starts the application $\rightarrow$ presses Record $\rightarrow$ moves around the space $\rightarrow$ gets live feedback regarding IQA (blurriness, speed, darkness, texture)$\rightarrow$ stops the recording $\rightarrow$ app displays the summary of quality data.
+    \item \textbf{Postcondition}: The information is saved on the device (video, poses, depth, quality, meta).
 \end{itemize}
 
 \paragraph{UC-2: Upload and Process}
 \begin{itemize}
-    \item \textbf{Actor}: End User
-    \item \textbf{Precondition}: Recording completed; server URL configured
-    \item \textbf{Main flow}: User taps ``Upload \& Process'' $\rightarrow$ app zips depth folder, uploads all files $\rightarrow$ server creates job, dispatches to GPU $\rightarrow$ app polls progress every 3\,s showing step, percentage, logs $\rightarrow$ completion or failure reported
-    \item \textbf{Postcondition}: 3D model (splat.ply) available for download
-    \item \textbf{Exception}: Upload fails $\rightarrow$ retry button; pipeline step fails $\rightarrow$ error message with step name
+    \item \textbf{Actor}: User
+    \item \textbf{Precondition}: Recording is over; URL of the server is configured.
+    \item \textbf{Flow of events}: The User clicks on Upload and Process $\rightarrow$ the app compresses the files and uploads them onto the server $\rightarrow$ server creates a job and sends it to GPU $\rightarrow$ app checks progress every 3 seconds communicating step, percentage, logs.
+    \item \textbf{Postcondition}: The 3D model (\texttt{splat.ply}) is ready for downloading.
+    \item \textbf{Exception}: The upload does not go through $\rightarrow$ button for retrying exists; failure of the process $\rightarrow$ error message shows the step name.
 \end{itemize}
 
 \section{Functional Requirements}
@@ -131,11 +131,11 @@ NFR-P1 & Performance & End-to-end processing (upload to exported \texttt{splat.p
 NFR-P2 & Performance & The app shall keep a 30\,FPS camera preview while recording (no frame drops from logging). & No frame drops in logcat over a 3-minute recording & Not yet measured \\
 NFR-P3 & Performance & The recording fast-path shall skip non-essential rendering (planes, virtual objects, PBR lighting). & Code inspection; GL thread profiling & Implemented; not profiled \\
 NFR-S1 & Security & The RunPod API key shall be loaded from environment variables or a \texttt{.env} file, never hardcoded. & Code review; CI secrets check; \texttt{/config} never returns the key (TC-10) & Implemented \\
-NFR-S2 & Security & The \texttt{.env} file shall be excluded from version control via \texttt{.gitignore}. & \texttt{.gitignore} inspection & \textbf{Not met}: \texttt{.env} is tracked in the repository \\
+NFR-S2 & Security & The \texttt{.env} file shall be excluded from version control via \texttt{.gitignore}. & \texttt{.gitignore} inspection & Met since 22~October~2026 (untracked and ignored); the key committed on 18~October is still in the history and must be rotated \\
 \bottomrule
 \end{longtable}
 }
 
 \section{Acceptance Criteria}
 \label{sec:acceptance}
-The acceptance check of every requirement is in Tables~\ref{tab:fr} and~\ref{tab:nfr}. The project-level acceptance thresholds are: held-out PSNR $\geq$ 25\,dB and SSIM $\geq$ 0.85 (FR-P4; met by v6), distances within 5\% of tape measure (FR-P3; met, worst case 0.29\%), and processing under 35\,min on an RTX 4090 (NFR-P1; not yet measured).
+All acceptance criteria are specified in Tables~\ref{tab:fr} and \ref{tab:nfr}. Project's acceptance limits are set as: held-out PSNR $\geq$ 25\,dB and SSIM $\geq$ 0.85 (FR-P4; achieved by version 6), difference no more than 5\% vs actual measure (FR-P3; achieved with the greatest difference of 0.29\%), and processing duration should not exceed 35\,min on RTX 4090 (NFR-P1; not measured yet).

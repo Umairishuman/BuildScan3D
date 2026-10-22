@@ -2,62 +2,62 @@
 \label{ch:plan}
 
 \section{Remaining Scope}
-FYP-2 has three priorities: (1)~finishing the refinement of the reconstruction pipeline and making it faster; (2)~completing the structural layer (wall planes, corners, wall lengths, door detection and floor plans) that turns the photoreal model into something that can be measured reliably; and (3)~building the web workspace with 1:1 metric measurement. The core capture $\rightarrow$ upload $\rightarrow$ reconstruct pipeline was built in FYP-1; FYP-2 completes and validates it.
+FYP-2 has three main objectives: (1) completing the enhancement of the reconstruction approach and accelerating it; (2) completing the structural layer (wall planes, corners, wall lengths, door identification and floor plans) that enables the photorealistic model to be suitably measured; and (3) developing a web workspace with a 1:1 measurement. The basic capture $\rightarrow$ upload $\rightarrow$ reconstruct pipeline was created during FYP-1 whereas FYP-2 completes and verifies it.
 
 \section{Remaining Modules and Features}
 
 \begin{enumerate}
-    \item \textbf{Pipeline Optimization Module}: Make the v6 recipe (gyro-selected frames, dense MVS initialisation, finer densification) the one-command pipeline and validate it on the second room. Reduce end-to-end processing time from the measured $\sim$75\,min on the development RTX 3070 (matching 23\,min, mapping 6\,min, training 45\,min) to under 35\,min on an RTX 4090. The 35\,min figure is a projected target, not a measurement. Techniques: ARCore-pose-guided or sequential matching pairs instead of exhaustive COLMAP matching, fewer training iterations, and fewer keyframes on slow walks.
+    \item \textbf{Pipeline Optimization Module}: This involves utilizing the v6 recipe comprising of gyro-selected frames, dense MVS initialization, and finer densification, as the one-command pipeline for validation in the second room. Also, it entails reducing the end-to-end processing time from 75 minutes on the development RTX 3070 to less than 35 minutes on the RTX 4090. The 35-minute benchmark is the projected target instead of a measurement. Techniques employed will include ARCore-pose-guided matching or sequential matching pairs in place of exhaustive COLMAP matching, fewer training iterations and fewer keyframes in slow walks.
 
-    \item \textbf{Reconstruction Refinement}: IMU-driven motion-blur and rolling-shutter modelling during training, using the per-frame exposure time and rolling-shutter readout the app now logs (the gyroscope shows the median training frame is blurred by 6--12\,px). Also ARCore-started image-only alignment with re-anchor detection from the logged anchors, which could give COLMAP-quality poses faster.
+    \item \textbf{Reconstruction Improvement}: This includes IMU-prompted motion blur modeling of the training data and rolling shutter modelling using the per-frame exposure time and rolling shutter information logged by the application. This means that according to the gyroscope, the median training frame is reported as being blurred by between 6 and 12 pixels. In addition, there will be ARCore-started image-only alignment with re-anchor detection based on the logged anchor information, which could give COLMAP-quality poses faster.
 
-    \item \textbf{Robustness Improvements}: Better handling of mirrors and glass (detecting and masking reflective regions), textureless walls, large rooms ($>$8\,m), and variable lighting conditions.
+    \item \textbf{Robustness Improvements}: Enhance the handling of mirrors and glass surfaces (by masking reflective areas), textureless walls, large rooms ($>$8\,m), and different types of lighting conditions.
 
-    \item \textbf{Structural Layer Module}: Complete \texttt{structure.py}, which already rebuilds the room shell next to the splat model: floor and wall planes, corners from neighbouring wall intersections, wall lengths (prototype: 6.65--6.68 $\times$ 4.45--4.48\,m on the first room) and openings, with 5 doors detected automatically. Remaining work: wall-to-wall dimensions, doors and other openings as first-class objects, fixing the ceiling-height detection, automatic floor-plan export, and measurement clicks that snap to walls. The photoreal splat model itself is not modified, because post-hoc flattening destroyed the glossy floor's reflections and crushed door frames.
+    \item \textbf{Structural Layer Module}: Finish the implementation of \texttt{structure.py}, which currently creates a room shell next to the splat model: the floor planes and walls, junctions of neighbouring walls (e.g., room dimensions: 6.65-6.68$\times$4.45-4.48\,m) and openings (i.e., 5 automatically detected doors). Tasks remaining include measuring wall-to-wall distances, treating doors and other openings as first-class entities, fixing the ceiling height measurement and developing an automatic floor plan generation process.
 
-    \item \textbf{Web Workspace Module}: Three.js / WebGPU-based Gaussian splat viewer with orbit/pan/zoom controls, running in any modern browser. Loads the \texttt{splat.ply} model and the structural layer's \texttt{structure.json}, and shows a floor-plan view.
+    \item \textbf{Web Workspace Module}: A Three.js / WebGPU-based Gaussian splat viewer with orbit/pan/zoom controls. It works in any modern web browser. It can load \texttt{splat.ply} with \texttt{structure.json} file from structural layer and display the floor plan view.
 
-    \item \textbf{Measurement Module}: Point-to-point 1:1 distance tool in the metric 3D model. The user clicks two points on the splat surface or on a structural-layer wall; the system computes the Euclidean distance in metres in the Sim3-aligned coordinate frame. Target accuracy: within 5\% of tape measure (current evidence: mean 0.19\%, worst case 0.29\%).
+    \item \textbf{Measurement Module}: A point-to-point measurement tool capable of measuring distance in metric units within a 3D model. The user clicks two points on either the splat surface or a structural-layer wall, and the system calculates the distance in m in a Sim3-aligned coordinate frame. Target accuracy: within 5\% of tape measure (current evidence: mean 0.19\%, worst case 0.29\%).
 
-    \item \textbf{3D Mesh Creation}: Create a 3D mesh of the scanned room from the reconstruction, alongside the splat model. This is in scope as planned work; it has not yet been assigned to an iteration.
+    \item \textbf{Development of 3D Mesh}: Generate a 3D mesh of the room scanned during the reconstruction process in parallel with the creation of the splat model. This task is on the agenda as it was planned, but it is yet to be allocated into an iteration.
 
-    \item \textbf{Dashboard Module}: Web-based project dashboard showing scan history, processing status, model thumbnails, and measurement records.
+    \item \textbf{Module for Dashboard}: Dashboard accessible via web showing scan history, status of processing, miniature size of models created, and records of measurements.
 \end{enumerate}
 
 \section{Remaining Iterations}
 
 \begin{itemize}
-    \item \textbf{Iteration 2a (Weeks 1--4)}: Pipeline optimization and web viewer. Deliverable: one-command v6 pipeline; processing time $<$35\,min on RTX 4090 (projected, not yet measured); browser-based splat viewer with point-to-point measurements validated on $\geq$3 rooms.
-    \item \textbf{Iteration 2b (Weeks 5--8)}: Robustness, reconstruction refinement and the structural layer. Deliverable: improved edge-case handling; structural layer with wall lengths, doors and floor-plan export; measurement snapping to walls in the viewer.
-    \item \textbf{Iteration 2c (Weeks 9--12)}: Dashboard, field validation, and final polish. Deliverable: complete web workspace, user testing on 5+ rooms, final report.
+    \item \textbf{Iteration~2a} (Weeks 1-4): Optimizing the pipeline and developing the web viewer. The result is a v6 pipeline that requires just one command; processing takes less than 35 minutes on the RTX 4090 (projected, not yet measured); and a browser viewer that allows for point-to-point measurements, validated in a minimum of 3 rooms.
+    \item \textbf{Iteration~2b} (Weeks 5-8): Robustness, improving the reconstruction process and structural component. The result is a better handling of edge cases, as well as adding a structural layer containing the wall lengths, location of the doors, and the floor plan; on the visualization website, it will be possible to snap the measurements to the walls.
+    \item \textbf{Iteration~2c} (Weeks 9-12): A dashboard, field testing, and fine-tuning the software. The deliverable is a complete workspace on the web alongside the user testing of the application on at least 5 rooms and the final report.
 \end{itemize}
 
 \section{Implementation Plan}
 
 \paragraph{Iteration 2a: Optimization + Web Viewer (Weeks 1--4)}
 \begin{enumerate}
-    \item Put the v6 recipe into the one-command pipeline; replace exhaustive matching with ARCore-pose-guided or sequential pairs (week 1).
-    \item Reduce splatfacto iterations and keyframes on slow walks; benchmark every change on the two reference rooms (week 1--2).
-    \item Set up a Three.js project with a Gaussian splat renderer and camera controls (week 2).
-    \item Build the measurement tool: ray-cast click $\rightarrow$ nearest splat $\rightarrow$ 3D coordinate $\rightarrow$ distance display (week 3).
-    \item Validate measurement accuracy against tape-measure ground truth on 3 rooms (week 3--4).
-    \item Integrate the viewer with the FastAPI backend for model loading (week 4).
+    \item Take the v6 recipe and fit it into the one-command pipeline; substitute exhaustive matching with ARCore-pose-guided or sequential pairs (week 1).
+    \item Decrease the number of iterations with splatfacto and keyframes for slow walks; test every adjustment in both reference rooms (week 1-2).
+    \item Create a project in Three.js equipped with a Gaussian splat renderer and camera controls (week 2).
+    \item Create a measuring device: ray-cast click $\rightarrow$ nearest splat $\rightarrow$ 3D coordinates $\rightarrow$ distance display (week 3).
+    \item Test measurement accuracy compared to a tape-measure on 3 rooms (week 3-4).
+    \item Connect the viewer to the FastAPI backend for model loading (week 4).
 \end{enumerate}
 
 \paragraph{Iteration 2b: Robustness + Structural Layer (Weeks 5--8)}
 \begin{enumerate}
-    \item Implement reflective-surface detection and masking for mirrors and glass (week 5).
-    \item Try IMU-driven motion-blur and rolling-shutter modelling on recordings that carry per-frame exposure metadata (week 5--6).
-    \item Structural layer: fix ceiling-height detection; make doors and openings first-class objects with their dimensions (week 6).
-    \item Structural layer: wall-to-wall dimensions and automatic floor-plan export from the floor polygon (week 7).
-    \item Load \texttt{structure.json} in the web viewer; snap measurement clicks to walls; add a floor-plan view (week 8).
+    \item Add mirror/glass reflective-surface detection and masking features (week 5).
+    \item Experiment with IMU-based motion-blur and rolling-shutter modeling on recordings that support per-frame exposure metadata (week 5-6).
+    \item Structural layer: fix ceiling height detection; create doors and openings as separate objects with their dimensions (week 6).
+    \item Structural layer: wall-to-wall dimensions, automate floor-plan exporting from the floor outline (week 7).
+    \item Use \texttt{structure.json} in the web viewer; make measurements snap to walls; add a floor-plan view (week 8).
 \end{enumerate}
 
 \paragraph{Iteration 2c: Dashboard + Final Validation (Weeks 9--12)}
 \begin{enumerate}
-    \item Build the web dashboard: scan list, processing status, model thumbnails (week 9--10).
-    \item User testing with 5+ external users; collect usability feedback (week 10--11).
-    \item Fix usability issues, write documentation (week 11--12).
+    \item Create the web dashboard: list of scans, processing statuses, model thumbnails (week 9-10).
+    \item Conduct usability tests with 5+ external users; obtain usability feedback (week 10-11).
+    \item Resolve usability problems; prepare documentation (week 11-12).
     \item Final validation: measurement accuracy, structural-layer accuracy, processing time on 5+ rooms (week 12).
 \end{enumerate}
 
@@ -102,12 +102,12 @@ FYP-2 has three priorities: (1)~finishing the refinement of the reconstruction p
 
 \section{Expected Final Deliverables}
 \begin{enumerate}
-    \item \textbf{Android APK}: Capture app with live IQA, coverage overlay, and upload.
-    \item \textbf{Web workspace}: Gaussian splat viewer with 1:1 measurement tools and a floor-plan view.
-    \item \textbf{Processing server}: FastAPI backend with local and cloud GPU support.
-    \item \textbf{Structural layer}: Per-room \texttt{structure.json} (planes, corners, wall lengths, doors and openings) and floor-plan export.
-    \item \textbf{Validation report}: Measurement accuracy on $\geq$5 rooms, structural-layer accuracy, processing-time benchmarks, usability test results.
-    \item \textbf{Documentation}: User guide, API documentation, deployment guide.
-    \item \textbf{Source code}: Complete repository with CI/CD, tests, and documentation.
-    \item \textbf{Final report}: FYP-2 report with complete results and analysis.
+    \item \textbf{Android APK}: The capture app with live IQA, coverage overlay, and uploading functionalities.
+    \item \textbf{Web app}: Gaussian splat viewer with 1:1 measurement tools and floor plan view.
+    \item \textbf{Processing server}: FastAPI with local and cloud GPU compatibility.
+    \item \textbf{Structural component}: per-room \texttt{structure.json} (planes, corners, walls length, doors and openings) and floor plan export.
+    \item \textbf{Validation report}: accuracy of measurements taken in at least 5 rooms, structural component accuracy and time measurement statistics.
+    \item \textbf{Documentation}: user manual, API documentation, deployment manual.
+    \item \textbf{Codebase}: complete repository with CI/CD process, tests and documentation.
+    \item \textbf{Final report}: FYP-2 document with complete results and analysis.
 \end{enumerate}
