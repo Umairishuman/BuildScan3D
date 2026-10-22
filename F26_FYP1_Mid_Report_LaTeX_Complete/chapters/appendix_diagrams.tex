@@ -1,10 +1,12 @@
 \chapter{Additional Design Diagrams}
 
-The main design diagrams are in the body of the report: the use case diagram (Figure~\ref{fig:usecase}), the system architecture (Figure~\ref{fig:architecture}), the job state machine (Figure~\ref{fig:jobstate}), the data flow (Figure~\ref{fig:dataflow}) and the upload--process--download sequence (Figure~\ref{fig:sequence}). This appendix adds four more detailed diagrams. Each is drawn from the code it names.
+The main design diagrams are in the body of the report: the use case diagram (Figure~\ref{fig:usecase}), the system architecture (Figure~\ref{fig:architecture}), the job state machine (Figure~\ref{fig:jobstate}), the data flow (Figure~\ref{fig:dataflow}) and the upload--process--download sequence (Figure~\ref{fig:sequence}). This appendix adds five further diagrams and one screenshot of the running system. Each diagram is drawn from the code it names.
 
 \section{Pipeline Step Sequence}
+Figure~\ref{fig:pipelinesteps} expands the six processing steps of Section~\ref{sec:process} with the per-step timeout enforced by the watchdog and, where one was recorded, the time the step actually took on the development RTX~3070.
 
-\begin{figure}[htbp]
+
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[font=\footnotesize, >=latex,
   pstep/.style={draw, rectangle, rounded corners=2pt, align=center, text width=4.2cm, inner sep=3pt, minimum height=0.9cm},
@@ -36,8 +38,10 @@ The main design diagrams are in the body of the report: the use case diagram (Fi
 \end{figure}
 
 \section{Android App Architecture}
+Figure~\ref{fig:androidarch} shows how the capture app is put together: which class owns which output file, how the activities hand off to one another, and which files stay on the phone rather than being uploaded.
 
-\begin{figure}[htbp]
+
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[font=\footnotesize, >=latex,
   cls/.style={draw, rectangle, rounded corners=2pt, align=center, text width=2.7cm, inner sep=3pt, minimum height=0.9cm, fill=white},
@@ -72,8 +76,10 @@ The main design diagrams are in the body of the report: the use case diagram (Fi
 \end{figure}
 
 \section{Sim3 Alignment}
+Figure~\ref{fig:sim3} shows how the COLMAP reconstruction is brought into ARCore's metric frame. This is the step that gives the model its real-world scale, so every measurement in Table~\ref{tab:tape} depends on it.
 
-\begin{figure}[htbp]
+
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[font=\footnotesize, >=latex,
   box/.style={draw, rectangle, rounded corners=2pt, align=center, text width=4.0cm, inner sep=3pt, minimum height=0.9cm}]
@@ -94,8 +100,10 @@ The main design diagrams are in the body of the report: the use case diagram (Fi
 \end{figure}
 
 \section{Coverage Map}
+Figure~\ref{fig:coverage} shows how the live overlay decides a voxel's colour, which is the guidance the user acts on while walking the room.
 
-\begin{figure}[htbp]
+
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[font=\footnotesize, >=latex]
   % voxel grid (illustrative colouring)
@@ -135,12 +143,64 @@ The main design diagrams are in the body of the report: the use case diagram (Fi
 \label{fig:coverage}
 \end{figure}
 
+
+\section{Domain Model}
+Figure~\ref{fig:domainmodel} draws the entities listed in Section~\ref{sec:domain} and the
+relationships between them. The attributes shown are the fields the code actually carries, so
+the diagram doubles as a map of what is written to disk at each stage.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\footnotesize, >=latex,
+  ent/.style={draw, rectangle, rounded corners=2pt, align=left, text width=7.4cm,
+              inner sep=4pt, fill=white},
+  rel/.style={font=\scriptsize, fill=white, inner sep=1.5pt}]
+
+  \node[ent] (scan) at (0,5.0)
+    {\textbf{Scan}\\[1pt]\scriptsize start time, device model, camera config, duration};
+  \node[ent] (data) at (0,2.6)
+    {\textbf{Dataset}\\[1pt]\scriptsize \texttt{dataset.mp4}, \texttt{poses.csv},
+     \texttt{tracking.csv}, \texttt{points.csv}, \texttt{quality.csv},
+     \texttt{depth/}, \texttt{meta.json}};
+  \node[ent] (job) at (0,0.1)
+    {\textbf{Job}\\[1pt]\scriptsize \texttt{job\_id}, status, step, progress, elapsed,
+     log lines, error, output path};
+  \node[ent] (model) at (0,-2.3)
+    {\textbf{Model}\\[1pt]\scriptsize \texttt{splat.ply}, splat count, metric scale};
+  \node[ent] (meas) at (0,-4.5)
+    {\textbf{Measurement}\\[1pt]\scriptsize two picked points, distance in metres (FYP-2)};
+  \node[ent] (struct) at (0,-6.7)
+    {\textbf{Structural element}\\[1pt]\scriptsize wall plane, corner, wall length,
+     door (prototype)};
+
+  \draw[->] (scan) -- node[rel,right] {1:1 \ produces} (data);
+  \draw[->] (data) -- node[rel,right] {1:N \ submitted as} (job);
+  \draw[->] (job)  -- node[rel,right] {1:1 \ produces on success} (model);
+  \draw[->] (model) -- node[rel,right] {1:N \ supports} (meas);
+  \draw[->] (model.west) -- (-4.2,-2.3) -- (-4.2,-6.7)
+        node[rel,midway,left,align=right] {1:N\\extracted from} -- (struct.west);
+
+  \node[rel,align=left,anchor=north west] at (4.2,5.4)
+    {\textit{A Dataset maps to more than one Job}\\
+     \textit{when a scan is reprocessed}\\
+     \textit{(\texttt{POST /reprocess}).}};
+\end{tikzpicture}
+\caption{Domain model. A \textbf{Scan} produces exactly one \textbf{Dataset}; a Dataset can be
+submitted as more than one \textbf{Job}, because a scan may be reprocessed after a pipeline
+change; a Job that succeeds produces one \textbf{Model}. \textbf{Measurement} and the web-facing
+part of \textbf{Structural element} are FYP-2 work, drawn here because the metric scale they
+depend on is already established by the Sim3 step in Figure~\ref{fig:sim3}. Entity fields follow
+\texttt{Job} in \texttt{server/pipeline.py} and the capture files written by
+\texttt{CaptureLogger.java}.}
+\label{fig:domainmodel}
+\end{figure}
+
 \section{Capture Application in Use}
 
 Figure~\ref{fig:appcapture} shows the capture app recording, with the quality and
 coverage features of Figure~\ref{fig:coverage} running live on the phone.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[height=0.62\textheight]{ThesisFigs/app-capture}
 \caption{The Android capture app mid-recording on the realme device. The header
