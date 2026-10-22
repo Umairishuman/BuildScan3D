@@ -76,7 +76,7 @@ This involves:
 
 \section{Technical Challenges}
 \begin{enumerate}
-    \item \textbf{ARCore silent re-anchoring}: ARCore silently corrects its world frame during SLAM loop closures, causing pose discontinuities of up to 1\,m / 28\textdegree. These must be detected and handled to avoid ghosting in the 3D model. Solved via anchor logging and IMU-bridged tracking-gap recovery (\texttt{fallback.py}).
+    \item \textbf{ARCore silent re-anchoring}: ARCore silently corrects its world frame during SLAM loop closures, causing pose discontinuities of up to 1\,m / 28\textdegree. On our first room every pose before $\sim$60\,s was off by about 1\,m and 28\textdegree, so part of the room appeared twice. Solved by taking training poses from image-based COLMAP SfM, which does not depend on ARCore's world frame; the app now also logs ARCore anchors so that re-anchors are directly detectable. Genuine tracking losses are bridged with the IMU (\texttt{fallback.py}).
 
     \item \textbf{Lens distortion}: ARCore's reported camera intrinsics lack lens distortion coefficients. COLMAP's self-calibration recovers radial distortion ($k_1 \approx 0.09$, $k_2 \approx -0.22$), which is essential for sub-pixel SfM accuracy.
 
@@ -99,3 +99,29 @@ Key research findings that shaped our design:
 
     \item \textbf{Gyro-aware frame selection improves sharpness}: Selecting frames by predicted motion blur (from IMU angular velocity and exposure time) instead of texture content improved PSNR by 0.26\,dB. \textit{Decision}: Implemented \texttt{select\_sharp.py} using per-frame exposure metadata logged by the app.
 \end{enumerate}
+
+\section{Techniques Explored and Parked}
+\label{sec:parked}
+Before the switch to image-based poses, the team tried a series of techniques to fix blurry, ``cotton-like'' models with floating splats. None of them fixed the underlying problem (ARCore's silent re-anchor and missing lens model; finding~1 above); the best model of that period reached only 22.67\,dB / 0.782 on held-out frames. They are recorded here so that every technique attempted is visible. Numbers are from \texttt{docs/progress/}.
+
+\begin{longtable}{p{0.20\textwidth}p{0.40\textwidth}p{0.30\textwidth}}
+\caption{Techniques explored and parked}\label{tab:parked}\\
+\toprule
+\textbf{Technique} & \textbf{What we tried and measured} & \textbf{Outcome} \\
+\midrule
+\endhead
+Own GPU bundle adjustment (\texttt{ba.py}) & Levenberg--Marquardt with the Schur complement accumulated on the GPU, ARCore as priors on relative and absolute pose. Median reprojection error 2.32\,px $\rightarrow$ 0.61\,px; trajectory length 0.998$\times$ ARCore. & Parked. Because it starts from ARCore and keeps ARCore priors, it kept the $\sim$1\,m\,/\,28\textdegree\ re-anchored segment. Replaced by COLMAP SfM. \\
+\midrule
+Metric3D monocular depth & Single-image metric depth as a dense prior. Per-frame scale varied 0.85$\times$--1.50$\times$ against ARCore points; walls came out wavy. A smooth log-depth correction cut its error against MVS from 2.4\% to 1.1\%. & Parked. Its errors are regional and consistent across neighbouring frames, so they passed consistency checks and produced floating copies of furniture. \\
+\midrule
+Own stereo matcher (\texttt{mvs.py}) & GPU plane-sweep MVS: 5 source views, 64 depth hypotheses, 7$\times$7 NCC, forward-backward consistency check. Only about 11\% of pixels per frame were measured, because of plain walls. & Parked. COLMAP dense MVS is used for initialisation instead (v5, v6). \\
+\midrule
+Depth supervision & Depth loss towards a fused surface that included single-image fill. Where stereo measured the true depth, the target was off by $>$5\% on $\sim$30\% of pixels and often lay behind the real surface. & Rejected. It fought the photometric loss and was one of the six causes of degenerate splats. \\
+\midrule
+Floater pruning (\texttt{clean\_splats.py}) & Delete splats contradicted by measured depth. Removed 1.4\% of splats for $-0.3$\,dB and no visible change; with filled depth as evidence it removed 9.8\% but deleted real surfaces. & Rejected. \\
+\midrule
+Median filtering & Hole-aware 5--9\,px median on stereo depth: outliers ($>$25\% error) 3.3\% $\rightarrow$ 2.4--2.7\%, but coverage was lost, and it does nothing for the Metric3D fill or for COLMAP depth. & Parked; kept only as an optional step in \texttt{colmap\_mvs.py}. \\
+\midrule
+Post-hoc flat-forcing (\texttt{planarize.py}) & Snapping walls and floor flat after training. & Rejected: it destroyed the glossy floor's reflections and crushed door frames. The structural layer is built next to the splat model instead. \\
+\bottomrule
+\end{longtable}

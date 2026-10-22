@@ -151,7 +151,7 @@ The worst case is 0.29\%, far inside the 5\% accuracy target. The error does not
 \section{Edge and Failure Cases}
 
 \begin{enumerate}
-    \item \textbf{Tracking loss during capture}: ARCore loses tracking in featureless corridors or when the phone is moved too fast. The app displays a red ``Tracking Lost'' banner and pauses quality logging. The pipeline's IMU fallback (\texttt{fallback.py}) bridges short gaps ($<$2\,s); longer gaps cause SfM failure. \textit{Mitigation}: Live IQA warns the user to slow down; coverage overlay shows unscanned areas.
+    \item \textbf{Tracking loss during capture}: ARCore loses tracking in featureless corridors or when the phone is moved too fast. The app displays a red ``Tracking Lost'' banner and pauses quality logging. The IMU fallback (\texttt{fallback.py}) bridges the gap; on simulated gaps of 9\,s its position error is 3.8\,cm against 30.6\,cm for interpolation, and re-alignment after re-tracking cuts post-gap error from 49.7\,px to 8.2\,px (Table~\ref{tab:imufallback}). In the image-based pipeline COLMAP also registers most gap frames (748 of 759 on the second room). Re-alignment fails if the user never returns to a mapped area; those segments are flagged unverified and kept out of training. \textit{Mitigation}: Live IQA warns the user to slow down; coverage overlay shows unscanned areas.
 
     \item \textbf{Plain white walls}: Rooms with large untextured surfaces produce sparse SfM point clouds in those regions. The model shows blurring or holes on plain walls. \textit{Mitigation}: The IQA ``low texture'' warning prompts the user to capture textured objects nearby.
 
@@ -170,7 +170,7 @@ The worst case is 0.29\%, far inside the 5\% accuracy target. The error does not
 \midrule
 D-1 & Degenerate splats (zero thickness, half-transparent) & Flattening regularizer $\times$ Adam interaction; depth loss gradient conflicts & Switched to splatfacto; removed custom regularizers & Fixed \\
 D-2 & 5\,dB PSNR drop vs.\ reference implementations & ARCore poses used directly for training (2.3\,px reprojection error) & Switched to COLMAP SfM poses (0.62\,px) & Fixed \\
-D-3 & Ghosting artifacts near doorways & ARCore silent re-anchoring events creating pose discontinuities & Added anchor correction logging and IMU-bridged gap recovery & Fixed \\
+D-3 & Ghosting artifacts near doorways & ARCore silent re-anchoring events creating pose discontinuities & Training poses from image-based COLMAP SfM; ARCore anchor logging added so re-anchors are detectable & Fixed \\
 D-4 & SfM failure on 30\,FPS input & Too many similar frames overwhelm COLMAP exhaustive matching & Keyframe selection: one sharp frame per window (\texttt{prepare.py}); gyro-aware selection (\texttt{select\_sharp.py}) for v4--v6 & Fixed \\
 D-5 & Barrel distortion visible at frame edges & ARCore intrinsics lack lens distortion coefficients & COLMAP self-calibration recovers $k_1$, $k_2$; undistort before training & Fixed \\
 \bottomrule

@@ -85,7 +85,7 @@ Pipeline steps & Next step & Filesystem (dataset directory) \\
 
 \section{Design Evolution}
 \begin{enumerate}
-    \item \textbf{Proposal $\rightarrow$ Mid}: Added live IQA and coverage guidance (not in original proposal). Changed from ARCore-pose-based training to COLMAP SfM-based training after discovering ARCore's pose accuracy limitations.
+    \item \textbf{Proposal $\rightarrow$ Mid}: Added live IQA and coverage guidance (not in original proposal). Changed from ARCore-pose-based training to COLMAP SfM-based training after discovering ARCore's pose accuracy limitations. On the way, the team's own GPU bundle adjustment, Metric3D depth, own stereo matcher, depth supervision, floater pruning, median filtering and post-hoc flat-forcing were tried and parked (Section~\ref{sec:parked}).
 
     \item \textbf{Custom trainer $\rightarrow$ splatfacto}: After two weeks of analysis documenting six root causes of degenerate splat geometry, we switched training to Nerfstudio splatfacto. The custom preprocessing pipeline was retained and validated.
 
