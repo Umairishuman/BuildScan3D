@@ -3,13 +3,13 @@
 \section{Project Overview}
 BuildScan~3D is an end-to-end system that enables non-expert users to create photorealistic, metric-scale 3D models of indoor spaces using only a commodity Android smartphone. The user records a short walk-through video; the system automatically uploads the captured data to a cloud GPU, reconstructs a 3D Gaussian Splatting model, and returns a viewable, measurable digital twin of the scanned space.
 
-The system targets construction site documentation, facility management, and architectural surveying---domains where 3D capture is valuable but traditional solutions (terrestrial LiDAR scanners, professional photogrammetry) are prohibitively expensive or require specialist operators.
+It targets construction site documentation, facility management and architectural surveying.
 
 \section{Problem Statement}
-Capturing accurate, metric-scale 3D models of indoor environments currently requires either (a)~LiDAR hardware costing \$10{,}000 or more, (b)~photogrammetry workflows requiring expert knowledge and hours of manual post-processing, or (c)~consumer-grade scanning apps (e.g.\ Polycam, Luma AI) that produce visually plausible but metrically inaccurate models unsuitable for measurement. There is no affordable, fully automated pipeline that turns a smartphone video into a metrically accurate 3D model with sufficient quality for professional use.
+Capturing accurate, metric-scale 3D models of indoor environments currently requires either (a)~LiDAR hardware costing \$10{,}000 or more, (b)~photogrammetry workflows requiring expert knowledge and hours of manual post-processing, or (c)~consumer-grade scanning apps (e.g.\ Polycam, Luma AI) that produce visually plausible but metrically inaccurate models unsuitable for measurement. There is no affordable, fully automated pipeline that turns a smartphone video into a metrically accurate 3D model with sufficient quality for professional use. Section~\ref{sec:gaps} examines these gaps in detail.
 
 \section{Problem Context and Motivation}
-Construction and facility management lose time and money to rework caused by inaccurate or outdated spatial documentation. Small firms and site teams need quick, accurate as-built 3D captures but cannot justify the cost of LiDAR equipment or trained surveyors for routine inspections. Modern smartphones carry high-resolution cameras, IMUs, and AR-capable processors (via Google ARCore), making them potential 3D capture devices---if the software pipeline can bridge the accuracy gap between consumer AR and professional surveying.
+Construction and facility management lose time and money to rework caused by inaccurate or outdated spatial documentation. Small firms and site teams need quick, accurate as-built captures for routine inspections. Modern smartphones carry high-resolution cameras, IMUs, and AR-capable processors (via Google ARCore), making them potential 3D capture devices---if the software pipeline can bridge the accuracy gap between consumer AR and professional surveying.
 
 Recent advances in 3D Gaussian Splatting~\cite{kerbl3dgs} enable photorealistic novel-view synthesis at real-time frame rates from posed images, while ARCore provides metric-scale camera poses and depth sensing on Android devices. Combining these technologies with cloud GPU processing creates an opportunity for a fully automated, affordable indoor scanning solution.
 
@@ -40,13 +40,7 @@ BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as re
     \item CI/CD pipeline via GitHub Actions.
 \end{itemize}
 
-\paragraph{Out of scope:}
-\begin{itemize}
-    \item Outdoor environments and large-scale (building-wide) scans.
-    \item iOS support (ARKit).
-    \item Real-time on-device reconstruction.
-    \item BIM (Building Information Modelling) export.
-\end{itemize}
+\paragraph{Out of scope:} outdoor environments and building-wide scans, iOS (ARKit), real-time on-device reconstruction, and BIM export.
 
 \section{Project Modules}
 \begin{enumerate}
@@ -59,12 +53,7 @@ BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as re
 \end{enumerate}
 
 \section{Stakeholders and User Classes}
-\begin{itemize}
-    \item \textbf{Primary users}: Construction site managers, facility maintenance teams, architectural survey teams who need quick as-built documentation.
-    \item \textbf{Secondary users}: Architecture and civil engineering students for educational purposes; real estate professionals for property documentation.
-    \item \textbf{Administrators}: System operators who manage cloud GPU resources and monitor processing jobs.
-    \item \textbf{Supervisor}: Mr.~Furqan Nasir (academic evaluation and guidance).
-\end{itemize}
+The primary users are construction site managers, facility maintenance teams and architectural survey teams who need quick as-built documentation. Secondary users are architecture and civil engineering students, and real estate professionals documenting properties. Administrators operate the cloud GPU resources and monitor processing jobs. The supervisor, Mr.~Furqan Nasir, provides academic evaluation and guidance.
 
 \section{Success Criteria}
 \label{sec:success}
@@ -77,13 +66,7 @@ BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as re
 \end{enumerate}
 
 \section{Constraints and Assumptions}
-\begin{itemize}
-    \item The target phone must support ARCore (Google's AR compatibility list). All results in this report come from a commodity Android phone (realme) with no LiDAR or other special hardware.
-    \item Cloud GPU processing requires internet connectivity and a RunPod account.
-    \item The scanned space must be a single room or connected set of rooms (not a full building).
-    \item Indoor lighting must be sufficient for ARCore to maintain tracking (no pitch-dark environments).
-    \item The current pipeline targets rooms up to approximately $10 \times 10$\,m.
-\end{itemize}
+The phone must support ARCore (Google's AR compatibility list); all results in this report come from a commodity Android phone (realme) with no LiDAR or other special hardware. Cloud processing needs internet connectivity and a RunPod account. The scanned space must be a single room or a connected set of rooms (not a full building), lit well enough for ARCore to keep tracking, and the current pipeline targets rooms up to about $10 \times 10$\,m.
 
 \section{Ethical, Legal and DEI Considerations}
 \begin{itemize}

@@ -63,6 +63,7 @@ The data flow is strictly sequential: Capture $\rightarrow$ Upload $\rightarrow$
 \end{figure}
 
 \section{Architectural Components}
+\label{sec:components}
 
 \paragraph{Android App (\texttt{googleARCore/samples/hello\_ar\_java/})}
 \begin{itemize}
@@ -149,15 +150,7 @@ Pipeline steps & Next step & Filesystem (dataset directory) \\
 \end{tabular}
 \end{table}
 
-\paragraph{External dependencies:}
-\begin{itemize}
-    \item Google ARCore SDK (Android)
-    \item COLMAP 4.2 (SfM/MVS)
-    \item Nerfstudio 1.1.5 (3DGS training)
-    \item OkHttp 4.12.0 (Android HTTP client)
-    \item FastAPI + Uvicorn (Python web framework)
-    \item RunPod API (cloud GPU provisioning)
-\end{itemize}
+\paragraph{External dependencies:} Google ARCore SDK (Android), COLMAP 4.2 (SfM/MVS), Nerfstudio 1.1.5 (3DGS training), OkHttp 4.12.0 (Android HTTP client), FastAPI + Uvicorn (Python web framework) and the RunPod API (cloud GPU provisioning).
 
 \section{Architecture Decisions and Rationale}
 
@@ -285,6 +278,7 @@ Figure~\ref{fig:dataflow} traces the capture files through the six pipeline step
 \end{figure}
 
 \section{Process / Behavior Design}
+\label{sec:process}
 
 The end-to-end pipeline follows a sequential six-step process:
 

@@ -4,18 +4,14 @@
 Build the complete end-to-end pipeline: phone capture $\rightarrow$ automated upload $\rightarrow$ cloud GPU reconstruction $\rightarrow$ metric-scale 3D model. Validate reconstruction quality and metric accuracy on real indoor scans.
 
 \section{Selected Use Cases / Features}
-\begin{itemize}
-    \item UC-1: Record Indoor Scan (with live IQA and coverage guidance)
-    \item UC-2: Upload and Process (with progress tracking)
-    \item UC-3: View finished model (via local viewer; web viewer deferred to FYP-2)
-\end{itemize}
+UC-1 Record Indoor Scan (with live IQA and coverage guidance), UC-2 Upload and Process (with progress tracking), and UC-3 View the finished model (in the local viewer; the web viewer is deferred to FYP-2).
 
 \section{Design}
 The Iteration~1 design focused on three subsystems:
 \begin{enumerate}
     \item \textbf{Capture subsystem}: ARCore session $\rightarrow$ CaptureLogger (background I/O) $\rightarrow$ QualityMonitor (frame analysis at 6\,FPS) $\rightarrow$ CoverageMap (depth $\rightarrow$ voxels $\rightarrow$ overlay).
     \item \textbf{Upload subsystem}: OkHttp multipart POST $\rightarrow$ FastAPI \texttt{/upload} $\rightarrow$ Job creation $\rightarrow$ Pipeline dispatch (local or RunPod).
-    \item \textbf{Pipeline subsystem}: Six sequential steps (fallback $\rightarrow$ prepare $\rightarrow$ sfm\_colmap $\rightarrow$ export\_nerfstudio $\rightarrow$ ns-train $\rightarrow$ ns-export), each with timeout watchdog.
+    \item \textbf{Pipeline subsystem}: six sequential steps, each with a timeout watchdog, detailed in Section~\ref{sec:process} and Figure~\ref{fig:pipelinesteps}.
 \end{enumerate}
 
 \section{Implementation}
@@ -31,44 +27,13 @@ Implementation was carried out in Java (Android app) and Python (server and pipe
 \section{Completed Features / Module}
 \label{sec:completed}
 
-\paragraph{Android Capture App (implemented):}
-\begin{itemize}
-    \item 30\,FPS video recording with per-frame pose, tracking state, feature points, depth, quality metrics, and device metadata.
-    \item Live IQA with colour-coded banner: tracking lost (red), moving too fast (orange), blurry (yellow), too dark (yellow), low texture (yellow).
-    \item Haptic feedback (vibration) on quality degradation during recording.
-    \item Coverage overlay: red (1 direction), yellow (2--3), green (4+) dots at 2\,Hz.
-    \item Per-frame exposure time, rolling-shutter readout, and anchor correction logging.
-    \item End-of-recording quality summary dialog.
-    \item Upload \& Process button launching \texttt{ProcessingActivity}.
-    \item Configurable server URL via settings menu (persisted in SharedPreferences).
-    \item Performance optimization: recording fast-path skips all demo rendering.
-\end{itemize}
+\paragraph{Android Capture App (implemented):} 30\,FPS video recording with per-frame pose, tracking state, feature points, depth, quality metrics and device metadata; per-frame exposure time, rolling-shutter readout and anchor-correction logging. Live IQA shows a colour-coded banner (tracking lost in red, moving too fast in orange; blurry, too dark or low texture in yellow) with a vibration alert, and the coverage overlay draws red (1 direction), yellow (2--3) and green (4+) dots at 2\,Hz. Recording ends with a quality summary dialog and an Upload \& Process button that opens \texttt{ProcessingActivity}. The server URL is set in the settings menu (persisted in SharedPreferences), and the recording fast-path skips all demo rendering.
 
-\paragraph{Processing Server (implemented):}
-\begin{itemize}
-    \item FastAPI with endpoints: \texttt{POST /upload}, \texttt{GET /status/\{id\}}, \texttt{GET /jobs}, \texttt{GET /download/\{id\}}, \texttt{GET/POST /config}, \texttt{GET /health}.
-    \item Local and RunPod processing modes switchable at runtime.
-    \item Per-step timeout watchdogs (fallback 2\,min, prepare 5\,min, SfM 40\,min, export 2\,min, train 60\,min, export\_splat 5\,min).
-    \item RunPod integration: pod creation, SSH readiness polling, dependency installation, SCP upload/download, guaranteed pod termination.
-    \item \texttt{.env} file support for API key management.
-\end{itemize}
+\paragraph{Processing Server (implemented):} The FastAPI endpoints and processing modes of Section~\ref{sec:components}, switchable at runtime; per-step timeout watchdogs (Figure~\ref{fig:pipelinesteps}); RunPod integration with pod creation, SSH readiness polling, dependency installation, SCP upload/download and pod termination; API key loaded from the environment or a \texttt{.env} file.
 
-\paragraph{Reconstruction Pipeline (core complete, refinement ongoing):}
-\begin{itemize}
-    \item IMU-bridged tracking-gap recovery (\texttt{fallback.py}).
-    \item Keyframe extraction (\texttt{prepare.py}, sharpest frame per window) in the one-command pipeline; gyro-aware sharp frame selection (\texttt{select\_sharp.py}, using per-frame exposure metadata) validated for v4--v6 but not yet in the one-command pipeline.
-    \item COLMAP SfM with SIFT features, exhaustive matching, global mapper, lens self-calibration (radial distortion $k_1, k_2$), and undistortion.
-    \item Sim3 alignment to ARCore metric frame (tape-measure error: mean 0.19\%, worst case 0.29\%).
-    \item Nerfstudio splatfacto training with bilateral grid exposure compensation.
-    \item Model export to \texttt{splat.ply}.
-\end{itemize}
+\paragraph{Reconstruction Pipeline (core complete, refinement ongoing):} All six steps of Section~\ref{sec:process} run end to end: IMU gap bridging, keyframe extraction, COLMAP SfM with lens self-calibration and Sim3 alignment (tape-measure error: mean 0.19\%, worst case 0.29\%), splatfacto training with bilateral-grid exposure compensation, and export to \texttt{splat.ply}. Gyro-aware frame selection (\texttt{select\_sharp.py}, using per-frame exposure metadata) is validated for v4--v6 but not yet in the one-command pipeline, which still uses \texttt{prepare.py}'s sharpest frame per window.
 
-\paragraph{CI/CD (implemented):}
-\begin{itemize}
-    \item GitHub Actions CI: Python lint (ruff) + unit tests (pytest, 3 Python versions), web UI build, Android APK build, repo hygiene (file size, secrets, workflow lint).
-    \item GitHub Actions CD: on push to master, full CI gate $\rightarrow$ web bundle + APK artifacts; on version tag, GitHub Release.
-    \item Pull request template with area checkboxes and CI checklist.
-\end{itemize}
+\paragraph{CI/CD (implemented):} GitHub Actions CI (lint, tests on three Python versions, web and APK builds, repository hygiene), CD to build artefacts and releases, and a pull request template; details in Chapter~\ref{ch:evidence}.
 
 \section{Technical Implementation Details}
 

@@ -2,27 +2,10 @@
 \label{ch:evidence}
 
 \section{Work Completed}
-\begin{enumerate}
-    \item Android capture app with ARCore pose/depth/quality logging, live IQA, coverage overlay, upload UI.
-    \item Reconstruction pipeline: IMU fallback, gyro-aware frame selection, COLMAP SfM with Sim3 metric alignment, Nerfstudio splatfacto training, model export.
-    \item FastAPI processing server with local and RunPod cloud GPU modes.
-    \item RunPod integration with guaranteed pod lifecycle management.
-    \item CI/CD pipeline (GitHub Actions): lint, unit tests, APK build, web build, hygiene checks.
-    \item Extensive root-cause analysis of degenerate splat geometry (6 causes, documented in \texttt{Training\_Analysis.md}).
-    \item Server launcher script (\texttt{start\_server.bat}) with \texttt{.env} support.
-\end{enumerate}
+The team has built the Android capture app (ARCore pose, depth and quality logging, live IQA, coverage overlay, upload UI); the reconstruction pipeline (IMU fallback, keyframe extraction, COLMAP SfM with Sim3 metric alignment, Nerfstudio splatfacto training, model export, with gyro-aware frame selection validated but not yet in the one-command pipeline); the FastAPI processing server with local and RunPod cloud GPU modes and pod termination in \texttt{finally} blocks; the CI/CD pipeline (lint, unit tests, APK and web builds, hygiene checks); the server launcher (\texttt{start\_server.bat}) with \texttt{.env} support; and a root-cause analysis of degenerate splat geometry (six causes, documented in \texttt{Training\_Analysis.md}).
 
 \section{Work Remaining}
-\begin{enumerate}
-    \item \textbf{Web viewer}: Three.js/WebGPU Gaussian splat viewer with orbit controls and measurement tools.
-    \item \textbf{Measurement tool}: Point-to-point distance measurement in the metric 3D model.
-    \item \textbf{Structural layer}: Complete \texttt{structure.py}: wall-to-wall dimensions, doors and openings, ceiling-height detection, and automatic floor-plan export.
-    \item \textbf{Wall snapping}: Measurement clicks that snap to structural-layer walls, and a floor-plan view in the web viewer.
-    \item \textbf{3DGS refinement}: One-command v6 pipeline, validation on the second room, and IMU-driven motion-blur modelling.
-    \item \textbf{3D mesh creation}: In scope as planned work; not yet scheduled.
-    \item \textbf{Field validation}: Metric accuracy validation on $\geq$3 additional rooms with varied geometry.
-    \item \textbf{User testing}: Usability evaluation with external users (non-team members).
-\end{enumerate}
+Scheduled in Chapter~\ref{ch:plan}: the Three.js/WebGPU splat viewer with orbit controls; point-to-point measurement; completing the structural layer (wall-to-wall dimensions, doors and openings, ceiling-height detection, floor-plan export) with wall snapping and a floor-plan view; 3DGS refinement (one-command v6 pipeline, second-room validation, IMU-driven motion-blur modelling); field validation on $\geq$3 more rooms; and usability evaluation with external users. 3D mesh creation is in scope as planned work but not yet scheduled.
 
 \section{Individual Responsibilities}
 
@@ -155,15 +138,7 @@ ChatGPT (OpenAI) & Research queries, algorithm explanations & Used to understand
 \paragraph{Statement of originality:}
 All core algorithms (Sim3 alignment, gyro-aware frame selection, coverage map, IQA pipeline, RunPod lifecycle management) were designed by the team. AI tools were used as assistants for code generation, debugging, explanation and report drafting, as disclosed in Table~\ref{tab:aitools}. The system architecture, experimental methodology, root-cause analysis, and design decisions are entirely our own work. All AI-generated code was reviewed, understood, tested, and adapted by team members before integration into the codebase.
 
-\paragraph{Other development tools:}
-\begin{itemize}
-    \item Android Studio (Ladybug) with Android Gradle Plugin
-    \item Visual Studio Code with Python and Java extensions
-    \item Git + GitHub for version control
-    \item Postman for API testing during server development
-    \item ADB (Android Debug Bridge) for device-level debugging
-    \item NVIDIA Nsight for GPU profiling during training experiments
-\end{itemize}
+\paragraph{Other development tools:} Android Studio (Ladybug) with the Android Gradle Plugin, Visual Studio Code with Python and Java extensions, Git and GitHub, Postman for API testing, ADB for device-level debugging, and NVIDIA Nsight for GPU profiling during training experiments.
 
 \section{External Components and Dependencies}
 
