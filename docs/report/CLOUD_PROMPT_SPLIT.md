@@ -58,9 +58,16 @@ they are. They are never chunk content.
 
 ## Output
 
-One Markdown file per source file, in a new directory `docs/report/rewrite/`, named after
-the source: `04_abstract.md`, `chapter1_introduction.md`, and so on. Also write
-`docs/report/rewrite/INDEX.md` listing every file with its chunk count and word count.
+**One single Markdown file: `docs/report/REPORT_CHUNKS.md`.** Do not create a directory
+and do not split the output across files.
+
+Structure it as:
+
+1. A short header: total chunk count, total words, the date, and the commit the chunks
+   were taken from.
+2. A `## <filename>` heading before the first chunk of each source file, so the file is
+   navigable — thirteen of these, in the reading order above.
+3. All chunks, numbered continuously 001 upwards across the whole report.
 
 ## Chunking rules
 
@@ -116,9 +123,9 @@ rewrite:
 
 ## Finish
 
-Commit the new `docs/report/rewrite/` directory in one commit. In `INDEX.md`, state the
-total chunk count, total words, and confirm explicitly that **no `.tex` file was modified**
-(`git status` should show only additions under `docs/report/rewrite/`).
+Commit `docs/report/REPORT_CHUNKS.md` in one commit. In its header, state the total chunk
+count, total words, and confirm explicitly that **no `.tex` file was modified**
+(`git status` should show one added file and nothing else).
 
 ---
 ---
@@ -129,7 +136,7 @@ Run this only after you have filled in some `rewrite:` blocks. Paste below the l
 
 ---
 
-Apply the filled-in rewrites in `docs/report/rewrite/` to the LaTeX sources in
+Apply the filled-in rewrites in `docs/report/REPORT_CHUNKS.md` to the LaTeX sources in
 `F26_FYP1_Mid_Report_LaTeX_Complete/chapters/`.
 
 Read `docs/report/REPORT_FIX_BRIEF.md` first — its Ground Truth table is the authority on
@@ -187,7 +194,7 @@ shown in `original:`; if it does not, **stop and report** rather than guessing.
 
 ## Finish
 
-Commit per source file, not per chunk. Then write `docs/report/rewrite/APPLY_LOG.md`
+Commit per source file, not per chunk. Then write `docs/report/APPLY_LOG.md`
 recording: which chunks were applied, which were skipped as empty, every number or honesty
 marker you refused and why, every `\ref`/`\cite` you restored, and any span that no longer
 matched.
