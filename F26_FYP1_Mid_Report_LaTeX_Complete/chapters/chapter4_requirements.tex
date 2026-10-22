@@ -131,7 +131,7 @@ NFR-P1 & Performance & End-to-end processing (upload to exported \texttt{splat.p
 NFR-P2 & Performance & The app shall keep a 30\,FPS camera preview while recording (no frame drops from logging). & No frame drops in logcat over a 3-minute recording & Not yet measured \\
 NFR-P3 & Performance & The recording fast-path shall skip non-essential rendering (planes, virtual objects, PBR lighting). & Code inspection; GL thread profiling & Implemented; not profiled \\
 NFR-S1 & Security & The RunPod API key shall be loaded from environment variables or a \texttt{.env} file, never hardcoded. & Code review; CI secrets check; \texttt{/config} never returns the key (TC-10) & Implemented \\
-NFR-S2 & Security & The \texttt{.env} file shall be excluded from version control via \texttt{.gitignore}. & \texttt{.gitignore} inspection & \textbf{Not met}: \texttt{.env} is tracked in the repository \\
+NFR-S2 & Security & The \texttt{.env} file shall be excluded from version control via \texttt{.gitignore}. & \texttt{.gitignore} inspection & Met since 22~October~2026 (untracked and ignored); the key committed on 18~October is still in the history and must be rotated \\
 \bottomrule
 \end{longtable}
 }
