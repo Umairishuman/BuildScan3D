@@ -72,7 +72,6 @@ Held-out PSNR & $\geq$25\,dB & 27.8\,dB & 26.4\,dB & Pass \\
 SSIM & $\geq$0.85 & 0.889 & 0.862 & Pass \\
 Scale accuracy & $<$1\% & 0.3\% & 0.5\% & Pass \\
 Wall-to-wall error & $<$2\,cm & 1.2\,cm & 1.7\,cm & Pass \\
-Processing time (3090) & $<$15\,min & 12\,min & 14\,min & Pass \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -83,7 +82,7 @@ Acceptance testing validates the system against the success criteria defined in 
 \begin{enumerate}
     \item \textbf{Metric accuracy}: Room dimensions measured in the 3D model match tape-measure ground truth within 2\,cm for rooms up to 5\,m in each dimension. Sim3 scale factor is consistently 1.000--1.003$\times$.
     \item \textbf{Reconstruction quality}: Held-out PSNR exceeds the 25\,dB threshold on both test rooms. Novel views are visually coherent with no ghosting or significant artifacts.
-    \item \textbf{Processing time}: End-to-end processing completes in under 15 minutes on an RTX 3090, meeting the NFR-P1 requirement.
+    \item \textbf{Processing time}: The measured end-to-end time is approximately 75 minutes on the development RTX 3070 (feature matching 23\,min, mapping 6\,min, training 45\,min). The NFR-P1 target of under 35 minutes on an RTX 4090 is a projection for FYP-2 and has not yet been measured, so NFR-P1 is not yet verified.
     \item \textbf{Capture usability}: Three users (team members) successfully captured rooms on first attempt using only the app's live IQA guidance, with no prior training.
 \end{enumerate}
 
@@ -120,7 +119,7 @@ All Iteration~1 acceptance criteria are met:
 \begin{itemize}
     \item \checkmark\ Reconstruction quality: PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85 on both test rooms.
     \item \checkmark\ Metric accuracy: Scale error $<$ 1\%, wall-to-wall error $<$ 2\,cm.
-    \item \checkmark\ Processing time: $<$ 15 minutes on RTX 3090.
+    \item Processing time: \textit{not yet verified}. Measured $\sim$75\,min on RTX 3070; the $<$35\,min RTX 4090 target (NFR-P1) is projected and not yet measured.
     \item \checkmark\ Pod lifecycle: Guaranteed termination verified in all code paths.
     \item \checkmark\ CI pipeline: All tests pass on 3 Python versions; zero lint violations.
 \end{itemize}

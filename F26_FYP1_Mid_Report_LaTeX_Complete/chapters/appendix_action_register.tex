@@ -13,10 +13,10 @@ The following table records all feedback received during the FYP proposal defens
 \midrule
 3 & X-ray / see-through-wall is infeasible & Remove X-ray from scope & Removed entirely. Scope redirected to metric measurements and MEP semantic segmentation (FYP-2). & Done & Section~1.6 \\
 \midrule
-4 & Define measurable acceptance criteria & Set quality thresholds & Acceptance criteria: PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85, scale error $<$ 1\%, processing $<$ 15\,min on RTX 3090 & Done & Section~1.9, Table~4.3 \\
+4 & Define measurable acceptance criteria & Set quality thresholds & Acceptance criteria: PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85, scale error $<$ 1\%, processing $<$ 35\,min on RTX 4090 (projected FYP-2 target; 75\,min measured on RTX 3070) & Done & Section~1.9, Table~4.3 \\
 \midrule
 5 & The pipeline should be automated, not manual & Show fully automated pipeline & Built FastAPI server with RunPod cloud GPU integration; one-tap upload from Android app triggers entire pipeline automatically & Done & Chapter~6, Section~6.5 \\
 \midrule
-6 & Consider cost implications of cloud GPU & Address cloud compute costs & Per-step timeouts prevent unbounded billing; guaranteed pod termination in try/finally; default to RTX 3090 (cheaper) & Done & Section~9.10, Table~9.4 \\
+6 & Consider cost implications of cloud GPU & Address cloud compute costs & Per-step timeouts prevent unbounded billing; guaranteed pod termination in try/finally; GPU type selectable at runtime via \texttt{/config} (default RTX 4090) & Done & Section~9.10, Table~9.4 \\
 \bottomrule
 \end{longtable}

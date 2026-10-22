@@ -148,7 +148,7 @@ All external components are used under permissive open-source licenses compatibl
 \toprule
 \textbf{Risk} & \textbf{Likelihood} & \textbf{Impact} & \textbf{Mitigation} \\
 \midrule
-Cloud GPU costs exceed budget & Medium & High & Per-step timeouts; guaranteed pod termination in finally block; RTX 3090 (cheaper than 4090) as default \\
+Cloud GPU costs exceed budget & Medium & High & Per-step timeouts; guaranteed pod termination in finally block; GPU type selectable per job via \texttt{/config} (default RTX 4090) \\
 ARCore API deprecation & Low & High & Abstracted behind CaptureLogger interface; can swap to AREngine \\
 COLMAP SfM fails on difficult scenes & Medium & Medium & IMU fallback for tracking gaps; live IQA reduces bad input; manual SfM parameter overrides available \\
 Nerfstudio breaking changes & Low & Medium & Pinned to version 1.1.5; tested upgrade path \\
@@ -168,9 +168,9 @@ Team member unavailability & Low & Medium & All code in shared repo; documented 
 \section{Current Limitations}
 \begin{enumerate}
     \item \textbf{Mirrors and glass}: Highly reflective and transparent surfaces cause SfM outliers and incorrect depth. The model shows artifacts in these regions. Planned mitigation in FYP-2: mask reflective surfaces using semantic segmentation.
-    \item \textbf{Large rooms}: Rooms exceeding approximately 8$\times$8\,m may exceed GPU memory during training on the RTX 3070 (8\,GB). Cloud GPUs (RTX 3090/4090, 24\,GB) handle larger scenes.
+    \item \textbf{Large rooms}: Rooms exceeding approximately 8$\times$8\,m may exceed GPU memory during training on the RTX 3070 (8\,GB). A 24\,GB cloud GPU (RTX 4090, the RunPod default) is expected to handle larger scenes; this has not yet been measured.
     \item \textbf{Outdoor scenes}: The system is designed for indoor environments. Outdoor scenes with sky, vegetation, and long-range views are out of scope.
-    \item \textbf{Real-time processing}: Processing takes 12--15 minutes on an RTX 3090. Real-time reconstruction is not feasible with current 3DGS training times.
+    \item \textbf{Real-time processing}: Processing takes approximately 75 minutes on the development RTX 3070; no cloud-GPU timing has been measured yet. Real-time reconstruction is not feasible with current 3DGS training times.
     \item \textbf{Single-floor only}: The current coverage map and measurement tools assume a single-floor environment. Multi-floor buildings require manual segmentation.
     \item \textbf{No web viewer yet}: The 3D model can currently only be viewed in a local desktop viewer. The web-based Three.js viewer is planned for FYP-2.
 \end{enumerate}

@@ -80,7 +80,7 @@ The system involves three actors: the \textit{End User} (captures and views), th
 
 \subsection{Performance}
 \begin{itemize}
-    \item \textbf{NFR-P1}: End-to-end processing time shall be under 15 minutes on an NVIDIA RTX 3090 or better.
+    \item \textbf{NFR-P1}: End-to-end processing time (upload to exported \texttt{splat.ply}) shall be under 35 minutes on an NVIDIA RTX 4090 cloud GPU. This is an FYP-2 target and a projection: the only measured time is $\sim$75 minutes on the development RTX 3070 (matching 23, mapping 6, training 45\,min).
     \item \textbf{NFR-P2}: The capture app shall maintain 30\,FPS camera preview during recording (no frame drops from logging overhead).
     \item \textbf{NFR-P3}: The app's recording fast-path shall skip all non-essential rendering (planes, virtual objects, PBR lighting) to minimize GL thread load.
 \end{itemize}
@@ -105,7 +105,7 @@ FR-M1 & Pose logged for every video frame & Row count in poses.csv equals frame 
 FR-P3 & Metric scale accuracy $<$ 1\% & Sim3 trajectory scale vs.\ ARCore = 1.000--1.003 \\
 FR-P4 & Reconstruction quality & Held-out PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85 \\
 FR-S7 & Pod always terminated & Server logs confirm \texttt{terminate\_pod()} in all paths \\
-NFR-P1 & Processing under 15\,min & Elapsed time on RTX 3090 for a 5-minute scan \\
+NFR-P1 & Processing under 35\,min on RTX 4090 & Wall-clock time from upload to exported \texttt{splat.ply} on an RTX 4090 pod. \textit{Outstanding: not yet measured} (75\,min measured on RTX 3070) \\
 NFR-P2 & 30\,FPS during recording & No frame drops in logcat during 3-minute recording \\
 \bottomrule
 \end{tabular}

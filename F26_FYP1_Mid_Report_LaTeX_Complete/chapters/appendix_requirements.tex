@@ -60,7 +60,7 @@ NFR-R1 & Reliability & Pod terminated within 60\,s of completion/failure & Serve
 NFR-R2 & Reliability & Each step has timeout watchdog & Pipeline config file \\
 NFR-U1 & Usability & Real-time visual feedback without 3D knowledge & User testing (3 users) \\
 NFR-U2 & Usability & Progress display with step, \%, elapsed time & UI inspection \\
-NFR-P1 & Performance & E2E processing $<$ 15\,min on RTX 3090 & Elapsed time measurement \\
+NFR-P1 & Performance & E2E processing $<$ 35\,min on RTX 4090 (projected FYP-2 target) & Elapsed time on an RTX 4090 pod; not yet measured (75\,min measured on RTX 3070) \\
 NFR-P2 & Performance & 30\,FPS during recording, no drops & logcat frame timing \\
 NFR-P3 & Performance & Recording fast-path skips non-essential rendering & GL thread profiling \\
 NFR-S1 & Security & API key from env vars, never hardcoded & Code review + CI secrets check \\

@@ -84,7 +84,7 @@ This involves:
 
     \item \textbf{Plain/textureless surfaces}: Rooms with plain white walls and ceilings cause tracking losses and produce inconsistent depth estimates. Solved via texture-aware IQA warnings and ceiling/floor capture guidance.
 
-    \item \textbf{GPU memory constraints}: The RTX 3070 (8\,GB VRAM) limits splat count to approximately 3\,million at full resolution. Addressed by training on cloud GPUs (RTX 3090/4090) and optimizing memory usage (images in pinned CPU RAM).
+    \item \textbf{GPU memory constraints}: The RTX 3070 (8\,GB VRAM) limits splat count to approximately 3\,million at full resolution. Addressed by training on a 24\,GB cloud GPU (RTX 4090 via RunPod) and optimizing memory usage (images in pinned CPU RAM).
 \end{enumerate}
 
 \section{Research Findings and Design Decisions}

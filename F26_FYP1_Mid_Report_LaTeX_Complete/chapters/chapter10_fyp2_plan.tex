@@ -6,7 +6,7 @@ FYP-2 focuses on two priorities: (1)~optimizing the existing pipeline for speed,
 \section{Remaining Modules and Features}
 
 \begin{enumerate}
-    \item \textbf{Pipeline Optimization Module}: Reduce end-to-end processing time from 12--15\,min to $<$5\,min on RTX 4090. Techniques: faster COLMAP matching (vocabulary tree instead of exhaustive), reduced splatfacto iterations with early stopping, parallel step execution where possible, and optimized data transfer (compressed uploads, delta downloads).
+    \item \textbf{Pipeline Optimization Module}: Reduce end-to-end processing time from the measured $\sim$75\,min on the development RTX 3070 (matching 23\,min, mapping 6\,min, training 45\,min) to under 35\,min on an RTX 4090. The 35\,min figure is a projected target, not a measurement. Techniques: ARCore-pose-guided or sequential matching pairs instead of exhaustive COLMAP matching, fewer training iterations, and fewer keyframes on slow walks.
 
     \item \textbf{Robustness Improvements}: Better handling of mirrors/glass (reflective surface detection and masking), textureless walls (depth-guided initialization), large rooms ($>$8\,m, tiled reconstruction), and variable lighting conditions.
 
@@ -24,7 +24,7 @@ FYP-2 focuses on two priorities: (1)~optimizing the existing pipeline for speed,
 \section{Remaining Iterations}
 
 \begin{itemize}
-    \item \textbf{Iteration 2a (Weeks 1--4)}: Pipeline optimization and web viewer. Deliverable: processing time $<$5\,min on RTX 4090; browser-based splat viewer with point-to-point measurements validated on $\geq$3 rooms.
+    \item \textbf{Iteration 2a (Weeks 1--4)}: Pipeline optimization and web viewer. Deliverable: processing time $<$35\,min on RTX 4090 (projected, not yet measured); browser-based splat viewer with point-to-point measurements validated on $\geq$3 rooms.
     \item \textbf{Iteration 2b (Weeks 5--8)}: Robustness improvements and semantic AI. Deliverable: improved edge-case handling; YOLOv8-Seg MEP detection with 3D projection, viewer toggle UI.
     \item \textbf{Iteration 2c (Weeks 9--12)}: Dashboard, field validation, and final polish. Deliverable: complete web platform, user testing on 5+ rooms, final report.
 \end{itemize}
@@ -66,7 +66,7 @@ FYP-2 focuses on two priorities: (1)~optimizing the existing pipeline for speed,
     \item \textbf{3D projection accuracy}: Compare projected semantic labels against manually annotated 3D ground truth. Target: IoU $\geq 0.60$.
     \item \textbf{Web viewer performance}: Maintain $\geq$30\,FPS on a mid-range laptop (integrated GPU) for models up to 2\,million splats.
     \item \textbf{Usability testing}: Task completion rate $\geq$90\% for first-time users performing capture, viewing, and measurement tasks.
-    \item \textbf{Processing time}: End-to-end pipeline $<$5\,min on RTX 4090 for a 5-minute scan. Benchmark each optimization individually.
+    \item \textbf{Processing time}: End-to-end pipeline $<$35\,min on RTX 4090 (projected target; currently $\sim$75\,min measured on RTX 3070). Benchmark each optimization individually.
     \item \textbf{Cross-browser}: Verify viewer on Chrome, Firefox, and Edge.
 \end{itemize}
 
@@ -88,7 +88,7 @@ FYP-2 focuses on two priorities: (1)~optimizing the existing pipeline for speed,
 \toprule
 \textbf{Week} & \textbf{Task} & \textbf{Deliverable} \\
 \midrule
-1--2 & Pipeline optimization (matching, training, transfer) + Three.js viewer setup & Processing $<$5\,min; viewer MVP \\
+1--2 & Pipeline optimization (matching, training, transfer) + Three.js viewer setup & Processing $<$35\,min (projected); viewer MVP \\
 3--4 & Measurement tool + accuracy validation on 3 rooms & Measurement accuracy report \\
 5--6 & Robustness (mirrors, textureless walls) + MEP data collection and YOLOv8-Seg training & Robust pipeline; trained model \\
 7--8 & 2D$\rightarrow$3D semantic projection + toggle UI & Semantic viewer \\

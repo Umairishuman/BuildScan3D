@@ -77,7 +77,7 @@ Pipeline steps & Next step & Filesystem (dataset directory) \\
 
     \item \textbf{Splatfacto over custom trainer}: After extensive analysis showing our custom training recipe produced degenerate splats, we adopted Nerfstudio's battle-tested splatfacto implementation. Our value-add is in the preprocessing (ARCore integration, metric alignment, IMU fallback, quality guidance).
 
-    \item \textbf{RunPod on-demand over serverless}: On-demand pods allow full SSH control of the pipeline, are cheaper for long-running jobs (15\,min), and support arbitrary software installation. Serverless endpoints have cold-start latency and timeout limits that conflict with COLMAP's variable runtime.
+    \item \textbf{RunPod on-demand over serverless}: On-demand pods allow full SSH control of the pipeline, suit long-running jobs (about 75\,min end-to-end measured on an RTX 3070), and support arbitrary software installation. Serverless endpoints have cold-start latency and timeout limits that conflict with COLMAP's variable runtime.
 
     \item \textbf{HTTP polling over WebSockets}: Simpler implementation, works across firewalls/proxies, and 3-second polling interval is sufficient for a pipeline that takes minutes.
 \end{enumerate}
@@ -88,7 +88,7 @@ Pipeline steps & Next step & Filesystem (dataset directory) \\
 
     \item \textbf{Custom trainer $\rightarrow$ splatfacto}: After two weeks of analysis documenting six root causes of degenerate splat geometry, we switched training to Nerfstudio splatfacto. The custom preprocessing pipeline was retained and validated.
 
-    \item \textbf{Local-only $\rightarrow$ local + cloud}: Added RunPod cloud GPU support to enable processing on machines without a GPU, and to support faster GPUs (RTX 3090/4090) than the development machine (RTX 3070, 8\,GB).
+    \item \textbf{Local-only $\rightarrow$ local + cloud}: Added RunPod cloud GPU support to enable processing on machines without a GPU, and to support faster GPUs (RTX 4090 by default) than the development machine (RTX 3070, 8\,GB).
 \end{enumerate}
 
 \section{Domain Model}
