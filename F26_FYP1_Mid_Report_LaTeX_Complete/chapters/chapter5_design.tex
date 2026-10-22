@@ -1,15 +1,15 @@
 \chapter{System Design}
 
 \section{System Architecture}
-BuildScan~3D uses a three-tier client-server architecture:
+The BuildScan~3D application is constructed on a three-level client-server architecture.
 
 \begin{enumerate}
-    \item \textbf{Client tier}: Android application (ARCore capture, upload, progress display).
-    \item \textbf{Server tier}: FastAPI backend (job management, pipeline orchestration, RunPod dispatch).
-    \item \textbf{Compute tier}: GPU processing (local or RunPod on-demand pod running COLMAP + Nerfstudio).
+    \item The client level is represented by a mobile app for Android, which is capable of capturing video with ARCore, uploading it to the server, and displaying the current progress of processing.
+    \item The server layer contains a FastAPI backend handling job arrangements, orchestration of the pipeline, and handling RunPod workloads.
+    \item At the last level of computing, the system performs GPU processing by either using the local computer having all the necessary programs installed or using a pod from RunPod service.
 \end{enumerate}
 
-The data flow is strictly sequential: Capture $\rightarrow$ Upload $\rightarrow$ Process $\rightarrow$ Download. The server acts as an orchestrator that manages the GPU lifecycle and provides progress updates to the client via polling. Figure~\ref{fig:architecture} shows the components of each tier and how they talk to each other. The server runs in one of four processing modes set through \texttt{/config}: \texttt{dry\_run} (the default: uploads are saved, nothing is processed), \texttt{local}, \texttt{runpod} and \texttt{remote} (a fixed GPU host over SSH).
+In this system, the data is transmitted in a strict sequence: Capture $\rightarrow$ Upload $\rightarrow$ Process $\rightarrow$ Download. The server is acting as a controller managing the GPU and passing the information to the client through regular polling of the server. Figure~\ref{fig:architecture} visualizes how every level function and communicates.
 
 \begin{figure}[htbp]
 \centering
@@ -67,15 +67,15 @@ The data flow is strictly sequential: Capture $\rightarrow$ Upload $\rightarrow$
 
 \paragraph{Android App (\texttt{googleARCore/samples/hello\_ar\_java/})}
 \begin{itemize}
-    \item \texttt{HelloArActivity}: Main AR camera activity with recording controls, settings menu, and quality overlay.
-    \item \texttt{CaptureLogger}: Background I/O thread writing poses, tracking, points, quality, depth, and metadata files.
-    \item \texttt{QualityMonitor}: Analyzes camera frames for blur, brightness, motion speed, and texture.
-    \item \texttt{CoverageMap}: Voxel-based (10\,cm) coverage tracker with 8-azimuth $\times$ 2-elevation direction awareness.
-    \item \texttt{CoverageOverlayView}: Renders red/yellow/green dots over the camera view.
-    \item \texttt{ProcessingActivity}: Upload + progress UI with OkHttp multipart client.
+    \item The \texttt{HelloArActivity} class is in charge of the AR camera, including the recording controls, the settings menu and the quality overlay.
+    \item The \texttt{CaptureLogger} class is the background I/O executor which writes the poses, tracking, points, quality, depth and metadata files.
+    \item The \texttt{QualityMonitor} class is responsible for the analysis of the camera frames in terms of blurry images, brightness, speed of motion, and texture.
+    \item The \texttt{CoverageMap} class keeps track of the coverage by using voxels with 10\,cm cubes and maps directions with 8 azimuth $\times$ 2 elevation bins.
+    \item The \texttt{CoverageOverlayView} class is responsible for the creation of red/yellow/green dots on the camera images.
+    \item The \texttt{ProcessingActivity} class uploads and shows progress with the help of OkHttp.
 \end{itemize}
 
-Figure~\ref{fig:androidarch} shows how these classes and screens connect.
+Figure~\ref{fig:androidarch} illustrates the connection between these classes and screens.
 
 \begin{figure}[htbp]
 \centering
@@ -155,32 +155,32 @@ Pipeline steps & Next step & Filesystem (dataset directory) \\
 \section{Architecture Decisions and Rationale}
 
 \begin{enumerate}
-    \item \textbf{COLMAP SfM over ARCore poses for training}: Raw ARCore poses have a 2.32\,px median reprojection error (slow drift); bundle adjustment reduces this to 0.62\,px, but ARCore also re-anchors silently (every pose before $\sim$60\,s was off by $\sim$1\,m and 28\textdegree) and reports no lens distortion. COLMAP's SfM with self-calibrated lens distortion ($k_1 \approx 0.09$, $k_2 \approx -0.22$) removes both. On the same recording, training-view fit rose from 21.9\,dB to $\sim$28\,dB, held-out SSIM from 0.78 to 0.86, and badly placed surfaces fell from 7--23\% to 3\%.
+    \item \textbf{Using COLMAP SfM over ARCore poses for training}: Raw ARCore poses have a 2.32\,px median reprojection error (with slow drift); however, using bundle adjustment, the error is reduced to 0.62\,px. However, ARCore can re-anchor poses without notifying us (for example, poses before 60 seconds were drifting by 1\,m and 28\textdegree{}). ARCore also reports no lens distortion. COLMAP's self-calibrated SfM with lens distortion (k1 $\approx$ 0.09 and k2 $\approx$ -0.22) removes both issues. On the same recording, switching to COLMAP poses made our training approach vastly improve the training-view fit from 21.9\,dB to 28\,dB and increased the held-out value of SSIM from 0.78 to 0.86.
 
-    \item \textbf{Splatfacto over custom trainer}: After extensive analysis showing our custom training recipe produced degenerate splats, we adopted Nerfstudio's battle-tested splatfacto implementation. On a separate scene (\texttt{roomAttemptSadness2}), splatfacto reached 27.81\,dB held-out against 24.70\,dB for our corrected custom trainer on the same inputs. Our value-add is in the preprocessing (ARCore integration, metric alignment, IMU fallback, quality guidance).
+    \item \textbf{Using Splatfacto over custom training}: After it became evident that the custom training recipe produces degenerate splats, we opted for Nerfstudio's proven splatfacto implementation. In another room (\texttt{roomAttemptSadness2}), we achieved a score of 27.81\,dB held-out using splatfacto compared to 24.70\,dB of the corrected custom trainer.
 
-    \item \textbf{RunPod on-demand over serverless}: On-demand pods allow full SSH control of the pipeline, suit long-running jobs (about 75\,min end-to-end measured on an RTX 3070), and support arbitrary software installation. Serverless endpoints have cold-start latency and timeout limits that conflict with COLMAP's variable runtime.
+    \item \textbf{Using RunPod on-demand over serverless}: Our on-demand pods enable fully controlled SSH pipeline, and are suited for long processing times (approximately 75 mins in total on RTX 3070).
 
     \item \textbf{HTTP polling over WebSockets}: Simpler implementation, works across firewalls/proxies, and 3-second polling interval is sufficient for a pipeline that takes minutes.
 \end{enumerate}
 
 \section{Design Evolution}
 \begin{enumerate}
-    \item \textbf{Proposal $\rightarrow$ Mid}: Added live IQA and coverage guidance (not in original proposal). Changed from ARCore-pose-based training to COLMAP SfM-based training after discovering ARCore's pose accuracy limitations. On the way, the team's own GPU bundle adjustment, Metric3D depth, own stereo matcher, depth supervision, floater pruning, median filtering and post-hoc flat-forcing were tried and parked (Section~\ref{sec:parked}).
+    \item \textbf{Proposal $\rightarrow$ Mid}: Live IQA and coverage guidance were added (absent from the original proposal). The training switched to COLMAP SfM after realization of ARCore pose accuracy issue. Meanwhile, the GPU bundle adjustment, Metric3D depth, stereo matcher, depth supervision, floater pruning, median filtering, and post-hoc flat-forcing were all tried but shelved by the team (Section~\ref{sec:parked}).
 
-    \item \textbf{Custom trainer $\rightarrow$ splatfacto}: After two weeks of analysis documenting six root causes of degenerate splat geometry, we switched training to Nerfstudio splatfacto. The custom preprocessing pipeline was retained and validated.
+    \item \textbf{Custom trainer $\rightarrow$ splatfacto}: After two weeks of analysis resulting in identifying six root-cause issues of the splat degeneracy, training switched to Nerfstudio splatfacto. The custom preprocessing pipeline was preserved and verified.
 
-    \item \textbf{Local-only $\rightarrow$ local + cloud}: Added RunPod cloud GPU support to enable processing on machines without a GPU, and to support faster GPUs (RTX 4090 by default) than the development machine (RTX 3070, 8\,GB).
+    \item \textbf{Local-only $\rightarrow$ local + cloud}: RunPod cloud GPU support was added allowing the usage of machines without GPU and achieving speed with GPUs more powerful than the development machine generally used (RTX 4090 as the default one vs RTX 3070, with 8\,GB of memory).
 \end{enumerate}
 
 \section{Domain Model}
-The core domain entities are:
+The fundamental entities of the domain comprise the following:
 \begin{itemize}
-    \item \textbf{Scan}: A recording session producing a dataset (video + sensor files).
-    \item \textbf{Dataset}: The collection of files from one scan (video, poses, depth, quality, meta).
-    \item \textbf{Job}: A processing task with status (queued, processing, completed, failed), progress, and output path. Its life cycle is shown in Figure~\ref{fig:jobstate}.
-    \item \textbf{Model}: The output 3D Gaussian Splatting model (\texttt{splat.ply}).
-    \item \textbf{Measurement}: A point-to-point distance in the metric model (FYP-2).
+    \item \textbf{Scan}: The session of recording that generates a dataset (video and sensor files).
+    \item \textbf{Dataset}: A set of files from one recorded session (video, poses, depth, quality and meta information).
+    \item \textbf{Job}: A process performed along with a status (queued, processing, completed and failed) and its current status in progress and output location. Evolution of the job is illustrated in Figure~\ref{fig:jobstate}.
+    \item \textbf{Model}:  The 3D Gaussian Splatting model (\texttt{splat.ply}).
+    \item \textbf{Measurement}: A distance measured in the metric model (FYP-2).
 \end{itemize}
 
 \begin{figure}[htbp]
@@ -280,18 +280,18 @@ Figure~\ref{fig:dataflow} traces the capture files through the six pipeline step
 \section{Process / Behavior Design}
 \label{sec:process}
 
-The end-to-end pipeline follows a sequential six-step process:
+The procedure for the end-to-end pipeline is as follows:
 
 \begin{enumerate}
-    \item \textbf{Fallback} (2\,min timeout): Read the gyroscope and accelerometer samples stored in \texttt{dataset.mp4}, find tracking gaps in \texttt{tracking.csv}, and bridge them with IMU integration anchored at both ends of each gap.
-    \item \textbf{Prepare} (5\,min timeout): Decode video, keep the sharpest frame (Laplacian variance) in each window of 8 frames, extract to JPEG (\texttt{prepare.py}). The gyro-aware selection of \texttt{select\_sharp.py} that produced v6 is not yet in this step.
-    \item \textbf{SfM} (40\,min timeout): COLMAP feature extraction (SIFT), exhaustive matching, global mapper, lens self-calibration, image undistortion, Sim3 alignment to ARCore metric frame.
-    \item \textbf{Export} (2\,min timeout): Convert COLMAP output to Nerfstudio \texttt{transforms.json} format.
-    \item \textbf{Train} (60\,min timeout): Nerfstudio splatfacto training (30k iterations) with bilateral grid exposure compensation, scale regularization, and fixed poses.
-    \item \textbf{Export Model} (5\,min timeout): Export trained model to \texttt{splat.ply}.
+    \item \textbf{Fallback} (2-minute timeout): Use the readings from the gyroscope and accelerometer datasets taken from the \texttt{dataset.mp4} file. The tracking gaps from \texttt{tracking.csv} will be identified and bridged with IMU integration anchored at both ends.
+    \item \textbf{Prepare} (5-minute timeout): Process the given clip, storing the sharpest frame from total 8 frames in terms of the Laplacian variance appearing in the relevant window under script \texttt{prepare.py} file. The gyro-aware selection of \texttt{select\_sharp.py} that produced v6 is not yet applied here.
+    \item \textbf{SfM} (40-minute timeout): COLMAP will be used to perform feature extraction (using the SIFT algorithm), matching of the features, mapping, lens self-calibration, undistorting images, and aligning to the ARCore.
+    \item \textbf{Exporting} (2-minute timeout): It is necessary to convert the result from COLMAP into Nerfstudio \texttt{transforms.json} format.
+    \item \textbf{Train} (60-minute timeout): Train the Nerfstudio splatfacto model for 30,000 iterations with bilateral-grid exposure compensation, scale regularization and fixed poses.
+    \item \textbf{Exporting the model} (5-minute timeout): It is the final stage to create \texttt{splat.ply} model.
 \end{enumerate}
 
-Figure~\ref{fig:pipelinesteps} shows the steps with their timeouts and the measured times.
+Figure~\ref{fig:pipelinesteps} depicts the above mentioned steps with the various timeframes taken during each stage.
 
 \begin{figure}[htbp]
 \centering
@@ -324,7 +324,7 @@ Figure~\ref{fig:pipelinesteps} shows the steps with their timeouts and the measu
 \label{fig:pipelinesteps}
 \end{figure}
 
-Each step is executed as a subprocess with streaming stdout captured for progress reporting. If a step exceeds its timeout, the process is killed and the job is marked failed. In RunPod mode, whenever a pod has been created it is terminated in a \texttt{finally} block regardless of success or failure, and a watchdog thread terminates it after \texttt{MAX\_POD\_LIFETIME} (default 7200\,s). Figure~\ref{fig:sequence} shows the upload $\rightarrow$ process $\rightarrow$ download interaction in RunPod mode.
+Every subprocess captures the streaming stdout of the executed step. In case of timeout lapse, the process dies and the job is marked as failed. In RunPod mode, whenever a pod was previously created, it is killed in a \texttt{finally} block irrespective of the success of the step. Additionally, the pod is terminated by the watchdog thread when \texttt{MAX\_POD\_LIFETIME} (default value is 7200\,s) is reached. Figure~\ref{fig:sequence} shows the upload $\rightarrow$ process $\rightarrow$ download interaction in RunPod mode.
 
 \begin{figure}[p]
 \centering
