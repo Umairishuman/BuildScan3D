@@ -15,8 +15,9 @@ Our testing strategy combines automated unit/integration tests (CI-enforced) wit
 
 \section{Test Levels and Techniques}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
+\small
 \caption{Test levels and techniques}
 \label{tab:testlevels}
 \begin{tabular}{p{2.5cm}p{3cm}p{3cm}p{2.5cm}}
@@ -113,7 +114,7 @@ The pytest suite has 128 test functions in 12 files (one of them parametrised ov
 
 \paragraph{System-level results:}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \caption{Reconstruction quality on the first room: 42 held-out frames that no model was trained on (\texttt{fair\_compare.py})}
 \label{tab:quality}
@@ -135,7 +136,7 @@ The current best model, v6, clears both acceptance thresholds. Gyro-aware frame 
 
 \paragraph{Effect of the pose fix.} Table~\ref{tab:posefix} compares the earlier ARCore-pose pipeline with the image-based pipeline on the same recording.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \caption{Before and after replacing ARCore poses with image-based (COLMAP) poses}
 \label{tab:posefix}
@@ -167,7 +168,7 @@ Acceptance testing validates the system against the success criteria defined in 
 
 \paragraph{Tape-measure evidence.} Table~\ref{tab:tape} compares distances measured in the reconstructed model (first room, image-based pipeline) with a tape measure. Two further measurements on soft edges (a chair and a rug) are recorded in \texttt{docs/progress/Problems\_and\_Solutions.md}; they are excluded from the rigid-object mean because their endpoints are not well defined.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \caption{Metric accuracy: model versus tape measure (rigid objects)}
 \label{tab:tape}
@@ -203,17 +204,19 @@ The worst case is 0.29\%, far inside the 5\% accuracy target. The error does not
 
 \section{Defects and Corrective Actions}
 
-\begin{longtable}{p{0.04\textwidth}p{0.25\textwidth}p{0.25\textwidth}p{0.25\textwidth}p{0.10\textwidth}}
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{p{0.05\textwidth}p{0.26\textwidth}p{0.28\textwidth}p{0.28\textwidth}p{0.06\textwidth}}
 \toprule
 \textbf{ID} & \textbf{Defect} & \textbf{Root Cause} & \textbf{Corrective Action} & \textbf{Status} \\
 \midrule
 D-1 & Degenerate splats (zero thickness, half-transparent) & Flattening regularizer $\times$ Adam interaction; depth loss gradient conflicts & Switched to splatfacto; removed custom regularizers & Fixed \\
-D-2 & 5\,dB PSNR drop vs.\ reference implementations & ARCore poses used directly for training (2.3\,px reprojection error) & Switched to COLMAP SfM poses (0.62\,px) & Fixed \\
+D-2 & Blurry models: best held-out result only 22.67\,dB / 0.782 & ARCore poses used for training (2.32\,px raw reprojection error, silent re-anchor, no lens model) & Image-based COLMAP SfM poses with lens self-calibration (held-out SSIM 0.78 $\rightarrow$ 0.86) & Fixed \\
 D-3 & Ghosting artifacts near doorways & ARCore silent re-anchoring events creating pose discontinuities & Training poses from image-based COLMAP SfM; ARCore anchor logging added so re-anchors are detectable & Fixed \\
 D-4 & SfM failure on 30\,FPS input & Too many similar frames overwhelm COLMAP exhaustive matching & Keyframe selection: one sharp frame per window (\texttt{prepare.py}); gyro-aware selection (\texttt{select\_sharp.py}) for v4--v6 & Fixed \\
 D-5 & Barrel distortion visible at frame edges & ARCore intrinsics lack lens distortion coefficients & COLMAP self-calibration recovers $k_1$, $k_2$; undistort before training & Fixed \\
 \bottomrule
 \end{longtable}
+}
 
 \section{Current Validation Status}
 Status of the Iteration~1 acceptance criteria (core pipeline complete, refinement ongoing):

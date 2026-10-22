@@ -100,7 +100,7 @@ Implementation was carried out in Java (Android app) and Python (server and pipe
 
 \paragraph{Featureless-tracking fallback (\texttt{imu.py}, \texttt{fallback.py}, \texttt{relocalize\_pnp.py}):} On plain walls ARCore loses tracking, and after re-tracking it sometimes continues in a shifted or rotated world frame. The fallback reads the gyroscope and accelerometer (201\,Hz) stored in ARCore's own recording, self-calibrates the IMU-to-camera rotation and the sensor biases, and bridges each gap: rotation by gyro integration, position by accelerometer integration with a minimal cubic correction that matches position and velocity at both ends. A heading mismatch at re-tracking reveals a new map frame, and the post-gap segment is re-aligned to the map by matching its keyframes against it (PnP). This is the team's main novelty claim. Validation on gaps cut out of tracked data:
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \caption{IMU fallback on simulated tracking gaps (position error, median / max)}
 \label{tab:imufallback}
@@ -175,8 +175,9 @@ Figure~\ref{fig:coverage} illustrates the coverage map.
 
 \section{Tools, Frameworks and Technologies}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
+\small
 \caption{Tools and technologies used}
 \label{tab:tools}
 \begin{tabular}{p{3.5cm}p{3cm}p{4.5cm}}
