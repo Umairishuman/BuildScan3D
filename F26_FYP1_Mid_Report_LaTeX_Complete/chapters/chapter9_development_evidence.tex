@@ -65,9 +65,48 @@ The project repository is hosted on GitHub. Key statistics:
     \item \textbf{Repository}: \texttt{github.com/Umairishuman/FYP} (private)
     \item \textbf{Branches}: \texttt{master} (stable) and work branches such as \texttt{ci/github-actions}, \texttt{ci/pipeline-updates} and \texttt{exp/trainer-arkitscenes}
     \item \textbf{Commit history}: 133 commits (85 / 26 / 20, plus 2 bot commits)
-    \item \textbf{CI}: GitHub Actions runs lint, tests and builds on work branches and pull requests
+    \item \textbf{CI}: GitHub Actions runs on work branches, pull requests and (through the CD workflow) \texttt{master}: ruff lint and pytest on Python 3.10, 3.11 and 3.12; a Node.js build of the web UI (a placeholder for FYP-2); a Gradle APK build with signing and manifest checks; and repository hygiene (file-size limits, a secrets check, workflow lint).
+    \item \textbf{CD}: on push to \texttt{master}, build artefacts; on a version tag, a GitHub Release with the APK and web bundle.
     \item \textbf{Code review}: Pull request template with area checkboxes and a testing checklist
+    \item \textbf{Task tracking}: \texttt{docs/progress/TODO.md} is the dated task log, with status markers and links to commits and analysis documents.
 \end{itemize}
+
+Table~\ref{tab:repo} maps the repository layout to the modules described in this report.
+
+{\footnotesize
+\begin{longtable}{p{0.47\textwidth}p{0.49\textwidth}}
+\caption{Repository structure}\label{tab:repo}\\
+\toprule
+\textbf{Path} & \textbf{Contents} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Path} & \textbf{Contents} \\
+\midrule
+\endhead
+\texttt{googleARCore/samples/}\allowbreak\texttt{hello\_ar\_java/} & Android capture app; Java sources in \texttt{app/src/main/java/.../helloar/} \\
+\quad\texttt{HelloArActivity.java} & main AR activity, recording, settings \\
+\quad\texttt{CaptureLogger.java} & sensor data recording \\
+\quad\texttt{QualityMonitor.java} & live IQA analysis \\
+\quad\texttt{CoverageMap.java, CoverageOverlayView.java} & voxel coverage tracker and dot overlay \\
+\quad\texttt{ProcessingActivity.java} & upload and progress UI \\
+\quad\texttt{GalleryActivity.java, ScanDetailActivity.java} & saved scans \\
+\texttt{src/arcore3dgs/} & reconstruction pipeline \\
+\quad\texttt{fallback.py, imu.py, relocalize\_pnp.py} & IMU tracking-gap bridging and post-gap re-alignment \\
+\quad\texttt{prepare.py, select\_sharp.py} & keyframe extraction; gyro-aware frame selection \\
+\quad\texttt{sfm\_colmap.py, export\_nerfstudio.py} & COLMAP SfM + Sim3 alignment; Nerfstudio export \\
+\quad\texttt{mvs\_init.py, structure.py} & dense MVS initialisation; structural layer \\
+\quad\texttt{fair\_compare.py, fit\_diag.py} & evaluation tools \\
+\texttt{server/} & processing server: \texttt{main.py}, \texttt{pipeline.py}, \texttt{runpod\_client.py}, \texttt{remote\_gpu.py} \\
+\texttt{.github/workflows/} & CI/CD: \texttt{ci.yml}, \texttt{cd.yml}, \texttt{docker-gpu.yml} \\
+\texttt{scripts/} & launchers: \texttt{start\_server.bat}, \texttt{view\_splat.bat}, job tools \\
+\texttt{tests/} & pytest suite (12 files + \texttt{conftest.py}) \\
+\texttt{prototype/web-ui/} & web UI prototype \\
+\texttt{docs/progress/} & \texttt{TODO.md}, \texttt{Training\_Analysis.md}, \texttt{Problems\_and\_Solutions.md} \\
+\texttt{.env} & RunPod API key and processing mode; tracked in the repository although NFR-S2 requires it to be ignored \\
+\bottomrule
+\end{longtable}
+}
 
 \section{Milestones and Commit Evidence}
 
