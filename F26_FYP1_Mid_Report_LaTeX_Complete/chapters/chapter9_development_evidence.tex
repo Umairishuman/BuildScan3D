@@ -148,22 +148,39 @@ All external components are used under permissive open-source licenses compatibl
 
 \section{Risks and Mitigation}
 
-\begin{table}[h]
-\centering
-\caption{Risk register}
-\label{tab:risks}
-\begin{tabular}{p{3cm}p{1.5cm}p{1.5cm}p{5cm}}
+Table~\ref{tab:risks} is the project's risk register. Likelihood and impact are rated Low, Medium or High by the team; the owner is the member whose modules the risk mainly affects (Table~\ref{tab:responsibilities}). The register is reviewed at the start of each FYP-2 iteration.
+
+\begin{longtable}{p{0.04\textwidth}p{0.20\textwidth}p{0.07\textwidth}p{0.07\textwidth}p{0.42\textwidth}p{0.08\textwidth}}
+\caption{Risk register}\label{tab:risks}\\
 \toprule
-\textbf{Risk} & \textbf{Likelihood} & \textbf{Impact} & \textbf{Mitigation} \\
+\textbf{ID} & \textbf{Risk} & \textbf{Likel.} & \textbf{Impact} & \textbf{Mitigation} & \textbf{Owner} \\
 \midrule
-Cloud GPU costs exceed budget & Medium & High & Per-step timeouts; guaranteed pod termination in finally block; GPU type selectable per job via \texttt{/config} (default RTX 4090) \\
-ARCore API deprecation & Low & High & Abstracted behind CaptureLogger interface; can swap to AREngine \\
-COLMAP SfM fails on difficult scenes & Medium & Medium & IMU fallback for tracking gaps; live IQA reduces bad input; manual SfM parameter overrides available \\
-Nerfstudio breaking changes & Low & Medium & Pinned to version 1.1.5; tested upgrade path \\
-Team member unavailability & Low & Medium & All code in shared repo; documented in Flow.md and TODO.md \\
+\endhead
+R1 & Cloud GPU cost exceeds budget & Medium & High & Per-step timeouts; \texttt{terminate\_pod()} in \texttt{finally} blocks whenever a pod exists; watchdog thread with a hard time limit; GPU type selectable per job. The cost per scan has not yet been measured; measure it on the first RunPod runs in Iteration~2a. & Umair \\
+\midrule
+R2 & Cloud GPU unavailable (RTX 4090 out of stock on RunPod) & Medium & Medium & GPU type selectable at runtime from the list RunPod reports as in stock; existing-pod mode; local RTX 3070 fallback (measured $\sim$75\,min per room). & Umair \\
+\midrule
+R3 & Tracking loss on featureless surfaces (plain walls, ceilings) & High & Medium & Live IQA ``low texture'' warning and coverage overlay during capture; IMU fallback bridges gaps (3.8\,cm vs 30.6\,cm over 9\,s) and re-aligns after re-tracking (49.7 $\rightarrow$ 8.2\,px); image-based SfM registers most gap frames. Segments that cannot be re-aligned are flagged and kept out of training. & Tayyab \\
+\midrule
+R4 & Mirrors and glass produce SfM outliers and artefacts & Medium & Medium & Documented limitation; detect and mask reflective regions in FYP-2 (Iteration~2b). & Tayyab \\
+\midrule
+R5 & Large rooms exceed GPU memory & Medium & Medium & The 8\,GB RTX 3070 already needs default densification thresholds and no page-locked caching above 4\,GB. Train large rooms on a 24\,GB RTX 4090 (not yet measured); fewer keyframes on slow walks. & Tayyab \\
+\midrule
+R6 & RTX 4090 performance is unmeasured; the $<$35\,min target may not be met & High & Medium & The target is a projection. Benchmark on an RTX 4090 at the start of Iteration~2a; attack feature matching first (23 of the 75\,min measured on the RTX 3070) with ARCore-pose-guided or sequential pairs; report the measured time whatever it is. & Umair \\
+\midrule
+R7 & FYP-2 scope not delivered in time (3DGS refinement, structural layer, web workspace, 3D mesh creation) & Medium & High & Fixed order of work: one-command v6 pipeline $\rightarrow$ web viewer with measurement $\rightarrow$ structural layer and floor plans $\rightarrow$ dashboard. The dashboard is cut first if time runs short. 3D mesh creation stays unscheduled until the core items are done. & Team \\
+\midrule
+R8 & Measurement evidence too thin (four rigid measurements, one room) & Medium & Medium & Tape-measure comparisons on $\geq$5 rooms in FYP-2, including the second room; structural-layer wall lengths checked against tape. & Tayyab \\
+\midrule
+R9 & Only one phone model tested (realme) & Medium & Medium & Record on at least one more ARCore phone in FYP-2; the app logs per-frame exposure and the factory lens calibration, so device differences can be measured. & Umair \\
+\midrule
+R10 & Nerfstudio / gsplat breaking changes or a lost local patch & Low & Medium & Nerfstudio pinned to 1.1.5; the local pin-memory patch is documented in \texttt{docs/progress/}; GPU Docker image built by CI. & Tayyab \\
+\midrule
+R11 & ARCore API changes or deprecation & Low & High & ARCore is used only in the capture app; the pipeline consumes plain files (\texttt{dataset.mp4}, \texttt{poses.csv}, \ldots), so another tracker can feed it. & Umair \\
+\midrule
+R12 & Team member unavailability & Low & Medium & All code in one shared repository; owned modules documented; progress logs in \texttt{docs/progress/}; automated tests guard the Python code. & Team \\
 \bottomrule
-\end{tabular}
-\end{table}
+\end{longtable}
 
 \section{Security and Privacy Considerations}
 \begin{itemize}
