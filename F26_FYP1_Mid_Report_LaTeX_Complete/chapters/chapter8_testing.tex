@@ -36,7 +36,7 @@ Acceptance & Quality and metric accuracy & Held-out frames; tape measure & Manua
 
 \section{Test Cases}
 
-Table~\ref{tab:testcases} summarises the test cases; Appendix~\ref{app:testcases} gives the input, expected result and evidence for each, and lists what each pytest file covers. ``Pass (CI)'' refers to GitHub Actions CI run \#6 (12~October~2026, commit \texttt{c3bfcc9}), whose unit-test step succeeded on Python 3.10, 3.11 and 3.12 with the same \texttt{tests/} folder as today. ``Pass (manual)'' means a recorded run whose numbers are in \texttt{docs/progress/}.
+Table~\ref{tab:testcases} summarises the test cases; Appendix~\ref{app:testcases} gives the input, expected result and evidence for each, and lists what each pytest file covers. ``Pass (CI)'' refers to a full local run of the suite on the current \texttt{master} head (commit \texttt{0d78466}, 22~October~2026): 194 passed, 1 skipped, ruff clean; cross-version evidence (Python 3.10--3.12) comes from GitHub Actions CI run \#6 (12~October~2026, commit \texttt{c3bfcc9}). ``Pass (manual)'' means a recorded run whose numbers are in \texttt{docs/progress/}.
 
 \begin{longtable}{p{0.06\textwidth}p{0.24\textwidth}p{0.30\textwidth}p{0.11\textwidth}p{0.15\textwidth}}
 \caption{Test cases and their status}\label{tab:testcases}\\
@@ -70,7 +70,7 @@ TC-20 & Source compilation & \texttt{test\_sources\_compile} & Static & Pass (CI
 \section{Test Results}
 
 \paragraph{Automated tests (CI):}
-The pytest suite has 128 test functions in 12 files (one of them parametrised over every Python file). In CI run \#6 the unit-test step succeeded on Python 3.10, 3.11 and 3.12, the blocking ruff lint (real errors only) passed, and the whole run took about two minutes. Of the 20 test cases above, 12 are backed by these automated tests (TC-6 is also checked by tape measure), 2 by recorded manual runs (TC-5, TC-13), 2 are only partly executed (TC-11, TC-12), 3 Android cases have no automated test (TC-1 to TC-3), and TC-14 has not been executed. CI runs on every push to non-master branches, on pull requests, and from the CD workflow on \texttt{master}; it has not yet been re-run on the current \texttt{master} head.
+The pytest suite has 128 test functions in 12 files (one of them parametrised over every Python file, giving 195 collected tests). Re-run in full on the current \texttt{master} head on 22~October~2026: 194 passed, 1 skipped (the APK signing check, which needs \texttt{keytool}), ruff clean, in under three seconds. That re-run found three real defects introduced after CI run \#6 --- including a missing \texttt{time} import that made the job-cancel endpoint raise \texttt{NameError} --- all fixed in commit \texttt{0d78466}. In CI run \#6 the unit-test step succeeded on Python 3.10, 3.11 and 3.12 and the blocking ruff lint passed. Of the 20 test cases above, 12 are backed by these automated tests (TC-6 is also checked by tape measure), 2 by recorded manual runs (TC-5, TC-13), 2 are only partly executed (TC-11, TC-12), 3 Android cases have no automated test (TC-1 to TC-3), and TC-14 has not been executed. CI runs on every push to non-master branches, on pull requests, and from the CD workflow on \texttt{master}; the CI workflow itself has not yet run on the current \texttt{master} head, so the multi-version evidence remains that of run~\#6.
 
 \paragraph{System-level results:}
 
@@ -183,7 +183,7 @@ Status of the Iteration~1 acceptance criteria (core pipeline complete, refinemen
     \item \checkmark\ Metric accuracy: mean 0.19\%, worst case 0.29\% against the 5\% target (Table~\ref{tab:tape}).
     \item Processing time: \textit{not yet verified}. Measured $\sim$75\,min on RTX 3070; the $<$35\,min RTX 4090 target (NFR-P1) is projected and not yet measured.
     \item Pod lifecycle: \textit{partly verified}. \texttt{terminate\_pod()} is called from \texttt{finally} blocks and the client calls are unit-tested with a faked API; a live-pod test is not yet executed.
-    \item \checkmark\ CI pipeline: all automated tests passed in CI run \#6 on Python 3.10--3.12; blocking ruff lint passed.
+    \item \checkmark\ CI pipeline: suite re-run green on the current \texttt{master} head (194 passed, 1 skipped, ruff clean); CI run~\#6 covers Python 3.10--3.12.
     \item Not yet automated or executed: Android unit tests (TC-1 to TC-3), processing timeout (TC-14), app-to-RunPod end-to-end run.
 \end{itemize}
 
