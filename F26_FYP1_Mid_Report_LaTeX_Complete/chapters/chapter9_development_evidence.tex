@@ -225,8 +225,8 @@ R12 & Team member unavailability & Low & Medium & All code in one shared reposit
 
 \section{Security and Privacy Considerations}
 \begin{itemize}
-    \item \textbf{API key management}: The RunPod API key is stored in a \texttt{.env} file excluded from version control via \texttt{.gitignore}. The key is loaded at runtime from environment variables, never hardcoded.
-    \item \textbf{CI secrets scanning}: The GitHub Actions CI pipeline includes a secrets detection check that blocks merges if API keys, tokens, or credentials are found in committed files.
+    \item \textbf{API key management}: The RunPod API key is loaded at runtime from environment variables or a \texttt{.env} file, never hardcoded in source. However, \texttt{.env} is not in \texttt{.gitignore} and was committed to the repository on 18~October~2026, so NFR-S2 is not met; the key must be rotated and the file removed from version control.
+    \item \textbf{CI secrets scanning}: The CI hygiene job fails if a \texttt{.env}, key or certificate file is tracked, and scans tracked files for private keys, AWS keys and GitHub tokens (it has no pattern for RunPod keys). CI last ran (run \#6) before \texttt{.env} was committed; by the job's own rule, the next CI run on \texttt{master} will fail until the file is removed.
     \item \textbf{Data privacy}: Captured scan data (video, depth, poses) is transmitted to the processing server over the local network. In production, HTTPS would be required. Scan data is stored only for the duration of processing and can be deleted via the API.
     \item \textbf{Cloud GPU security}: RunPod pods are created on-demand, used for a single job, and terminated immediately after. No persistent data remains on the cloud GPU.
 \end{itemize}
