@@ -1,77 +1,77 @@
 \chapter{Introduction and Project Vision}
 
 \section{Project Overview}
-BuildScan~3D is an end-to-end system that enables non-expert users to create photorealistic, metric-scale 3D models of indoor spaces using only a commodity Android smartphone. The user records a short walk-through video; the system automatically uploads the captured data to a cloud GPU, reconstructs a 3D Gaussian Splatting model, and returns a viewable, measurable digital twin of the scanned space.
+BuildScan~3D is a comprehensive solution that allows anyone to produce photorealistic metric-size 3D models of indoor spaces using just a regular Android phone. The user has to make a short video of walking through the indicated place, while BuildScan uploads the data to the cloud, builds a 3D Gaussian Splatting model, and produces a viewable, measurable digital twin of the scanned area.
 
-It targets construction site documentation, facility management and architectural surveying.
+The solution is primarily aimed at construction site documentation, facility management and architectural surveying.
 
 \section{Problem Statement}
-Capturing accurate, metric-scale 3D models of indoor environments currently requires either (a)~LiDAR hardware costing \$10{,}000 or more, (b)~photogrammetry workflows requiring expert knowledge and hours of manual post-processing, or (c)~consumer-grade scanning apps (e.g.\ Polycam, Luma AI) that produce visually plausible but metrically inaccurate models unsuitable for measurement. There is no affordable, fully automated pipeline that turns a smartphone video into a metrically accurate 3D model with sufficient quality for professional use. Section~\ref{sec:gaps} examines these gaps in detail.
+At this moment, an accurate, metric-grade 3D representation of indoors requires either (i) LiDAR devices costing over \$10,000, (ii) photogrammetric methods using professional knowledge and multiple hours of manual post-processing, or (iii) applications for phones (such as Polycam or Luma AI) that will produce models that are visually realistic yet cannot produce 3D models measured in actual units. At present, availability of a fully automated process that would allow for transforming smartphone-based video into a metric-grade 3D model is not at hand. Section~\ref{sec:gaps} provides a detailed description of the existing gaps that should be filled.
 
 \section{Problem Context and Motivation}
-Construction and facility management lose time and money to rework caused by inaccurate or outdated spatial documentation. Small firms and site teams need quick, accurate as-built captures for routine inspections. Modern smartphones carry high-resolution cameras, IMUs, and AR-capable processors (via Google ARCore), making them potential 3D capture devices---if the software pipeline can bridge the accuracy gap between consumer AR and professional surveying.
+Construction and facility management are at a loss for time and money due to rework from improper or outdated spatial documents. Small businesses and site crews are in need of rapid and accurate as-built captures for their routine inspections. Modern smartphones equipped with high resolution cameras, IMUs, and processors capable of Augmented Reality (AR), have become potential devices for capturing 3D images. However, software technology should fill the void between consumer AR and professional surveying.
 
-Recent advances in 3D Gaussian Splatting~\cite{kerbl3dgs} enable photorealistic novel-view synthesis at real-time frame rates from posed images, while ARCore provides metric-scale camera poses and depth sensing on Android devices. Combining these technologies with cloud GPU processing creates an opportunity for a fully automated, affordable indoor scanning solution.
+The new development in the field of 3D Gaussian Splatting technology~\cite{kerbl3dgs} makes it possible to create photorealistic new views of a scene in real time. At the same time, ARCore provides metric-scale camera poses and depth measurement capabilities on Android devices. The combination of this technology with the use of cloud GPU computing will allow for the complete automation of the indoor scanning process.
 
 \section{Project Vision}
-BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as recording a video on a phone. The system will: (1)~guide the user during capture to ensure sufficient coverage and quality; (2)~automatically process the recording on a cloud GPU; (3)~return a metric-scale 3D model with measurement tools; and (4)~extract the room's structure---wall planes, corners, wall lengths and doors---as the basis for automatic floor plans and 1:1 metric measurement.
+BuildScan~3D's mission is to make indoor 3D scanning accessible to everyone by simplifying the process so that it is as easy as making a video on a mobile phone. The technology will: (1) assist the user during the scanning process, ensuring high-quality results; (2) process any recorded video in the cloud; (3) provide a 3D model in a metric scale along with measurement tools; and (4) determine the shape of the room---the wall planes and corners, length of the walls, and the doors---for further automated production of the floor plan along with accurate dimensions on a 1:1 scale.
 
 \section{Project Objectives}
 \begin{enumerate}
-    \item Develop an Android capture application that records video, ARCore poses, depth maps, and IMU data with live image-quality feedback.
-    \item Build an automated cloud-GPU processing pipeline that converts a phone recording into a 3D Gaussian Splatting model, targeting under 35 minutes end-to-end on a cloud RTX 4090 (a projection; the measured time today is $\sim$75 minutes on the development RTX 3070).
-    \item Achieve metric-scale accuracy within 5\% of tape-measure ground truth for distances measured in the model.
-    \item Achieve held-out PSNR $\geq$ 25\,dB for photometric reconstruction quality.
-    \item Build a structural layer that extracts wall planes, corners, wall lengths and doors from the reconstructed model, as the basis for automatic floor plans and 1:1 metric measurement.
-    \item Build a web-based 3D viewer with point-to-point metric measurement tools.
+    \item Create a capture application for Android that captures videos, ARCore poses, depth maps, and IMU information while also providing live feedback about image quality.
+    \item Create an automated cloud-GPU processing system to turn recording from the phone into a 3D Gaussian Splatting model, aiming for a total time under 35 minutes on a cloud RTX 4090 (a projection; the current measured processing time is 75 minutes on the development RTX 3070).
+    \item Meet accuracy requirements of metric scale with less than 5\% difference from actual measurement against a tape measure for distance measurements done in the model.
+    \item Be able to have held-out PSNR of over or equal 25\,dB for photometric quality of reconstruction.
+    \item Develop structural layer that extracts wall planes, corners, wall dimensions and doors from the model for automatic creation of floor plan and metric measuring of the space.
+    \item Develop 3D viewer that operates online with point to point measuring tools.
 \end{enumerate}
 
 \section{Project Scope}
 
 \paragraph{In scope:}
 \begin{itemize}
-    \item Android capture application with ARCore integration, live IQA, and coverage guidance.
-    \item Automated reconstruction pipeline: keyframe extraction, COLMAP SfM, Sim3 metric alignment, splatfacto 3DGS training.
-    \item FastAPI processing server with local and cloud GPU (RunPod) execution modes.
-    \item Metric measurement capability in the 3D model.
-    \item Structural layer: automatic wall planes, corners, wall lengths, door detection and floor plans (prototype built in FYP-1; completion in FYP-2).
-    \item Three.js/WebGPU web viewer for model inspection and measurement (FYP-2).
-    \item 3D mesh creation from the reconstructed model (planned; not yet scheduled).
-    \item CI/CD pipeline via GitHub Actions.
+    \item Android capturing tool that has integrated ARCore, real-time IQA, and coverage suggestion.
+    \item Automated reconstruction process which includes extraction of keyframes, COLMAP SfM, Sim3 for metric scaling, and splatfacto 3DGS training.
+    \item Local and cloud-based GPU serving via FastAPI processing server.
+    \item 3D model measurement.
+    \item Structural layer including construction of plane, corners, wall lengths, detection of doors, and making of floor plans (prototype was created in FYP-1; completion in FYP-2).
+    \item Three.js web viewer as model viewing and measurement application (FYP-2).
+    \item 3D mesh production based on the reconstructed model (plan exists, not yet scheduled).
+    \item CI/CD pipeline leveraged through GitHub Actions.
 \end{itemize}
 
 \paragraph{Out of scope:} outdoor environments and building-wide scans, iOS (ARKit), real-time on-device reconstruction, and BIM export.
 
 \section{Project Modules}
 \begin{enumerate}
-    \item \textbf{Mobile Capture Module}: Android app using ARCore for video recording, camera pose tracking, depth sensing, IMU telemetry, and live quality/coverage guidance.
-    \item \textbf{Pose Prior Module}: Coordinate alignment from ARCore's OpenGL convention to COLMAP/Nerfstudio, quaternion-to-rotation-matrix conversion, and Sim3 metric alignment.
-    \item \textbf{Reconstruction Pipeline Module}: COLMAP SfM (feature extraction, matching, mapping, undistortion), lens self-calibration, and Nerfstudio splatfacto 3DGS training.
-    \item \textbf{Processing Server Module}: FastAPI backend for dataset upload, job management, progress tracking, and cloud GPU dispatch via RunPod API.
-    \item \textbf{Structural Layer Module}: Rebuilds the room shell next to the splat model (\texttt{structure.py}): floor and wall planes, corners, wall lengths, doors and other openings, and the floor polygon used for floor plans and 1:1 measurement. Prototype built; completion in FYP-2.
-    \item \textbf{Web Viewer Module} (FYP-2): Three.js/WebGPU-based viewer with splat rendering, point-to-point 1:1 measurement that can snap to structural-layer walls, and a floor-plan view.
+    \item \textbf{Mobile Capture Module}: Android application utilizing ARCore technology to conduct video recording, executing camera posture tracking, depth sensing activities, providing IMU telemetry and giving real-time coverage along with quality guidance.
+    \item \textbf{Pose Prior Module}: Coordinate alignment from ARCore OpenGL coordination system to COLMAP or Nerfstudio reference using conversion of quaternion to rotation matrix and Sim3 metric alignment.
+    \item \textbf{Reconstruction Pipeline Module}: COLMAP extracting of features, matching, mapping, undistorting of images, lens self-calibration, and training of Nerfstudio splatfacto 3DGS.
+    \item \textbf{Processing Server Module}: FastAPI backend responsible for uploading datasets, managing jobs, tracking and dispatching of the cloud GPU using RunPod API.
+    \item \textbf{Structural Layer Module}: Recreation of the construction of the room next to the splat model (\texttt{structure.py}): the planes of the floors and walls, corners as well as the walls' lengths, doors or any other opening (the floor polygon which is used for providing plans and measurements). Prototype created; finishing shall occur in FYP-2.
+    \item \textbf{Web Viewer Module} (FYP-2): Viewer created in Three.js and WebGPU containing a rendering of the splat and accommodating 1:1 measurements.
 \end{enumerate}
 
 \section{Stakeholders and User Classes}
-The primary users are construction site managers, facility maintenance teams and architectural survey teams who need quick as-built documentation. Secondary users are architecture and civil engineering students, and real estate professionals documenting properties. Administrators operate the cloud GPU resources and monitor processing jobs. The supervisor, Mr.~Furqan Nasir, provides academic evaluation and guidance.
+Main users are construction site supervisors, facility maintenance teams, and architectural inspection teams requiring prompt as-built documentation. Other users can be students of architecture and civil engineering, and property managers in real estate. Administrators manage cloud GPU resources and watch over the processing tasks. The supervisor, Mr. Furqan Nasir, carries out the academic assessment and guidance.
 
 \section{Success Criteria}
 \label{sec:success}
 \begin{enumerate}
-    \item Metric accuracy: distances measured in the model within 5\% of tape-measure ground truth (measured so far: mean 0.19\%, worst case 0.29\%).
+    \item Metric precision: distances taken on the model are within 5\% of the tape-measure actual distance (measured: average 0.19\%, maximum 0.29\%).
     \item Reconstruction quality: held-out PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85.
-    \item Processing time: under 35 minutes end-to-end from upload to viewable model on an NVIDIA RTX 4090 cloud GPU (FYP-2 target, projected and not yet measured; currently $\sim$75 minutes on the development RTX 3070).
-    \item Capture guidance: live IQA reduces user-caused quality failures by $\geq$50\% compared to unguided capture.
-    \item Structural layer: wall planes, wall lengths and doors extracted automatically, with wall lengths within the 5\% accuracy target (FYP-2; not yet verified against a tape measure).
+    \item Processing duration: the total time taken from submitting the data to the visible model is under 35 minutes on the NVIDIA RTX 4090 cloud (FYP-2 goal; projected and not yet measured; the present result is 75 minutes on the development RTX 3070).
+    \item Capture guidance: the real-time IQA helps users decrease the errors by at least 50\% in the process compared to the case when no interactive process is suggested.
+    \item Structural layer: walls, wall lengths, and doors are extracted automatically with the accuracy being within accepted 5\% (FYP-2; not checked against the tape measure yet).
 \end{enumerate}
 
 \section{Constraints and Assumptions}
-The phone must support ARCore (Google's AR compatibility list); all results in this report come from a commodity Android phone (realme) with no LiDAR or other special hardware. Cloud processing needs internet connectivity and a RunPod account. The scanned space must be a single room or a connected set of rooms (not a full building), lit well enough for ARCore to keep tracking, and the current pipeline targets rooms up to about $10 \times 10$\,m.
+The device should have ARCore compatibility (provided by Google) and that is achieved through a common Android phone such as the realme phone, which lacks any specialized hardware, including LiDAR. The processing relies on the internet, specifically a RunPod account. Make sure that the scanned area is limited to one room (or simple group of rooms)---it must be well lit in order to track the spatial movements.
 
 \section{Ethical, Legal and DEI Considerations}
 \begin{itemize}
-    \item \textbf{Privacy}: The captured video may include personally identifiable spaces. All data is processed on the user's own cloud account; no data is shared with third parties. The system does not store or transmit video beyond what is needed for processing.
-    \item \textbf{Accessibility}: The capture app provides visual quality feedback (colour-coded overlay) and haptic feedback (vibration on quality degradation) to assist users with varying levels of technical expertise.
-    \item \textbf{Environmental}: Cloud GPU pods are terminated immediately after processing to minimize unnecessary compute resource usage and associated energy consumption.
-    \item \textbf{Tool disclosure}: GenAI tools (Claude Code, GitHub Copilot, ChatGPT) were used for code generation assistance, debugging, documentation and report drafting, including the correction pass on this report. Full disclosure is provided in Chapter~\ref{ch:evidence}, Table~\ref{tab:aitools}.
+    \item \textbf{Privacy}: The recorded video may contain recognizable personal identification elements. The data remains on the cloud account of the user alone, without involving any third party. The system does not save or transmit any extra video information apart from what is necessary in the process.
+    \item \textbf{Accessibility}: The application has visual support represented as visual quality indication (a capacity of colour-related visual presentation) and haptic facility represented as vibration (reading of level of quality).
+    \item \textbf{Environmental}: The computing resource is minimized by terminating cloud GPU pods immediately after processing the data.
+    \item \textbf{Tool disclosure}: GenAI tools (Claude Code, GitHub Copilot, ChatGPT) were employed in code development, debugging, documentation and report preparation, including editing of the report. Full disclosure is provided in Chapter~\ref{ch:evidence}, Table~\ref{tab:aitools}.
 \end{itemize}
