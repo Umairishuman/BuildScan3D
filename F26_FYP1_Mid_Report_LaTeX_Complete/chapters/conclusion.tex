@@ -8,7 +8,7 @@ This report presents the mid-evaluation status of BuildScan~3D, a system that co
 
 \paragraph{Design and implementation.} We built a three-tier system---Android capture app, FastAPI processing server, and cloud GPU pipeline---implementing all Iteration~1 features: ARCore capture with live IQA and coverage overlay, COLMAP SfM with Sim3 metric alignment, Nerfstudio splatfacto training, RunPod cloud GPU integration with guaranteed pod lifecycle management, and CI/CD via GitHub Actions.
 
-\paragraph{Validation.} The system meets all acceptance criteria: the current best model (v6) scores 26.52\,dB PSNR ($\geq$25\,dB target) and 0.8886 SSIM ($\geq$0.85 target) on 42 held-out frames, metric scale accuracy of 0.3\% ($<$1\% target), and wall-to-wall measurement error under 2\,cm. Processing currently takes about 75 minutes on an RTX 3070; the under-35-minute RTX 4090 target is projected and not yet measured.
+\paragraph{Validation.} The current best model (v6) scores 26.52\,dB PSNR ($\geq$25\,dB target) and 0.8886 SSIM ($\geq$0.85 target) on 42 held-out frames. Tape-measure checks give a mean error of 4.8\,mm (0.19\%) on rigid objects and a worst case of 0.29\%, substantially better than the 5\% accuracy target. Processing currently takes about 75 minutes on an RTX 3070; the under-35-minute RTX 4090 target is projected and not yet measured.
 
 \paragraph{Risks.} The primary risks are cloud GPU costs (mitigated by timeout watchdogs and guaranteed pod termination) and SfM failure on difficult scenes (mitigated by live IQA guidance). Mirrors and large untextured surfaces remain known limitations.
 

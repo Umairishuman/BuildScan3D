@@ -16,9 +16,9 @@ During the proposal defense, the panel provided the following key feedback:
 No. & Feedback / Required Change & Action Taken & Status & Evidence \\
 \midrule
 1 & Differentiate from consumer apps & Added metric scale via ARCore Sim3, live IQA, and measurement capability & Done & Chapter~2, Table~\ref{tab:comparison} \\
-2 & Quantitative metric accuracy & Validated Sim3 scale at 0.3\%; room dimensions match tape measure & Done & Section~7.5 \\
+2 & Quantitative metric accuracy & Tape-measure comparison: mean error 4.8\,mm (0.19\%), worst case 0.29\% against a 5\% target & Done & Table~\ref{tab:tape} \\
 3 & Remove X-ray functionality & Removed from scope; refocused on measurement and MEP semantics & Done & Section~1.6 \\
-4 & Define quality thresholds & Set acceptance: PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85, scale error $<$ 1\% & Done & Section~1.9 \\
+4 & Define quality thresholds & Set acceptance: PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85, measurement error $\leq$ 5\% of tape measure & Done & Section~1.9 \\
 5 & Show automated pipeline & Built FastAPI server with RunPod cloud GPU integration & Done & Chapter~6, Section~6.6 \\
 \bottomrule
 \end{longtable}

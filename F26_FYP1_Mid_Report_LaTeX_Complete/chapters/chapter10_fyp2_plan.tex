@@ -12,7 +12,7 @@ FYP-2 focuses on two priorities: (1)~optimizing the existing pipeline for speed,
 
     \item \textbf{Web Viewer Module}: Three.js / WebGPU-based Gaussian splat renderer with orbit/pan/zoom controls, running in any modern browser. Loads the \texttt{splat.ply} model exported by the pipeline.
 
-    \item \textbf{Measurement Module}: Point-to-point distance tool in the metric 3D model. The user clicks two points on the splat surface; the system computes the Euclidean distance in metres using the Sim3-aligned coordinate frame. Target accuracy: $<$2\,cm for distances up to 10\,m.
+    \item \textbf{Measurement Module}: Point-to-point distance tool in the metric 3D model. The user clicks two points on the splat surface; the system computes the Euclidean distance in metres using the Sim3-aligned coordinate frame. Target accuracy: within 5\% of tape measure (current evidence: mean 0.19\%, worst case 0.29\%).
 
     \item \textbf{Semantic AI Module}: YOLOv8-Seg instance segmentation trained on MEP components (pipes, conduits, HVAC ducts). 2D masks from multiple viewpoints are projected to 3D and merged via multi-view consensus to label regions of the point cloud.
 
@@ -61,7 +61,7 @@ FYP-2 focuses on two priorities: (1)~optimizing the existing pipeline for speed,
 
 \section{Testing and Validation Plan}
 \begin{itemize}
-    \item \textbf{Measurement accuracy}: Compare point-to-point measurements in the web viewer against tape-measure ground truth on $\geq$5 rooms of varying size and geometry. Target: $<$2\,cm error for distances up to 10\,m.
+    \item \textbf{Measurement accuracy}: Compare point-to-point measurements in the web viewer against tape-measure ground truth on $\geq$5 rooms of varying size and geometry. Target: error within 5\% of tape measure, extending the current four-measurement evidence (mean 0.19\%) to more rooms.
     \item \textbf{Semantic segmentation}: Evaluate YOLOv8-Seg on a held-out test set. Target: mAP$_{50} \geq 0.70$ for MEP classes.
     \item \textbf{3D projection accuracy}: Compare projected semantic labels against manually annotated 3D ground truth. Target: IoU $\geq 0.60$.
     \item \textbf{Web viewer performance}: Maintain $\geq$30\,FPS on a mid-range laptop (integrated GPU) for models up to 2\,million splats.

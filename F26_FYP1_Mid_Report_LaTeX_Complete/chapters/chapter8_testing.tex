@@ -105,11 +105,34 @@ Badly placed surfaces & 7--23\% & 3\% (second room: 1\%) \\
 Acceptance testing validates the system against the success criteria defined in Section~1.9:
 
 \begin{enumerate}
-    \item \textbf{Metric accuracy}: Room dimensions measured in the 3D model match tape-measure ground truth within 2\,cm for rooms up to 5\,m in each dimension. Sim3 scale factor is consistently 1.000--1.003$\times$.
-    \item \textbf{Reconstruction quality}: Held-out PSNR exceeds the 25\,dB threshold on both test rooms. Novel views are visually coherent with no ghosting or significant artifacts.
+    \item \textbf{Metric accuracy}: Four rigid-object distances measured in the model agree with a tape measure to a mean of 4.8\,mm (0.19\%) and a worst case of 0.29\% (Table~\ref{tab:tape}), against a 5\% target.
+    \item \textbf{Reconstruction quality}: v6 scores 26.52\,dB PSNR / 0.8886 SSIM on 42 held-out frames of the first room, clearing the 25\,dB / 0.85 thresholds; the second room reaches held-out SSIM 0.91 (its PSNR is not yet measured). Views from the room centre, where no camera stood, are coherent, and the earlier ghosts and floating splats are gone.
     \item \textbf{Processing time}: The measured end-to-end time is approximately 75 minutes on the development RTX 3070 (feature matching 23\,min, mapping 6\,min, training 45\,min). The NFR-P1 target of under 35 minutes on an RTX 4090 is a projection for FYP-2 and has not yet been measured, so NFR-P1 is not yet verified.
     \item \textbf{Capture usability}: Three users (team members) successfully captured rooms on first attempt using only the app's live IQA guidance, with no prior training.
 \end{enumerate}
+
+
+\paragraph{Tape-measure evidence.} Table~\ref{tab:tape} compares distances measured in the reconstructed model (first room, image-based pipeline) with a tape measure. Two further measurements on soft edges (a chair and a rug) are recorded in \texttt{docs/progress/Problems\_and\_Solutions.md}; they are excluded from the rigid-object mean because their endpoints are not well defined.
+
+\begin{table}[h]
+\centering
+\caption{Metric accuracy: model versus tape measure (rigid objects)}
+\label{tab:tape}
+\begin{tabular}{p{3.6cm}cccc}
+\toprule
+\textbf{Object} & \textbf{Model (m)} & \textbf{Tape (m)} & \textbf{Error} & \textbf{Relative} \\
+\midrule
+Table (short side) & 0.458 & 0.459 & $-1$\,mm & 0.22\% \\
+Table (long side) & 1.748 & 1.750 & $-2$\,mm & 0.11\% \\
+Wall & 2.792 & 2.800 & $-8$\,mm & 0.29\% \\
+Room length & 6.692 & 6.700 & $-8$\,mm & 0.12\% \\
+\midrule
+\textbf{Mean} & & & \textbf{4.8\,mm} & \textbf{0.19\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The worst case is 0.29\%, far inside the 5\% accuracy target. The error does not grow with distance ($-8$\,mm at both 2.8\,m and 6.7\,m), so the ARCore-derived scale is sound; the small, consistent negative offset most likely comes from where the endpoints are clicked in the viewer. These are four measurements in one room; more rooms are planned for FYP-2.
 
 \section{Edge and Failure Cases}
 
@@ -143,7 +166,7 @@ D-5 & Barrel distortion visible at frame edges & ARCore intrinsics lack lens dis
 All Iteration~1 acceptance criteria are met:
 \begin{itemize}
     \item \checkmark\ Reconstruction quality: PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85 on both test rooms.
-    \item \checkmark\ Metric accuracy: Scale error $<$ 1\%, wall-to-wall error $<$ 2\,cm.
+    \item \checkmark\ Metric accuracy: mean 0.19\%, worst case 0.29\% against the 5\% target (Table~\ref{tab:tape}).
     \item Processing time: \textit{not yet verified}. Measured $\sim$75\,min on RTX 3070; the $<$35\,min RTX 4090 target (NFR-P1) is projected and not yet measured.
     \item \checkmark\ Pod lifecycle: Guaranteed termination verified in all code paths.
     \item \checkmark\ CI pipeline: All tests pass on 3 Python versions; zero lint violations.

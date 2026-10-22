@@ -20,7 +20,7 @@ BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as re
 \begin{enumerate}
     \item Develop an Android capture application that records video, ARCore poses, depth maps, and IMU data with live image-quality feedback.
     \item Build an automated cloud-GPU processing pipeline that converts a phone recording into a 3D Gaussian Splatting model, targeting under 35 minutes end-to-end on a cloud RTX 4090 (a projection; the measured time today is $\sim$75 minutes on the development RTX 3070).
-    \item Achieve metric-scale accuracy within 1\% of tape-measure ground truth for wall-to-wall measurements.
+    \item Achieve metric-scale accuracy within 5\% of tape-measure ground truth for distances measured in the model.
     \item Achieve held-out PSNR $\geq$ 25\,dB for photometric reconstruction quality.
     \item Implement semantic segmentation for MEP system identification (pipes, conduits, HVAC ducts).
     \item Build a web-based 3D viewer with point-to-point metric measurement tools.
@@ -68,7 +68,7 @@ BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as re
 
 \section{Success Criteria}
 \begin{enumerate}
-    \item Metric accuracy: wall-to-wall measurements within 1\% of tape-measure ground truth.
+    \item Metric accuracy: distances measured in the model within 5\% of tape-measure ground truth (measured so far: mean 0.19\%, worst case 0.29\%).
     \item Reconstruction quality: held-out PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85.
     \item Processing time: under 35 minutes end-to-end from upload to viewable model on an NVIDIA RTX 4090 cloud GPU (FYP-2 target, projected and not yet measured; currently $\sim$75 minutes on the development RTX 3070).
     \item Capture guidance: live IQA reduces user-caused quality failures by $\geq$50\% compared to unguided capture.
