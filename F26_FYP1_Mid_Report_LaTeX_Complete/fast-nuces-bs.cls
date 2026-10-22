@@ -252,13 +252,11 @@
 
 
 	
-\tableofcontents
-		\clearpage
-\listoffigures
-		\clearpage
-\listoftables
-\pagenumbering{arabic}
-\setcounter{page}{0}	
+% The Contents and the lists of figures and tables are NOT emitted here.
+% The template places them after the Students' Submission, Abstract and
+% Executive Summary, so main.tex issues them in that position. Emitting
+% them here also forced \pagenumbering{arabic} with the counter reset to
+% zero, which is what produced a front-matter page numbered "0".
 
 
 	

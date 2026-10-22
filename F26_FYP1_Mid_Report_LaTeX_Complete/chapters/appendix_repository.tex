@@ -1,6 +1,8 @@
 \chapter{Repository and Contribution Evidence}
 
 \section{Repository Structure}
+
+The table below lists the top-level paths in the repository and what each one holds.
 \begin{longtable}{p{0.48\textwidth}p{0.46\textwidth}}
 \toprule
 \textbf{Path} & \textbf{Contents} \\
@@ -41,10 +43,14 @@ The repository contains 133 commits (\texttt{git shortlog -sne --all}): Muhammad
 
 \section{Repository Overview}
 
+Figure~\ref{fig:repooverview} shows the repository as GitHub presents it.
+
+The contributor list confirms the three team members and the handles used in the commit history: \texttt{Umairishuman} (Muhammad Umair), \texttt{BlazingBeam} (Muhammad Tayyab) and \texttt{Zaid-fareed} (Zaid Fareed). The top-level layout matches Table~\ref{tab:repo}.
+
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{ThesisFigs/repo-overview}
-\caption{Repository root on GitHub. The contributor list confirms the three team members and the GitHub handles used in the commit history: \texttt{Umairishuman} (Muhammad Umair), \texttt{BlazingBeam} (Muhammad Tayyab) and \texttt{Zaid-fareed} (Zaid Fareed). The top-level layout matches Table~\ref{tab:repo}.}
+\caption{Repository root on GitHub.}
 \label{fig:repooverview}
 \end{figure}
 
@@ -55,10 +61,12 @@ The repository contains 133 commits (\texttt{git shortlog -sne --all}): Muhammad
     \item Branches are merged locally rather than through pull requests. The pull request template exists and CI runs on feature branches, but the merges themselves were not raised as PRs, so the ``Pull request'' column in Figure~\ref{fig:repobranches} is empty. Adopting PR-based merges is an action for FYP-2.
 \end{itemize}
 
+Each row shows a branch's check status and its ahead/behind count against \texttt{master}. Feature branches carry passing checks; the failing status on \texttt{master} is the hygiene job described in Section~\ref{sec:cicdevidence}.
+
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{ThesisFigs/repo-branches}
-\caption{Branch list with each branch's check status and its ahead/behind count against \texttt{master}. Feature branches carry passing checks; the failing status on \texttt{master} is the hygiene job described in Section~\ref{sec:cicdevidence}.}
+\caption{Branch list with per-branch check status.}
 \label{fig:repobranches}
 \end{figure}
 
@@ -74,17 +82,21 @@ The GitHub Actions CI pipeline runs on pushes to non-\texttt{master} branches an
 
 The CD pipeline triggers on push to master (build artifacts) and on version tags (GitHub Release with APK and web bundle).
 
+CI passes on the feature branches. The failing runs on \texttt{master} are the CD workflow's hygiene job, which rejects a tracked \texttt{.env}. That file has since been untracked and ignored, and the key it held must still be rotated (NFR-S2, recorded as not met).
+
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{ThesisFigs/repo-actions}
-\caption{GitHub Actions run history. CI passes on the feature branches; the failing runs on \texttt{master} are the CD workflow's hygiene job, which rejects a tracked \texttt{.env}. That file has since been untracked and ignored, and the key it held must still be rotated (NFR-S2, recorded as not met).}
+\caption{GitHub Actions run history.}
 \label{fig:repoactions}
 \end{figure}
+
+Each version tag builds a GitHub Release carrying the signed APK and the web bundle, so every tagged build is reproducible from its commit.
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{ThesisFigs/repo-tags}
-\caption{Release tags produced by the CD workflow. Each version tag builds a GitHub Release carrying the signed APK and the web bundle, so every tagged build is reproducible from its commit.}
+\caption{Release tags produced by the CD workflow.}
 \label{fig:repotags}
 \end{figure}
 

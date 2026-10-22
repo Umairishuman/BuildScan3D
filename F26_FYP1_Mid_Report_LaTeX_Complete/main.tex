@@ -59,10 +59,16 @@
 \input{chapters/04_abstract}
 \input{chapters/05_acknowledgments}
 \input{chapters/06_executive_summary}
-% Contents, List of Figures and List of Tables are emitted by the document
-% class (fast-nuces-bs.cls) straight after the title page. Repeating them
-% here printed three empty headings: \@starttoc reopens the .toc/.lof/.lot
-% for writing after the first read, so the second call finds nothing.
+% Template order: the Contents and the lists follow the Students' Submission,
+% Abstract and Executive Summary. The class no longer emits them after the
+% title page, so they appear once, here.
+\clearpage
+\tableofcontents
+\clearpage
+\listoffigures
+\clearpage
+\listoftables
+\clearpage
 \input{chapters/07_abbreviations}
 
 \cleardoublepage

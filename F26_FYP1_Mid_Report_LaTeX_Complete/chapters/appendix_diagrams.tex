@@ -6,6 +6,8 @@ The main design diagrams are in the body of the report: the use case diagram (Fi
 Figure~\ref{fig:pipelinesteps} expands the six processing steps of Section~\ref{sec:process} with the per-step timeout enforced by the watchdog and, where one was recorded, the time the step actually took on the development RTX~3070.
 
 
+The steps are \texttt{STEPS} in \texttt{server/pipeline.py}. The measured end-to-end time on the development RTX~3070 is about 75\,min; no cloud-GPU time has been measured yet.
+
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[font=\footnotesize, >=latex,
@@ -33,13 +35,15 @@ Figure~\ref{fig:pipelinesteps} expands the six processing steps of Section~\ref{
   \node[note] at (0.1,-6.0) {timeout 60\,min. Measured on RTX 3070: $\sim$45\,min};
   \node[note] at (0.1,-7.5) {timeout 5\,min};
 \end{tikzpicture}
-\caption{The six pipeline steps and their timeouts (\texttt{STEPS} in \texttt{server/pipeline.py}). The measured end-to-end time on the development RTX 3070 is $\sim$75\,min; no cloud-GPU time has been measured yet.}
+\caption{The six pipeline steps and their timeouts.}
 \label{fig:pipelinesteps}
 \end{figure}
 
 \section{Android App Architecture}
 Figure~\ref{fig:androidarch} shows how the capture app is put together: which class owns which output file, how the activities hand off to one another, and which files stay on the phone rather than being uploaded.
 
+
+The classes are in \texttt{googleARCore/samples/hello\_ar\_java/.../helloar/}. Arrows from \texttt{HelloArActivity} show ownership or navigation by \texttt{Intent}; \texttt{CaptureLogger} feeds raw depth to \texttt{CoverageMap}. \texttt{ProcessingActivity} uploads six files plus a zipped \texttt{depth/} folder, while \texttt{camera.csv} and \texttt{anchors.csv} stay on the phone.
 
 \begin{figure}[H]
 \centering
@@ -71,13 +75,15 @@ Figure~\ref{fig:androidarch} shows how the capture app is put together: which cl
   \draw[->] (gal) -- (det);
   \draw[->, dashed] (files.south) -- node[lbl, sloped, above] {read} (proc.north east);
 \end{tikzpicture}
-\caption{Android capture app (\texttt{googleARCore/samples/hello\_ar\_java/.../helloar/}). Arrows from \texttt{HelloArActivity} show ownership or navigation (\texttt{Intent}s); \texttt{CaptureLogger} feeds raw depth to \texttt{CoverageMap}. \texttt{ProcessingActivity} uploads six files plus a zipped \texttt{depth/} folder; \texttt{camera.csv} and \texttt{anchors.csv} stay on the phone.}
+\caption{Android capture app architecture.}
 \label{fig:androidarch}
 \end{figure}
 
 \section{Sim3 Alignment}
 Figure~\ref{fig:sim3} shows how the COLMAP reconstruction is brought into ARCore's metric frame. This is the step that gives the model its real-world scale, so every measurement in Table~\ref{tab:tape} depends on it.
 
+
+The fit is done in \texttt{sfm\_colmap.py} at the export stage, with the Umeyama step unit-tested in \texttt{test\_relocalize\_and\_sfm.py}. Because ARCore re-anchors silently, only its largest self-consistent segment ends up as inliers; the inlier median residual is about 2.5\,cm. The resulting scale is validated against a tape measure (Table~\ref{tab:tape}).
 
 \begin{figure}[H]
 \centering
@@ -95,13 +101,15 @@ Figure~\ref{fig:sim3} shows how the COLMAP reconstruction is brought into ARCore
   \draw[->] (refit) -- (apply);
   \draw[->] (apply) -- (out);
 \end{tikzpicture}
-\caption{Sim3 alignment of the COLMAP reconstruction to ARCore's metric frame (\texttt{sfm\_colmap.py}, export stage; Umeyama fit unit-tested in \texttt{test\_relocalize\_and\_sfm.py}). Because ARCore re-anchors silently, only its largest self-consistent segment ends up as inliers. Inlier median residual: about 2.5\,cm. The resulting scale is validated against a tape measure (Table~\ref{tab:tape}).}
+\caption{Sim3 alignment of the COLMAP reconstruction to ARCore's metric frame.}
 \label{fig:sim3}
 \end{figure}
 
 \section{Coverage Map}
 Figure~\ref{fig:coverage} shows how the live overlay decides a voxel's colour, which is the guidance the user acts on while walking the room.
 
+
+The overlay is produced by \texttt{CoverageMap.java} and \texttt{CoverageOverlayView.java}. ARCore raw depth (5\,Hz, confidence $\geq$128, up to 5\,m) is accumulated in 10\,cm voxels, and each voxel records from which of 16 directions it was seen. Visible voxels are drawn as dots coloured by direction count, with at most 5{,}000 voxels projected and 2{,}000 dots drawn, refreshed at 2\,Hz. The grid colouring below is illustrative.
 
 \begin{figure}[H]
 \centering
@@ -139,7 +147,7 @@ Figure~\ref{fig:coverage} shows how the live overlay decides a voxel's colour, w
   \node[anchor=west, font=\scriptsize] at (-0.7,-2.4) {$\geq$4 directions};
   \node[anchor=west, font=\scriptsize] at (1.8,-2.4) {unmapped: no dot};
 \end{tikzpicture}
-\caption{Live coverage map (\texttt{CoverageMap.java}, \texttt{CoverageOverlayView.java}). ARCore raw depth (5\,Hz, confidence $\geq$128, up to 5\,m) is accumulated in 10\,cm voxels; each voxel records from which of 16 directions it was seen. Visible voxels are drawn as dots, coloured by direction count, with at most 5{,}000 voxels projected and 2{,}000 dots drawn, refreshed at 2\,Hz. The grid colouring is illustrative.}
+\caption{Live coverage map.}
 \label{fig:coverage}
 \end{figure}
 
@@ -148,6 +156,8 @@ Figure~\ref{fig:coverage} shows how the live overlay decides a voxel's colour, w
 Figure~\ref{fig:domainmodel} draws the entities listed in Section~\ref{sec:domain} and the
 relationships between them. The attributes shown are the fields the code actually carries, so
 the diagram doubles as a map of what is written to disk at each stage.
+
+A \textbf{Scan} produces exactly one \textbf{Dataset}; a Dataset can be submitted as more than one \textbf{Job}, because a scan may be reprocessed after a pipeline change; a Job that succeeds produces one \textbf{Model}. \textbf{Measurement} and the web-facing part of \textbf{Structural element} are FYP-2 work, drawn here because the metric scale they depend on is already established by the Sim3 step in Figure~\ref{fig:sim3}. Entity fields follow \texttt{Job} in \texttt{server/pipeline.py} and the capture files written by \texttt{CaptureLogger.java}.
 
 \begin{figure}[H]
 \centering
@@ -185,13 +195,7 @@ the diagram doubles as a map of what is written to disk at each stage.
      \textit{when a scan is reprocessed}\\
      \textit{(\texttt{POST /reprocess}).}};
 \end{tikzpicture}
-\caption{Domain model. A \textbf{Scan} produces exactly one \textbf{Dataset}; a Dataset can be
-submitted as more than one \textbf{Job}, because a scan may be reprocessed after a pipeline
-change; a Job that succeeds produces one \textbf{Model}. \textbf{Measurement} and the web-facing
-part of \textbf{Structural element} are FYP-2 work, drawn here because the metric scale they
-depend on is already established by the Sim3 step in Figure~\ref{fig:sim3}. Entity fields follow
-\texttt{Job} in \texttt{server/pipeline.py} and the capture files written by
-\texttt{CaptureLogger.java}.}
+\caption{Domain model entities and their relationships.}
 \label{fig:domainmodel}
 \end{figure}
 
@@ -200,17 +204,11 @@ depend on is already established by the Sim3 step in Figure~\ref{fig:sim3}. Enti
 Figure~\ref{fig:appcapture} shows the capture app recording, with the quality and
 coverage features of Figure~\ref{fig:coverage} running live on the phone.
 
+The header confirms the capture format (1920$\times$1080 at 30\,FPS, FR-M1). The green banner is the live IQA verdict from \texttt{QualityMonitor.java}, and the row beneath it reports coverage state from \texttt{CoverageMap.java}: ceiling and floor not yet seen, and the current voxel observed from 1 of 8 azimuth directions. The red and yellow dots are the overlay drawn by \texttt{CoverageOverlayView.java}, red marking surfaces seen from a single direction and yellow from two or three. ``Searching for surfaces'' is ARCore still building its plane estimate early in the session.
+
 \begin{figure}[H]
 \centering
 \includegraphics[height=0.62\textheight]{ThesisFigs/app-capture}
-\caption{The Android capture app mid-recording on the realme device. The header
-confirms the capture format (1920$\times$1080 at 30\,FPS, FR-M1). The green banner is
-the live IQA verdict from \texttt{QualityMonitor.java}; the row beneath it reports
-coverage state from \texttt{CoverageMap.java} --- ceiling and floor not yet seen, and
-the current voxel observed from 1 of 8 azimuth directions. The red and yellow dots are
-the coverage overlay drawn by \texttt{CoverageOverlayView.java}: red marks surfaces seen
-from a single direction, yellow from two or three. The elapsed-time counter and the stop
-control complete the recording UI, and ``Searching for surfaces'' is ARCore still
-building its plane estimate early in the session.}
+\caption{The capture app mid-recording on the realme device.}
 \label{fig:appcapture}
 \end{figure}

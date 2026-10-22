@@ -22,6 +22,8 @@ The implementation of the system consists of three actors (See Figure~\ref{fig:u
     \node[align=center] at (0,-0.85) {#3};
   \end{scope}}
 
+The End User is the primary actor; the Processing Server (\texttt{server/main.py}) and the Cloud GPU (a RunPod pod, or the local GPU) are secondary actors. Take Measurement currently runs in the desktop viewer; the web version is FYP-2 work.
+
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[font=\footnotesize,
@@ -44,7 +46,7 @@ The implementation of the system consists of three actors (See Figure~\ref{fig:u
   \foreach \n in {upl,mon,conf} {\draw (srv) -- (\n.east);}
   \draw (gpu) -- (upl.east);
 \end{tikzpicture}
-\caption{Use case diagram. The End User is the primary actor; the Processing Server (\texttt{server/main.py}) and the Cloud GPU (RunPod pod, or the local GPU) are secondary actors. Take Measurement currently runs in the desktop viewer; the web version is FYP-2 work.}
+\caption{Use case diagram.}
 \label{fig:usecase}
 \end{figure}
 
