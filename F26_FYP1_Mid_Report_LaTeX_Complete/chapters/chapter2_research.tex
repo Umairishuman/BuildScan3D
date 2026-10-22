@@ -38,7 +38,7 @@ Auto processing & Yes & Yes & Yes & On-device & Cloud \\
 Quality (PSNR) & N/A & Medium & High & High & High \\
 Expert needed & No & No & No & No & No \\
 Capture guidance & No & No & No & No & Yes \\
-Semantic labels & No & No & No & No & Planned \\
+Floor plan from scan & Yes & LiDAR only & No & No & Prototype \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -50,7 +50,7 @@ The key limitations of existing solutions that motivate our work are:
     \item \textbf{No metric scale from video}: Consumer apps (Luma AI) and research methods (3DGS, PocketGS) produce visually plausible models but without metric scale, making measurements impossible.
     \item \textbf{No capture guidance}: No existing system provides real-time feedback on image quality, tracking state, and spatial coverage during capture, leading to frequent quality failures.
     \item \textbf{Manual pipeline}: Research pipelines require manual steps (photo selection, COLMAP setup, training configuration) that non-experts cannot perform.
-    \item \textbf{No semantic understanding}: None of the reviewed systems identify MEP components (pipes, conduits, HVAC) in the reconstructed model.
+    \item \textbf{No structure from a plain video}: Consumer 3DGS apps and research methods produce a radiance field but no explicit room structure (wall planes, wall lengths, doors) from which a floor plan or reliable measurement can be taken; where floor plans exist, they depend on LiDAR or dedicated hardware.
 \end{enumerate}
 
 \section{Proposed Solution}
@@ -60,7 +60,7 @@ BuildScan~3D bridges these gaps by combining:
     \item \textbf{Live capture guidance}: Real-time image quality assessment (blur, exposure, motion speed) and spatial coverage visualization (voxel-based direction-aware coverage map) reduce capture failures.
     \item \textbf{Fully automated cloud pipeline}: A FastAPI server handles upload, dispatches processing to a RunPod GPU pod, monitors progress, and delivers the finished model---no manual steps.
     \item \textbf{State-of-the-art rendering}: Nerfstudio splatfacto 3DGS produces photorealistic models that render at real-time frame rates.
-    \item \textbf{Semantic layer} (FYP-2): YOLOv8-Seg will identify and label MEP systems in the 3D model.
+    \item \textbf{Structural layer}: wall planes, corners, wall lengths and doors extracted automatically from the splat model (\texttt{structure.py}, prototype), as the basis for floor plans and 1:1 measurement; completion in FYP-2.
 \end{itemize}
 
 \section{Complex Computing Problem}

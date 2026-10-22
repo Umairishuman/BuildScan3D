@@ -14,7 +14,7 @@ The construction and facility management industries spend an estimated \$1.6~tri
 Recent advances in 3D Gaussian Splatting~\cite{kerbl3dgs} enable photorealistic novel-view synthesis at real-time frame rates from posed images, while ARCore provides metric-scale camera poses and depth sensing on Android devices. Combining these technologies with cloud GPU processing creates an opportunity for a fully automated, affordable indoor scanning solution.
 
 \section{Project Vision}
-BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as recording a video on a phone. The system will: (1)~guide the user during capture to ensure sufficient coverage and quality; (2)~automatically process the recording on a cloud GPU; (3)~return a metric-scale 3D model with measurement tools; and (4)~identify MEP systems (pipes, conduits, HVAC) via semantic segmentation.
+BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as recording a video on a phone. The system will: (1)~guide the user during capture to ensure sufficient coverage and quality; (2)~automatically process the recording on a cloud GPU; (3)~return a metric-scale 3D model with measurement tools; and (4)~extract the room's structure---wall planes, corners, wall lengths and doors---as the basis for automatic floor plans and 1:1 metric measurement.
 
 \section{Project Objectives}
 \begin{enumerate}
@@ -22,7 +22,7 @@ BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as re
     \item Build an automated cloud-GPU processing pipeline that converts a phone recording into a 3D Gaussian Splatting model, targeting under 35 minutes end-to-end on a cloud RTX 4090 (a projection; the measured time today is $\sim$75 minutes on the development RTX 3070).
     \item Achieve metric-scale accuracy within 5\% of tape-measure ground truth for distances measured in the model.
     \item Achieve held-out PSNR $\geq$ 25\,dB for photometric reconstruction quality.
-    \item Implement semantic segmentation for MEP system identification (pipes, conduits, HVAC ducts).
+    \item Build a structural layer that extracts wall planes, corners, wall lengths and doors from the reconstructed model, as the basis for automatic floor plans and 1:1 metric measurement.
     \item Build a web-based 3D viewer with point-to-point metric measurement tools.
 \end{enumerate}
 
@@ -34,7 +34,7 @@ BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as re
     \item Automated reconstruction pipeline: keyframe extraction, COLMAP SfM, Sim3 metric alignment, splatfacto 3DGS training.
     \item FastAPI processing server with local and cloud GPU (RunPod) execution modes.
     \item Metric measurement capability in the 3D model.
-    \item YOLOv8-Seg semantic segmentation for MEP systems (FYP-2).
+    \item Structural layer: automatic wall planes, corners, wall lengths, door detection and floor plans (prototype built in FYP-1; completion in FYP-2).
     \item Three.js/WebGPU web viewer for model inspection and measurement (FYP-2).
     \item CI/CD pipeline via GitHub Actions.
 \end{itemize}
@@ -53,8 +53,8 @@ BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as re
     \item \textbf{Pose Prior Module}: Coordinate alignment from ARCore's OpenGL convention to COLMAP/Nerfstudio, quaternion-to-rotation-matrix conversion, and Sim3 metric alignment.
     \item \textbf{Reconstruction Pipeline Module}: COLMAP SfM (feature extraction, matching, mapping, undistortion), lens self-calibration, and Nerfstudio splatfacto 3DGS training.
     \item \textbf{Processing Server Module}: FastAPI backend for dataset upload, job management, progress tracking, and cloud GPU dispatch via RunPod API.
-    \item \textbf{Semantic AI Module} (FYP-2): YOLOv8-Seg 2D segmentation masks projected into 3D space for MEP identification.
-    \item \textbf{Web Viewer Module} (FYP-2): Three.js/WebGPU-based viewer with splat rendering, point-to-point measurement, and semantic system toggles.
+    \item \textbf{Structural Layer Module}: Rebuilds the room shell next to the splat model (\texttt{structure.py}): floor and wall planes, corners, wall lengths, doors and other openings, and the floor polygon used for floor plans and 1:1 measurement. Prototype built; completion in FYP-2.
+    \item \textbf{Web Viewer Module} (FYP-2): Three.js/WebGPU-based viewer with splat rendering, point-to-point 1:1 measurement that can snap to structural-layer walls, and a floor-plan view.
 \end{enumerate}
 
 \section{Stakeholders and User Classes}
@@ -71,7 +71,7 @@ BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as re
     \item Reconstruction quality: held-out PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85.
     \item Processing time: under 35 minutes end-to-end from upload to viewable model on an NVIDIA RTX 4090 cloud GPU (FYP-2 target, projected and not yet measured; currently $\sim$75 minutes on the development RTX 3070).
     \item Capture guidance: live IQA reduces user-caused quality failures by $\geq$50\% compared to unguided capture.
-    \item Semantic accuracy: MEP system detection mIoU $\geq$ 0.6 (FYP-2).
+    \item Structural layer: wall planes, wall lengths and doors extracted automatically, with wall lengths within the 5\% accuracy target (FYP-2; not yet verified against a tape measure).
 \end{enumerate}
 
 \section{Constraints and Assumptions}
