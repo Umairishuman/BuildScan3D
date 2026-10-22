@@ -5,7 +5,6 @@ During the proposal defense, the panel provided the following key feedback:
 \begin{itemize}
     \item Clarify the distinction between BuildScan~3D and existing consumer scanning apps (Polycam, Luma AI).
     \item Demonstrate metric accuracy with quantitative comparisons to ground truth measurements.
-    \item Drop the X-ray / through-wall scanning concept as infeasible for the project scope.
     \item Focus on measurement accuracy and the automated pipeline rather than feature-rich UI.
     \item Define clear acceptance criteria for reconstruction quality (PSNR, SSIM thresholds).
 \end{itemize}
@@ -17,9 +16,8 @@ No. & Feedback / Required Change & Action Taken & Status & Evidence \\
 \midrule
 1 & Differentiate from consumer apps & Added metric scale via ARCore Sim3, live IQA, and measurement capability & Done & Chapter~2, Table~\ref{tab:comparison} \\
 2 & Quantitative metric accuracy & Tape-measure comparison: mean error 4.8\,mm (0.19\%), worst case 0.29\% against a 5\% target & Done & Table~\ref{tab:tape} \\
-3 & Remove X-ray functionality & Removed from scope; refocused on measurement and MEP semantics & Done & Section~1.6 \\
-4 & Define quality thresholds & Set acceptance: PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85, measurement error $\leq$ 5\% of tape measure & Done & Section~1.9 \\
-5 & Show automated pipeline & Built FastAPI server with RunPod cloud GPU integration & Done & Chapter~6, Section~6.6 \\
+3 & Define quality thresholds & Set acceptance: PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85, measurement error $\leq$ 5\% of tape measure & Done & Section~1.9 \\
+4 & Show automated pipeline & Built FastAPI server with RunPod cloud GPU integration & Done & Chapter~6, Section~6.6 \\
 \bottomrule
 \end{longtable}
 
@@ -85,6 +83,5 @@ All Iteration~1 milestones have been met:
 \section{Delays, Deviations and Recovery Plan}
 \begin{itemize}
     \item \textbf{Deviation}: We initially built a custom training script (\texttt{train.py}) with depth supervision, flattening regularization, and pose refinement. After extensive analysis (documented in \texttt{Training\_Analysis.md}), we found this produced worse results than standard splatfacto. We pivoted to using splatfacto for training and keeping our custom preprocessing. This analysis consumed approximately 2 weeks but resulted in a better-informed design decision.
-    \item \textbf{Deviation}: The X-ray / through-wall scanning concept from the original proposal was dropped as infeasible. The scope was redirected to metric measurements and MEP semantic segmentation.
     \item \textbf{Recovery}: No recovery plan needed---Iteration 1 deliverables are complete and on schedule.
 \end{itemize}
