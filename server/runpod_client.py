@@ -336,7 +336,9 @@ PIPELINE_COMMANDS = [
 ]
 
 
-MAX_POD_LIFETIME_SEC = int(os.environ.get("MAX_POD_LIFETIME", 3600))  # 60 min default
+MAX_POD_LIFETIME_SEC = int(os.environ.get("MAX_POD_LIFETIME", 7200))  # 2 h default; the
+# only measured end-to-end run is ~75 min on an RTX 3070, so a 60 min cap killed the pod
+# mid-training. Override with MAX_POD_LIFETIME once a faster GPU is benchmarked.
 
 
 def _pod_watchdog(client: RunPodClient, pod_id: str, job, max_sec: int):

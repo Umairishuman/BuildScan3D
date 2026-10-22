@@ -173,7 +173,7 @@ The core domain entities are:
   \draw[->] (done.east) -- (6.5,1.6);
   \draw[->] (failed.south) .. controls (4.6,-3.2) and (-3.6,-3.2) .. node[lbl, below] {POST /retry/\{job\_id\}} (queued.south);
 \end{tikzpicture}
-\caption{Job state machine (\texttt{JobStatus} in \texttt{server/pipeline.py}). A timeout is enforced per step by the watchdog loop in \texttt{run\_pipeline()}, which kills the subprocess and marks the job failed; cancel is \texttt{POST /jobs/\{job\_id\}/cancel}. In RunPod mode a separate pod watchdog terminates the pod after \texttt{MAX\_POD\_LIFETIME} (default 3600\,s). An \texttt{uploading} value is defined in \texttt{JobStatus} but no code path sets it.}
+\caption{Job state machine (\texttt{JobStatus} in \texttt{server/pipeline.py}). A timeout is enforced per step by the watchdog loop in \texttt{run\_pipeline()}, which kills the subprocess and marks the job failed; cancel is \texttt{POST /jobs/\{job\_id\}/cancel}. In RunPod mode a separate pod watchdog terminates the pod after \texttt{MAX\_POD\_LIFETIME} (default 7200\,s). An \texttt{uploading} value is defined in \texttt{JobStatus} but no code path sets it.}
 \label{fig:jobstate}
 \end{figure}
 
@@ -260,7 +260,7 @@ The end-to-end pipeline follows a sequential six-step process:
     \item \textbf{Export Model} (5\,min timeout): Export trained model to \texttt{splat.ply}.
 \end{enumerate}
 
-Each step is executed as a subprocess with streaming stdout captured for progress reporting. If a step exceeds its timeout, the process is killed and the job is marked failed. In RunPod mode, whenever a pod has been created it is terminated in a \texttt{finally} block regardless of success or failure, and a watchdog thread terminates it after \texttt{MAX\_POD\_LIFETIME} (default 3600\,s). Figure~\ref{fig:sequence} shows the upload $\rightarrow$ process $\rightarrow$ download interaction in RunPod mode.
+Each step is executed as a subprocess with streaming stdout captured for progress reporting. If a step exceeds its timeout, the process is killed and the job is marked failed. In RunPod mode, whenever a pod has been created it is terminated in a \texttt{finally} block regardless of success or failure, and a watchdog thread terminates it after \texttt{MAX\_POD\_LIFETIME} (default 7200\,s). Figure~\ref{fig:sequence} shows the upload $\rightarrow$ process $\rightarrow$ download interaction in RunPod mode.
 
 \begin{figure}[p]
 \centering
