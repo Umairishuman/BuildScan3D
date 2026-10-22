@@ -1,13 +1,7 @@
 \chapter{Proposal Feedback and Iteration Plan}
 
 \section{Proposal Feedback Summary}
-During the proposal defense, the panel provided the following key feedback:
-\begin{itemize}
-    \item Clarify the distinction between BuildScan~3D and existing consumer scanning apps (Polycam, Luma AI).
-    \item Demonstrate metric accuracy with quantitative comparisons to ground truth measurements.
-    \item Focus on measurement accuracy and the automated pipeline rather than feature-rich UI.
-    \item Define clear acceptance criteria for reconstruction quality (PSNR, SSIM thresholds).
-\end{itemize}
+At the proposal defense the panel asked the team to distinguish BuildScan~3D from consumer scanning apps (Polycam, Luma AI), to demonstrate metric accuracy against ground-truth measurements, to define clear acceptance criteria for reconstruction quality, and to focus on measurement accuracy and the automated pipeline rather than a feature-rich UI. Each point and the action taken is recorded in the action register below.
 
 \section{Proposal Action Register}
 \label{sec:actionregister}
@@ -52,7 +46,7 @@ We follow a two-iteration strategy aligned with FYP-1 and FYP-2:
 \section{Iteration 2 Plan}
 \begin{itemize}
     \item \textbf{Objective}: Optimize processing time, improve pipeline robustness, complete the structural layer and add measurement tools.
-    \item \textbf{Features}: Pipeline optimization (target $<$35\,min on RTX 4090, projected, from $\sim$75\,min measured on RTX 3070); improved handling of edge cases (mirrors, textureless walls, large rooms); Three.js/WebGPU splat viewer; point-to-point measurement tool that snaps to walls; structural layer completion (wall planes, corners, wall lengths, door detection, floor plans).
+    \item \textbf{Features}: pipeline optimization (target $<$35\,min on RTX 4090, projected, from $\sim$75\,min measured on RTX 3070), edge-case robustness, the web viewer with wall-snapping measurement, and structural layer completion; modules and schedule in Chapter~\ref{ch:plan}.
     \item \textbf{Deliverables}: Optimized pipeline with reduced processing time, web viewer with measurement tools, structural layer with floor-plan export, field validation report across $\geq$5 rooms.
     \item \textbf{Evidence}: Processing time benchmarks; measurement accuracy comparison with tape-measure ground truth across $\geq$5 rooms.
 \end{itemize}
@@ -98,5 +92,5 @@ The core-pipeline milestones of Iteration~1 have been met; refinement is ongoing
 \section{Delays, Deviations and Recovery Plan}
 \begin{itemize}
     \item \textbf{Deviation}: We initially built a custom training script (\texttt{train.py}) with depth supervision, flattening regularization, and pose refinement. After extensive analysis (documented in \texttt{Training\_Analysis.md}), we found this produced worse results than standard splatfacto. We pivoted to using splatfacto for training and keeping our custom preprocessing. This analysis consumed approximately 2 weeks but resulted in a better-informed design decision.
-    \item \textbf{Recovery}: The core pipeline is in place, but Iteration~1 is not finished: 3DGS refinement, 3D mesh creation, completion of the structural layer, and the web workspace remain open. The training analysis cost about two weeks. FYP-2 therefore starts with the one-command v6 pipeline and the processing-time reduction, and schedules the structural layer and web workspace in Iterations~2a--2b. 3D mesh creation is in scope but not yet scheduled.
+    \item \textbf{Recovery}: The core pipeline is in place, but Iteration~1 is not finished: the open items listed above remain. FYP-2 therefore starts with the one-command v6 pipeline and the processing-time reduction, and schedules the structural layer and web workspace in Iterations~2a--2b. 3D mesh creation is in scope but not yet scheduled.
 \end{itemize}
