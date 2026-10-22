@@ -1,7 +1,7 @@
 \chapter{Proposal Feedback and Iteration Plan}
 
 \section{Proposal Feedback Summary}
-At the proposal defense the panel asked the team to distinguish BuildScan~3D from consumer scanning apps (Polycam, Luma AI), to demonstrate metric accuracy against ground-truth measurements, to define clear acceptance criteria for reconstruction quality, and to focus on measurement accuracy and the automated pipeline rather than a feature-rich UI. Each point and the action taken is recorded in the action register below.
+During the proposal defense, the committee requested the group to explain the differences between BuildScan~3D and consumer scan applications (Polycam, Luma AI), show metric accuracy as compared to the real measurements, set precise acceptance criteria for the quality of reconstruction, and concentrate on the metrics and the automated process, not addressing the rich UI. All the details of the requests and actions taken are summarized in the action register.
 
 \section{Proposal Action Register}
 \label{sec:actionregister}
@@ -28,27 +28,27 @@ Table~\ref{tab:actionregister} records the feedback received at the proposal def
 }
 
 \section{Iteration Strategy}
-We follow a two-iteration strategy aligned with FYP-1 and FYP-2:
+We undertake a strategy that comprises two iterations, represented by FYP-1 and FYP-2:
 
 \begin{itemize}
-    \item \textbf{Iteration 1 (FYP-1, Weeks 1--8)}: Core model implementation---capture app, reconstruction pipeline, processing server, cloud GPU integration, validated on real recordings. Status at mid-evaluation: \emph{core pipeline complete, refinement ongoing}. Deliverables: working Android APK, FastAPI server, RunPod integration, metric-accurate 3D reconstruction.
-    \item \textbf{Iteration 2 (FYP-2, Weeks 9--16)}: Optimization, performance tuning, and feature enrichment. Deliverables: reduced processing time, pipeline robustness improvements, Three.js web viewer with measurement tools, structural layer and floor plans, field validation on multiple rooms.
+    \item \textbf{Iteration~1} (FYP-1, Weeks 1--8): Implementation of the key model; thus, we create the app, reconstruction pipeline and processing server, integrate cloud GPU, and test everything on the real data. As of the mid-evaluation, the core pipeline is complete and refinement is ongoing. The deliverables include a functioning android app, FastAPI server, Run Pod integration, and accurate 3D reconstruction.
+    \item \textbf{Iteration~2} (FYP-2, Weeks 9--16): Performance tuning and enrichment of the functions offered. The deliverables include the reduction of time necessary for processing and improvement of robustness of the pipeline; creation of the web-viewing page based on Three.js, which can also measure; the structural layer with floor plans; and field validation on multiple rooms.
 \end{itemize}
 
 \section{Iteration 1 Plan}
 \begin{itemize}
-    \item \textbf{Objective}: Build the end-to-end pipeline from phone capture to 3D model.
-    \item \textbf{Features}: ARCore capture with IQA + coverage overlay; COLMAP SfM + splatfacto training; FastAPI server with RunPod dispatch; upload UI in the Android app.
-    \item \textbf{Deliverables}: Working Android APK, processing server, cloud GPU integration, reconstruction quality validation on two rooms.
-    \item \textbf{Evidence}: Live demo of phone capture $\rightarrow$ upload $\rightarrow$ cloud processing $\rightarrow$ 3D model viewing.
+    \item \textbf{Objective}: Create the complete system from mobile phone capture to 3D model.
+    \item \textbf{Features}: ARCore capture, including IQA \& overlay capabilities; COLMAP SfM together with splatfacto training; FastAPI server with RunPod dispatch; upload interface inside the Android application.
+    \item \textbf{Deliverables}: Working Android APK, processing server, cloud GPU integration, verification of reconstruction quality in two rooms.
+    \item \textbf{Evidence}: Live demo of mobile phone capture $\rightarrow$ upload $\rightarrow$ cloud processing $\rightarrow$ 3D model display.
 \end{itemize}
 
 \section{Iteration 2 Plan}
 \begin{itemize}
-    \item \textbf{Objective}: Optimize processing time, improve pipeline robustness, complete the structural layer and add measurement tools.
-    \item \textbf{Features}: pipeline optimization (target $<$35\,min on RTX 4090, projected, from $\sim$75\,min measured on RTX 3070), edge-case robustness, the web viewer with wall-snapping measurement, and structural layer completion; modules and schedule in Chapter~\ref{ch:plan}.
-    \item \textbf{Deliverables}: Optimized pipeline with reduced processing time, web viewer with measurement tools, structural layer with floor-plan export, field validation report across $\geq$5 rooms.
-    \item \textbf{Evidence}: Processing time benchmarks; measurement accuracy comparison with tape-measure ground truth across $\geq$5 rooms.
+    \item \textbf{Aim}: Speed up processing time, enhance pipeline stability, finalize the structural layer, and integrate measuring instruments.
+    \item \textbf{Characteristics}: pipeline performance enhancement (goal $<$35 minutes on RTX 4090, projected; 75 minutes measured on RTX 3070), edge case resilient, wall-snapping measurement using the web viewer, and completion of the structural layer; modules and timetable in Chapter~\ref{ch:plan}.
+    \item \textbf{Expected results}: Optimized pipeline with lower processing time; web viewer providing measurement tools; structural layer capable of floor plan export; report on field validation for $\geq$5 rooms.
+    \item \textbf{Proof}: Processing time benchmarks; measuring accuracy comparison with tape measure on at least 5 rooms.
 \end{itemize}
 
 \section{Work Breakdown and Responsibilities}
@@ -80,17 +80,17 @@ Structural layer (\texttt{structure.py}) & Tayyab & Prototype; completion FYP-2 
 \end{table}
 
 \section{Progress Against Plan}
-The core-pipeline milestones of Iteration~1 have been met; refinement is ongoing:
+The core-pipeline milestones for Iteration~1 have been accomplished; refining work is still going on:
 \begin{itemize}
-    \item \textbf{Week 1--2}: ARCore capture app with basic recording $\rightarrow$ \textit{Completed}.
-    \item \textbf{Week 3--4}: COLMAP SfM pipeline with ARCore Sim3 alignment $\rightarrow$ \textit{Completed}. Also resolved root causes of poor reconstruction quality (tracking gaps, lens distortion, degenerate splats).
-    \item \textbf{Week 5--6}: Live IQA, coverage overlay, quality improvements (gyro-aware frame selection, MVS initialization) $\rightarrow$ \textit{Completed}.
-    \item \textbf{Week 7--8}: Processing server, RunPod integration, upload UI, CI/CD $\rightarrow$ \textit{Completed}.
-    \item \textbf{Open items}: 3DGS refinement, 3D mesh creation, completion of the structural layer, and the web workspace.
+    \item Weeks 1--2: ARCore capture app with primitive recording feature has been achieved.
+    \item Weeks 3--4: COLMAP SfM pipeline with ARCore Sim3 alignment has been completed. The main issues leading to low quality of reconstruction (gaps in tracking, distortion of lens, and problems with splats) have been solved.
+    \item Weeks 5--6: Live IQA has been realized with coverage overlay and a number of improvements in quality (selection of gyro-aware frames, MVS initialization).
+    \item Weeks 7--8: the processing server has been developed and integrated with RunPod, the upload interface has been built, and CI/CD has been finalized.
+    \item \textbf{Current issues to be addressed}: 3DGS refinement, 3D mesh generation, finishing the structural layer and the web workspace.
 \end{itemize}
 
 \section{Delays, Deviations and Recovery Plan}
 \begin{itemize}
-    \item \textbf{Deviation}: We initially built a custom training script (\texttt{train.py}) with depth supervision, flattening regularization, and pose refinement. After extensive analysis (documented in \texttt{Training\_Analysis.md}), we found this produced worse results than standard splatfacto. We pivoted to using splatfacto for training and keeping our custom preprocessing. This analysis consumed approximately 2 weeks but resulted in a better-informed design decision.
-    \item \textbf{Recovery}: The core pipeline is in place, but Iteration~1 is not finished: the open items listed above remain. FYP-2 therefore starts with the one-command v6 pipeline and the processing-time reduction, and schedules the structural layer and web workspace in Iterations~2a--2b. 3D mesh creation is in scope but not yet scheduled.
+    \item \textbf{Deviation}: At first, we came up with our unique script for training (\texttt{train.py}) that included depth supervision, flattening regularization, and pose correction. But after carrying out a thorough analysis (detailed in \texttt{Training\_Analysis.md}) we realized that it had proved less effective than splatfacto. Consequently, we switched to splatfacto, and kept our unique preprocessing intact. The overall process took around two weeks, but the analysis allowed us to make the right decision about the design.
+    \item \textbf{Recovery}: The basic pipeline has been launched, but Iteration~1 is not complete yet: there are still some points left to resolve. Therefore, the FYP-2 project will make use of the one-command v6 pipeline and the processing time decrease, and will make plans for structural layer and web workspace in Iteration~2a-2b. Actual 3D mesh creation is in the scope of the project but is not included into the agenda so far.
 \end{itemize}
