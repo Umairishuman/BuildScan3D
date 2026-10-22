@@ -26,19 +26,21 @@
 
 \section{Individual Responsibilities}
 
+The primary evidence of each member's contribution is the set of modules they own: the files whose commit history carries their name (\texttt{git log -- <file>}). Table~\ref{tab:responsibilities} lists them.
+
 \begin{table}[h]
 \centering
-\caption{Individual responsibilities and contributions}
+\caption{Owned modules per team member (from the commit history of each file)}
 \label{tab:responsibilities}
-\begin{tabular}{p{3.5cm}p{7.5cm}}
+\begin{tabular}{p{3.2cm}p{9.3cm}}
 \toprule
-\textbf{Team Member} & \textbf{Responsibilities} \\
+\textbf{Team Member} & \textbf{Owned modules} \\
 \midrule
-Muhammad Umair (23I-0662) & Project lead. ARCore capture app (IQA, coverage overlay, upload UI). Reconstruction pipeline (SfM, Sim3 alignment, splatfacto integration). FastAPI server. RunPod cloud GPU integration. Root-cause analysis of degenerate splats. \\
+Muhammad Umair (23I-0662) & Processing server: \texttt{server/main.py}, \texttt{pipeline.py}, \texttt{runpod\_client.py}, \texttt{remote\_gpu.py}. Android upload and app screens: \texttt{ProcessingActivity}, \texttt{ScanDetailActivity}, \texttt{UpdateChecker}; co-author of \texttt{HelloArActivity}, \texttt{CoverageMap}, \texttt{CoverageOverlayView}, \texttt{QualityMonitor}. Web UI prototype (\texttt{prototype/}). GPU Docker workflow; co-author of the CD workflow. Server and job scripts (\texttt{scripts/}). Proposal, report and project documentation. \\
 \midrule
-Zaid Fareed (23I-0829) & Android app co-development (ARCore session, recording controls). CI/CD pipeline (GitHub Actions workflows, ruff, pytest). Unit test suite. Pull request template and repo hygiene. \\
+Zaid Fareed (23I-0829) & CI/CD: \texttt{ci.yml}, \texttt{cd.yml}, APK/manifest checker (\texttt{.github/android/}), \texttt{ruff.toml}, \texttt{pytest.ini}, pull request template. The whole pytest suite (\texttt{tests/}, all 12 files and \texttt{conftest.py}). Trainer experiments and fixes (\texttt{train.py} checkpoints and depth loss, \texttt{mvs.py}), ARKitScenes trainer experiments (\texttt{docs/Experiments\_ARKitScenes.md}). CI/CD documentation. \\
 \midrule
-Muhammad Tayyab (23I-0636) & Reconstruction pipeline co-development (COLMAP experiments, training configurations). 3DGS training analysis and parameter tuning. Documentation. \\
+Muhammad Tayyab (23I-0636) & Reconstruction pipeline (\texttt{src/arcore3dgs/}): \texttt{fallback.py}, \texttt{imu.py}, \texttt{relocalize\_pnp.py}, \texttt{prepare.py}, \texttt{select\_sharp.py}, \texttt{ba.py}, \texttt{sfm\_colmap.py}, \texttt{export\_nerfstudio.py}, \texttt{mvs\_init.py}, \texttt{structure.py}, evaluation tools (\texttt{fair\_compare.py}, \texttt{fit\_diag.py}, \texttt{diagnose.py}). Capture logging and live IQA in the app: \texttt{CaptureLogger}, \texttt{QualityMonitor}; co-author of \texttt{HelloArActivity} and the coverage overlay. Training analysis (\texttt{Training\_Analysis.md}), tape-measure validation and second-room evaluation. \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -46,22 +48,25 @@ Muhammad Tayyab (23I-0636) & Reconstruction pipeline co-development (COLMAP expe
 \section{Contribution of Each Team Member}
 
 \paragraph{Muhammad Umair (23I-0662):}
-Led the system architecture, implemented the majority of the Android capture features (CaptureLogger, QualityMonitor, CoverageMap, CoverageOverlayView, ProcessingActivity), the complete server backend (FastAPI, RunPod client), and the SfM pipeline (sfm\_colmap.py, export\_nerfstudio.py, fallback.py). Conducted the root-cause analysis of degenerate splat geometry and made the decision to adopt splatfacto.
+Project lead. Built the processing server (FastAPI endpoints, job model with per-step timeouts, local pipeline runner) and the RunPod integration (pod creation, SSH readiness, remote pipeline, termination in \texttt{finally} blocks). Built the app's upload and progress screen and the scan gallery/detail screens, worked on the main AR activity and coverage overlay, built the web UI prototype, and wrote the proposal and report.
 
 \paragraph{Zaid Fareed (23I-0829):}
-Built the CI/CD infrastructure (ci.yml, cd.yml, pytest.ini, ruff.toml), wrote unit tests, co-developed the ARCore capture session and recording controls, and established the pull request workflow with automated checks.
+Built the CI/CD infrastructure (lint, test and build workflows on three Python versions, Android build and signing checks, repository hygiene, releases) and wrote the entire automated test suite that backs the ``Pass (CI)'' results in Chapter~\ref{ch:testing}. Also contributed trainer fixes and the ARKitScenes trainer experiments.
 
 \paragraph{Muhammad Tayyab (23I-0636):}
-Worked on COLMAP pipeline experiments (varying feature types, matching strategies, mapper configurations), 3DGS training parameter sweeps (learning rates, regularization weights, initialization strategies), and contributed to project documentation.
+Built the reconstruction pipeline: IMU fallback and re-alignment, keyframe and gyro-aware frame selection, bundle adjustment, the COLMAP SfM stage with Sim3 metric alignment, dense MVS initialisation, the structural layer, and the evaluation tools. Wrote the app's capture logging and live IQA, ran the training analysis, and produced the v6 model, the tape-measure validation and the second-room result.
+
+\paragraph{Commit counts.}
+The repository has \textbf{133} commits: Muhammad Umair 85, Zaid Fareed 26, Muhammad Tayyab 20 (committing as ``BlazingBeam''), and 2 automated commits by the GitHub Actions bot. \textbf{These counts reflect differing commit granularity, not differing effort.} Umair commits each small change separately; Tayyab works in large batches, so a single commit of his often carries a whole pipeline stage (for example, the commit that introduced image-based SfM poses and lens self-calibration, or the one that introduced gyro-aware frames, dense MVS initialisation and the structural layer). The owned modules above, not the commit counts, are the evidence of contribution.
 
 \section{Repository and Version Control Evidence}
 The project repository is hosted on GitHub. Key statistics:
 \begin{itemize}
     \item \textbf{Repository}: \texttt{github.com/Umairishuman/FYP} (private)
-    \item \textbf{Branches}: \texttt{master} (stable), feature branches for each work item
-    \item \textbf{Commit history}: 40+ commits across all team members
-    \item \textbf{Pull requests}: Feature branches merged via pull requests with CI checks
-    \item \textbf{Code review}: Pull request template enforces area checkboxes and testing checklist
+    \item \textbf{Branches}: \texttt{master} (stable) and work branches such as \texttt{ci/github-actions}, \texttt{ci/pipeline-updates} and \texttt{exp/trainer-arkitscenes}
+    \item \textbf{Commit history}: 133 commits (85 / 26 / 20, plus 2 bot commits)
+    \item \textbf{CI}: GitHub Actions runs lint, tests and builds on work branches and pull requests
+    \item \textbf{Code review}: Pull request template with area checkboxes and a testing checklist
 \end{itemize}
 
 \section{Milestones and Commit Evidence}
@@ -70,16 +75,16 @@ The project repository is hosted on GitHub. Key statistics:
 \centering
 \caption{Key milestones with commit evidence}
 \label{tab:milestones}
-\begin{tabular}{p{2.5cm}p{5cm}p{3.5cm}}
+\begin{tabular}{p{2.5cm}p{5cm}p{4cm}}
 \toprule
 \textbf{Milestone} & \textbf{Description} & \textbf{Evidence} \\
 \midrule
-M1: Capture & ARCore recording with pose/depth logging & Commits by Umair, Zaid \\
-M2: Pipeline & COLMAP SfM + splatfacto training & Commits by Umair, Tayyab \\
-M3: Quality & IQA, coverage overlay, gyro-aware selection & Commits by Umair \\
-M4: Server & FastAPI + RunPod integration & Commits by Umair \\
-M5: CI/CD & GitHub Actions workflows & Commits by Zaid \\
-M6: Validation & Quality metrics on two rooms & Documented in TODO.md \\
+M1: Capture & ARCore recording with pose/depth/IMU logging & Commits by Tayyab, Umair \\
+M2: Pipeline & IMU fallback, COLMAP SfM, splatfacto training & Commits by Tayyab; trainer fixes by Zaid \\
+M3: Quality & Live IQA, coverage overlay, gyro-aware selection & IQA and selection by Tayyab; coverage overlay by Umair and Tayyab \\
+M4: Server & FastAPI + RunPod integration, upload UI & Commits by Umair \\
+M5: CI/CD & GitHub Actions workflows, test suite & Commits by Zaid; workflow merges by Umair \\
+M6: Validation & v3--v6 results, tape measure, second room & Commits by Tayyab; numbers in \texttt{docs/progress/} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -94,11 +99,11 @@ In compliance with university policy, we disclose the use of the following AI-as
 \centering
 \caption{AI and automated tools used during development}
 \label{tab:aitools}
-\begin{tabular}{p{3cm}p{4cm}p{4cm}}
+\begin{tabular}{p{3cm}p{4cm}p{5cm}}
 \toprule
 \textbf{Tool} & \textbf{Usage} & \textbf{Scope / Boundaries} \\
 \midrule
-Claude (Anthropic) & Code assistance, debugging, documentation drafting & Used for boilerplate generation, error diagnosis, and report drafting. All generated code was reviewed, tested, and modified by team members before integration. \\
+Claude Code (Anthropic) & Agentic coding assistant, used in local and cloud sessions & Code generation and refactoring, debugging and error diagnosis, CI/CD workflow changes (some commits carry a \texttt{Co-Authored-By: Claude} trailer), project documentation, drafting of this report, and the correction pass on this report after supervisor review (checking every figure against \texttt{docs/progress/} and the team's decisions, rewriting the test and meeting sections, and drawing the TikZ diagrams). All output was reviewed, tested and edited by team members, who remain responsible for it. \\
 GitHub Copilot & Inline code completion & Used for auto-completion in Android Studio and VS Code. All suggestions were reviewed before acceptance. \\
 ChatGPT (OpenAI) & Research queries, algorithm explanations & Used to understand COLMAP parameters, quaternion math, and coordinate system conventions. No code directly copied. \\
 \bottomrule
@@ -106,7 +111,7 @@ ChatGPT (OpenAI) & Research queries, algorithm explanations & Used to understand
 \end{table}
 
 \paragraph{Statement of originality:}
-All core algorithms (Sim3 alignment, gyro-aware frame selection, coverage map, IQA pipeline, RunPod lifecycle management) were designed and implemented by the team. AI tools were used as assistants for code generation, debugging, and explanation---not as primary authors. The system architecture, experimental methodology, root-cause analysis, and design decisions are entirely our own work. All AI-generated code was reviewed, understood, tested, and adapted by team members before integration into the codebase.
+All core algorithms (Sim3 alignment, gyro-aware frame selection, coverage map, IQA pipeline, RunPod lifecycle management) were designed by the team. AI tools were used as assistants for code generation, debugging, explanation and report drafting, as disclosed in Table~\ref{tab:aitools}. The system architecture, experimental methodology, root-cause analysis, and design decisions are entirely our own work. All AI-generated code was reviewed, understood, tested, and adapted by team members before integration into the codebase.
 
 \paragraph{Other development tools:}
 \begin{itemize}

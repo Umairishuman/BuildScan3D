@@ -3,48 +3,56 @@
 \section{Repository Structure}
 \begin{verbatim}
 FYP/
-├── googleARCore/samples/hello_ar_java/  # Android capture app
-│   └── app/src/main/java/.../
-│       ├── HelloArActivity.java         # Main AR activity
-│       ├── CaptureLogger.java           # Sensor data recording
-│       ├── QualityMonitor.java          # Live IQA analysis
-│       ├── CoverageMap.java             # Voxel coverage tracker
-│       ├── CoverageOverlayView.java     # Coverage dot overlay
-│       └── ProcessingActivity.java      # Upload + progress UI
-├── src/arcore3dgs/                      # Reconstruction pipeline
-│   ├── fallback.py                      # IMU tracking-gap recovery
-│   ├── prepare.py                       # Gyro-aware frame selection
-│   ├── sfm_colmap.py                    # COLMAP SfM + Sim3 alignment
-│   └── export_nerfstudio.py             # Nerfstudio data export
-├── server/                              # Processing server
-│   ├── main.py                          # FastAPI endpoints
-│   ├── pipeline.py                      # Local pipeline runner
-│   ├── runpod_client.py                 # RunPod GPU integration
-│   └── requirements.txt                 # Python dependencies
-├── .github/workflows/                   # CI/CD
-│   ├── ci.yml                           # Lint, test, build
-│   └── cd.yml                           # Deploy on push/tag
-├── scripts/
-│   ├── start_server.bat                 # Server launcher
-│   └── view_splat.bat                   # Model viewer launcher
-├── tests/                               # pytest unit tests
-├── docs/                                # Project documentation
-│   ├── Flow.md                          # System flow
-│   └── progress/
-│       ├── TODO.md                      # Development log
-│       ├── Training_Analysis.md         # Splat quality analysis
-│       └── Problems_and_Solutions.md    # Issue tracker
-└── .env                                 # API keys (gitignored)
+|-- googleARCore/samples/hello_ar_java/   Android capture app
+|   `-- app/src/main/java/.../helloar/
+|       |-- HelloArActivity.java          main AR activity, recording
+|       |-- CaptureLogger.java            sensor data recording
+|       |-- QualityMonitor.java           live IQA analysis
+|       |-- CoverageMap.java              voxel coverage tracker
+|       |-- CoverageOverlayView.java      coverage dot overlay
+|       |-- ProcessingActivity.java       upload + progress UI
+|       `-- GalleryActivity.java, ScanDetailActivity.java
+|-- src/arcore3dgs/                       reconstruction pipeline
+|   |-- fallback.py, imu.py               IMU tracking-gap bridging
+|   |-- relocalize_pnp.py                 post-gap re-alignment
+|   |-- prepare.py                        keyframe extraction (Laplacian)
+|   |-- select_sharp.py                   gyro-aware frame selection
+|   |-- sfm_colmap.py                     COLMAP SfM + Sim3 alignment
+|   |-- export_nerfstudio.py              Nerfstudio data export
+|   |-- mvs_init.py                       dense MVS initialisation
+|   |-- structure.py                      structural layer
+|   `-- fair_compare.py, fit_diag.py      evaluation tools
+|-- server/                               processing server
+|   |-- main.py                           FastAPI endpoints
+|   |-- pipeline.py                       Job model, local pipeline runner
+|   |-- runpod_client.py                  RunPod GPU integration
+|   `-- requirements.txt
+|-- .github/workflows/                    CI/CD
+|   |-- ci.yml                            lint, test, build
+|   |-- cd.yml                            build artefacts, releases
+|   `-- docker-gpu.yml                    GPU image
+|-- scripts/
+|   |-- start_server.bat                  server launcher
+|   `-- view_splat.bat                    model viewer launcher
+|-- tests/                                pytest suite (12 files)
+|-- prototype/web-ui/                     web UI prototype
+|-- docs/
+|   |-- Flow.md                           system flow
+|   `-- progress/
+|       |-- TODO.md                       development log
+|       |-- Training_Analysis.md          splat quality analysis
+|       `-- Problems_and_Solutions.md     problems and fixes
+`-- .env                                  API keys (gitignored)
 \end{verbatim}
 
 \section{Commit History Summary}
 
-The repository contains 40+ commits across all team members. Key commit categories:
+The repository contains 133 commits (\texttt{git shortlog -sne --all}): Muhammad Umair 85, Zaid Fareed 26, Muhammad Tayyab 20 (as ``BlazingBeam''), and 2 GitHub Actions bot commits. The counts reflect commit granularity rather than effort: Umair commits each small change, Tayyab commits whole pipeline stages in large batches. Owned modules are listed in Table~\ref{tab:responsibilities}. Key commit categories:
 
 \begin{itemize}
-    \item \textbf{Muhammad Umair}: ARCore capture features, pipeline scripts, server endpoints, RunPod integration, quality analysis, documentation.
-    \item \textbf{Zaid Fareed}: CI/CD workflows (ci.yml, cd.yml), pytest configuration, ruff setup, pull request template, repo hygiene checks.
-    \item \textbf{Muhammad Tayyab}: COLMAP experiment configurations, training parameter sweeps, documentation contributions.
+    \item \textbf{Muhammad Umair}: processing server, RunPod integration, upload and gallery screens, AR activity and coverage overlay work, web UI prototype, proposal, report and documentation.
+    \item \textbf{Zaid Fareed}: CI/CD workflows (\texttt{ci.yml}, \texttt{cd.yml}), APK checker, the pytest suite, pytest and ruff configuration, pull request template, trainer fixes and ARKitScenes experiments.
+    \item \textbf{Muhammad Tayyab}: reconstruction pipeline (\texttt{src/arcore3dgs/}), capture logging and live IQA in the app, training analysis, v3--v6 models, tape-measure validation and the structural layer.
 \end{itemize}
 
 \section{Branch Strategy}
