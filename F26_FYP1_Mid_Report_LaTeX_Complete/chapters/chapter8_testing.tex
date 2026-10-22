@@ -163,9 +163,9 @@ D-5 & Barrel distortion visible at frame edges & ARCore intrinsics lack lens dis
 \end{longtable}
 
 \section{Current Validation Status}
-All Iteration~1 acceptance criteria are met:
+Status of the Iteration~1 acceptance criteria (core pipeline complete, refinement ongoing):
 \begin{itemize}
-    \item \checkmark\ Reconstruction quality: PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85 on both test rooms.
+    \item \checkmark\ Reconstruction quality: v6 scores 26.52\,dB / 0.8886 on the first room ($\geq$25\,dB, $\geq$0.85). Second room: SSIM 0.91; PSNR not yet measured.
     \item \checkmark\ Metric accuracy: mean 0.19\%, worst case 0.29\% against the 5\% target (Table~\ref{tab:tape}).
     \item Processing time: \textit{not yet verified}. Measured $\sim$75\,min on RTX 3070; the $<$35\,min RTX 4090 target (NFR-P1) is projected and not yet measured.
     \item \checkmark\ Pod lifecycle: Guaranteed termination verified in all code paths.

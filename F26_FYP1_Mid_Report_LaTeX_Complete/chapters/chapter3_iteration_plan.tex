@@ -25,7 +25,7 @@ No. & Feedback / Required Change & Action Taken & Status & Evidence \\
 We follow a two-iteration strategy aligned with FYP-1 and FYP-2:
 
 \begin{itemize}
-    \item \textbf{Iteration 1 (FYP-1, Weeks 1--8)}: Complete model implementation---capture app, reconstruction pipeline, processing server, cloud GPU integration, and validated end-to-end system. Deliverables: working Android APK, FastAPI server, RunPod integration, metric-accurate 3D reconstruction.
+    \item \textbf{Iteration 1 (FYP-1, Weeks 1--8)}: Core model implementation---capture app, reconstruction pipeline, processing server, cloud GPU integration, validated on real recordings. Status at mid-evaluation: \emph{core pipeline complete, refinement ongoing}. Deliverables: working Android APK, FastAPI server, RunPod integration, metric-accurate 3D reconstruction.
     \item \textbf{Iteration 2 (FYP-2, Weeks 9--16)}: Optimization, performance tuning, and feature enrichment. Deliverables: reduced processing time, pipeline robustness improvements, Three.js web viewer with measurement tools, structural layer and floor plans, field validation on multiple rooms.
 \end{itemize}
 
@@ -58,30 +58,32 @@ We follow a two-iteration strategy aligned with FYP-1 and FYP-2:
 ARCore capture app & Umair, Zaid & Complete \\
 Live IQA + coverage overlay & Umair & Complete \\
 Upload UI (ProcessingActivity) & Umair & Complete \\
-Reconstruction pipeline (SfM) & Umair, Tayyab & Complete \\
-3DGS training \& analysis & Umair, Tayyab & Complete \\
+Reconstruction pipeline (SfM) & Umair, Tayyab & Core complete; refinement ongoing \\
+3DGS training \& analysis & Umair, Tayyab & Refinement ongoing \\
 FastAPI processing server & Umair & Complete \\
 RunPod cloud GPU integration & Umair & Complete \\
 CI/CD (GitHub Actions) & Zaid & Complete \\
 Unit tests (pytest) & Zaid & Complete \\
 Pipeline optimization (FYP-2) & Umair, Tayyab & Planned \\
 Web viewer (FYP-2) & Zaid, Tayyab & Planned \\
+3D mesh creation & Team & Planned; not yet scheduled \\
 Structural layer (\texttt{structure.py}) & Tayyab & Prototype; completion FYP-2 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \section{Progress Against Plan}
-All Iteration~1 milestones have been met:
+The core-pipeline milestones of Iteration~1 have been met; refinement is ongoing:
 \begin{itemize}
     \item \textbf{Week 1--2}: ARCore capture app with basic recording $\rightarrow$ \textit{Completed}.
     \item \textbf{Week 3--4}: COLMAP SfM pipeline with ARCore Sim3 alignment $\rightarrow$ \textit{Completed}. Also resolved root causes of poor reconstruction quality (tracking gaps, lens distortion, degenerate splats).
     \item \textbf{Week 5--6}: Live IQA, coverage overlay, quality improvements (gyro-aware frame selection, MVS initialization) $\rightarrow$ \textit{Completed}.
     \item \textbf{Week 7--8}: Processing server, RunPod integration, upload UI, CI/CD $\rightarrow$ \textit{Completed}.
+    \item \textbf{Open items}: 3DGS refinement, 3D mesh creation, completion of the structural layer, and the web workspace.
 \end{itemize}
 
 \section{Delays, Deviations and Recovery Plan}
 \begin{itemize}
     \item \textbf{Deviation}: We initially built a custom training script (\texttt{train.py}) with depth supervision, flattening regularization, and pose refinement. After extensive analysis (documented in \texttt{Training\_Analysis.md}), we found this produced worse results than standard splatfacto. We pivoted to using splatfacto for training and keeping our custom preprocessing. This analysis consumed approximately 2 weeks but resulted in a better-informed design decision.
-    \item \textbf{Recovery}: No recovery plan needed---Iteration 1 deliverables are complete and on schedule.
+    \item \textbf{Recovery}: The core pipeline is in place, but Iteration~1 is not finished: 3DGS refinement, 3D mesh creation, completion of the structural layer, and the web workspace remain open. The training analysis cost about two weeks. FYP-2 therefore starts with the one-command v6 pipeline and the processing-time reduction, and schedules the structural layer and web workspace in Iterations~2a--2b. 3D mesh creation is in scope but not yet scheduled.
 \end{itemize}

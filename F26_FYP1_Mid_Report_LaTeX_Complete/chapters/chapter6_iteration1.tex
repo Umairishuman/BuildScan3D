@@ -30,7 +30,7 @@ Implementation was carried out in Java (Android app) and Python (server and pipe
 
 \section{Completed Features / Module}
 
-\paragraph{Android Capture App (complete):}
+\paragraph{Android Capture App (implemented):}
 \begin{itemize}
     \item 30\,FPS video recording with per-frame pose, tracking state, feature points, depth, quality metrics, and device metadata.
     \item Live IQA with colour-coded banner: tracking lost (red), moving too fast (orange), blurry (yellow), too dark (yellow), low texture (yellow).
@@ -43,7 +43,7 @@ Implementation was carried out in Java (Android app) and Python (server and pipe
     \item Performance optimization: recording fast-path skips all demo rendering.
 \end{itemize}
 
-\paragraph{Processing Server (complete):}
+\paragraph{Processing Server (implemented):}
 \begin{itemize}
     \item FastAPI with endpoints: \texttt{POST /upload}, \texttt{GET /status/\{id\}}, \texttt{GET /jobs}, \texttt{GET /download/\{id\}}, \texttt{GET/POST /config}, \texttt{GET /health}.
     \item Local and RunPod processing modes switchable at runtime.
@@ -52,7 +52,7 @@ Implementation was carried out in Java (Android app) and Python (server and pipe
     \item \texttt{.env} file support for API key management.
 \end{itemize}
 
-\paragraph{Reconstruction Pipeline (complete):}
+\paragraph{Reconstruction Pipeline (core complete, refinement ongoing):}
 \begin{itemize}
     \item IMU-bridged tracking-gap recovery (\texttt{fallback.py}).
     \item Gyro-aware sharp frame selection (\texttt{prepare.py} using per-frame exposure metadata).
@@ -62,7 +62,7 @@ Implementation was carried out in Java (Android app) and Python (server and pipe
     \item Model export to \texttt{splat.ply}.
 \end{itemize}
 
-\paragraph{CI/CD (complete):}
+\paragraph{CI/CD (implemented):}
 \begin{itemize}
     \item GitHub Actions CI: Python lint (ruff) + unit tests (pytest, 3 Python versions), web UI build, Android APK build, repo hygiene (file size, secrets, workflow lint).
     \item GitHub Actions CD: on push to master, full CI gate $\rightarrow$ web bundle + APK artifacts; on version tag, GitHub Release.
@@ -128,11 +128,19 @@ The following can be demonstrated live:
 \end{enumerate}
 
 \section{Iteration Outcome}
-Iteration~1 is \textbf{complete}. All planned features are implemented and validated:
+Iteration~1 status: \textbf{core pipeline complete, refinement ongoing}. Results so far:
 \begin{itemize}
     \item Reconstruction quality clears the 25\,dB PSNR acceptance bar: the current best model (v6) scores 26.52\,dB PSNR / 0.8886 SSIM on 42 held-out frames that no model was trained on.
     \item Metric accuracy: tape-measure mean error 4.8\,mm (0.19\%), worst case 0.29\%, against a 5\% target.
     \item Processing time is approximately 75 minutes measured on the local RTX 3070 (matching 23, mapping 6, training 45\,min). The FYP-2 target is under 35 minutes on an RTX 4090 (RunPod); this is a projection and has not yet been measured.
     \item The app provides live quality guidance and coverage visualization.
     \item The server supports both local and cloud GPU processing with automatic lifecycle management.
+\end{itemize}
+
+Open items (the FYP-2 schedule for all but mesh creation is in the Remaining FYP Plan chapter):
+\begin{itemize}
+    \item \textbf{3DGS refinement}: make the v6 recipe the one-command pipeline, validate it on the second room, and model the remaining motion blur.
+    \item \textbf{3D mesh creation}: in scope as planned work; not yet scheduled.
+    \item \textbf{Structural layer completion}: wall-to-wall dimensions, doors and openings, ceiling-height detection, floor-plan export.
+    \item \textbf{Web workspace}: browser viewer with 1:1 measurement.
 \end{itemize}
