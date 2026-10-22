@@ -74,7 +74,27 @@ Implementation was carried out in Java (Android app) and Python (server and pipe
 
 \paragraph{Pose-to-video synchronization (\texttt{CaptureLogger.java}):} ARCore's recording API writes video and poses from the same frames, but poses are only logged during \texttt{TRACKING} state, creating gaps. The pipeline interpolates poses at each frame's PTS (linear position, slerp rotation) and skips frames inside tracking gaps $> 0.12$\,s.
 
-\paragraph{Sim3 metric alignment (\texttt{sfm\_colmap.py}):} COLMAP's global mapper produces an arbitrary-scale coordinate system. We compute a 7-DOF similarity transform (rotation + translation + scale) from matched COLMAP and ARCore camera positions using RANSAC (2{,}000 four-point samples, 10\,cm inlier threshold) followed by a Umeyama refit on the inliers; the inlier median residual is about 2.5\,cm. Because ARCore re-anchors silently, only its largest self-consistent segment ends up as inliers. Frames that jump more than 30\,cm from their temporal neighbours are dropped as SfM mis-registrations. The resulting metric scale is validated against a tape measure (Table~\ref{tab:tape}).
+\paragraph{Sim3 metric alignment (\texttt{sfm\_colmap.py}):} COLMAP's global mapper produces an arbitrary-scale coordinate system. We compute a 7-DOF similarity transform (rotation + translation + scale) from matched COLMAP and ARCore camera positions using RANSAC (2{,}000 four-point samples, 10\,cm inlier threshold) followed by a Umeyama refit on the inliers; the inlier median residual is about 2.5\,cm. Because ARCore re-anchors silently, only its largest self-consistent segment ends up as inliers. Frames that jump more than 30\,cm from their temporal neighbours are dropped as SfM mis-registrations. The resulting metric scale is validated against a tape measure (Table~\ref{tab:tape}). Figure~\ref{fig:sim3} shows the steps.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\footnotesize, >=latex,
+  box/.style={draw, rectangle, rounded corners=2pt, align=center, text width=4.0cm, inner sep=3pt, minimum height=0.9cm}]
+  \node[box] (colmap) at (-4.3,2.2) {\textbf{COLMAP camera centres}\\arbitrary scale and frame};
+  \node[box] (arcore) at (4.3,2.2)  {\textbf{Raw ARCore camera centres}\\metres, gravity-aligned};
+  \node[box, text width=6.0cm] (ransac) at (0,0.4) {\textbf{RANSAC}: 2{,}000 random 4-point samples, Umeyama fit each, inlier if residual $<$ 10\,cm};
+  \node[box, text width=6.0cm] (refit)  at (0,-1.3) {\textbf{Umeyama refit} on the largest inlier set $\rightarrow$ scale $s$, rotation $R$, translation $t$};
+  \node[box, text width=6.0cm] (apply)  at (0,-3.0) {Apply $(s, R, t)$ to every registered frame; drop frames $>$ 30\,cm from their temporal neighbours};
+  \node[draw, very thick, rectangle, rounded corners=2pt, inner sep=4pt] (out) at (0,-4.5) {metric, Sim3-aligned \texttt{frames.json}};
+  \draw[->] (colmap.south) -- (ransac.north west);
+  \draw[->] (arcore.south) -- (ransac.north east);
+  \draw[->] (ransac) -- (refit);
+  \draw[->] (refit) -- (apply);
+  \draw[->] (apply) -- (out);
+\end{tikzpicture}
+\caption{Sim3 alignment of the COLMAP reconstruction to ARCore's metric frame (\texttt{sfm\_colmap.py}, export stage; Umeyama fit unit-tested in \texttt{test\_relocalize\_and\_sfm.py}). Because ARCore re-anchors silently, only its largest self-consistent segment ends up as inliers. Inlier median residual: about 2.5\,cm. The resulting scale is validated against a tape measure (Table~\ref{tab:tape}).}
+\label{fig:sim3}
+\end{figure}
 
 \paragraph{Recording fast-path (\texttt{HelloArActivity.java}):} During recording, the \texttt{onDrawFrame()} method exits early after camera feed rendering and quality overlay (at 2\,Hz). All plane detection rendering, virtual object placement, PBR lighting, cubemap filtering, and tap handling are skipped, reducing GL thread load significantly.
 
@@ -110,6 +130,48 @@ On a real recording, all three heading jumps were detected, and re-alignment cut
 
     \item \textbf{Degenerate splat diagnosis}: Computed per-model statistics (thickness/width median, opacity histogram, splat count) and compared against reference implementations. Identified flattening regularizer $\times$ Adam interaction as the primary cause of zero-thickness splats.
 \end{enumerate}
+
+Figure~\ref{fig:coverage} illustrates the coverage map.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\footnotesize, >=latex]
+  % voxel grid (illustrative colouring)
+  \node[font=\small\bfseries] at (-4.0,2.4) {Voxels (10\,cm)};
+  \begin{scope}[shift={(-6.0,-1.0)}]
+    \foreach \x/\y/\col in {0/0/red, 1/0/yellow, 2/0/green, 3/0/green,
+                            0/1/red, 1/1/red, 2/1/yellow, 3/1/green,
+                            1/2/red, 2/2/yellow, 3/2/yellow} {
+      \fill[\col!70] (0.9*\x,0.9*\y) rectangle ++(0.9,0.9);
+    }
+    \draw[step=0.9] (0,0) grid (3.6,2.7);
+  \end{scope}
+  % direction bins of one voxel
+  \node[font=\small\bfseries, align=center] at (2.6,2.4) {Direction bins of one voxel};
+  \node[font=\scriptsize] at (0.9,1.6) {upper elevation};
+  \node[font=\scriptsize] at (4.3,1.6) {lower elevation};
+  \foreach \a/\b in {0/45, 45/90, 90/135, 135/180, 180/225} {
+    \fill[green!60] (0.9,0) -- ++(\a:1.0) arc (\a:\b:1.0) -- cycle;
+  }
+  \foreach \a in {0,45,90,135,180,225,270,315} {
+    \draw (0.9,0) -- ++(\a:1.0);
+    \draw (4.3,0) -- ++(\a:1.0);
+  }
+  \draw (0.9,0) circle (1.0);
+  \draw (4.3,0) circle (1.0);
+  \node[font=\scriptsize, align=center, text width=6cm] at (2.6,-1.6) {5 of 16 bins observed (8 azimuth $\times$ 2 elevation) $\rightarrow$ green};
+  % legend
+  \fill[red!70] (-6.0,-2.6) rectangle ++(0.4,0.4);
+  \node[anchor=west, font=\scriptsize] at (-5.5,-2.4) {1 direction};
+  \fill[yellow!70] (-3.8,-2.6) rectangle ++(0.4,0.4);
+  \node[anchor=west, font=\scriptsize] at (-3.3,-2.4) {2--3 directions};
+  \fill[green!70] (-1.2,-2.6) rectangle ++(0.4,0.4);
+  \node[anchor=west, font=\scriptsize] at (-0.7,-2.4) {$\geq$4 directions};
+  \node[anchor=west, font=\scriptsize] at (1.8,-2.4) {unmapped: no dot};
+\end{tikzpicture}
+\caption{Live coverage map (\texttt{CoverageMap.java}, \texttt{CoverageOverlayView.java}). ARCore raw depth (5\,Hz, confidence $\geq$128, up to 5\,m) is accumulated in 10\,cm voxels; each voxel records from which of 16 directions it was seen. Visible voxels are drawn as dots, coloured by direction count, with at most 5{,}000 voxels projected and 2{,}000 dots drawn, refreshed at 2\,Hz. The grid colouring is illustrative.}
+\label{fig:coverage}
+\end{figure}
 
 \section{Tools, Frameworks and Technologies}
 
