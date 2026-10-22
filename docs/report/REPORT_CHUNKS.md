@@ -2504,6 +2504,17 @@ Processing time: End-to-end pipeline <35 min on RTX 4090 (projected target; curr
 Cross-browser: Verify viewer on Chrome, Firefox, and Edge.
 
 rewrite:
+Measurement accuracy: Compare point-to-point measurements in the web viewer against tape-measure ground truth on >=5 rooms of varying size and geometry. Target: error within 5% of tape measure, extending the current four-measurement evidence (mean 0.19%) to more rooms.
+
+Structural layer: For each test room, compare extracted wall lengths against tape measure (target: within 5%) and the detected doors against a manual count.
+
+Web viewer performance: Maintain >=30 FPS on a mid-range laptop (integrated GPU) for models up to 2 million splats.
+
+Usability testing: Task completion rate >=90% for first-time users performing capture, viewing, and measurement tasks.
+
+Processing time: End-to-end pipeline <35 min on RTX 4090 (projected target; currently 75 min measured on RTX 3070). Benchmark each optimization individually.
+
+Cross-browser: Verify viewer on Chrome, Firefox, and Edge.
 
 
 ---
