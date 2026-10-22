@@ -134,3 +134,23 @@ The main design diagrams are in the body of the report: the use case diagram (Fi
 \caption{Live coverage map (\texttt{CoverageMap.java}, \texttt{CoverageOverlayView.java}). ARCore raw depth (5\,Hz, confidence $\geq$128, up to 5\,m) is accumulated in 10\,cm voxels; each voxel records from which of 16 directions it was seen. Visible voxels are drawn as dots, coloured by direction count, with at most 5{,}000 voxels projected and 2{,}000 dots drawn, refreshed at 2\,Hz. The grid colouring is illustrative.}
 \label{fig:coverage}
 \end{figure}
+
+\section{Capture Application in Use}
+
+Figure~\ref{fig:appcapture} shows the capture app recording, with the quality and
+coverage features of Figure~\ref{fig:coverage} running live on the phone.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[height=0.62\textheight]{ThesisFigs/app-capture}
+\caption{The Android capture app mid-recording on the realme device. The header
+confirms the capture format (1920$\times$1080 at 30\,FPS, FR-M1). The green banner is
+the live IQA verdict from \texttt{QualityMonitor.java}; the row beneath it reports
+coverage state from \texttt{CoverageMap.java} --- ceiling and floor not yet seen, and
+the current voxel observed from 1 of 8 azimuth directions. The red and yellow dots are
+the coverage overlay drawn by \texttt{CoverageOverlayView.java}: red marks surfaces seen
+from a single direction, yellow from two or three. The elapsed-time counter and the stop
+control complete the recording UI, and ``Searching for surfaces'' is ARCore still
+building its plane estimate early in the session.}
+\label{fig:appcapture}
+\end{figure}

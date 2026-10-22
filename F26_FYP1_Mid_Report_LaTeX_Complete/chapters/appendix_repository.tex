@@ -39,14 +39,32 @@ The repository contains 133 commits (\texttt{git shortlog -sne --all}): Muhammad
     \item \textbf{Muhammad Tayyab}: reconstruction pipeline (\texttt{src/arcore3dgs/}), capture logging and live IQA in the app, training analysis, v3--v6 models, tape-measure validation and the structural layer.
 \end{itemize}
 
+\section{Repository Overview}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{ThesisFigs/repo-overview}
+\caption{Repository root on GitHub. The contributor list confirms the three team members and the GitHub handles used in the commit history: \texttt{Umairishuman} (Muhammad Umair), \texttt{BlazingBeam} (Muhammad Tayyab) and \texttt{Zaid-fareed} (Zaid Fareed). The top-level layout matches Table~\ref{tab:repo}.}
+\label{fig:repooverview}
+\end{figure}
+
 \section{Branch Strategy}
 \begin{itemize}
-    \item \texttt{master}: Stable, CI-passing code. All merges go through pull requests.
-    \item Feature branches (e.g., \texttt{ci/github-actions}): Short-lived branches for specific work items, merged via PR with CI checks.
+    \item \texttt{master}: the integration branch, and the default branch.
+    \item Feature branches (e.g.\ \texttt{ci/github-actions}, \texttt{ci/pipeline-updates}, \texttt{exp/trainer-arkitscenes}): short-lived branches for specific work items.
+    \item Branches are merged locally rather than through pull requests. The pull request template exists and CI runs on feature branches, but the merges themselves were not raised as PRs, so the ``Pull request'' column in Figure~\ref{fig:repobranches} is empty. Adopting PR-based merges is an action for FYP-2.
 \end{itemize}
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{ThesisFigs/repo-branches}
+\caption{Branch list with each branch's check status and its ahead/behind count against \texttt{master}. Feature branches carry passing checks; the failing status on \texttt{master} is the hygiene job described in Section~\ref{sec:cicdevidence}.}
+\label{fig:repobranches}
+\end{figure}
+
 \section{CI/CD Evidence}
-The GitHub Actions CI pipeline runs on every push and pull request:
+\label{sec:cicdevidence}
+The GitHub Actions CI pipeline runs on pushes to non-\texttt{master} branches and on pull requests; direct pushes to \texttt{master} are covered by the CD workflow instead.
 \begin{enumerate}
     \item \textbf{Python checks}: ruff lint + pytest on Python 3.10, 3.11, 3.12.
     \item \textbf{Web build}: Node.js build of the web UI (placeholder for FYP-2).
@@ -55,6 +73,20 @@ The GitHub Actions CI pipeline runs on every push and pull request:
 \end{enumerate}
 
 The CD pipeline triggers on push to master (build artifacts) and on version tags (GitHub Release with APK and web bundle).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{ThesisFigs/repo-actions}
+\caption{GitHub Actions run history. CI passes on the feature branches; the failing runs on \texttt{master} are the CD workflow's hygiene job, which rejects a tracked \texttt{.env}. That file has since been untracked and ignored, and the key it held must still be rotated (NFR-S2, recorded as not met).}
+\label{fig:repoactions}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{ThesisFigs/repo-tags}
+\caption{Release tags produced by the CD workflow. Each version tag builds a GitHub Release carrying the signed APK and the web bundle, so every tagged build is reproducible from its commit.}
+\label{fig:repotags}
+\end{figure}
 
 \section{Task Tracking}
 Development progress is tracked in \texttt{docs/progress/TODO.md}, which serves as the project's task log with dated entries, status markers, and links to relevant commits and analysis documents.
