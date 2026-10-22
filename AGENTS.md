@@ -12,9 +12,9 @@
 ## 3. FYP Defense Architecture
 - **Stage 1 (Mobile)**: CameraX / ARCore (Android) & ARKit (iOS) capturing 30 FPS video + 120Hz IMU telemetry (`poses.csv` and `points.csv`).
 - **Stage 2 (Pose Prior)**: `build_transforms.py` quaternion to $3 \times 3$ SO(3) matrix conversion + OpenGL to OpenCV/Nerfstudio coordinate alignment (`transforms.json` and `points3D.ply`).
-- **Stage 3 (3DGS)**: Nerfstudio `splatfacto` 3D Gaussian Splatting trained in < 5 minutes on Cloud GPU (NVIDIA RTX 4090).
-- **Stage 4 (Semantic AI)**: YOLOv8-Seg 2D segmentation masks projected to 3D point cloud for MEP systems (Pipes, Conduits, HVAC).
-- **Stage 5 (Web Workspace)**: Three.js / WebGPU rendering with 1:1 metric measurements and semantic system toggles.
+- **Stage 3 (3DGS)**: COLMAP SfM (image-based poses, lens self-calibration, Sim3 to ARCore scale) + Nerfstudio `splatfacto` 3D Gaussian Splatting. Measured end-to-end ~75 min on an RTX 3070; FYP-2 target under 35 min on a cloud RTX 4090 (projection, not yet measured).
+- **Stage 4 (Structural Layer)**: `structure.py` rebuilds the room shell next to the splat model: floor and wall planes, corners, wall lengths, door/opening detection. Basis for automatic floor plans and 1:1 metric measurement. (MEP semantic segmentation is out of scope.)
+- **Stage 5 (Web Workspace)**: Three.js / WebGPU rendering with 1:1 metric measurements, wall snapping and a floor-plan view.
 
 ## 4. Git & Commit Conventions
 - **No AI attribution in commits.** Do NOT add `Co-Authored-By: Claude ...`, `Generated with Claude Code`, or any similar AI attribution trailer to commit messages or pull request descriptions. Commits are authored by the student team only.

@@ -1,4 +1,5 @@
 \chapter{Project Management and Development Evidence}
+\label{ch:evidence}
 
 \section{Work Completed}
 \begin{enumerate}
@@ -15,27 +16,31 @@
 \begin{enumerate}
     \item \textbf{Web viewer}: Three.js/WebGPU Gaussian splat viewer with orbit controls and measurement tools.
     \item \textbf{Measurement tool}: Point-to-point distance measurement in the metric 3D model.
-    \item \textbf{Semantic AI}: YOLOv8-Seg 2D segmentation of MEP components (pipes, conduits, HVAC) projected to 3D point cloud.
-    \item \textbf{Semantic toggles}: System-level visibility controls (show/hide pipes, conduits, HVAC) in the web viewer.
+    \item \textbf{Structural layer}: Complete \texttt{structure.py}: wall-to-wall dimensions, doors and openings, ceiling-height detection, and automatic floor-plan export.
+    \item \textbf{Wall snapping}: Measurement clicks that snap to structural-layer walls, and a floor-plan view in the web viewer.
+    \item \textbf{3DGS refinement}: One-command v6 pipeline, validation on the second room, and IMU-driven motion-blur modelling.
+    \item \textbf{3D mesh creation}: In scope as planned work; not yet scheduled.
     \item \textbf{Field validation}: Metric accuracy validation on $\geq$3 additional rooms with varied geometry.
     \item \textbf{User testing}: Usability evaluation with external users (non-team members).
 \end{enumerate}
 
 \section{Individual Responsibilities}
 
+The primary evidence of each member's contribution is the set of modules they own: the files whose commit history carries their name (\texttt{git log -- <file>}). Table~\ref{tab:responsibilities} lists them.
+
 \begin{table}[h]
 \centering
-\caption{Individual responsibilities and contributions}
+\caption{Owned modules per team member (from the commit history of each file)}
 \label{tab:responsibilities}
-\begin{tabular}{p{3.5cm}p{7.5cm}}
+\begin{tabular}{p{3.2cm}p{9.3cm}}
 \toprule
-\textbf{Team Member} & \textbf{Responsibilities} \\
+\textbf{Team Member} & \textbf{Owned modules} \\
 \midrule
-Muhammad Umair (23I-0662) & Project lead. ARCore capture app (IQA, coverage overlay, upload UI). Reconstruction pipeline (SfM, Sim3 alignment, splatfacto integration). FastAPI server. RunPod cloud GPU integration. Root-cause analysis of degenerate splats. \\
+Muhammad Umair (23I-0662) & Processing server: \texttt{server/main.py}, \texttt{pipeline.py}, \texttt{runpod\_client.py}, \texttt{remote\_gpu.py}. Android upload and app screens: \texttt{ProcessingActivity}, \texttt{ScanDetailActivity}, \texttt{UpdateChecker}; co-author of \texttt{HelloArActivity}, \texttt{CoverageMap}, \texttt{CoverageOverlayView}, \texttt{QualityMonitor}. Web UI prototype (\texttt{prototype/}). GPU Docker workflow; co-author of the CD workflow. Server and job scripts (\texttt{scripts/}). Proposal, report and project documentation. \\
 \midrule
-Zaid Fareed (23I-0829) & Android app co-development (ARCore session, recording controls). CI/CD pipeline (GitHub Actions workflows, ruff, pytest). Unit test suite. Pull request template and repo hygiene. \\
+Zaid Fareed (23I-0829) & CI/CD: \texttt{ci.yml}, \texttt{cd.yml}, APK/manifest checker (\texttt{.github/android/}), \texttt{ruff.toml}, \texttt{pytest.ini}, pull request template. The whole pytest suite (\texttt{tests/}, all 12 files and \texttt{conftest.py}). Trainer experiments and fixes (\texttt{train.py} checkpoints and depth loss, \texttt{mvs.py}), ARKitScenes trainer experiments (\texttt{docs/Experiments\_ARKitScenes.md}). CI/CD documentation. \\
 \midrule
-Muhammad Tayyab (23I-0636) & Reconstruction pipeline co-development (COLMAP experiments, training configurations). 3DGS training analysis and parameter tuning. Documentation. \\
+Muhammad Tayyab (23I-0636) & Reconstruction pipeline (\texttt{src/arcore3dgs/}): \texttt{fallback.py}, \texttt{imu.py}, \texttt{relocalize\_pnp.py}, \texttt{prepare.py}, \texttt{select\_sharp.py}, \texttt{ba.py}, \texttt{sfm\_colmap.py}, \texttt{export\_nerfstudio.py}, \texttt{mvs\_init.py}, \texttt{structure.py}, evaluation tools (\texttt{fair\_compare.py}, \texttt{fit\_diag.py}, \texttt{diagnose.py}). Capture logging and live IQA in the app: \texttt{CaptureLogger}, \texttt{QualityMonitor}; co-author of \texttt{HelloArActivity} and the coverage overlay. Training analysis (\texttt{Training\_Analysis.md}), tape-measure validation and second-room evaluation. \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -43,22 +48,25 @@ Muhammad Tayyab (23I-0636) & Reconstruction pipeline co-development (COLMAP expe
 \section{Contribution of Each Team Member}
 
 \paragraph{Muhammad Umair (23I-0662):}
-Led the system architecture, implemented the majority of the Android capture features (CaptureLogger, QualityMonitor, CoverageMap, CoverageOverlayView, ProcessingActivity), the complete server backend (FastAPI, RunPod client), and the SfM pipeline (sfm\_colmap.py, export\_nerfstudio.py, fallback.py). Conducted the root-cause analysis of degenerate splat geometry and made the decision to adopt splatfacto.
+Project lead. Built the processing server (FastAPI endpoints, job model with per-step timeouts, local pipeline runner) and the RunPod integration (pod creation, SSH readiness, remote pipeline, termination in \texttt{finally} blocks). Built the app's upload and progress screen and the scan gallery/detail screens, worked on the main AR activity and coverage overlay, built the web UI prototype, and wrote the proposal and report.
 
 \paragraph{Zaid Fareed (23I-0829):}
-Built the CI/CD infrastructure (ci.yml, cd.yml, pytest.ini, ruff.toml), wrote unit tests, co-developed the ARCore capture session and recording controls, and established the pull request workflow with automated checks.
+Built the CI/CD infrastructure (lint, test and build workflows on three Python versions, Android build and signing checks, repository hygiene, releases) and wrote the entire automated test suite that backs the ``Pass (CI)'' results in Chapter~\ref{ch:testing}. Also contributed trainer fixes and the ARKitScenes trainer experiments.
 
 \paragraph{Muhammad Tayyab (23I-0636):}
-Worked on COLMAP pipeline experiments (varying feature types, matching strategies, mapper configurations), 3DGS training parameter sweeps (learning rates, regularization weights, initialization strategies), and contributed to project documentation.
+Built the reconstruction pipeline: IMU fallback and re-alignment, keyframe and gyro-aware frame selection, bundle adjustment, the COLMAP SfM stage with Sim3 metric alignment, dense MVS initialisation, the structural layer, and the evaluation tools. Wrote the app's capture logging and live IQA, ran the training analysis, and produced the v6 model, the tape-measure validation and the second-room result.
+
+\paragraph{Commit counts.}
+The repository has \textbf{133} commits: Muhammad Umair 85, Zaid Fareed 26, Muhammad Tayyab 20 (committing as ``BlazingBeam''), and 2 automated commits by the GitHub Actions bot. \textbf{These counts reflect differing commit granularity, not differing effort.} Umair commits each small change separately; Tayyab works in large batches, so a single commit of his often carries a whole pipeline stage (for example, the commit that introduced image-based SfM poses and lens self-calibration, or the one that introduced gyro-aware frames, dense MVS initialisation and the structural layer). The owned modules above, not the commit counts, are the evidence of contribution.
 
 \section{Repository and Version Control Evidence}
 The project repository is hosted on GitHub. Key statistics:
 \begin{itemize}
     \item \textbf{Repository}: \texttt{github.com/Umairishuman/FYP} (private)
-    \item \textbf{Branches}: \texttt{master} (stable), feature branches for each work item
-    \item \textbf{Commit history}: 40+ commits across all team members
-    \item \textbf{Pull requests}: Feature branches merged via pull requests with CI checks
-    \item \textbf{Code review}: Pull request template enforces area checkboxes and testing checklist
+    \item \textbf{Branches}: \texttt{master} (stable) and work branches such as \texttt{ci/github-actions}, \texttt{ci/pipeline-updates} and \texttt{exp/trainer-arkitscenes}
+    \item \textbf{Commit history}: 133 commits (85 / 26 / 20, plus 2 bot commits)
+    \item \textbf{CI}: GitHub Actions runs lint, tests and builds on work branches and pull requests
+    \item \textbf{Code review}: Pull request template with area checkboxes and a testing checklist
 \end{itemize}
 
 \section{Milestones and Commit Evidence}
@@ -67,16 +75,16 @@ The project repository is hosted on GitHub. Key statistics:
 \centering
 \caption{Key milestones with commit evidence}
 \label{tab:milestones}
-\begin{tabular}{p{2.5cm}p{5cm}p{3.5cm}}
+\begin{tabular}{p{2.5cm}p{5cm}p{4cm}}
 \toprule
 \textbf{Milestone} & \textbf{Description} & \textbf{Evidence} \\
 \midrule
-M1: Capture & ARCore recording with pose/depth logging & Commits by Umair, Zaid \\
-M2: Pipeline & COLMAP SfM + splatfacto training & Commits by Umair, Tayyab \\
-M3: Quality & IQA, coverage overlay, gyro-aware selection & Commits by Umair \\
-M4: Server & FastAPI + RunPod integration & Commits by Umair \\
-M5: CI/CD & GitHub Actions workflows & Commits by Zaid \\
-M6: Validation & Quality metrics on two rooms & Documented in TODO.md \\
+M1: Capture & ARCore recording with pose/depth/IMU logging & Commits by Tayyab, Umair \\
+M2: Pipeline & IMU fallback, COLMAP SfM, splatfacto training & Commits by Tayyab; trainer fixes by Zaid \\
+M3: Quality & Live IQA, coverage overlay, gyro-aware selection & IQA and selection by Tayyab; coverage overlay by Umair and Tayyab \\
+M4: Server & FastAPI + RunPod integration, upload UI & Commits by Umair \\
+M5: CI/CD & GitHub Actions workflows, test suite & Commits by Zaid; workflow merges by Umair \\
+M6: Validation & v3--v6 results, tape measure, second room & Commits by Tayyab; numbers in \texttt{docs/progress/} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -91,11 +99,11 @@ In compliance with university policy, we disclose the use of the following AI-as
 \centering
 \caption{AI and automated tools used during development}
 \label{tab:aitools}
-\begin{tabular}{p{3cm}p{4cm}p{4cm}}
+\begin{tabular}{p{3cm}p{4cm}p{5cm}}
 \toprule
 \textbf{Tool} & \textbf{Usage} & \textbf{Scope / Boundaries} \\
 \midrule
-Claude (Anthropic) & Code assistance, debugging, documentation drafting & Used for boilerplate generation, error diagnosis, and report drafting. All generated code was reviewed, tested, and modified by team members before integration. \\
+Claude Code (Anthropic) & Agentic coding assistant, used in local and cloud sessions & Code generation and refactoring, debugging and error diagnosis, CI/CD workflow changes (some commits carry a \texttt{Co-Authored-By: Claude} trailer), project documentation, drafting of this report, and the correction pass on this report after supervisor review (checking every figure against \texttt{docs/progress/} and the team's decisions, rewriting the test and meeting sections, and drawing the TikZ diagrams). All output was reviewed, tested and edited by team members, who remain responsible for it. \\
 GitHub Copilot & Inline code completion & Used for auto-completion in Android Studio and VS Code. All suggestions were reviewed before acceptance. \\
 ChatGPT (OpenAI) & Research queries, algorithm explanations & Used to understand COLMAP parameters, quaternion math, and coordinate system conventions. No code directly copied. \\
 \bottomrule
@@ -103,7 +111,7 @@ ChatGPT (OpenAI) & Research queries, algorithm explanations & Used to understand
 \end{table}
 
 \paragraph{Statement of originality:}
-All core algorithms (Sim3 alignment, gyro-aware frame selection, coverage map, IQA pipeline, RunPod lifecycle management) were designed and implemented by the team. AI tools were used as assistants for code generation, debugging, and explanation---not as primary authors. The system architecture, experimental methodology, root-cause analysis, and design decisions are entirely our own work. All AI-generated code was reviewed, understood, tested, and adapted by team members before integration into the codebase.
+All core algorithms (Sim3 alignment, gyro-aware frame selection, coverage map, IQA pipeline, RunPod lifecycle management) were designed by the team. AI tools were used as assistants for code generation, debugging, explanation and report drafting, as disclosed in Table~\ref{tab:aitools}. The system architecture, experimental methodology, root-cause analysis, and design decisions are entirely our own work. All AI-generated code was reviewed, understood, tested, and adapted by team members before integration into the codebase.
 
 \paragraph{Other development tools:}
 \begin{itemize}
@@ -140,22 +148,41 @@ All external components are used under permissive open-source licenses compatibl
 
 \section{Risks and Mitigation}
 
-\begin{table}[h]
-\centering
-\caption{Risk register}
-\label{tab:risks}
-\begin{tabular}{p{3cm}p{1.5cm}p{1.5cm}p{5cm}}
+Table~\ref{tab:risks} is the project's risk register. Likelihood and impact are rated Low, Medium or High by the team; the owner is the member whose modules the risk mainly affects (Table~\ref{tab:responsibilities}). The register is reviewed at the start of each FYP-2 iteration.
+
+{\small\setlength{\tabcolsep}{3pt}
+\begin{longtable}{p{0.04\textwidth}p{0.19\textwidth}p{0.08\textwidth}p{0.08\textwidth}p{0.42\textwidth}p{0.08\textwidth}}
+\caption{Risk register}\label{tab:risks}\\
 \toprule
-\textbf{Risk} & \textbf{Likelihood} & \textbf{Impact} & \textbf{Mitigation} \\
+\textbf{ID} & \textbf{Risk} & \textbf{Likel.} & \textbf{Impact} & \textbf{Mitigation} & \textbf{Owner} \\
 \midrule
-Cloud GPU costs exceed budget & Medium & High & Per-step timeouts; guaranteed pod termination in finally block; RTX 3090 (cheaper than 4090) as default \\
-ARCore API deprecation & Low & High & Abstracted behind CaptureLogger interface; can swap to AREngine \\
-COLMAP SfM fails on difficult scenes & Medium & Medium & IMU fallback for tracking gaps; live IQA reduces bad input; manual SfM parameter overrides available \\
-Nerfstudio breaking changes & Low & Medium & Pinned to version 1.1.5; tested upgrade path \\
-Team member unavailability & Low & Medium & All code in shared repo; documented in Flow.md and TODO.md \\
+\endhead
+R1 & Cloud GPU cost exceeds budget & Medium & High & Per-step timeouts; \texttt{terminate\_pod()} in \texttt{finally} blocks whenever a pod exists; watchdog thread with a hard time limit; GPU type selectable per job. The cost per scan has not yet been measured; measure it on the first RunPod runs in Iteration~2a. & Umair \\
+\midrule
+R2 & Cloud GPU unavailable (RTX 4090 out of stock on RunPod) & Medium & Medium & GPU type selectable at runtime from the list RunPod reports as in stock; existing-pod mode; local RTX 3070 fallback (measured $\sim$75\,min per room). & Umair \\
+\midrule
+R3 & Tracking loss on featureless surfaces (plain walls, ceilings) & High & Medium & Live IQA ``low texture'' warning and coverage overlay during capture; IMU fallback bridges gaps (3.8\,cm vs 30.6\,cm over 9\,s) and re-aligns after re-tracking (49.7 $\rightarrow$ 8.2\,px); image-based SfM registers most gap frames. Segments that cannot be re-aligned are flagged and kept out of training. & Tayyab \\
+\midrule
+R4 & Mirrors and glass produce SfM outliers and artefacts & Medium & Medium & Documented limitation; detect and mask reflective regions in FYP-2 (Iteration~2b). & Tayyab \\
+\midrule
+R5 & Large rooms exceed GPU memory & Medium & Medium & The 8\,GB RTX 3070 already needs default densification thresholds and no page-locked caching above 4\,GB. Train large rooms on a 24\,GB RTX 4090 (not yet measured); fewer keyframes on slow walks. & Tayyab \\
+\midrule
+R6 & RTX 4090 performance is unmeasured; the $<$35\,min target may not be met & High & Medium & The target is a projection. Benchmark on an RTX 4090 at the start of Iteration~2a; attack feature matching first (23 of the 75\,min measured on the RTX 3070) with ARCore-pose-guided or sequential pairs; report the measured time whatever it is. Note that the RunPod pod watchdog's default hard limit (\texttt{MAX\_POD\_LIFETIME}) is 60\,min, shorter than the only measured run; raise it, or confirm the run fits, before the first full RunPod job. & Umair \\
+\midrule
+R7 & FYP-2 scope not delivered in time (3DGS refinement, structural layer, web workspace, 3D mesh creation) & Medium & High & Fixed order of work: one-command v6 pipeline $\rightarrow$ web viewer with measurement $\rightarrow$ structural layer and floor plans $\rightarrow$ dashboard. The dashboard is cut first if time runs short. 3D mesh creation stays unscheduled until the core items are done. & Team \\
+\midrule
+R8 & Measurement evidence too thin (four rigid measurements, one room) & Medium & Medium & Tape-measure comparisons on $\geq$5 rooms in FYP-2, including the second room; structural-layer wall lengths checked against tape. & Tayyab \\
+\midrule
+R9 & Only one phone model tested (realme) & Medium & Medium & Record on at least one more ARCore phone in FYP-2; the app logs per-frame exposure and the factory lens calibration, so device differences can be measured. & Umair \\
+\midrule
+R10 & Nerfstudio / gsplat breaking changes or a lost local patch & Low & Medium & Nerfstudio pinned to 1.1.5; the local pin-memory patch is documented in \texttt{docs/progress/}; GPU Docker image built by CI. & Tayyab \\
+\midrule
+R11 & ARCore API changes or deprecation & Low & High & ARCore is used only in the capture app; the pipeline consumes plain files (\texttt{dataset.mp4}, \texttt{poses.csv}, \ldots), so another tracker can feed it. & Umair \\
+\midrule
+R12 & Team member unavailability & Low & Medium & All code in one shared repository; owned modules documented; progress logs in \texttt{docs/progress/}; automated tests guard the Python code. & Team \\
 \bottomrule
-\end{tabular}
-\end{table}
+\end{longtable}
+}
 
 \section{Security and Privacy Considerations}
 \begin{itemize}
@@ -167,10 +194,10 @@ Team member unavailability & Low & Medium & All code in shared repo; documented 
 
 \section{Current Limitations}
 \begin{enumerate}
-    \item \textbf{Mirrors and glass}: Highly reflective and transparent surfaces cause SfM outliers and incorrect depth. The model shows artifacts in these regions. Planned mitigation in FYP-2: mask reflective surfaces using semantic segmentation.
-    \item \textbf{Large rooms}: Rooms exceeding approximately 8$\times$8\,m may exceed GPU memory during training on the RTX 3070 (8\,GB). Cloud GPUs (RTX 3090/4090, 24\,GB) handle larger scenes.
+    \item \textbf{Mirrors and glass}: Highly reflective and transparent surfaces cause SfM outliers and incorrect depth. The model shows artifacts in these regions. Planned FYP-2 investigation: detect and mask reflective regions.
+    \item \textbf{Large rooms}: Rooms exceeding approximately 8$\times$8\,m may exceed GPU memory during training on the RTX 3070 (8\,GB). A 24\,GB cloud GPU (RTX 4090, the RunPod default) is expected to handle larger scenes; this has not yet been measured.
     \item \textbf{Outdoor scenes}: The system is designed for indoor environments. Outdoor scenes with sky, vegetation, and long-range views are out of scope.
-    \item \textbf{Real-time processing}: Processing takes 12--15 minutes on an RTX 3090. Real-time reconstruction is not feasible with current 3DGS training times.
+    \item \textbf{Real-time processing}: Processing takes approximately 75 minutes on the development RTX 3070; no cloud-GPU timing has been measured yet. Real-time reconstruction is not feasible with current 3DGS training times.
     \item \textbf{Single-floor only}: The current coverage map and measurement tools assume a single-floor environment. Multi-floor buildings require manual segmentation.
     \item \textbf{No web viewer yet}: The 3D model can currently only be viewed in a local desktop viewer. The web-based Three.js viewer is planned for FYP-2.
 \end{enumerate}

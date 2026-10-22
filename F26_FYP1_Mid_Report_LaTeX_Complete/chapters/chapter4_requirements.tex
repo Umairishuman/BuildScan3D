@@ -9,7 +9,44 @@ The system supports three primary user interactions:
 \end{enumerate}
 
 \section{Use Case Diagram}
-The system involves three actors: the \textit{End User} (captures and views), the \textit{Processing Server} (manages jobs), and the \textit{Cloud GPU} (runs reconstruction). Use cases include: Record Scan, Upload Dataset, Monitor Progress, View Model, Take Measurement, and Configure Server.
+The system involves three actors (Figure~\ref{fig:usecase}): the \textit{End User} (captures and views), the \textit{Processing Server} (manages jobs), and the \textit{Cloud GPU} (runs reconstruction). The use cases are Record Scan, Upload Dataset, Monitor Progress, View Model, Take Measurement, and Configure Server. Each maps to code: Record Scan to \texttt{HelloArActivity} and \texttt{CaptureLogger}; Upload Dataset and Monitor Progress to \texttt{ProcessingActivity} and the \texttt{/upload} and \texttt{/status} endpoints of \texttt{server/main.py}; Configure Server to the app's settings menu (server URL) and \texttt{/config}; View Model and Take Measurement to the desktop viewer today and the web workspace in FYP-2.
+
+% Stick-figure actor for the use case diagram: \bsactor{x}{y}{label}
+\newcommand{\bsactor}[3]{%
+  \begin{scope}[shift={(#1,#2)}]
+    \draw (0,0.95) circle (0.2);
+    \draw (0,0.75) -- (0,0.05);
+    \draw (-0.35,0.5) -- (0.35,0.5);
+    \draw (0,0.05) -- (-0.3,-0.45);
+    \draw (0,0.05) -- (0.3,-0.45);
+    \node[align=center] at (0,-0.85) {#3};
+  \end{scope}}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\footnotesize,
+  uc/.style={draw, ellipse, minimum width=3.6cm, minimum height=0.85cm, align=center}]
+  \draw[rounded corners=4pt] (-2.6,-3.6) rectangle (2.6,4.0);
+  \node[font=\small\bfseries] at (0,3.6) {BuildScan 3D};
+  \node[uc] (rec)  at (0,2.7)  {Record Scan};
+  \node[uc] (upl)  at (0,1.6)  {Upload Dataset};
+  \node[uc] (mon)  at (0,0.5)  {Monitor Progress};
+  \node[uc] (view) at (0,-0.6) {View Model};
+  \node[uc] (meas) at (0,-1.7) {Take Measurement};
+  \node[uc] (conf) at (0,-2.8) {Configure Server};
+  \bsactor{-5.2}{-0.2}{End User}
+  \bsactor{5.2}{1.4}{Processing\\Server}
+  \bsactor{5.2}{-2.4}{Cloud GPU}
+  \coordinate (user) at (-4.8,0.3);
+  \coordinate (srv)  at (4.8,1.9);
+  \coordinate (gpu)  at (4.8,-1.9);
+  \foreach \n in {rec,upl,mon,view,meas,conf} {\draw (user) -- (\n.west);}
+  \foreach \n in {upl,mon,conf} {\draw (srv) -- (\n.east);}
+  \draw (gpu) -- (upl.east);
+\end{tikzpicture}
+\caption{Use case diagram. The End User is the primary actor; the Processing Server (\texttt{server/main.py}) and the Cloud GPU (RunPod pod, or the local GPU) are secondary actors. Take Measurement currently runs in the desktop viewer; the web version is FYP-2 work.}
+\label{fig:usecase}
+\end{figure}
 
 \section{Detailed Use Cases}
 
@@ -80,7 +117,7 @@ The system involves three actors: the \textit{End User} (captures and views), th
 
 \subsection{Performance}
 \begin{itemize}
-    \item \textbf{NFR-P1}: End-to-end processing time shall be under 15 minutes on an NVIDIA RTX 3090 or better.
+    \item \textbf{NFR-P1}: End-to-end processing time (upload to exported \texttt{splat.ply}) shall be under 35 minutes on an NVIDIA RTX 4090 cloud GPU. This is an FYP-2 target and a projection: the only measured time is $\sim$75 minutes on the development RTX 3070 (matching 23, mapping 6, training 45\,min).
     \item \textbf{NFR-P2}: The capture app shall maintain 30\,FPS camera preview during recording (no frame drops from logging overhead).
     \item \textbf{NFR-P3}: The app's recording fast-path shall skip all non-essential rendering (planes, virtual objects, PBR lighting) to minimize GL thread load.
 \end{itemize}
@@ -102,10 +139,10 @@ The system involves three actors: the \textit{End User} (captures and views), th
 \textbf{Req.} & \textbf{Criterion} & \textbf{Measurement} \\
 \midrule
 FR-M1 & Pose logged for every video frame & Row count in poses.csv equals frame count in video \\
-FR-P3 & Metric scale accuracy $<$ 1\% & Sim3 trajectory scale vs.\ ARCore = 1.000--1.003 \\
+FR-P3 & Metric accuracy within 5\% & Distances in the model vs.\ tape measure on rigid objects; measured mean 0.19\%, worst 0.29\% (Table~\ref{tab:tape}) \\
 FR-P4 & Reconstruction quality & Held-out PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85 \\
 FR-S7 & Pod always terminated & Server logs confirm \texttt{terminate\_pod()} in all paths \\
-NFR-P1 & Processing under 15\,min & Elapsed time on RTX 3090 for a 5-minute scan \\
+NFR-P1 & Processing under 35\,min on RTX 4090 & Wall-clock time from upload to exported \texttt{splat.ply} on an RTX 4090 pod. \textit{Outstanding: not yet measured} (75\,min measured on RTX 3070) \\
 NFR-P2 & 30\,FPS during recording & No frame drops in logcat during 3-minute recording \\
 \bottomrule
 \end{tabular}

@@ -1,81 +1,81 @@
 \chapter{Remaining FYP Plan}
 
 \section{Remaining Scope}
-FYP-2 focuses on two priorities: (1)~optimizing the existing pipeline for speed, robustness, and edge-case handling, and (2)~building the semantic understanding layer and interactive web workspace that make the 3D model actionable for construction professionals. The complete model implementation (capture $\rightarrow$ upload $\rightarrow$ reconstruct) was delivered in FYP-1; FYP-2 makes it production-ready and feature-rich.
+FYP-2 has three priorities: (1)~finishing the refinement of the reconstruction pipeline and making it faster; (2)~completing the structural layer (wall planes, corners, wall lengths, door detection and floor plans) that turns the photoreal model into something that can be measured reliably; and (3)~building the web workspace with 1:1 metric measurement. The core capture $\rightarrow$ upload $\rightarrow$ reconstruct pipeline was built in FYP-1; FYP-2 completes and validates it.
 
 \section{Remaining Modules and Features}
 
 \begin{enumerate}
-    \item \textbf{Pipeline Optimization Module}: Reduce end-to-end processing time from 12--15\,min to $<$5\,min on RTX 4090. Techniques: faster COLMAP matching (vocabulary tree instead of exhaustive), reduced splatfacto iterations with early stopping, parallel step execution where possible, and optimized data transfer (compressed uploads, delta downloads).
+    \item \textbf{Pipeline Optimization Module}: Make the v6 recipe (gyro-selected frames, dense MVS initialisation, finer densification) the one-command pipeline and validate it on the second room. Reduce end-to-end processing time from the measured $\sim$75\,min on the development RTX 3070 (matching 23\,min, mapping 6\,min, training 45\,min) to under 35\,min on an RTX 4090. The 35\,min figure is a projected target, not a measurement. Techniques: ARCore-pose-guided or sequential matching pairs instead of exhaustive COLMAP matching, fewer training iterations, and fewer keyframes on slow walks.
 
-    \item \textbf{Robustness Improvements}: Better handling of mirrors/glass (reflective surface detection and masking), textureless walls (depth-guided initialization), large rooms ($>$8\,m, tiled reconstruction), and variable lighting conditions.
+    \item \textbf{Reconstruction Refinement}: IMU-driven motion-blur and rolling-shutter modelling during training, using the per-frame exposure time and rolling-shutter readout the app now logs (the gyroscope shows the median training frame is blurred by 6--12\,px). Also ARCore-started image-only alignment with re-anchor detection from the logged anchors, which could give COLMAP-quality poses faster.
 
-    \item \textbf{Web Viewer Module}: Three.js / WebGPU-based Gaussian splat renderer with orbit/pan/zoom controls, running in any modern browser. Loads the \texttt{splat.ply} model exported by the pipeline.
+    \item \textbf{Robustness Improvements}: Better handling of mirrors and glass (detecting and masking reflective regions), textureless walls, large rooms ($>$8\,m), and variable lighting conditions.
 
-    \item \textbf{Measurement Module}: Point-to-point distance tool in the metric 3D model. The user clicks two points on the splat surface; the system computes the Euclidean distance in metres using the Sim3-aligned coordinate frame. Target accuracy: $<$2\,cm for distances up to 10\,m.
+    \item \textbf{Structural Layer Module}: Complete \texttt{structure.py}, which already rebuilds the room shell next to the splat model: floor and wall planes, corners from neighbouring wall intersections, wall lengths (prototype: 6.65--6.68 $\times$ 4.45--4.48\,m on the first room) and openings, with 5 doors detected automatically. Remaining work: wall-to-wall dimensions, doors and other openings as first-class objects, fixing the ceiling-height detection, automatic floor-plan export, and measurement clicks that snap to walls. The photoreal splat model itself is not modified, because post-hoc flattening destroyed the glossy floor's reflections and crushed door frames.
 
-    \item \textbf{Semantic AI Module}: YOLOv8-Seg instance segmentation trained on MEP components (pipes, conduits, HVAC ducts). 2D masks from multiple viewpoints are projected to 3D and merged via multi-view consensus to label regions of the point cloud.
+    \item \textbf{Web Workspace Module}: Three.js / WebGPU-based Gaussian splat viewer with orbit/pan/zoom controls, running in any modern browser. Loads the \texttt{splat.ply} model and the structural layer's \texttt{structure.json}, and shows a floor-plan view.
 
-    \item \textbf{Semantic Toggle UI}: System-level visibility controls in the web viewer---toggle pipes, conduits, and HVAC independently. Colour-coded overlays on the 3D model.
+    \item \textbf{Measurement Module}: Point-to-point 1:1 distance tool in the metric 3D model. The user clicks two points on the splat surface or on a structural-layer wall; the system computes the Euclidean distance in metres in the Sim3-aligned coordinate frame. Target accuracy: within 5\% of tape measure (current evidence: mean 0.19\%, worst case 0.29\%).
 
-    \item \textbf{Dashboard Module}: Web-based project management dashboard showing scan history, processing status, model thumbnails, and measurement records.
+    \item \textbf{3D Mesh Creation}: Create a 3D mesh of the scanned room from the reconstruction, alongside the splat model. This is in scope as planned work; it has not yet been assigned to an iteration.
+
+    \item \textbf{Dashboard Module}: Web-based project dashboard showing scan history, processing status, model thumbnails, and measurement records.
 \end{enumerate}
 
 \section{Remaining Iterations}
 
 \begin{itemize}
-    \item \textbf{Iteration 2a (Weeks 1--4)}: Pipeline optimization and web viewer. Deliverable: processing time $<$5\,min on RTX 4090; browser-based splat viewer with point-to-point measurements validated on $\geq$3 rooms.
-    \item \textbf{Iteration 2b (Weeks 5--8)}: Robustness improvements and semantic AI. Deliverable: improved edge-case handling; YOLOv8-Seg MEP detection with 3D projection, viewer toggle UI.
-    \item \textbf{Iteration 2c (Weeks 9--12)}: Dashboard, field validation, and final polish. Deliverable: complete web platform, user testing on 5+ rooms, final report.
+    \item \textbf{Iteration 2a (Weeks 1--4)}: Pipeline optimization and web viewer. Deliverable: one-command v6 pipeline; processing time $<$35\,min on RTX 4090 (projected, not yet measured); browser-based splat viewer with point-to-point measurements validated on $\geq$3 rooms.
+    \item \textbf{Iteration 2b (Weeks 5--8)}: Robustness, reconstruction refinement and the structural layer. Deliverable: improved edge-case handling; structural layer with wall lengths, doors and floor-plan export; measurement snapping to walls in the viewer.
+    \item \textbf{Iteration 2c (Weeks 9--12)}: Dashboard, field validation, and final polish. Deliverable: complete web workspace, user testing on 5+ rooms, final report.
 \end{itemize}
 
 \section{Implementation Plan}
 
 \paragraph{Iteration 2a: Optimization + Web Viewer (Weeks 1--4)}
 \begin{enumerate}
-    \item Profile pipeline bottlenecks; switch COLMAP to vocabulary-tree matching (week 1).
-    \item Reduce splatfacto iterations with early-stopping on validation loss; benchmark on 3 scans (week 1--2).
-    \item Set up React + Three.js project with Gaussian splat renderer and camera controls (week 2).
-    \item Build measurement tool: ray-cast click $\rightarrow$ nearest splat $\rightarrow$ 3D coordinate $\rightarrow$ distance display (week 3).
+    \item Put the v6 recipe into the one-command pipeline; replace exhaustive matching with ARCore-pose-guided or sequential pairs (week 1).
+    \item Reduce splatfacto iterations and keyframes on slow walks; benchmark every change on the two reference rooms (week 1--2).
+    \item Set up a Three.js project with a Gaussian splat renderer and camera controls (week 2).
+    \item Build the measurement tool: ray-cast click $\rightarrow$ nearest splat $\rightarrow$ 3D coordinate $\rightarrow$ distance display (week 3).
     \item Validate measurement accuracy against tape-measure ground truth on 3 rooms (week 3--4).
-    \item Integrate viewer with the FastAPI backend for model loading (week 4).
+    \item Integrate the viewer with the FastAPI backend for model loading (week 4).
 \end{enumerate}
 
-\paragraph{Iteration 2b: Robustness + Semantic AI (Weeks 5--8)}
+\paragraph{Iteration 2b: Robustness + Structural Layer (Weeks 5--8)}
 \begin{enumerate}
-    \item Implement reflective surface detection and masking for mirrors/glass (week 5).
-    \item Improve textureless-wall handling with depth-guided splat initialization (week 5--6).
-    \item Collect and annotate MEP training data from captured scans (week 6).
-    \item Train YOLOv8-Seg on MEP classes: pipe, conduit, HVAC duct (week 6--7).
-    \item Implement 2D-to-3D mask projection and multi-view consensus (week 7--8).
-    \item Add semantic toggle UI to the web viewer (week 8).
+    \item Implement reflective-surface detection and masking for mirrors and glass (week 5).
+    \item Try IMU-driven motion-blur and rolling-shutter modelling on recordings that carry per-frame exposure metadata (week 5--6).
+    \item Structural layer: fix ceiling-height detection; make doors and openings first-class objects with their dimensions (week 6).
+    \item Structural layer: wall-to-wall dimensions and automatic floor-plan export from the floor polygon (week 7).
+    \item Load \texttt{structure.json} in the web viewer; snap measurement clicks to walls; add a floor-plan view (week 8).
 \end{enumerate}
 
 \paragraph{Iteration 2c: Dashboard + Final Validation (Weeks 9--12)}
 \begin{enumerate}
-    \item Build web dashboard: scan list, processing status, model thumbnails (week 9--10).
+    \item Build the web dashboard: scan list, processing status, model thumbnails (week 9--10).
     \item User testing with 5+ external users; collect usability feedback (week 10--11).
     \item Fix usability issues, write documentation (week 11--12).
-    \item Final validation: measurement accuracy, semantic accuracy, processing time on 5+ rooms (week 12).
+    \item Final validation: measurement accuracy, structural-layer accuracy, processing time on 5+ rooms (week 12).
 \end{enumerate}
 
 \section{Testing and Validation Plan}
 \begin{itemize}
-    \item \textbf{Measurement accuracy}: Compare point-to-point measurements in the web viewer against tape-measure ground truth on $\geq$5 rooms of varying size and geometry. Target: $<$2\,cm error for distances up to 10\,m.
-    \item \textbf{Semantic segmentation}: Evaluate YOLOv8-Seg on a held-out test set. Target: mAP$_{50} \geq 0.70$ for MEP classes.
-    \item \textbf{3D projection accuracy}: Compare projected semantic labels against manually annotated 3D ground truth. Target: IoU $\geq 0.60$.
+    \item \textbf{Measurement accuracy}: Compare point-to-point measurements in the web viewer against tape-measure ground truth on $\geq$5 rooms of varying size and geometry. Target: error within 5\% of tape measure, extending the current four-measurement evidence (mean 0.19\%) to more rooms.
+    \item \textbf{Structural layer}: For each test room, compare extracted wall lengths against tape measure (target: within 5\%) and the detected doors against a manual count.
     \item \textbf{Web viewer performance}: Maintain $\geq$30\,FPS on a mid-range laptop (integrated GPU) for models up to 2\,million splats.
     \item \textbf{Usability testing}: Task completion rate $\geq$90\% for first-time users performing capture, viewing, and measurement tasks.
-    \item \textbf{Processing time}: End-to-end pipeline $<$5\,min on RTX 4090 for a 5-minute scan. Benchmark each optimization individually.
+    \item \textbf{Processing time}: End-to-end pipeline $<$35\,min on RTX 4090 (projected target; currently $\sim$75\,min measured on RTX 3070). Benchmark each optimization individually.
     \item \textbf{Cross-browser}: Verify viewer on Chrome, Firefox, and Edge.
 \end{itemize}
 
 \section{Deployment Plan}
 \begin{enumerate}
-    \item \textbf{Server}: Deploy FastAPI backend + web viewer on a VPS with HTTPS (Let's Encrypt). Static assets served via CDN.
+    \item \textbf{Server}: Deploy the FastAPI backend and web viewer on a VPS with HTTPS (Let's Encrypt). Static assets served via CDN.
     \item \textbf{GPU processing}: Continue using RunPod on-demand pods. Evaluate RunPod serverless endpoints if job volume increases.
-    \item \textbf{Android app}: Distribute APK via GitHub Releases. Google Play Store submission if time permits.
-    \item \textbf{CI/CD}: Extend existing GitHub Actions to deploy web frontend on push to master.
+    \item \textbf{Android app}: Distribute the APK via GitHub Releases. Google Play Store submission if time permits.
+    \item \textbf{CI/CD}: Extend the existing GitHub Actions to deploy the web frontend on push to master.
 \end{enumerate}
 
 \section{Tentative Timeline}
@@ -88,10 +88,10 @@ FYP-2 focuses on two priorities: (1)~optimizing the existing pipeline for speed,
 \toprule
 \textbf{Week} & \textbf{Task} & \textbf{Deliverable} \\
 \midrule
-1--2 & Pipeline optimization (matching, training, transfer) + Three.js viewer setup & Processing $<$5\,min; viewer MVP \\
+1--2 & One-command v6 pipeline, matching and training speed-ups + Three.js viewer setup & Processing $<$35\,min (projected); viewer MVP \\
 3--4 & Measurement tool + accuracy validation on 3 rooms & Measurement accuracy report \\
-5--6 & Robustness (mirrors, textureless walls) + MEP data collection and YOLOv8-Seg training & Robust pipeline; trained model \\
-7--8 & 2D$\rightarrow$3D semantic projection + toggle UI & Semantic viewer \\
+5--6 & Robustness (mirrors, textureless walls), motion-blur modelling, structural-layer fixes (ceiling height, openings) & Robust pipeline; structural layer v2 \\
+7--8 & Floor-plan export, wall snapping and floor-plan view in the viewer & Measurable web workspace \\
 9--10 & Dashboard + user testing (5+ external users) & Web platform MVP \\
 11--12 & Final validation on 5+ rooms, polish, final report & Complete system \\
 \bottomrule
@@ -101,10 +101,10 @@ FYP-2 focuses on two priorities: (1)~optimizing the existing pipeline for speed,
 \section{Expected Final Deliverables}
 \begin{enumerate}
     \item \textbf{Android APK}: Capture app with live IQA, coverage overlay, and upload.
-    \item \textbf{Web platform}: Gaussian splat viewer with measurement tools and semantic toggles.
+    \item \textbf{Web workspace}: Gaussian splat viewer with 1:1 measurement tools and a floor-plan view.
     \item \textbf{Processing server}: FastAPI backend with local and cloud GPU support.
-    \item \textbf{Trained models}: YOLOv8-Seg weights for MEP segmentation.
-    \item \textbf{Validation report}: Measurement accuracy on $\geq$5 rooms, semantic accuracy metrics, usability test results.
+    \item \textbf{Structural layer}: Per-room \texttt{structure.json} (planes, corners, wall lengths, doors and openings) and floor-plan export.
+    \item \textbf{Validation report}: Measurement accuracy on $\geq$5 rooms, structural-layer accuracy, processing-time benchmarks, usability test results.
     \item \textbf{Documentation}: User guide, API documentation, deployment guide.
     \item \textbf{Source code}: Complete repository with CI/CD, tests, and documentation.
     \item \textbf{Final report}: FYP-2 report with complete results and analysis.

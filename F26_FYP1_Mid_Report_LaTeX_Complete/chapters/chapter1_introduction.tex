@@ -9,20 +9,20 @@ The system targets construction site documentation, facility management, and arc
 Capturing accurate, metric-scale 3D models of indoor environments currently requires either (a)~LiDAR hardware costing \$10{,}000 or more, (b)~photogrammetry workflows requiring expert knowledge and hours of manual post-processing, or (c)~consumer-grade scanning apps (e.g.\ Polycam, Luma AI) that produce visually plausible but metrically inaccurate models unsuitable for measurement. There is no affordable, fully automated pipeline that turns a smartphone video into a metrically accurate 3D model with sufficient quality for professional use.
 
 \section{Problem Context and Motivation}
-The construction and facility management industries spend an estimated \$1.6~trillion annually on rework caused by inaccurate or outdated spatial documentation. Small firms and site teams need quick, accurate as-built 3D captures but cannot justify the cost of LiDAR equipment or trained surveyors for routine inspections. Modern smartphones carry high-resolution cameras, IMUs, and AR-capable processors (via Google ARCore), making them potential 3D capture devices---if the software pipeline can bridge the accuracy gap between consumer AR and professional surveying.
+Construction and facility management lose time and money to rework caused by inaccurate or outdated spatial documentation. Small firms and site teams need quick, accurate as-built 3D captures but cannot justify the cost of LiDAR equipment or trained surveyors for routine inspections. Modern smartphones carry high-resolution cameras, IMUs, and AR-capable processors (via Google ARCore), making them potential 3D capture devices---if the software pipeline can bridge the accuracy gap between consumer AR and professional surveying.
 
 Recent advances in 3D Gaussian Splatting~\cite{kerbl3dgs} enable photorealistic novel-view synthesis at real-time frame rates from posed images, while ARCore provides metric-scale camera poses and depth sensing on Android devices. Combining these technologies with cloud GPU processing creates an opportunity for a fully automated, affordable indoor scanning solution.
 
 \section{Project Vision}
-BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as recording a video on a phone. The system will: (1)~guide the user during capture to ensure sufficient coverage and quality; (2)~automatically process the recording on a cloud GPU; (3)~return a metric-scale 3D model with measurement tools; and (4)~identify MEP systems (pipes, conduits, HVAC) via semantic segmentation.
+BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as recording a video on a phone. The system will: (1)~guide the user during capture to ensure sufficient coverage and quality; (2)~automatically process the recording on a cloud GPU; (3)~return a metric-scale 3D model with measurement tools; and (4)~extract the room's structure---wall planes, corners, wall lengths and doors---as the basis for automatic floor plans and 1:1 metric measurement.
 
 \section{Project Objectives}
 \begin{enumerate}
     \item Develop an Android capture application that records video, ARCore poses, depth maps, and IMU data with live image-quality feedback.
-    \item Build an automated cloud-GPU processing pipeline that converts a phone recording into a 3D Gaussian Splatting model in under 15 minutes.
-    \item Achieve metric-scale accuracy within 1\% of tape-measure ground truth for wall-to-wall measurements.
+    \item Build an automated cloud-GPU processing pipeline that converts a phone recording into a 3D Gaussian Splatting model, targeting under 35 minutes end-to-end on a cloud RTX 4090 (a projection; the measured time today is $\sim$75 minutes on the development RTX 3070).
+    \item Achieve metric-scale accuracy within 5\% of tape-measure ground truth for distances measured in the model.
     \item Achieve held-out PSNR $\geq$ 25\,dB for photometric reconstruction quality.
-    \item Implement semantic segmentation for MEP system identification (pipes, conduits, HVAC ducts).
+    \item Build a structural layer that extracts wall planes, corners, wall lengths and doors from the reconstructed model, as the basis for automatic floor plans and 1:1 metric measurement.
     \item Build a web-based 3D viewer with point-to-point metric measurement tools.
 \end{enumerate}
 
@@ -34,8 +34,9 @@ BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as re
     \item Automated reconstruction pipeline: keyframe extraction, COLMAP SfM, Sim3 metric alignment, splatfacto 3DGS training.
     \item FastAPI processing server with local and cloud GPU (RunPod) execution modes.
     \item Metric measurement capability in the 3D model.
-    \item YOLOv8-Seg semantic segmentation for MEP systems (FYP-2).
+    \item Structural layer: automatic wall planes, corners, wall lengths, door detection and floor plans (prototype built in FYP-1; completion in FYP-2).
     \item Three.js/WebGPU web viewer for model inspection and measurement (FYP-2).
+    \item 3D mesh creation from the reconstructed model (planned; not yet scheduled).
     \item CI/CD pipeline via GitHub Actions.
 \end{itemize}
 
@@ -45,7 +46,6 @@ BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as re
     \item iOS support (ARKit).
     \item Real-time on-device reconstruction.
     \item BIM (Building Information Modelling) export.
-    \item X-ray or through-wall scanning functionality.
 \end{itemize}
 
 \section{Project Modules}
@@ -54,8 +54,8 @@ BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as re
     \item \textbf{Pose Prior Module}: Coordinate alignment from ARCore's OpenGL convention to COLMAP/Nerfstudio, quaternion-to-rotation-matrix conversion, and Sim3 metric alignment.
     \item \textbf{Reconstruction Pipeline Module}: COLMAP SfM (feature extraction, matching, mapping, undistortion), lens self-calibration, and Nerfstudio splatfacto 3DGS training.
     \item \textbf{Processing Server Module}: FastAPI backend for dataset upload, job management, progress tracking, and cloud GPU dispatch via RunPod API.
-    \item \textbf{Semantic AI Module} (FYP-2): YOLOv8-Seg 2D segmentation masks projected into 3D space for MEP identification.
-    \item \textbf{Web Viewer Module} (FYP-2): Three.js/WebGPU-based viewer with splat rendering, point-to-point measurement, and semantic system toggles.
+    \item \textbf{Structural Layer Module}: Rebuilds the room shell next to the splat model (\texttt{structure.py}): floor and wall planes, corners, wall lengths, doors and other openings, and the floor polygon used for floor plans and 1:1 measurement. Prototype built; completion in FYP-2.
+    \item \textbf{Web Viewer Module} (FYP-2): Three.js/WebGPU-based viewer with splat rendering, point-to-point 1:1 measurement that can snap to structural-layer walls, and a floor-plan view.
 \end{enumerate}
 
 \section{Stakeholders and User Classes}
@@ -68,16 +68,16 @@ BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as re
 
 \section{Success Criteria}
 \begin{enumerate}
-    \item Metric accuracy: wall-to-wall measurements within 1\% of tape-measure ground truth.
+    \item Metric accuracy: distances measured in the model within 5\% of tape-measure ground truth (measured so far: mean 0.19\%, worst case 0.29\%).
     \item Reconstruction quality: held-out PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85.
-    \item Processing time: under 15 minutes end-to-end from upload to viewable model on a cloud GPU.
+    \item Processing time: under 35 minutes end-to-end from upload to viewable model on an NVIDIA RTX 4090 cloud GPU (FYP-2 target, projected and not yet measured; currently $\sim$75 minutes on the development RTX 3070).
     \item Capture guidance: live IQA reduces user-caused quality failures by $\geq$50\% compared to unguided capture.
-    \item Semantic accuracy: MEP system detection mIoU $\geq$ 0.6 (FYP-2).
+    \item Structural layer: wall planes, wall lengths and doors extracted automatically, with wall lengths within the 5\% accuracy target (FYP-2; not yet verified against a tape measure).
 \end{enumerate}
 
 \section{Constraints and Assumptions}
 \begin{itemize}
-    \item The target phone must support ARCore (Google's AR compatibility list).
+    \item The target phone must support ARCore (Google's AR compatibility list). All results in this report come from a commodity Android phone (realme) with no LiDAR or other special hardware.
     \item Cloud GPU processing requires internet connectivity and a RunPod account.
     \item The scanned space must be a single room or connected set of rooms (not a full building).
     \item Indoor lighting must be sufficient for ARCore to maintain tracking (no pitch-dark environments).
@@ -89,5 +89,5 @@ BuildScan~3D aims to democratize indoor 3D scanning by making it as simple as re
     \item \textbf{Privacy}: The captured video may include personally identifiable spaces. All data is processed on the user's own cloud account; no data is shared with third parties. The system does not store or transmit video beyond what is needed for processing.
     \item \textbf{Accessibility}: The capture app provides visual quality feedback (colour-coded overlay) and haptic feedback (vibration on quality degradation) to assist users with varying levels of technical expertise.
     \item \textbf{Environmental}: Cloud GPU pods are terminated immediately after processing to minimize unnecessary compute resource usage and associated energy consumption.
-    \item \textbf{Tool disclosure}: GenAI tools (Claude Code) were used for code generation assistance and report drafting. Full disclosure is provided in Chapter~9.
+    \item \textbf{Tool disclosure}: GenAI tools (Claude Code, GitHub Copilot, ChatGPT) were used for code generation assistance, debugging, documentation and report drafting, including the correction pass on this report. Full disclosure is provided in Chapter~\ref{ch:evidence}, Table~\ref{tab:aitools}.
 \end{itemize}
