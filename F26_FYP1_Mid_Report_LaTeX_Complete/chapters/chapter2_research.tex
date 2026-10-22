@@ -23,7 +23,7 @@ Our research followed a structured literature review combined with empirical exp
 
 \section{Comparison of Existing Solutions}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \caption{Comparison of existing 3D scanning solutions}
 \label{tab:comparison}
@@ -44,6 +44,7 @@ Floor plan from scan & Yes & LiDAR only & No & No & Prototype \\
 \end{table}
 
 \section{Limitations and Gaps}
+\label{sec:gaps}
 The key limitations of existing solutions that motivate our work are:
 \begin{enumerate}
     \item \textbf{Cost barrier}: Professional solutions (Matterport, RealityCapture) require expensive hardware or software licenses.
@@ -104,8 +105,13 @@ Key research findings that shaped our design:
 \label{sec:parked}
 Before the switch to image-based poses, the team tried a series of techniques to fix blurry, ``cotton-like'' models with floating splats. None of them fixed the underlying problem (ARCore's silent re-anchor and missing lens model; finding~1 above); the best model of that period reached only 22.67\,dB / 0.782 on held-out frames. They are recorded here so that every technique attempted is visible. Numbers are from \texttt{docs/progress/}.
 
-\begin{longtable}{p{0.20\textwidth}p{0.40\textwidth}p{0.30\textwidth}}
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{p{0.19\textwidth}p{0.45\textwidth}p{0.31\textwidth}}
 \caption{Techniques explored and parked}\label{tab:parked}\\
+\toprule
+\textbf{Technique} & \textbf{What we tried and measured} & \textbf{Outcome} \\
+\midrule
+\endfirsthead
 \toprule
 \textbf{Technique} & \textbf{What we tried and measured} & \textbf{Outcome} \\
 \midrule
@@ -125,3 +131,4 @@ Median filtering & Hole-aware 5--9\,px median on stereo depth: outliers ($>$25\%
 Post-hoc flat-forcing (\texttt{planarize.py}) & Snapping walls and floor flat after training. & Rejected: it destroyed the glossy floor's reflections and crushed door frames. The structural layer is built next to the splat model instead. \\
 \bottomrule
 \end{longtable}
+}

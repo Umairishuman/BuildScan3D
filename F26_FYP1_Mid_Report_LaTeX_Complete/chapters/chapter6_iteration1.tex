@@ -4,18 +4,14 @@
 Build the complete end-to-end pipeline: phone capture $\rightarrow$ automated upload $\rightarrow$ cloud GPU reconstruction $\rightarrow$ metric-scale 3D model. Validate reconstruction quality and metric accuracy on real indoor scans.
 
 \section{Selected Use Cases / Features}
-\begin{itemize}
-    \item UC-1: Record Indoor Scan (with live IQA and coverage guidance)
-    \item UC-2: Upload and Process (with progress tracking)
-    \item UC-3: View finished model (via local viewer; web viewer deferred to FYP-2)
-\end{itemize}
+UC-1 Record Indoor Scan (with live IQA and coverage guidance), UC-2 Upload and Process (with progress tracking), and UC-3 View the finished model (in the local viewer; the web viewer is deferred to FYP-2).
 
 \section{Design}
 The Iteration~1 design focused on three subsystems:
 \begin{enumerate}
     \item \textbf{Capture subsystem}: ARCore session $\rightarrow$ CaptureLogger (background I/O) $\rightarrow$ QualityMonitor (frame analysis at 6\,FPS) $\rightarrow$ CoverageMap (depth $\rightarrow$ voxels $\rightarrow$ overlay).
     \item \textbf{Upload subsystem}: OkHttp multipart POST $\rightarrow$ FastAPI \texttt{/upload} $\rightarrow$ Job creation $\rightarrow$ Pipeline dispatch (local or RunPod).
-    \item \textbf{Pipeline subsystem}: Six sequential steps (fallback $\rightarrow$ prepare $\rightarrow$ sfm\_colmap $\rightarrow$ export\_nerfstudio $\rightarrow$ ns-train $\rightarrow$ ns-export), each with timeout watchdog.
+    \item \textbf{Pipeline subsystem}: six sequential steps, each with a timeout watchdog, detailed in Section~\ref{sec:process} and Figure~\ref{fig:pipelinesteps}.
 \end{enumerate}
 
 \section{Implementation}
@@ -29,57 +25,47 @@ Implementation was carried out in Java (Android app) and Python (server and pipe
 \end{enumerate}
 
 \section{Completed Features / Module}
+\label{sec:completed}
 
-\paragraph{Android Capture App (implemented):}
-\begin{itemize}
-    \item 30\,FPS video recording with per-frame pose, tracking state, feature points, depth, quality metrics, and device metadata.
-    \item Live IQA with colour-coded banner: tracking lost (red), moving too fast (orange), blurry (yellow), too dark (yellow), low texture (yellow).
-    \item Haptic feedback (vibration) on quality degradation during recording.
-    \item Coverage overlay: red (1 direction), yellow (2--3), green (4+) dots at 2\,Hz.
-    \item Per-frame exposure time, rolling-shutter readout, and anchor correction logging.
-    \item End-of-recording quality summary dialog.
-    \item Upload \& Process button launching \texttt{ProcessingActivity}.
-    \item Configurable server URL via settings menu (persisted in SharedPreferences).
-    \item Performance optimization: recording fast-path skips all demo rendering.
-\end{itemize}
+\paragraph{Android Capture App (implemented):} 30\,FPS video recording with per-frame pose, tracking state, feature points, depth, quality metrics and device metadata; per-frame exposure time, rolling-shutter readout and anchor-correction logging. Live IQA shows a colour-coded banner (tracking lost in red, moving too fast in orange; blurry, too dark or low texture in yellow) with a vibration alert, and the coverage overlay draws red (1 direction), yellow (2--3) and green (4+) dots at 2\,Hz. Recording ends with a quality summary dialog and an Upload \& Process button that opens \texttt{ProcessingActivity}. The server URL is set in the settings menu (persisted in SharedPreferences), and the recording fast-path skips all demo rendering.
 
-\paragraph{Processing Server (implemented):}
-\begin{itemize}
-    \item FastAPI with endpoints: \texttt{POST /upload}, \texttt{GET /status/\{id\}}, \texttt{GET /jobs}, \texttt{GET /download/\{id\}}, \texttt{GET/POST /config}, \texttt{GET /health}.
-    \item Local and RunPod processing modes switchable at runtime.
-    \item Per-step timeout watchdogs (fallback 2\,min, prepare 5\,min, SfM 40\,min, export 2\,min, train 60\,min, export\_splat 5\,min).
-    \item RunPod integration: pod creation, SSH readiness polling, dependency installation, SCP upload/download, guaranteed pod termination.
-    \item \texttt{.env} file support for API key management.
-\end{itemize}
+\paragraph{Processing Server (implemented):} The FastAPI endpoints and processing modes of Section~\ref{sec:components}, switchable at runtime; per-step timeout watchdogs (Figure~\ref{fig:pipelinesteps}); RunPod integration with pod creation, SSH readiness polling, dependency installation, SCP upload/download and pod termination; API key loaded from the environment or a \texttt{.env} file.
 
-\paragraph{Reconstruction Pipeline (core complete, refinement ongoing):}
-\begin{itemize}
-    \item IMU-bridged tracking-gap recovery (\texttt{fallback.py}).
-    \item Keyframe extraction (\texttt{prepare.py}, sharpest frame per window) in the one-command pipeline; gyro-aware sharp frame selection (\texttt{select\_sharp.py}, using per-frame exposure metadata) validated for v4--v6 but not yet in the one-command pipeline.
-    \item COLMAP SfM with SIFT features, exhaustive matching, global mapper, lens self-calibration (radial distortion $k_1, k_2$), and undistortion.
-    \item Sim3 alignment to ARCore metric frame (tape-measure error: mean 0.19\%, worst case 0.29\%).
-    \item Nerfstudio splatfacto training with bilateral grid exposure compensation.
-    \item Model export to \texttt{splat.ply}.
-\end{itemize}
+\paragraph{Reconstruction Pipeline (core complete, refinement ongoing):} All six steps of Section~\ref{sec:process} run end to end: IMU gap bridging, keyframe extraction, COLMAP SfM with lens self-calibration and Sim3 alignment (tape-measure error: mean 0.19\%, worst case 0.29\%), splatfacto training with bilateral-grid exposure compensation, and export to \texttt{splat.ply}. Gyro-aware frame selection (\texttt{select\_sharp.py}, using per-frame exposure metadata) is validated for v4--v6 but not yet in the one-command pipeline, which still uses \texttt{prepare.py}'s sharpest frame per window.
 
-\paragraph{CI/CD (implemented):}
-\begin{itemize}
-    \item GitHub Actions CI: Python lint (ruff) + unit tests (pytest, 3 Python versions), web UI build, Android APK build, repo hygiene (file size, secrets, workflow lint).
-    \item GitHub Actions CD: on push to master, full CI gate $\rightarrow$ web bundle + APK artifacts; on version tag, GitHub Release.
-    \item Pull request template with area checkboxes and CI checklist.
-\end{itemize}
+\paragraph{CI/CD (implemented):} GitHub Actions CI (lint, tests on three Python versions, web and APK builds, repository hygiene), CD to build artefacts and releases, and a pull request template; details in Chapter~\ref{ch:evidence}.
 
 \section{Technical Implementation Details}
 
 \paragraph{Pose-to-video synchronization (\texttt{CaptureLogger.java}):} ARCore's recording API writes video and poses from the same frames, but poses are only logged during \texttt{TRACKING} state, creating gaps. The pipeline interpolates poses at each frame's PTS (linear position, slerp rotation) and skips frames inside tracking gaps $> 0.12$\,s.
 
-\paragraph{Sim3 metric alignment (\texttt{sfm\_colmap.py}):} COLMAP's global mapper produces an arbitrary-scale coordinate system. We compute a 7-DOF similarity transform (rotation + translation + scale) from matched COLMAP and ARCore camera positions using RANSAC (2{,}000 four-point samples, 10\,cm inlier threshold) followed by a Umeyama refit on the inliers; the inlier median residual is about 2.5\,cm. Because ARCore re-anchors silently, only its largest self-consistent segment ends up as inliers. Frames that jump more than 30\,cm from their temporal neighbours are dropped as SfM mis-registrations. The resulting metric scale is validated against a tape measure (Table~\ref{tab:tape}).
+\paragraph{Sim3 metric alignment (\texttt{sfm\_colmap.py}):} COLMAP's global mapper produces an arbitrary-scale coordinate system. We compute a 7-DOF similarity transform (rotation + translation + scale) from matched COLMAP and ARCore camera positions using RANSAC (2{,}000 four-point samples, 10\,cm inlier threshold) followed by a Umeyama refit on the inliers; the inlier median residual is about 2.5\,cm. Because ARCore re-anchors silently, only its largest self-consistent segment ends up as inliers. Frames that jump more than 30\,cm from their temporal neighbours are dropped as SfM mis-registrations. The resulting metric scale is validated against a tape measure (Table~\ref{tab:tape}). Figure~\ref{fig:sim3} shows the steps.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\footnotesize, >=latex,
+  box/.style={draw, rectangle, rounded corners=2pt, align=center, text width=4.0cm, inner sep=3pt, minimum height=0.9cm}]
+  \node[box] (colmap) at (-4.3,2.2) {\textbf{COLMAP camera centres}\\arbitrary scale and frame};
+  \node[box] (arcore) at (4.3,2.2)  {\textbf{Raw ARCore camera centres}\\metres, gravity-aligned};
+  \node[box, text width=6.0cm] (ransac) at (0,0.4) {\textbf{RANSAC}: 2{,}000 random 4-point samples, Umeyama fit each, inlier if residual $<$ 10\,cm};
+  \node[box, text width=6.0cm] (refit)  at (0,-1.3) {\textbf{Umeyama refit} on the largest inlier set $\rightarrow$ scale $s$, rotation $R$, translation $t$};
+  \node[box, text width=6.0cm] (apply)  at (0,-3.0) {Apply $(s, R, t)$ to every registered frame; drop frames $>$ 30\,cm from their temporal neighbours};
+  \node[draw, very thick, rectangle, rounded corners=2pt, inner sep=4pt] (out) at (0,-4.5) {metric, Sim3-aligned \texttt{frames.json}};
+  \draw[->] (colmap.south) -- (ransac.north west);
+  \draw[->] (arcore.south) -- (ransac.north east);
+  \draw[->] (ransac) -- (refit);
+  \draw[->] (refit) -- (apply);
+  \draw[->] (apply) -- (out);
+\end{tikzpicture}
+\caption{Sim3 alignment of the COLMAP reconstruction to ARCore's metric frame (\texttt{sfm\_colmap.py}, export stage; Umeyama fit unit-tested in \texttt{test\_relocalize\_and\_sfm.py}). Because ARCore re-anchors silently, only its largest self-consistent segment ends up as inliers. Inlier median residual: about 2.5\,cm. The resulting scale is validated against a tape measure (Table~\ref{tab:tape}).}
+\label{fig:sim3}
+\end{figure}
 
 \paragraph{Recording fast-path (\texttt{HelloArActivity.java}):} During recording, the \texttt{onDrawFrame()} method exits early after camera feed rendering and quality overlay (at 2\,Hz). All plane detection rendering, virtual object placement, PBR lighting, cubemap filtering, and tap handling are skipped, reducing GL thread load significantly.
 
 \paragraph{Featureless-tracking fallback (\texttt{imu.py}, \texttt{fallback.py}, \texttt{relocalize\_pnp.py}):} On plain walls ARCore loses tracking, and after re-tracking it sometimes continues in a shifted or rotated world frame. The fallback reads the gyroscope and accelerometer (201\,Hz) stored in ARCore's own recording, self-calibrates the IMU-to-camera rotation and the sensor biases, and bridges each gap: rotation by gyro integration, position by accelerometer integration with a minimal cubic correction that matches position and velocity at both ends. A heading mismatch at re-tracking reveals a new map frame, and the post-gap segment is re-aligned to the map by matching its keyframes against it (PnP). This is the team's main novelty claim. Validation on gaps cut out of tracked data:
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \caption{IMU fallback on simulated tracking gaps (position error, median / max)}
 \label{tab:imufallback}
@@ -110,10 +96,53 @@ On a real recording, all three heading jumps were detected, and re-alignment cut
     \item \textbf{Degenerate splat diagnosis}: Computed per-model statistics (thickness/width median, opacity histogram, splat count) and compared against reference implementations. Identified flattening regularizer $\times$ Adam interaction as the primary cause of zero-thickness splats.
 \end{enumerate}
 
+Figure~\ref{fig:coverage} illustrates the coverage map.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\footnotesize, >=latex]
+  % voxel grid (illustrative colouring)
+  \node[font=\small\bfseries] at (-4.0,2.4) {Voxels (10\,cm)};
+  \begin{scope}[shift={(-6.0,-1.0)}]
+    \foreach \x/\y/\col in {0/0/red, 1/0/yellow, 2/0/green, 3/0/green,
+                            0/1/red, 1/1/red, 2/1/yellow, 3/1/green,
+                            1/2/red, 2/2/yellow, 3/2/yellow} {
+      \fill[\col!70] (0.9*\x,0.9*\y) rectangle ++(0.9,0.9);
+    }
+    \draw[step=0.9] (0,0) grid (3.6,2.7);
+  \end{scope}
+  % direction bins of one voxel
+  \node[font=\small\bfseries, align=center] at (2.6,2.4) {Direction bins of one voxel};
+  \node[font=\scriptsize] at (0.9,1.6) {upper elevation};
+  \node[font=\scriptsize] at (4.3,1.6) {lower elevation};
+  \foreach \a/\b in {0/45, 45/90, 90/135, 135/180, 180/225} {
+    \fill[green!60] (0.9,0) -- ++(\a:1.0) arc (\a:\b:1.0) -- cycle;
+  }
+  \foreach \a in {0,45,90,135,180,225,270,315} {
+    \draw (0.9,0) -- ++(\a:1.0);
+    \draw (4.3,0) -- ++(\a:1.0);
+  }
+  \draw (0.9,0) circle (1.0);
+  \draw (4.3,0) circle (1.0);
+  \node[font=\scriptsize, align=center, text width=6cm] at (2.6,-1.6) {5 of 16 bins observed (8 azimuth $\times$ 2 elevation) $\rightarrow$ green};
+  % legend
+  \fill[red!70] (-6.0,-2.6) rectangle ++(0.4,0.4);
+  \node[anchor=west, font=\scriptsize] at (-5.5,-2.4) {1 direction};
+  \fill[yellow!70] (-3.8,-2.6) rectangle ++(0.4,0.4);
+  \node[anchor=west, font=\scriptsize] at (-3.3,-2.4) {2--3 directions};
+  \fill[green!70] (-1.2,-2.6) rectangle ++(0.4,0.4);
+  \node[anchor=west, font=\scriptsize] at (-0.7,-2.4) {$\geq$4 directions};
+  \node[anchor=west, font=\scriptsize] at (1.8,-2.4) {unmapped: no dot};
+\end{tikzpicture}
+\caption{Live coverage map (\texttt{CoverageMap.java}, \texttt{CoverageOverlayView.java}). ARCore raw depth (5\,Hz, confidence $\geq$128, up to 5\,m) is accumulated in 10\,cm voxels; each voxel records from which of 16 directions it was seen. Visible voxels are drawn as dots, coloured by direction count, with at most 5{,}000 voxels projected and 2{,}000 dots drawn, refreshed at 2\,Hz. The grid colouring is illustrative.}
+\label{fig:coverage}
+\end{figure}
+
 \section{Tools, Frameworks and Technologies}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
+\small
 \caption{Tools and technologies used}
 \label{tab:tools}
 \begin{tabular}{p{3.5cm}p{3cm}p{4.5cm}}

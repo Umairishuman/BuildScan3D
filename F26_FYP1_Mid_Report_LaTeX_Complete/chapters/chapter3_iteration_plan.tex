@@ -1,25 +1,31 @@
 \chapter{Proposal Feedback and Iteration Plan}
 
 \section{Proposal Feedback Summary}
-During the proposal defense, the panel provided the following key feedback:
-\begin{itemize}
-    \item Clarify the distinction between BuildScan~3D and existing consumer scanning apps (Polycam, Luma AI).
-    \item Demonstrate metric accuracy with quantitative comparisons to ground truth measurements.
-    \item Focus on measurement accuracy and the automated pipeline rather than feature-rich UI.
-    \item Define clear acceptance criteria for reconstruction quality (PSNR, SSIM thresholds).
-\end{itemize}
+At the proposal defense the panel asked the team to distinguish BuildScan~3D from consumer scanning apps (Polycam, Luma AI), to demonstrate metric accuracy against ground-truth measurements, to define clear acceptance criteria for reconstruction quality, and to focus on measurement accuracy and the automated pipeline rather than a feature-rich UI. Each point and the action taken is recorded in the action register below.
 
 \section{Proposal Action Register}
-\begin{longtable}{p{0.04\textwidth}p{0.26\textwidth}p{0.28\textwidth}p{0.12\textwidth}p{0.20\textwidth}}
+\label{sec:actionregister}
+Table~\ref{tab:actionregister} records the feedback received at the proposal defense and the action taken on each point.
+
+{\small
+\begin{longtable}{p{0.03\textwidth}p{0.22\textwidth}p{0.40\textwidth}p{0.07\textwidth}p{0.14\textwidth}}
+\caption{Proposal action register}\label{tab:actionregister}\\
 \toprule
-No. & Feedback / Required Change & Action Taken & Status & Evidence \\
+\textbf{No.} & \textbf{Panel feedback} & \textbf{Action taken} & \textbf{Status} & \textbf{Evidence} \\
 \midrule
-1 & Differentiate from consumer apps & Added metric scale via ARCore Sim3, live IQA, and measurement capability & Done & Chapter~2, Table~\ref{tab:comparison} \\
-2 & Quantitative metric accuracy & Tape-measure comparison: mean error 4.8\,mm (0.19\%), worst case 0.29\% against a 5\% target & Done & Table~\ref{tab:tape} \\
-3 & Define quality thresholds & Set acceptance: PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85, measurement error $\leq$ 5\% of tape measure & Done & Section~1.9 \\
-4 & Show automated pipeline & Built FastAPI server with RunPod cloud GPU integration & Done & Chapter~6, Section~6.6 \\
+\endfirsthead
+\toprule
+\textbf{No.} & \textbf{Panel feedback} & \textbf{Action taken} & \textbf{Status} & \textbf{Evidence} \\
+\midrule
+\endhead
+1 & How does this differ from Polycam or Luma AI? & Added metric scale via ARCore Sim3 alignment (tape-measure error: mean 0.19\%, worst 0.29\%), live IQA capture guidance and measurement tools; added a comparison table. & Done & Table~\ref{tab:comparison} \\
+2 & Show quantitative accuracy, not just visual quality & Tape-measure comparison on four rigid measurements: mean error 4.8\,mm (0.19\%), worst case 0.29\%, against a 5\% target. PSNR/SSIM reported on 42 held-out frames. & Done & Tables~\ref{tab:quality}, \ref{tab:tape} \\
+3 & Define measurable acceptance criteria & PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85, measurement error $\leq$ 5\% of tape measure, processing $<$ 35\,min on RTX 4090 (projected FYP-2 target; 75\,min measured on RTX 3070). & Done & Section~\ref{sec:success}, Section~\ref{sec:acceptance} \\
+4 & The pipeline should be automated, not manual & FastAPI server with RunPod cloud GPU integration; one tap in the Android app uploads the dataset and starts the whole pipeline. & Done & Section~\ref{sec:completed} \\
+5 & Consider cost implications of cloud GPU & Per-step timeouts; pod termination in try/finally; GPU type selectable at runtime via \texttt{/config} (default RTX 4090). Cost per scan not yet measured. & Done & Table~\ref{tab:risks} (R1, R2) \\
 \bottomrule
 \end{longtable}
+}
 
 \section{Iteration Strategy}
 We follow a two-iteration strategy aligned with FYP-1 and FYP-2:
@@ -40,15 +46,16 @@ We follow a two-iteration strategy aligned with FYP-1 and FYP-2:
 \section{Iteration 2 Plan}
 \begin{itemize}
     \item \textbf{Objective}: Optimize processing time, improve pipeline robustness, complete the structural layer and add measurement tools.
-    \item \textbf{Features}: Pipeline optimization (target $<$35\,min on RTX 4090, projected, from $\sim$75\,min measured on RTX 3070); improved handling of edge cases (mirrors, textureless walls, large rooms); Three.js/WebGPU splat viewer; point-to-point measurement tool that snaps to walls; structural layer completion (wall planes, corners, wall lengths, door detection, floor plans).
+    \item \textbf{Features}: pipeline optimization (target $<$35\,min on RTX 4090, projected, from $\sim$75\,min measured on RTX 3070), edge-case robustness, the web viewer with wall-snapping measurement, and structural layer completion; modules and schedule in Chapter~\ref{ch:plan}.
     \item \textbf{Deliverables}: Optimized pipeline with reduced processing time, web viewer with measurement tools, structural layer with floor-plan export, field validation report across $\geq$5 rooms.
     \item \textbf{Evidence}: Processing time benchmarks; measurement accuracy comparison with tape-measure ground truth across $\geq$5 rooms.
 \end{itemize}
 
 \section{Work Breakdown and Responsibilities}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
+\small
 \caption{Work breakdown and ownership}
 \label{tab:workbreakdown}
 \begin{tabular}{p{4cm}p{3.5cm}p{3cm}}
@@ -85,5 +92,5 @@ The core-pipeline milestones of Iteration~1 have been met; refinement is ongoing
 \section{Delays, Deviations and Recovery Plan}
 \begin{itemize}
     \item \textbf{Deviation}: We initially built a custom training script (\texttt{train.py}) with depth supervision, flattening regularization, and pose refinement. After extensive analysis (documented in \texttt{Training\_Analysis.md}), we found this produced worse results than standard splatfacto. We pivoted to using splatfacto for training and keeping our custom preprocessing. This analysis consumed approximately 2 weeks but resulted in a better-informed design decision.
-    \item \textbf{Recovery}: The core pipeline is in place, but Iteration~1 is not finished: 3DGS refinement, 3D mesh creation, completion of the structural layer, and the web workspace remain open. The training analysis cost about two weeks. FYP-2 therefore starts with the one-command v6 pipeline and the processing-time reduction, and schedules the structural layer and web workspace in Iterations~2a--2b. 3D mesh creation is in scope but not yet scheduled.
+    \item \textbf{Recovery}: The core pipeline is in place, but Iteration~1 is not finished: the open items listed above remain. FYP-2 therefore starts with the one-command v6 pipeline and the processing-time reduction, and schedules the structural layer and web workspace in Iterations~2a--2b. 3D mesh creation is in scope but not yet scheduled.
 \end{itemize}

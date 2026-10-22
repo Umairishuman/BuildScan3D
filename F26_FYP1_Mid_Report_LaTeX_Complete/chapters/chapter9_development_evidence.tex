@@ -2,34 +2,18 @@
 \label{ch:evidence}
 
 \section{Work Completed}
-\begin{enumerate}
-    \item Android capture app with ARCore pose/depth/quality logging, live IQA, coverage overlay, upload UI.
-    \item Reconstruction pipeline: IMU fallback, gyro-aware frame selection, COLMAP SfM with Sim3 metric alignment, Nerfstudio splatfacto training, model export.
-    \item FastAPI processing server with local and RunPod cloud GPU modes.
-    \item RunPod integration with guaranteed pod lifecycle management.
-    \item CI/CD pipeline (GitHub Actions): lint, unit tests, APK build, web build, hygiene checks.
-    \item Extensive root-cause analysis of degenerate splat geometry (6 causes, documented in \texttt{Training\_Analysis.md}).
-    \item Server launcher script (\texttt{start\_server.bat}) with \texttt{.env} support.
-\end{enumerate}
+The team has built the Android capture app (ARCore pose, depth and quality logging, live IQA, coverage overlay, upload UI); the reconstruction pipeline (IMU fallback, keyframe extraction, COLMAP SfM with Sim3 metric alignment, Nerfstudio splatfacto training, model export, with gyro-aware frame selection validated but not yet in the one-command pipeline); the FastAPI processing server with local and RunPod cloud GPU modes and pod termination in \texttt{finally} blocks; the CI/CD pipeline (lint, unit tests, APK and web builds, hygiene checks); the server launcher (\texttt{start\_server.bat}) with \texttt{.env} support; and a root-cause analysis of degenerate splat geometry (six causes, documented in \texttt{Training\_Analysis.md}).
 
 \section{Work Remaining}
-\begin{enumerate}
-    \item \textbf{Web viewer}: Three.js/WebGPU Gaussian splat viewer with orbit controls and measurement tools.
-    \item \textbf{Measurement tool}: Point-to-point distance measurement in the metric 3D model.
-    \item \textbf{Structural layer}: Complete \texttt{structure.py}: wall-to-wall dimensions, doors and openings, ceiling-height detection, and automatic floor-plan export.
-    \item \textbf{Wall snapping}: Measurement clicks that snap to structural-layer walls, and a floor-plan view in the web viewer.
-    \item \textbf{3DGS refinement}: One-command v6 pipeline, validation on the second room, and IMU-driven motion-blur modelling.
-    \item \textbf{3D mesh creation}: In scope as planned work; not yet scheduled.
-    \item \textbf{Field validation}: Metric accuracy validation on $\geq$3 additional rooms with varied geometry.
-    \item \textbf{User testing}: Usability evaluation with external users (non-team members).
-\end{enumerate}
+Scheduled in Chapter~\ref{ch:plan}: the Three.js/WebGPU splat viewer with orbit controls; point-to-point measurement; completing the structural layer (wall-to-wall dimensions, doors and openings, ceiling-height detection, floor-plan export) with wall snapping and a floor-plan view; 3DGS refinement (one-command v6 pipeline, second-room validation, IMU-driven motion-blur modelling); field validation on $\geq$3 more rooms; and usability evaluation with external users. 3D mesh creation is in scope as planned work but not yet scheduled.
 
 \section{Individual Responsibilities}
 
 The primary evidence of each member's contribution is the set of modules they own: the files whose commit history carries their name (\texttt{git log -- <file>}). Table~\ref{tab:responsibilities} lists them.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
+\small
 \caption{Owned modules per team member (from the commit history of each file)}
 \label{tab:responsibilities}
 \begin{tabular}{p{3.2cm}p{9.3cm}}
@@ -65,14 +49,54 @@ The project repository is hosted on GitHub. Key statistics:
     \item \textbf{Repository}: \texttt{github.com/Umairishuman/FYP} (private)
     \item \textbf{Branches}: \texttt{master} (stable) and work branches such as \texttt{ci/github-actions}, \texttt{ci/pipeline-updates} and \texttt{exp/trainer-arkitscenes}
     \item \textbf{Commit history}: 133 commits (85 / 26 / 20, plus 2 bot commits)
-    \item \textbf{CI}: GitHub Actions runs lint, tests and builds on work branches and pull requests
+    \item \textbf{CI}: GitHub Actions runs on work branches, pull requests and (through the CD workflow) \texttt{master}: ruff lint and pytest on Python 3.10, 3.11 and 3.12; a Node.js build of the web UI (a placeholder for FYP-2); a Gradle APK build with signing and manifest checks; and repository hygiene (file-size limits, a secrets check, workflow lint).
+    \item \textbf{CD}: on push to \texttt{master}, build artefacts; on a version tag, a GitHub Release with the APK and web bundle.
     \item \textbf{Code review}: Pull request template with area checkboxes and a testing checklist
+    \item \textbf{Task tracking}: \texttt{docs/progress/TODO.md} is the dated task log, with status markers and links to commits and analysis documents.
 \end{itemize}
+
+Table~\ref{tab:repo} maps the repository layout to the modules described in this report.
+
+{\footnotesize
+\begin{longtable}{p{0.47\textwidth}p{0.49\textwidth}}
+\caption{Repository structure}\label{tab:repo}\\
+\toprule
+\textbf{Path} & \textbf{Contents} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Path} & \textbf{Contents} \\
+\midrule
+\endhead
+\texttt{googleARCore/samples/}\allowbreak\texttt{hello\_ar\_java/} & Android capture app; Java sources in \texttt{app/src/main/java/.../helloar/} \\
+\quad\texttt{HelloArActivity.java} & main AR activity, recording, settings \\
+\quad\texttt{CaptureLogger.java} & sensor data recording \\
+\quad\texttt{QualityMonitor.java} & live IQA analysis \\
+\quad\texttt{CoverageMap.java, CoverageOverlayView.java} & voxel coverage tracker and dot overlay \\
+\quad\texttt{ProcessingActivity.java} & upload and progress UI \\
+\quad\texttt{GalleryActivity.java, ScanDetailActivity.java} & saved scans \\
+\texttt{src/arcore3dgs/} & reconstruction pipeline \\
+\quad\texttt{fallback.py, imu.py, relocalize\_pnp.py} & IMU tracking-gap bridging and post-gap re-alignment \\
+\quad\texttt{prepare.py, select\_sharp.py} & keyframe extraction; gyro-aware frame selection \\
+\quad\texttt{sfm\_colmap.py, export\_nerfstudio.py} & COLMAP SfM + Sim3 alignment; Nerfstudio export \\
+\quad\texttt{mvs\_init.py, structure.py} & dense MVS initialisation; structural layer \\
+\quad\texttt{fair\_compare.py, fit\_diag.py} & evaluation tools \\
+\texttt{server/} & processing server: \texttt{main.py}, \texttt{pipeline.py}, \texttt{runpod\_client.py}, \texttt{remote\_gpu.py} \\
+\texttt{.github/workflows/} & CI/CD: \texttt{ci.yml}, \texttt{cd.yml}, \texttt{docker-gpu.yml} \\
+\texttt{scripts/} & launchers: \texttt{start\_server.bat}, \texttt{view\_splat.bat}, job tools \\
+\texttt{tests/} & pytest suite (12 files + \texttt{conftest.py}) \\
+\texttt{prototype/web-ui/} & web UI prototype \\
+\texttt{docs/progress/} & \texttt{TODO.md}, \texttt{Training\_Analysis.md}, \texttt{Problems\_and\_Solutions.md} \\
+\texttt{.env} & RunPod API key and processing mode; tracked in the repository although NFR-S2 requires it to be ignored \\
+\bottomrule
+\end{longtable}
+}
 
 \section{Milestones and Commit Evidence}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
+\small
 \caption{Key milestones with commit evidence}
 \label{tab:milestones}
 \begin{tabular}{p{2.5cm}p{5cm}p{4cm}}
@@ -95,8 +119,9 @@ M6: Validation & v3--v6 results, tape measure, second room & Commits by Tayyab; 
 
 In compliance with university policy, we disclose the use of the following AI-assisted development tools:
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
+\small
 \caption{AI and automated tools used during development}
 \label{tab:aitools}
 \begin{tabular}{p{3cm}p{4cm}p{5cm}}
@@ -113,20 +138,13 @@ ChatGPT (OpenAI) & Research queries, algorithm explanations & Used to understand
 \paragraph{Statement of originality:}
 All core algorithms (Sim3 alignment, gyro-aware frame selection, coverage map, IQA pipeline, RunPod lifecycle management) were designed by the team. AI tools were used as assistants for code generation, debugging, explanation and report drafting, as disclosed in Table~\ref{tab:aitools}. The system architecture, experimental methodology, root-cause analysis, and design decisions are entirely our own work. All AI-generated code was reviewed, understood, tested, and adapted by team members before integration into the codebase.
 
-\paragraph{Other development tools:}
-\begin{itemize}
-    \item Android Studio (Ladybug) with Android Gradle Plugin
-    \item Visual Studio Code with Python and Java extensions
-    \item Git + GitHub for version control
-    \item Postman for API testing during server development
-    \item ADB (Android Debug Bridge) for device-level debugging
-    \item NVIDIA Nsight for GPU profiling during training experiments
-\end{itemize}
+\paragraph{Other development tools:} Android Studio (Ladybug) with the Android Gradle Plugin, Visual Studio Code with Python and Java extensions, Git and GitHub, Postman for API testing, ADB for device-level debugging, and NVIDIA Nsight for GPU profiling during training experiments.
 
 \section{External Components and Dependencies}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
+\small
 \caption{External components and their licenses}
 \label{tab:dependencies}
 \begin{tabular}{p{3.5cm}p{2cm}p{2.5cm}p{3cm}}
@@ -148,46 +166,39 @@ All external components are used under permissive open-source licenses compatibl
 
 \section{Risks and Mitigation}
 
-Table~\ref{tab:risks} is the project's risk register. Likelihood and impact are rated Low, Medium or High by the team; the owner is the member whose modules the risk mainly affects (Table~\ref{tab:responsibilities}). The register is reviewed at the start of each FYP-2 iteration.
+Table~\ref{tab:risks} is the project's risk register. Likelihood and impact are rated Low, Medium or High by the team; each risk is handled by the member who owns the affected modules (Table~\ref{tab:responsibilities}). The register is reviewed at the start of each FYP-2 iteration.
 
-{\small\setlength{\tabcolsep}{3pt}
-\begin{longtable}{p{0.04\textwidth}p{0.19\textwidth}p{0.08\textwidth}p{0.08\textwidth}p{0.42\textwidth}p{0.08\textwidth}}
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{p{0.04\textwidth}p{0.25\textwidth}p{0.07\textwidth}p{0.07\textwidth}p{0.50\textwidth}}
 \caption{Risk register}\label{tab:risks}\\
 \toprule
-\textbf{ID} & \textbf{Risk} & \textbf{Likel.} & \textbf{Impact} & \textbf{Mitigation} & \textbf{Owner} \\
+\textbf{ID} & \textbf{Risk} & \textbf{Likel.} & \textbf{Impact} & \textbf{Mitigation} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Risk} & \textbf{Likel.} & \textbf{Impact} & \textbf{Mitigation} \\
 \midrule
 \endhead
-R1 & Cloud GPU cost exceeds budget & Medium & High & Per-step timeouts; \texttt{terminate\_pod()} in \texttt{finally} blocks whenever a pod exists; watchdog thread with a hard time limit; GPU type selectable per job. The cost per scan has not yet been measured; measure it on the first RunPod runs in Iteration~2a. & Umair \\
-\midrule
-R2 & Cloud GPU unavailable (RTX 4090 out of stock on RunPod) & Medium & Medium & GPU type selectable at runtime from the list RunPod reports as in stock; existing-pod mode; local RTX 3070 fallback (measured $\sim$75\,min per room). & Umair \\
-\midrule
-R3 & Tracking loss on featureless surfaces (plain walls, ceilings) & High & Medium & Live IQA ``low texture'' warning and coverage overlay during capture; IMU fallback bridges gaps (3.8\,cm vs 30.6\,cm over 9\,s) and re-aligns after re-tracking (49.7 $\rightarrow$ 8.2\,px); image-based SfM registers most gap frames. Segments that cannot be re-aligned are flagged and kept out of training. & Tayyab \\
-\midrule
-R4 & Mirrors and glass produce SfM outliers and artefacts & Medium & Medium & Documented limitation; detect and mask reflective regions in FYP-2 (Iteration~2b). & Tayyab \\
-\midrule
-R5 & Large rooms exceed GPU memory & Medium & Medium & The 8\,GB RTX 3070 already needs default densification thresholds and no page-locked caching above 4\,GB. Train large rooms on a 24\,GB RTX 4090 (not yet measured); fewer keyframes on slow walks. & Tayyab \\
-\midrule
-R6 & RTX 4090 performance is unmeasured; the $<$35\,min target may not be met & High & Medium & The target is a projection. Benchmark on an RTX 4090 at the start of Iteration~2a; attack feature matching first (23 of the 75\,min measured on the RTX 3070) with ARCore-pose-guided or sequential pairs; report the measured time whatever it is. Note that the RunPod pod watchdog's default hard limit (\texttt{MAX\_POD\_LIFETIME}) is 60\,min, shorter than the only measured run; raise it, or confirm the run fits, before the first full RunPod job. & Umair \\
-\midrule
-R7 & FYP-2 scope not delivered in time (3DGS refinement, structural layer, web workspace, 3D mesh creation) & Medium & High & Fixed order of work: one-command v6 pipeline $\rightarrow$ web viewer with measurement $\rightarrow$ structural layer and floor plans $\rightarrow$ dashboard. The dashboard is cut first if time runs short. 3D mesh creation stays unscheduled until the core items are done. & Team \\
-\midrule
-R8 & Measurement evidence too thin (four rigid measurements, one room) & Medium & Medium & Tape-measure comparisons on $\geq$5 rooms in FYP-2, including the second room; structural-layer wall lengths checked against tape. & Tayyab \\
-\midrule
-R9 & Only one phone model tested (realme) & Medium & Medium & Record on at least one more ARCore phone in FYP-2; the app logs per-frame exposure and the factory lens calibration, so device differences can be measured. & Umair \\
-\midrule
-R10 & Nerfstudio / gsplat breaking changes or a lost local patch & Low & Medium & Nerfstudio pinned to 1.1.5; the local pin-memory patch is documented in \texttt{docs/progress/}; GPU Docker image built by CI. & Tayyab \\
-\midrule
-R11 & ARCore API changes or deprecation & Low & High & ARCore is used only in the capture app; the pipeline consumes plain files (\texttt{dataset.mp4}, \texttt{poses.csv}, \ldots), so another tracker can feed it. & Umair \\
-\midrule
-R12 & Team member unavailability & Low & Medium & All code in one shared repository; owned modules documented; progress logs in \texttt{docs/progress/}; automated tests guard the Python code. & Team \\
+R1 & Cloud GPU cost exceeds budget & Medium & High & Per-step timeouts, pod watchdog, \texttt{terminate\_pod()} in \texttt{finally}; cost per scan not yet measured (measure in Iteration~2a). \\
+R2 & RTX 4090 unavailable on RunPod & Medium & Medium & GPU type selectable at runtime; existing-pod mode; local RTX 3070 fallback ($\sim$75\,min). \\
+R3 & Tracking loss on featureless surfaces & High & Medium & Live IQA and coverage overlay; IMU fallback (3.8 vs 30.6\,cm over 9\,s; 49.7 $\rightarrow$ 8.2\,px); unverified segments kept out of training. \\
+R4 & Mirrors and glass cause SfM outliers & Medium & Medium & Documented limitation; reflective-region masking in Iteration~2b. \\
+R5 & Large rooms exceed GPU memory & Medium & Medium & 24\,GB RTX 4090 (not yet measured); default densification thresholds; fewer keyframes. \\
+R6 & RTX 4090 time unmeasured; $<$35\,min target may be missed & High & Medium & Benchmark first in Iteration~2a; speed up matching (23 of 75\,min) first; pod watchdog default raised to 2\,h. \\
+R7 & FYP-2 scope not delivered in time & Medium & High & Fixed order: v6 pipeline, web viewer, structural layer, dashboard (cut first); mesh unscheduled. \\
+R8 & Measurement evidence too thin (four measurements, one room) & Medium & Medium & Tape-measure comparisons on $\geq$5 rooms in FYP-2, including structural-layer wall lengths. \\
+R9 & Only one phone model tested (realme) & Medium & Medium & Record on a second ARCore phone; exposure and lens metadata logged for comparison. \\
+R10 & Nerfstudio/gsplat changes or lost local patch & Low & Medium & Nerfstudio pinned to 1.1.5; pin-memory patch documented; GPU Docker image built by CI. \\
+R11 & ARCore API changes & Low & High & ARCore confined to the app; the pipeline reads plain files, so another tracker can feed it. \\
+R12 & Team member unavailability & Low & Medium & One shared repository; owned modules and progress logs documented; tests guard the Python code. \\
 \bottomrule
 \end{longtable}
 }
 
 \section{Security and Privacy Considerations}
 \begin{itemize}
-    \item \textbf{API key management}: The RunPod API key is stored in a \texttt{.env} file excluded from version control via \texttt{.gitignore}. The key is loaded at runtime from environment variables, never hardcoded.
-    \item \textbf{CI secrets scanning}: The GitHub Actions CI pipeline includes a secrets detection check that blocks merges if API keys, tokens, or credentials are found in committed files.
+    \item \textbf{API key management}: The RunPod API key is loaded at runtime from environment variables or a \texttt{.env} file, never hardcoded in source. However, \texttt{.env} is not in \texttt{.gitignore} and was committed to the repository on 18~October~2026, so NFR-S2 is not met; the key must be rotated and the file removed from version control.
+    \item \textbf{CI secrets scanning}: The CI hygiene job fails if a \texttt{.env}, key or certificate file is tracked, and scans tracked files for private keys, AWS keys and GitHub tokens (it has no pattern for RunPod keys). CI last ran (run \#6) before \texttt{.env} was committed; by the job's own rule, the next CI run on \texttt{master} will fail until the file is removed.
     \item \textbf{Data privacy}: Captured scan data (video, depth, poses) is transmitted to the processing server over the local network. In production, HTTPS would be required. Scan data is stored only for the duration of processing and can be deleted via the API.
     \item \textbf{Cloud GPU security}: RunPod pods are created on-demand, used for a single job, and terminated immediately after. No persistent data remains on the cloud GPU.
 \end{itemize}
