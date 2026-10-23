@@ -28,7 +28,9 @@ def api(tmp_path, monkeypatch):
     monkeypatch.setattr(m, "DATASET_ROOT", tmp_path / "dataset")
     monkeypatch.setattr(m, "jobs", {})
     monkeypatch.setattr(m, "processing_config",
-                        {"mode": "local", "runpod_api_key": "", "runpod_gpu_type": "NVIDIA RTX 3090"})
+                        {"mode": "local", "runpod_api_key": "", "runpod_gpu_type": "NVIDIA RTX 3090",
+                         "remote_host": "", "remote_port": 22, "remote_user": "root",
+                         "remote_skip_setup": False})
     monkeypatch.setattr(m, "start_pipeline_thread",
                         lambda job, iterations=30000: started.local.append((job.job_id, iterations)))
     monkeypatch.setattr(m, "start_runpod_pipeline_thread",

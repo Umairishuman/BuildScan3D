@@ -1,0 +1,44 @@
+\chapter{Meeting and Progress Evidence}
+
+\section{Supervisor Meetings}
+
+The team held \textbf{two} meetings with the supervisor, Mr.~Furqan Nasir, in the run-up to the mid-evaluation: a progress review on 14~October~2026 and the mid-evaluation meeting itself on 19~October~2026. No formal minutes were taken, so the agendas below are recorded from memory, and no decision in this report is presented as having been approved by the supervisor. The dated record of the work itself is the progress log in Section~\ref{sec:progresslog} and the commit history (Chapter~\ref{ch:evidence}).
+
+\begin{longtable}{p{0.14\textwidth}p{0.46\textwidth}p{0.30\textwidth}}
+\toprule
+\textbf{Meeting} & \textbf{Agenda} & \textbf{Attendees} \\
+\midrule
+\endhead
+14~October~2026 \newline (progress review) & Demonstration of the work completed to date: the capture app, the reconstruction pipeline and the processing server. Discussion of the techniques used, including the move from ARCore poses to image-based COLMAP poses and the decision to train with splatfacto. & Project team and supervisor \\
+\midrule
+19~October~2026 \newline (mid-evaluation) & Review of progress against the mid-evaluation criteria, and clarification of what the mid-report and the demonstration were expected to cover. & Project team and supervisor \\
+\bottomrule
+\end{longtable}
+
+\section{Progress Log}
+\label{sec:progresslog}
+
+Detailed development progress is maintained in \texttt{docs/progress/TODO.md}. Key milestones:
+
+\begin{itemize}
+    \item \textbf{ARCore capture app}: Basic recording $\rightarrow$ pose sync validation $\rightarrow$ IQA $\rightarrow$ coverage overlay $\rightarrow$ upload UI. Incremental feature additions documented with timestamps.
+
+    \item \textbf{Reconstruction pipeline}: Best custom-trainer model on ARCore-derived poses (\texttt{gs\_colmap\_nc}, 22.67\,dB / 0.782 held-out) $\rightarrow$ image-based COLMAP poses (training-view fit 21.9 $\rightarrow$ $\sim$28\,dB; held-out SSIM 0.78 $\rightarrow$ 0.86) $\rightarrow$ v3 (26.04\,dB / 0.8756 on the 42-frame held-out set) $\rightarrow$ gyro-aware frame selection (+0.26\,dB / +0.009 SSIM) $\rightarrow$ dense MVS initialisation (+0.21\,dB / +0.003 SSIM) $\rightarrow$ v6 (26.52\,dB / 0.8886). Each improvement documented with before/after metrics.
+
+    \item \textbf{Quality debugging}: Two-week root-cause analysis documented in \texttt{Training\_Analysis.md} covering 6 identified causes of degenerate splats, with per-cause experiments and metrics.
+
+    \item \textbf{Server and cloud}: FastAPI server $\rightarrow$ local pipeline runner $\rightarrow$ RunPod integration $\rightarrow$ guaranteed pod lifecycle. Problem-solution pairs documented in \texttt{Problems\_and\_Solutions.md}.
+\end{itemize}
+
+\section{Problems and Solutions Summary}
+
+25 problems encountered during development are documented in \texttt{docs/progress/Problems\_and\_Solutions.md}. The most significant:
+
+\begin{enumerate}
+    \item ARCore silent re-anchoring causing pose discontinuities (solved: anchor logging + IMU fallback)
+    \item COLMAP lens distortion not matching ARCore intrinsics (solved: self-calibration)
+    \item Degenerate splat geometry from custom training recipe (solved: adopted splatfacto)
+    \item 30\,FPS input overwhelming COLMAP matching (solved: keyframe selection, one sharp frame per window)
+    \item Motion blur in training frames, 6--12\,px median (solved for v4--v6: gyro-aware frame selection, +0.26\,dB / +0.009 SSIM)
+    \item GPU memory overflow on the 8\,GB RTX 3070 with $>$1000 full-resolution frames (solved: skip page-locked image caching above 4\,GB; default densification thresholds)
+\end{enumerate}

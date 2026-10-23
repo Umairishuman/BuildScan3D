@@ -1,0 +1,143 @@
+\chapter{Software Requirements}
+
+\section{User Interactions / Use Cases}
+The system operates with three main types of interaction of the user:
+\begin{enumerate}
+    \item \textbf{Capture}: The user starts the application on Android, initiates recording operation, then walks around the room being shown feedback on the recording quality, and stops recording after this and taps ``Upload \& Process.''
+    \item \textbf{Monitor}: The user monitors the processing progress showing the current phase, percentage completed, time elapsed, and logs.
+    \item \textbf{View/Measure}: The user checks the resultant 3D model on the web viewer and can calculate certain distances (FYP-2).
+\end{enumerate}
+
+\section{Use Case Diagram}
+The implementation of the system consists of three actors (See Figure~\ref{fig:usecase}): \emph{End User} (perform captures and views), \emph{Processing Server} (executes jobs), and the \emph{Cloud GPU} (carries-out reconstruction). The use cases are Record Scan, Upload Dataset, Monitor Progress, View Model, Take Measurements and Configure Server. Each of them has the relevant code: Record Scan corresponds to \texttt{HelloArActivity} and \texttt{CaptureLogger}; Upload Dataset and Monitor Progress refer to \texttt{ProcessingActivity} and the \texttt{/upload} and \texttt{/status} endpoints of \texttt{server/main.py}; Configure Server links to the settings menu of the app (server URL) and \texttt{/config}; View Model and Take Measurements correspond to the desktop viewer today and web workspace in phase FYP-2.
+
+% Stick-figure actor for the use case diagram: \bsactor{x}{y}{label}
+\newcommand{\bsactor}[3]{%
+  \begin{scope}[shift={(#1,#2)}]
+    \draw (0,0.95) circle (0.2);
+    \draw (0,0.75) -- (0,0.05);
+    \draw (-0.35,0.5) -- (0.35,0.5);
+    \draw (0,0.05) -- (-0.3,-0.45);
+    \draw (0,0.05) -- (0.3,-0.45);
+    \node[align=center] at (0,-0.85) {#3};
+  \end{scope}}
+
+The End User is the primary actor; the Processing Server (\texttt{server/main.py}) and the Cloud GPU (a RunPod pod, or the local GPU) are secondary actors. Take Measurement currently runs in the desktop viewer; the web version is FYP-2 work.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\footnotesize,
+  uc/.style={draw, ellipse, minimum width=3.6cm, minimum height=0.85cm, align=center}]
+  \draw[rounded corners=4pt] (-2.6,-3.6) rectangle (2.6,4.0);
+  \node[font=\small\bfseries] at (0,3.6) {BuildScan 3D};
+  \node[uc] (rec)  at (0,2.7)  {Record Scan};
+  \node[uc] (upl)  at (0,1.6)  {Upload Dataset};
+  \node[uc] (mon)  at (0,0.5)  {Monitor Progress};
+  \node[uc] (view) at (0,-0.6) {View Model};
+  \node[uc] (meas) at (0,-1.7) {Take Measurement};
+  \node[uc] (conf) at (0,-2.8) {Configure Server};
+  \bsactor{-5.2}{-0.2}{End User}
+  \bsactor{5.2}{1.4}{Processing\\Server}
+  \bsactor{5.2}{-2.4}{Cloud GPU}
+  \coordinate (user) at (-4.8,0.3);
+  \coordinate (srv)  at (4.8,1.9);
+  \coordinate (gpu)  at (4.8,-1.9);
+  \foreach \n in {rec,upl,mon,view,meas,conf} {\draw (user) -- (\n.west);}
+  \foreach \n in {upl,mon,conf} {\draw (srv) -- (\n.east);}
+  \draw (gpu) -- (upl.east);
+\end{tikzpicture}
+\caption{Use case diagram.}
+\label{fig:usecase}
+\end{figure}
+
+\section{Detailed Use Cases}
+
+\paragraph{UC-1: Record Indoor Scan}
+\begin{itemize}
+    \item \textbf{Actor}: User
+    \item \textbf{Precondition}: Application downloaded on Android device compatible with ARCore.
+    \item \textbf{Flow of Events}: The User starts the application $\rightarrow$ presses Record $\rightarrow$ moves around the space $\rightarrow$ gets live feedback regarding IQA (blurriness, speed, darkness, texture)$\rightarrow$ stops the recording $\rightarrow$ app displays the summary of quality data.
+    \item \textbf{Postcondition}: The information is saved on the device (video, poses, depth, quality, meta).
+\end{itemize}
+
+\paragraph{UC-2: Upload and Process}
+\begin{itemize}
+    \item \textbf{Actor}: User
+    \item \textbf{Precondition}: Recording is over; URL of the server is configured.
+    \item \textbf{Flow of events}: The User clicks on Upload and Process $\rightarrow$ the app compresses the files and uploads them onto the server $\rightarrow$ server creates a job and sends it to GPU $\rightarrow$ app checks progress every 3 seconds communicating step, percentage, logs.
+    \item \textbf{Postcondition}: The 3D model (\texttt{splat.ply}) is ready for downloading.
+    \item \textbf{Exception}: The upload does not go through $\rightarrow$ button for retrying exists; failure of the process $\rightarrow$ error message shows the step name.
+\end{itemize}
+
+\section{Functional Requirements}
+Table~\ref{tab:fr} lists the functional requirements by module. Each has a priority, a status, a verifiable acceptance check, and its trace to the implementing file and the test case (Chapter~\ref{ch:testing}) that checks it.
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{p{0.07\textwidth}p{0.27\textwidth}p{0.06\textwidth}p{0.10\textwidth}p{0.24\textwidth}p{0.17\textwidth}}
+\caption{Functional requirements with acceptance checks and traceability}\label{tab:fr}\\
+\toprule
+\textbf{ID} & \textbf{Requirement (dependency)} & \textbf{Pri.} & \textbf{Status} & \textbf{Acceptance check} & \textbf{Implementation; test} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Requirement (dependency)} & \textbf{Pri.} & \textbf{Status} & \textbf{Acceptance check} & \textbf{Implementation; test} \\
+\midrule
+\endhead
+\multicolumn{6}{l}{\textit{Mobile capture module}} \\
+FR-M1 & Record video at 30\,FPS with per-frame camera poses (position, quaternion, intrinsics) in \texttt{poses.csv} (ARCore SDK) & Must & Done & One pose row per tracked video frame & \texttt{CaptureLogger.java}; TC-1 \\
+FR-M2 & Log ARCore tracking state and failure reasons in \texttt{tracking.csv} (FR-M1) & Must & Done & One row per frame with state and reason & \texttt{CaptureLogger.java}; TC-1 \\
+FR-M3 & Save ARCore feature points with confidence in \texttt{points.csv} (ARCore SDK) & Should & Done & Points written with timestamps & \texttt{CaptureLogger.java}; TC-1 \\
+FR-M4 & Save raw depth maps with confidence at 5\,Hz in \texttt{depth/} (ARCore Depth API) & Should & Done & Depth written at most every 0.2\,s, only when ARCore produced a new map & \texttt{CaptureLogger.java}; TC-1 \\
+FR-M5 & Compute and display live IQA: blur, brightness, motion speed, texture (FR-M1) & Must & Done & Warning shown on blurred, dark, fast or textureless frames & \texttt{QualityMonitor.java}; TC-2 \\
+FR-M6 & Show a coverage overlay: red, yellow, green by observed directions (FR-M4) & Must & Done & Dot colour follows the 1 / 2--3 / $\geq$4 direction rule & \texttt{CoverageMap.java}; TC-3 \\
+FR-M7 & Upload the complete dataset by multipart HTTP POST (server available) & Must & Done & Server returns a job ID; files saved & \texttt{ProcessingActivity.java}; TC-8 \\
+FR-M8 & Configure the server URL from the settings menu & Must & Done & URL persists across app restarts & \texttt{HelloArActivity.java}; -- \\
+FR-M9 & Show progress: step, percentage, elapsed time, recent log lines (FR-S5) & Must & Done & Fields update from \texttt{/status} every 3\,s & \texttt{ProcessingActivity.java}; TC-9 \\
+\multicolumn{6}{l}{\textit{Processing server module}} \\
+FR-S1 & Accept multipart uploads (video, poses, tracking, points, quality, meta, \texttt{depth.zip}) & Must & Done & Missing file rejected; corrupt zip fails cleanly & \texttt{main.py}; TC-8 \\
+FR-S2 & Create a unique job ID per upload and track its status & Must & Done & Status has the fields the app reads & \texttt{pipeline.py} (\texttt{Job}); TC-9 \\
+FR-S3 & Run the pipeline with per-step timeout watchdogs (pipeline scripts) & Must & Done & Step over its timeout is killed; job failed & \texttt{pipeline.py} (\texttt{StepConfig}); TC-15, TC-14 \\
+FR-S4 & Support local GPU and RunPod cloud GPU modes (RunPod API key) & Must & Done & Mode switch via \texttt{/config} reaches the right starter & \texttt{runpod\_client.py}; TC-7, TC-10 \\
+FR-S5 & Expose a progress-polling endpoint (FR-S2) & Must & Done & \texttt{GET /status/\{id\}}; unknown job 404 & \texttt{main.py}; TC-9 \\
+FR-S6 & Provide a download endpoint for \texttt{splat.ply} (FR-S3) & Must & Done & 404 unknown, 409 unfinished, file when done & \texttt{main.py}; TC-16 \\
+FR-S7 & In RunPod mode, always terminate the pod after processing, even on failure (FR-S4) & Must & Done & \texttt{terminate\_pod()} on every path where a pod exists & \texttt{runpod\_client.py}; TC-7 \\
+\multicolumn{6}{l}{\textit{Reconstruction pipeline module}} \\
+FR-P1 & Extract keyframes by gyro-aware sharpness prediction (exposure metadata) & Must & Partial: validated in v4--v6, not yet in the one-command pipeline & Least predicted blur per 0.2\,s window & \texttt{prepare.py}, \texttt{select\_sharp.py}; TC-5 \\
+FR-P2 & Run COLMAP SfM with SIFT, lens self-calibration and global mapping (COLMAP 4.2) & Must & Done & Frames register; reprojection error $<$1\,px & \texttt{sfm\_colmap.py}; TC-5, TC-18 \\
+FR-P3 & Compute a Sim3 alignment from COLMAP to ARCore's metric frame (FR-P2, FR-M1) & Must & Done & Model distances within 5\% of tape measure; measured mean 0.19\%, worst 0.29\% (Table~\ref{tab:tape}) & \texttt{sfm\_colmap.py}; TC-6 \\
+FR-P4 & Train splatfacto and export \texttt{splat.ply} (Nerfstudio 1.1.5) & Must & Done & Held-out PSNR $\geq$ 25\,dB, SSIM $\geq$ 0.85; v6: 26.52\,dB / 0.8886 & \texttt{pipeline.py}; TC-13 \\
+FR-P5 & Bridge ARCore tracking gaps with the IMU (FR-M2) & Should & Done & Bridged poses land on both gap anchors & \texttt{fallback.py}; TC-4 \\
+\bottomrule
+\end{longtable}
+}
+
+\section{Non-Functional Requirements}
+Table~\ref{tab:nfr} lists the non-functional requirements with their measurement method and current status. Several are not yet measured; they are marked as such rather than assumed.
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{p{0.07\textwidth}p{0.10\textwidth}p{0.33\textwidth}p{0.24\textwidth}p{0.18\textwidth}}
+\caption{Non-functional requirements and how each is measured}\label{tab:nfr}\\
+\toprule
+\textbf{ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Measurement} & \textbf{Status} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Category} & \textbf{Requirement} & \textbf{Measurement} & \textbf{Status} \\
+\midrule
+\endhead
+NFR-R1 & Reliability & The cloud GPU pod shall be terminated within 60\,s of job completion or failure (prevents billing leaks). & Server log timestamps on a live pod & Not yet measured \\
+NFR-R2 & Reliability & Each pipeline step shall have a timeout watchdog; if exceeded, the step is killed and the job marked failed. & Timeouts in \texttt{StepConfig} (TC-15); kill path (TC-14) & Implemented; kill path not yet executed \\
+NFR-U1 & Usability & The capture app shall give real-time visual feedback without the user needing to understand 3D reconstruction. & User testing with external users & Not yet executed (planned FYP-2) \\
+NFR-U2 & Usability & Processing progress shall show a progress bar, step name and elapsed time. & UI inspection & Implemented \\
+NFR-P1 & Performance & End-to-end processing (upload to exported \texttt{splat.ply}) shall take under 35\,min on an NVIDIA RTX 4090 cloud GPU. FYP-2 target and a projection; the only measured time is $\sim$75\,min on the RTX 3070 (matching 23, mapping 6, training 45\,min). & Wall-clock time on an RTX 4090 pod & \textit{Outstanding: not yet measured} \\
+NFR-P2 & Performance & The app shall keep a 30\,FPS camera preview while recording (no frame drops from logging). & No frame drops in logcat over a 3-minute recording & Not yet measured \\
+NFR-P3 & Performance & The recording fast-path shall skip non-essential rendering (planes, virtual objects, PBR lighting). & Code inspection; GL thread profiling & Implemented; not profiled \\
+NFR-S1 & Security & The RunPod API key shall be loaded from environment variables or a \texttt{.env} file, never hardcoded. & Code review; CI secrets check; \texttt{/config} never returns the key (TC-10) & Implemented \\
+NFR-S2 & Security & The \texttt{.env} file shall be excluded from version control via \texttt{.gitignore}. & \texttt{.gitignore} inspection & Met since 22~October~2026 (untracked and ignored); the key committed on 18~October is still in the history and must be rotated \\
+\bottomrule
+\end{longtable}
+}
+
+\section{Acceptance Criteria}
+\label{sec:acceptance}
+All acceptance criteria are specified in Tables~\ref{tab:fr} and \ref{tab:nfr}. Project's acceptance limits are set as: held-out PSNR $\geq$ 25\,dB and SSIM $\geq$ 0.85 (FR-P4; achieved by version 6), difference no more than 5\% vs actual measure (FR-P3; achieved with the greatest difference of 0.29\%), and processing duration should not exceed 35\,min on RTX 4090 (NFR-P1; not measured yet).

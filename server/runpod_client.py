@@ -53,17 +53,76 @@ class RunPodClient:
             raise RuntimeError(f"RunPod API error: {data['errors']}")
         return data.get("data", {})
 
+    def list_gpu_types(self) -> list:
+        """List available GPU types with pricing and real-time stock status."""
+        query = """
+        query GpuTypes {
+          gpuTypes {
+            id
+            displayName
+            memoryInGb
+            secureCloud
+            communityCloud
+            lowestPrice(input: { gpuCount: 1 }) {
+              minimumBidPrice
+              uninterruptablePrice
+              stockStatus
+            }
+          }
+        }
+        """
+        data = self._query(query)
+        gpus = data.get("gpuTypes", [])
+        result = []
+        for g in gpus:
+            price = g.get("lowestPrice") or {}
+            result.append({
+                "id": g["id"],
+                "name": g.get("displayName", g["id"]),
+                "vram_gb": g.get("memoryInGb", 0),
+                "secure": g.get("secureCloud", False),
+                "community": g.get("communityCloud", False),
+                "price_on_demand": price.get("uninterruptablePrice"),
+                "price_spot": price.get("minimumBidPrice"),
+                "stock_status": price.get("stockStatus", "None"),
+            })
+        result.sort(key=lambda x: x.get("price_on_demand") or 999)
+        return result
+
+    def resolve_gpu_type(self, gpu_type: str) -> str:
+        """Resolve a short/display GPU name to the actual API id."""
+        try:
+            gpus = self.list_gpu_types()
+        except Exception:
+            return gpu_type
+        for g in gpus:
+            if gpu_type in (g["id"], g["name"]):
+                return g["id"]
+        needle = gpu_type.lower()
+        for g in gpus:
+            if needle in g["id"].lower() or needle in g["name"].lower():
+                return g["id"]
+        return gpu_type
+
     def create_pod(
         self,
         name: str = "buildscan-3dgs",
-        gpu_type: str = "NVIDIA RTX 4090",
-        image: str = "runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04",
-        disk_gb: int = 50,
-        volume_gb: int = 0,
+        gpu_type: str = "RTX 4090",
+        image: str = "umairishuman/buildscan-gpu:latest",
+        disk_gb: int = 40,
         cloud_type: str = "SECURE",
-        docker_args: str = "",
+        retry_interval: int = 15,
+        max_retries: int = 6,
+        job=None,
     ) -> PodInfo:
-        """Create an on-demand GPU pod. Returns PodInfo with the pod_id."""
+        """Create an on-demand GPU pod. Resolves short names, retries on supply constraints."""
+        resolved = self.resolve_gpu_type(gpu_type)
+        if resolved != gpu_type:
+            log.info("Resolved GPU '%s' → '%s'", gpu_type, resolved)
+            if job:
+                job._append_log(f"Resolved GPU '{gpu_type}' → '{resolved}'")
+            gpu_type = resolved
+
         query = """
         mutation createPod($input: PodFindAndDeployOnDemandInput!) {
           podFindAndDeployOnDemand(input: $input) {
@@ -74,25 +133,53 @@ class RunPodClient:
           }
         }
         """
-        variables = {
-            "input": {
-                "name": name,
-                "imageName": image,
-                "gpuTypeId": gpu_type,
-                "cloudType": cloud_type,
-                "containerDiskInGb": disk_gb,
-                "volumeInGb": volume_gb,
-                "startSsh": True,
-                "dockerArgs": docker_args,
-            }
+        pod_input = {
+            "name": name,
+            "imageName": image,
+            "gpuTypeId": gpu_type,
+            "gpuCount": 1,
+            "cloudType": cloud_type,
+            "containerDiskInGb": disk_gb,
+            "startSsh": True,
         }
-        data = self._query(query, variables)
-        pod = data["podFindAndDeployOnDemand"]
-        log.info("Created pod %s (%s)", pod["id"], pod.get("machine", {}).get("gpuDisplayName", "?"))
-        return PodInfo(
-            pod_id=pod["id"],
-            status=pod.get("desiredStatus", "RUNNING"),
-            gpu_type=pod.get("machine", {}).get("gpuDisplayName"),
+
+        cloud_types = ["SECURE", "COMMUNITY"] if cloud_type == "SECURE" else [cloud_type]
+        for ct in cloud_types:
+            pod_input["cloudType"] = ct
+            for attempt in range(max_retries + 1):
+                try:
+                    data = self._query(query, {"input": pod_input})
+                    pod = data["podFindAndDeployOnDemand"]
+                    log.info("Created pod %s (%s) on %s cloud", pod["id"],
+                             pod.get("machine", {}).get("gpuDisplayName", "?"), ct)
+                    if job:
+                        job._append_log(f"Pod created: {pod['id']} ({ct} cloud)")
+                    return PodInfo(
+                        pod_id=pod["id"],
+                        status=pod.get("desiredStatus", "RUNNING"),
+                        gpu_type=pod.get("machine", {}).get("gpuDisplayName"),
+                    )
+                except RuntimeError as e:
+                    if "SUPPLY_CONSTRAINT" not in str(e):
+                        raise
+                    msg = f"No {gpu_type} on {ct} cloud (attempt {attempt+1}/{max_retries+1})"
+                    log.warning(msg)
+                    if job:
+                        job._append_log(msg)
+
+                if attempt < max_retries:
+                    wait_msg = f"Waiting {retry_interval}s before retrying..."
+                    log.info(wait_msg)
+                    if job:
+                        job._append_log(wait_msg)
+                    time.sleep(retry_interval)
+
+            if job:
+                job._append_log(f"Exhausted {ct} cloud, trying next...")
+
+        raise RuntimeError(
+            f"No {gpu_type} available on any cloud after all attempts. "
+            "Try a different GPU via the job manager (option 8 to browse)."
         )
 
     def get_pod(self, pod_id: str) -> PodInfo:
@@ -203,11 +290,21 @@ def scp_download(host: str, port: int, remote_path: str, local_path: str, timeou
 
 SETUP_SCRIPT = r"""#!/bin/bash
 set -e
+
+# Skip setup if nerfstudio is already installed (custom Docker image)
+if python -c "import nerfstudio" 2>/dev/null && command -v colmap &>/dev/null; then
+    echo "=== Dependencies already installed (custom image) — skipping setup ==="
+    nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
+    exit 0
+fi
+
 echo "=== Installing COLMAP ==="
-apt-get update -qq && apt-get install -y -qq colmap > /dev/null 2>&1
+apt-get update -qq && apt-get install -y colmap
+echo "  COLMAP installed"
 
 echo "=== Installing Python dependencies ==="
-pip install -q nerfstudio==1.1.5 open3d==0.19.0 pyquaternion scipy opencv-python-headless plyfile 2>/dev/null
+pip install nerfstudio==1.1.5 open3d==0.19.0 pyquaternion scipy opencv-python-headless plyfile
+echo "  Python deps installed"
 
 echo "=== Setup complete ==="
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
@@ -239,7 +336,9 @@ PIPELINE_COMMANDS = [
 ]
 
 
-MAX_POD_LIFETIME_SEC = int(os.environ.get("MAX_POD_LIFETIME", 1800))  # 30 min default
+MAX_POD_LIFETIME_SEC = int(os.environ.get("MAX_POD_LIFETIME", 7200))  # 2 h default; the
+# only measured end-to-end run is ~75 min on an RTX 3070, so a 60 min cap killed the pod
+# mid-training. Override with MAX_POD_LIFETIME once a faster GPU is benchmarked.
 
 
 def _pod_watchdog(client: RunPodClient, pod_id: str, job, max_sec: int):
@@ -254,7 +353,7 @@ def _pod_watchdog(client: RunPodClient, pod_id: str, job, max_sec: int):
             log.error("WATCHDOG: failed to terminate pod %s: %s", pod_id, e)
 
 
-def run_pipeline_on_runpod(job, api_key: str, gpu_type: str = "NVIDIA RTX 3090",
+def run_pipeline_on_runpod(job, api_key: str, gpu_type: str = "RTX 4090",
                             iterations: int = 30000):
     """
     Full pipeline: create pod → setup → upload → process → download → terminate.
@@ -276,7 +375,7 @@ def run_pipeline_on_runpod(job, api_key: str, gpu_type: str = "NVIDIA RTX 3090",
         job.progress_pct = 0
         job._append_log(f"Requesting {gpu_type} pod...")
 
-        pod_info = client.create_pod(gpu_type=gpu_type)
+        pod_info = client.create_pod(gpu_type=gpu_type, job=job)
         job._append_log(f"Pod created: {pod_info.pod_id}")
 
         # Safety watchdog — terminates pod if total time exceeds limit
@@ -385,11 +484,131 @@ def run_pipeline_on_runpod(job, api_key: str, gpu_type: str = "NVIDIA RTX 3090",
                 log.error("Failed to terminate pod %s: %s", pod_info.pod_id, e)
 
 
-def start_runpod_pipeline_thread(job, api_key: str, gpu_type: str = "NVIDIA RTX 3090",
+def run_pipeline_on_existing_pod(job, api_key: str, pod_id: str,
+                                  iterations: int = 30000):
+    """
+    Run pipeline on a pod the user already created (e.g. via RunPod website).
+    Waits for SSH, runs the full pipeline, then terminates the pod.
+    """
+    from .pipeline import JobStatus
+
+    client = RunPodClient(api_key)
+    dataset_name = os.path.basename(job.dataset_dir)
+    remote_dataset = f"/workspace/project/dataset/{dataset_name}"
+
+    try:
+        job.status = JobStatus.PROCESSING
+        job.started_at = time.time()
+        job.current_step = "connecting"
+        job.current_step_label = "Connecting to existing pod..."
+        job.progress_pct = 0
+        job._append_log(f"Connecting to pod {pod_id}...")
+
+        watchdog = threading.Thread(
+            target=_pod_watchdog,
+            args=(client, pod_id, job, MAX_POD_LIFETIME_SEC),
+            daemon=True,
+        )
+        watchdog.start()
+        job._append_log(f"Watchdog armed: pod will be killed after {MAX_POD_LIFETIME_SEC}s")
+
+        pod_info = client.wait_for_ready(pod_id, timeout_sec=300)
+        host, port = pod_info.ssh_host, pod_info.ssh_port
+        job._append_log(f"Pod ready: SSH at {host}:{port} (GPU: {pod_info.gpu_type})")
+        time.sleep(5)
+
+        job.current_step = "setup"
+        job.current_step_label = "Installing dependencies on GPU..."
+        job.progress_pct = 8
+        job._append_log("Running setup script...")
+        rc = ssh_stream(host, port, SETUP_SCRIPT, job, "setup", timeout=600)
+        if rc != 0:
+            raise RuntimeError(f"Setup failed with exit code {rc}")
+
+        job.current_step = "upload"
+        job.current_step_label = "Uploading project code & dataset..."
+        job.progress_pct = 12
+        job._append_log("Creating remote directories...")
+        ssh_cmd(host, port, "mkdir -p /workspace/project/src/arcore3dgs /workspace/project/dataset")
+
+        job._append_log("Uploading pipeline code...")
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        scp_upload(host, port, os.path.join(project_root, "src", "arcore3dgs") + "/",
+                   "/workspace/project/src/arcore3dgs/", timeout=120)
+
+        job._append_log(f"Uploading dataset ({dataset_name})...")
+        scp_upload(host, port, job.dataset_dir, remote_dataset, timeout=600)
+        job._append_log("Upload complete")
+
+        total_steps = len(PIPELINE_COMMANDS)
+        for i, (step_name, step_label, timeout, cmd_template) in enumerate(PIPELINE_COMMANDS):
+            job.step_index = i
+            job.current_step = step_name
+            job.current_step_label = step_label
+            job.progress_pct = 15 + int((i / total_steps) * 80)
+            job.total_steps = total_steps
+            job._append_log(f"[step {i+1}/{total_steps}] {step_label}")
+
+            if step_name == "prepare":
+                check = ssh_cmd(host, port, f"test -f {remote_dataset}/work/frames.json && echo EXISTS")
+                if "EXISTS" in (check.stdout or ""):
+                    job._append_log("  frames.json exists, skipping")
+                    continue
+
+            cmd = cmd_template.format(dataset=remote_dataset, iters=iterations)
+            rc = ssh_stream(host, port, cmd, job, step_label, timeout=timeout)
+            if rc != 0:
+                raise RuntimeError(f"Step '{step_name}' failed with exit code {rc}")
+            job._append_log(f"  step complete")
+
+        job.current_step = "download"
+        job.current_step_label = "Downloading result..."
+        job.progress_pct = 95
+        remote_splat = f"{remote_dataset}/work_sfm/gs_sfm/splat.ply"
+        local_splat = os.path.join(job.dataset_dir, "splat.ply")
+        job._append_log("Downloading splat.ply...")
+        scp_download(host, port, remote_splat, local_splat, timeout=300)
+
+        job.status = JobStatus.COMPLETED
+        job.progress_pct = 100
+        job.current_step_label = "Done"
+        job.output_path = local_splat if os.path.exists(local_splat) else None
+        job.finished_at = time.time()
+        job._append_log(f"Completed in {int(job.finished_at - job.started_at)}s")
+
+    except Exception as e:
+        job.status = JobStatus.FAILED
+        job.error = str(e)
+        job.finished_at = time.time()
+        job._append_log(f"FAILED: {e}")
+        log.error("Job %s failed on pod %s: %s", job.job_id, pod_id, e)
+
+    finally:
+        try:
+            job._append_log("Terminating pod...")
+            client.terminate_pod(pod_id)
+            job._append_log("Pod terminated (billing stopped)")
+        except Exception as e:
+            job._append_log(f"WARNING: Failed to terminate pod {pod_id}: {e}")
+            log.error("Failed to terminate pod %s: %s", pod_id, e)
+
+
+def start_runpod_pipeline_thread(job, api_key: str, gpu_type: str = "RTX 4090",
                                   iterations: int = 30000) -> threading.Thread:
     t = threading.Thread(
         target=run_pipeline_on_runpod,
         args=(job, api_key, gpu_type, iterations),
+        daemon=True,
+    )
+    t.start()
+    return t
+
+
+def start_existing_pod_pipeline_thread(job, api_key: str, pod_id: str,
+                                        iterations: int = 30000) -> threading.Thread:
+    t = threading.Thread(
+        target=run_pipeline_on_existing_pod,
+        args=(job, api_key, pod_id, iterations),
         daemon=True,
     )
     t.start()

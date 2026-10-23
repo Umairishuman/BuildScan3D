@@ -157,14 +157,14 @@ REMOTE_GPU_HOST=192.168.1.50     # Friend's GPU machine IP (for remote mode)
 REMOTE_GPU_PORT=22               # SSH port
 REMOTE_GPU_USER=root             # SSH user
 REMOTE_SKIP_SETUP=false          # Skip installing deps on remote (if already done)
-MAX_POD_LIFETIME=1800            # Safety: kill RunPod pod after this many seconds (default 30 min)
+MAX_POD_LIFETIME=7200            # Safety: kill RunPod pod after this many seconds (default 2 h)
 ```
 
 ---
 
 ## Safety Features
 
-- **Pod watchdog**: RunPod pods are automatically terminated after `MAX_POD_LIFETIME` seconds (default 30 min), even if a step hangs
+- **Pod watchdog**: RunPod pods are automatically terminated after `MAX_POD_LIFETIME` seconds (default 2 h), even if a step hangs
 - **Per-step timeouts**: Each pipeline step has its own timeout (e.g., training: 60 min, COLMAP: 40 min)
 - **Always-terminate**: RunPod pods are killed in a `finally` block — errors, crashes, timeouts all trigger cleanup
 - **Dry run mode**: Default mode saves uploads without spending GPU credits

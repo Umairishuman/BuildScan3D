@@ -14,6 +14,7 @@ Run (RunPod):  RUNPOD_API_KEY=your_key python -m uvicorn server.main:app --host 
 """
 
 import os
+import time
 import shutil
 import uuid
 import logging
@@ -24,7 +25,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from .pipeline import Job, JobStatus, start_pipeline_thread
-from .runpod_client import start_runpod_pipeline_thread
+from .runpod_client import start_runpod_pipeline_thread, start_existing_pod_pipeline_thread
 from .remote_gpu import start_remote_pipeline_thread
 
 logging.basicConfig(level=logging.INFO)
@@ -40,7 +41,7 @@ jobs: dict[str, Job] = {}
 processing_config = {
     "mode": os.environ.get("PROCESSING_MODE", "dry_run"),
     "runpod_api_key": os.environ.get("RUNPOD_API_KEY", ""),
-    "runpod_gpu_type": os.environ.get("RUNPOD_GPU_TYPE", "NVIDIA RTX 3090"),
+    "runpod_gpu_type": os.environ.get("RUNPOD_GPU_TYPE", "RTX 4090"),
     "remote_host": os.environ.get("REMOTE_GPU_HOST", ""),
     "remote_port": int(os.environ.get("REMOTE_GPU_PORT", "22")),
     "remote_user": os.environ.get("REMOTE_GPU_USER", "root"),
@@ -261,6 +262,17 @@ async def retry_job(job_id: str):
     return {"job_id": job_id, "status": "retrying", "mode": mode}
 
 
+@app.get("/gpus")
+async def list_gpus():
+    """List available RunPod GPU types with pricing."""
+    api_key = processing_config["runpod_api_key"]
+    if not api_key:
+        raise HTTPException(status_code=400, detail="RunPod API key not set")
+    from .runpod_client import RunPodClient
+    client = RunPodClient(api_key)
+    return client.list_gpu_types()
+
+
 @app.get("/datasets")
 async def list_datasets():
     """List all scan datasets on disk (uploaded or not)."""
@@ -289,6 +301,56 @@ async def list_datasets():
                     "job_status": job_status,
                 })
     return datasets
+
+
+@app.post("/jobs/{job_id}/cancel")
+async def cancel_job(job_id: str):
+    """Cancel/reset a stuck job so the dataset can be reprocessed."""
+    if job_id not in jobs:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found")
+    job = jobs[job_id]
+    job.status = JobStatus.FAILED
+    job.error = "Cancelled by user"
+    job.finished_at = time.time()
+    job._append_log("Job cancelled by user")
+    return {"job_id": job_id, "status": "cancelled"}
+
+
+@app.post("/run-on-pod")
+async def run_on_existing_pod(dataset_name: str = Form(...), pod_id: str = Form(...),
+                               iterations: int = Form(30000)):
+    """Run pipeline on a pod the user created manually (e.g. via RunPod website)."""
+    api_key = processing_config["runpod_api_key"]
+    if not api_key:
+        raise HTTPException(status_code=400, detail="RunPod API key not set")
+    dataset_dir = DATASET_ROOT / dataset_name
+    if not dataset_dir.is_dir():
+        raise HTTPException(status_code=404, detail=f"Dataset '{dataset_name}' not found")
+    if not (dataset_dir / "dataset.mp4").exists():
+        raise HTTPException(status_code=400, detail="Dataset has no video file")
+
+    job_id = dataset_name.replace("scan_", "")[:12]
+    if job_id in jobs:
+        job = jobs[job_id]
+        if job.status.value in ("processing", "uploading"):
+            raise HTTPException(status_code=409, detail="Job is already running")
+    else:
+        job = Job(job_id=job_id, dataset_dir=str(dataset_dir))
+        jobs[job_id] = job
+
+    job.status = JobStatus.QUEUED
+    job.error = None
+    job.current_step = None
+    job.current_step_label = f"Connecting to pod {pod_id}..."
+    job.step_index = 0
+    job.progress_pct = 0
+    job.started_at = None
+    job.finished_at = None
+    job.output_path = None
+    job.log_lines = [f"=== RUN ON POD {pod_id} at {__import__('datetime').datetime.now().isoformat()} ==="]
+
+    start_existing_pod_pipeline_thread(job, api_key=api_key, pod_id=pod_id, iterations=iterations)
+    return {"job_id": job_id, "dataset": dataset_name, "pod_id": pod_id, "poll": f"/status/{job_id}"}
 
 
 @app.post("/reprocess")

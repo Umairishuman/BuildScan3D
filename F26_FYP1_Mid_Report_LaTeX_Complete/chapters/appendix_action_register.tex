@@ -1,0 +1,49 @@
+\chapter{Proposal Action Register}
+
+This appendix reproduces the committee's proposal defense result in full and repeats the action register of Section~\ref{sec:actionregister} so the two can be read side by side.
+
+\section{Committee Decision}
+
+The result was issued by the FYP Committee on 14~September~2026 for project F26-115-BuildScan3D. The decision was \textbf{Approved with Minor Modifications}. Figure~\ref{fig:panelemail} is the email as received.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{ThesisFigs/proposal-feedback-email}
+\caption{Proposal defense result from the FYP Committee, 14~September~2026.}
+\label{fig:panelemail}
+\end{figure}
+
+\section{Actions Taken}
+
+The table below repeats the register of Section~\ref{sec:actionregister}, mapping each point in the email above to the work done in response.
+
+{\small
+\begin{longtable}{p{0.03\textwidth}p{0.20\textwidth}p{0.42\textwidth}p{0.07\textwidth}p{0.16\textwidth}}
+\toprule
+\textbf{No.} & \textbf{Committee feedback} & \textbf{Action taken} & \textbf{Status} & \textbf{Evidence} \\
+\midrule
+\endhead
+1 & Handling of scale & Sim3 alignment of the COLMAP reconstruction to ARCore's metric frame, validated against a tape measure: mean error 4.8\,mm (0.19\%), worst case 0.29\%. & Done & Figure~\ref{fig:sim3}, Table~\ref{tab:tape} \\
+\midrule
+2 & Handling of drift & Diagnosed ARCore's silent re-anchoring (about 1\,m and 28\textdegree) as the cause of ghosting, and replaced ARCore poses with image-based COLMAP poses. Anchor logging makes re-anchor events detectable, and the IMU bridges tracking gaps: 3.8\,cm error over a simulated 9\,s gap, against 30.6\,cm for interpolation. & Done & Table~\ref{tab:imufallback} \\
+\midrule
+3 & Incomplete visual coverage & Live coverage overlay: depth is accumulated into 10\,cm voxels, each recording which of 16 directions it was seen from, drawn back as red, yellow and green dots at 2\,Hz while recording. & Done & Figure~\ref{fig:coverage}, Figure~\ref{fig:appcapture} \\
+\midrule
+4 & Lighting variation and contrast & Live IQA warns on darkness during capture, and training applies per-image bilateral-grid exposure compensation for the phone's auto-exposure. Capture across markedly different lighting conditions has not yet been tested. & Partial & Section~\ref{sec:completed}, Table~\ref{tab:risks} \\
+\midrule
+5 & Low-texture surfaces & Live IQA warns on low texture, and the IMU fallback bridges the tracking loss that plain walls cause. Reconstruction on large untextured surfaces remains weaker than on textured ones. & Partial & Table~\ref{tab:imufallback}, Chapter~\ref{ch:testing} \\
+\midrule
+6 & Reconstruction quality & Acceptance thresholds fixed at PSNR $\geq$ 25\,dB and SSIM $\geq$ 0.85 on held-out views. The current best model (v6) reaches 26.52\,dB and 0.8886 on 42 held-out frames. & Done & Table~\ref{tab:quality} \\
+\midrule
+7 & Define the practical capture scope and operating conditions, including site size and the limits of commodity Android & Scope now states single rooms or a connected set of rooms, captured on a commodity Android phone (realme, no LiDAR), with the lighting and tracking conditions ARCore needs listed as explicit constraints. & Done & Sections~1.6 and~1.10 \\
+\midrule
+8 & Capture guidance and handling of poor-quality input should be part of the solution & Live IQA for blur, brightness, motion speed and texture, with a colour-coded banner and a vibration alert, plus the coverage overlay; poor frames are then dropped at preprocessing by gyro-aware sharp-frame selection. & Done & Section~\ref{sec:completed}, Figure~\ref{fig:appcapture} \\
+\midrule
+9 & State plainly that the scope is limited to budget phone video & The abstract and the scope section both state that capture is from a commodity Android phone with no LiDAR and no special hardware. & Done & Abstract, Section~1.6 \\
+\midrule
+10 & Work on edge devices and handle every edge case & Edge and failure cases are documented with their mitigations: tracking loss, plain walls, mirrors and glass, network interruption and pod failure. Mirrors, glass and large rooms remain open and are carried in the risk register. & Partial & Chapter~\ref{ch:testing}, Table~\ref{tab:risks} \\
+\midrule
+11 & Check feasibility deeply; focus on implementation & The end-to-end pipeline is implemented and measured on real captures, from phone recording through cloud GPU reconstruction to a metric model. Remaining work is listed honestly rather than claimed. & Done & Chapter~\ref{ch:evidence}, Chapter~\ref{ch:testing} \\
+\bottomrule
+\end{longtable}
+}
