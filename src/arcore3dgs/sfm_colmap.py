@@ -27,6 +27,10 @@ ap.add_argument("--colmap", default=os.path.join(os.path.dirname(os.path.abspath
                                                  "colmap_dl", "colmap-4.2.0", "COLMAP.bat"))
 ap.add_argument("--mapper", default="global_mapper", choices=["global_mapper", "mapper"])
 ap.add_argument("--extract_gpu", type=int, default=1, help="0 = CPU SIFT (e.g. while the GPU is training)")
+ap.add_argument("--pairs", default="exhaustive", choices=["exhaustive", "arcore"],
+                help="arcore = match only temporal + ARCore-pose neighbours (much faster than exhaustive)")
+ap.add_argument("--temporal", type=int, default=10)
+ap.add_argument("--spatial", type=int, default=20)
 ap.add_argument("--stage", default="all", choices=["all", "extract", "match", "map", "undistort", "export"])
 args = ap.parse_args()
 WK = os.path.abspath(args.work); OUT = os.path.abspath(args.out); CM = os.path.abspath(args.colmap)
@@ -59,7 +63,30 @@ if run("extract"):
            "--FeatureExtraction.use_gpu", args.extract_gpu, "--SiftExtraction.max_num_features", 8192)
 
 if run("match"):
-    colmap("exhaustive_matcher", "--database_path", db, "--FeatureMatching.use_gpu", 1)
+    if args.pairs == "exhaustive":
+        colmap("exhaustive_matcher", "--database_path", db, "--FeatureMatching.use_gpu", 1)
+    else:
+        # ARCore-guided pairs: +-args.temporal neighbours in time, plus the args.spatial nearest cameras by ARCore
+        # pose (position + viewing direction). ARCore's world is only locally consistent (silent re-anchors), so
+        # neighbours are searched within it but the global SfM still decides the poses. ~30 pairs/frame instead of N.
+        C = np.array([np.array(x.get("c2w_arcore", x["c2w"]))[:3, 3] for x in fr])
+        Dv = np.array([-np.array(x.get("c2w_arcore", x["c2w"]))[:3, 2] for x in fr])        # OpenGL: -z = forward
+        pairs = set()
+        for i in range(len(fr)):
+            for j in range(i + 1, min(len(fr), i + 1 + args.temporal)):
+                pairs.add((i, j))
+            dist = np.linalg.norm(C - C[i], axis=1) + 1.5 * (1 - Dv @ Dv[i])                # metres + view-angle penalty
+            dist[max(0, i - args.temporal):i + args.temporal + 1] = np.inf
+            for j in np.argsort(dist)[: args.spatial]:
+                if np.isfinite(dist[j]) and Dv[i] @ Dv[j] > 0.3:
+                    pairs.add((min(i, j), max(i, j)))
+        names = [x["name"] + ".jpg" for x in fr]
+        with open(os.path.join(OUT, "pairs.txt"), "w") as f:
+            f.write("\n".join(f"{names[i]} {names[j]}" for i, j in sorted(pairs)))
+        print(f"{len(pairs)} ARCore-guided pairs ({len(pairs) / len(fr):.1f}/frame, exhaustive would be "
+              f"{len(fr) * (len(fr) - 1) // 2})", flush=True)
+        colmap("matches_importer", "--database_path", db, "--match_list_path", os.path.join(OUT, "pairs.txt"),
+               "--match_type", "pairs", "--FeatureMatching.use_gpu", 1)
 
 if run("map"):
     sp = os.path.join(OUT, "sparse"); os.makedirs(sp, exist_ok=True)

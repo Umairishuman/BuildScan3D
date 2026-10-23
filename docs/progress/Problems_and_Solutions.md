@@ -394,6 +394,21 @@ PocketGS's own reported quality is 22–23.5 dB PSNR on near-path test views (LL
 - **Next:** model the remaining blur explicitly (IMU-driven motion-blur + rolling-shutter, TODO step 3). The gyro data quantifies exactly how much there is.
 - **Lesson:** ARCore's VIO world frame is not globally consistent. It re-anchors silently, and its factory intrinsics ignore distortion. Both are harmless for AR overlays and fatal for 3DGS. Poses for 3DGS must come from image-based SfM with lens self-calibration; ARCore should provide scale, gravity and a fallback only.
 
+### 4.14 Fast pipeline attempt v7: under 25 min, but quality not acceptable (2026-10-21)
+- **Goal:** under 15 min from video to model (v3 took ~75 min, v6 ~4 h) without losing quality.
+- **What was tried:**
+  - gyro frame selection (592 frames);
+  - **ARCore-guided matching**: each frame is matched only to its time neighbours and its 20 nearest cameras by ARCore pose, giving 13.3k pairs instead of 175k;
+  - global SfM, no dense MVS;
+  - splatfacto for 10k iterations with its schedule scaled down.
+- **Result:**
+  - 24 min 56 s in total. SfM took 5 min 15 s (matching **54 s instead of 23 min**, 586/592 frames registered); training took ~17 min, the bottleneck at ~100 ms/step on the RTX 3070.
+  - Quality on held-out frames: 24.83 dB / SSIM 0.848, against 26.45 / 0.883 for v6.
+  - Fine detail is lost, and **views off the camera path are clearly worse.** Rejected.
+- **Evaluation lesson:** models from independent SfM runs differ by ~0.1–0.2° and mm–cm per camera. Scored without aligning the test cameras, v7 appeared 5 dB worse. `fair_compare.py` now refines each test camera's pose photometrically before scoring, equally for every model. Off-path views also need their own check, since held-out frames lie on the walked path.
+- **Kept:** ARCore-guided matching (`sfm_colmap.py --pairs arcore`), a safe and large speed-up.
+- **Next ideas** (TODO "Fast pipeline v7"): half-resolution training with a full-resolution finish, a fast dense initialisation (what keeps off-path views coherent), keeping ~1100 frames with guided matching, faster 3DGS training methods, cloud GPU, and an off-path quality metric.
+
 ## 5. 3DGS training quality
 
 ### 5.1 Scene rotated in the Nerfstudio viewer

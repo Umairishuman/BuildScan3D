@@ -25,6 +25,20 @@ Every experiment writes to its own folder, is compared with `compare_models.py -
 - [ ] **4. PGSR-style geometric regularisation during training** (PGSR paper in `docs/Research Papers`): flatten Gaussians (min-scale loss), unbiased plane-based depth, single-view depth/normal consistency with edge-aware weights, multi-view homography consistency. Rendering quality stays about the same as 3DGS while geometry gets much flatter and sharper. This is the proper way to get flat walls/floors (see the parked flattening project) without losing the glossy floor. Needs a custom splatfacto model: several days.
 - [ ] **5. Anti-aliasing (Mip-Splatting idea / gsplat `rasterize_mode="antialiased"`)** for zooming in/out in the viewer without sparkle or blur. Cheap to try with step 1 or 2. Note: antialiased PLYs need an antialiased-aware viewer, so update `view.py` too.
 
+### Fast pipeline v7 (2026-10-21): REJECTED on quality, continue later
+Goal: < 15 min end to end at v6-like quality.
+- Recipe: `select_sharp.py --window 12` (592 frames) → `sfm_colmap.py --pairs arcore` (new: temporal ±10 + 20 nearest by ARCore pose, 13.3k pairs vs 175k exhaustive) → global_mapper → no dense MVS → splatfacto 10k iterations with the schedule scaled down (stop-split 5k, resolution-schedule 1k, sh-interval 333, means/bilateral-grid lr max-steps 10k). Output: `dataset/newRoomAttemptSadness/work_v7_sfm/gs_v7_10000/`.
+- Time: **24 min 56 s** = selection 1:47, SfM 5:15 (matching **54 s instead of 23 min**; 586/592 registered, Sim3 4.1 cm), training ~17 min (~100 ms/step at full res on the 3070).
+- Quality (`fair_compare.py`, now with test-time pose refinement, which is needed because independent SfM solutions differ ~0.1–0.2° / mm–cm per camera; without it v7 scored a misleading 21.4 dB): v3 25.81 / 0.866, v6 26.45 / 0.883, **v7 24.83 / 0.848**. Fine detail lost (printer vents), and **views off the camera path are clearly worse**. The user rejected it. Sheets: `dataset/newRoomAttemptSadness/night_compare/v7_refined/`.
+- Kept: the ARCore-guided matching (a large, safe win) and the pose-refined `fair_compare.py`.
+- Ideas for "fast without losing quality", not yet tried:
+  1. Train mostly at half resolution and finish at full res (training is now 2/3 of the time).
+  2. Fast dense init to replace the 2 h COLMAP PatchMatch: low-res PatchMatch on ~100 frames, or our GPU plane-sweep `mvs.py` on SfM poses, or ARCore depth where valid. Dense init is what keeps off-path views coherent.
+  3. Keep v6's frame count (~1100) but match them with ARCore-guided pairs (SfM stays ~5–8 min).
+  4. Faster 3DGS training methods from the literature (PocketGS's training-side baselines: DashGaussian, Taming-3DGS, FastGS, speedy-splat) to reach 30k-quality in fewer steps; check what runs with gsplat 1.4.
+  5. Cloud RTX 3090/4090 (RunPod path in `server/`) roughly halves training.
+  6. Add an off-path quality metric (room-centre / novel views, e.g. agreement with a 30k reference model), so speed experiments are judged on what failed here, not only on held-out frames along the path.
+
 ### App update (2026-10-12, `CaptureLogger.java`), built into `app-debug.apk`
 - [x] `camera.csv`: per-frame exposure time, rolling-shutter skew, frame duration, ISO, focus distance, AE/AWB/lens state (ARCore `Frame.getImageMetadata()`). This is the input for IMU motion-blur / rolling-shutter modelling (step 3).
 - [x] `anchors.csv`: a reference anchor at the camera every 10 s, all anchor poses logged at 5 Hz. ARCore moves anchors when it silently corrects its world frame, so a jump = a re-anchor event, and its size is the correction (the newRoom 1 m / 28° event would now be visible). `check_capture.py` reports these events.
