@@ -14,9 +14,33 @@ export interface Project {
   accuracy?: string;
   captureDevice?: string;
   description: string;
+  /** Real captured scan: a 3DGS .ply served from /public. When set, the viewer renders it with Spark. */
+  splatUrl?: string;
+  /** Camera start pose for the splat viewer, in the scan's metric coordinates (+Y up). */
+  splatStart?: { position: [number, number, number]; target: [number, number, number] };
 }
 
 export const MOCK_PROJECTS: Project[] = [
+  {
+    id: "newroom-scan",
+    name: "Living Room Scan (Real Capture)",
+    floor: "Ground Floor",
+    block: "Residence",
+    area: "≈ 30 m²",
+    location: "Ground Floor • Residence • ≈ 30 m²",
+    dateCaptured: "Oct 10, 2026",
+    status: "ready",
+    statusLabel: "3DGS Ready · 597K splats",
+    thumbnail: "/thumbnails/newroom_v6.jpg",
+    scansCount: 1,
+    gaussianCount: "596,638",
+    accuracy: "±8 mm over 6.7 m (tape-checked)",
+    captureDevice: "realme RMX5111 (ARCore)",
+    description:
+      "Real 4-minute phone video reconstructed with the BuildScan pipeline (v6: gyro-selected sharp frames, COLMAP poses scaled by ARCore, dense init, splatfacto). Metric: room length 6.692 m vs 6.700 m tape.",
+    splatUrl: "/splats/newroom_v6.spz",
+    splatStart: { position: [-0.98, -0.06, -0.2], target: [-1.98, -0.36, -0.2] },
+  },
   {
     id: "sector-4-mep",
     name: "Sector 4 MEP Room",

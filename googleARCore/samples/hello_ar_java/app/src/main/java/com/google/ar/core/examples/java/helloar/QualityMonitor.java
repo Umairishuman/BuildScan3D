@@ -3,6 +3,7 @@ package com.google.ar.core.examples.java.helloar;
 import android.media.Image;
 import com.google.ar.core.Camera;
 import com.google.ar.core.Frame;
+import com.google.ar.core.ImageMetadata;
 import com.google.ar.core.Pose;
 import com.google.ar.core.TrackingFailureReason;
 import com.google.ar.core.TrackingState;
@@ -15,7 +16,9 @@ import java.util.Locale;
  * Live image-quality assessment (IQA) for capture. Runs on the GL thread once per frame and tells
  * the user, in priority order, what is wrong with the footage right now:
  *   1. tracking lost / degraded (ARCore state + failure reason)
- *   2. moving / turning too fast (pose delta between frames -> calibration-free motion-blur predictor)
+ *   2. motion blur: predicted blur in pixels = (angular speed + linear speed / 2.5 m) x the camera's LIVE
+ *      exposure time x focal length. 3DGS needs near-sharp frames; at 1/30 s exposure 10 deg/s already smears
+ *      ~9 px, so the old fixed deg/s limits were far too lenient (recordings averaged 8-12 deg/s = "Good").
  *   3. too little texture (absolute Laplacian variance; plain walls/ceilings -> tracking loss), then
  *      blurry image (Laplacian variance relative to the recent median)
  *   4. too dark / overexposed (mean luma, saturated-pixel fraction)
@@ -29,11 +32,11 @@ public class QualityMonitor {
     public Level level = Level.GOOD;
     public String message = "";
     public float sharpness = -1, sharpnessRel = -1, brightness = -1, overexposed = -1;
-    public float angSpeedDeg, linSpeed;
+    public float angSpeedDeg, linSpeed, blurPx = -1, exposureMs = -1;
     public boolean tracking;
     public String csv(long ts) {
-      return String.format(Locale.US, "%d,%s,%.1f,%.3f,%.1f,%.3f,%.2f,%.3f,%d\n", ts, level.name(), sharpness,
-          sharpnessRel, brightness, overexposed, angSpeedDeg, linSpeed, tracking ? 1 : 0);
+      return String.format(Locale.US, "%d,%s,%.1f,%.3f,%.1f,%.3f,%.2f,%.3f,%d,%.1f,%.2f\n", ts, level.name(), sharpness,
+          sharpnessRel, brightness, overexposed, angSpeedDeg, linSpeed, tracking ? 1 : 0, blurPx, exposureMs);
     }
   }
 
@@ -48,12 +51,16 @@ public class QualityMonitor {
   // tracking, failed stereo depth and floating geometry, so this warns BEFORE tracking drops.
   private static final float TEX_WARN = 22f, TEX_BAD = 13f;
   private static final float OVER_WARN = 0.12f, OVER_BAD = 0.25f; // fraction of pixels >= 245
+  private static final float BLUR_WARN = 5f, BLUR_BAD = 10f;      // predicted motion blur, pixels
   private static final int IMAGE_EVERY = 5;                       // analyse every 5th camera image
-  private static final int STEP = 5;                              // pixel subsampling stride
+  // pixel subsampling stride: the Laplacian uses adjacent pixels, so the stride only changes how many samples
+  // are read (8 = ~2.5x fewer reads than 5 on the GL thread, where camera frames were being dropped)
+  private static final int STEP = 8;
   private static final float CEIL_PITCH = 35f, FLOOR_PITCH = -35f;// deg
   private static final int COVER_FRAMES = 45;                     // ~1.5 s of looking counts as covered
 
   private Pose lastPose = null;
+  private float exposureS = 1f / 30f;                             // last reported sensor exposure
   private long lastTs = 0;
   private float angEma = 0, linEma = 0;
   private int frameCount = 0;
@@ -99,6 +106,15 @@ public class QualityMonitor {
     }
     r.angSpeedDeg = angEma;
     r.linSpeed = linEma;
+    try {                                                         // live exposure time (ns) from the camera
+      long e = frame.getImageMetadata().getLong(ImageMetadata.SENSOR_EXPOSURE_TIME);
+      if (e > 0) exposureS = e / 1e9f;
+    } catch (Exception ignored) {
+      // not reported for this frame: keep the last value
+    }
+    float fx = camera.getImageIntrinsics().getFocalLength()[0];
+    r.exposureMs = exposureS * 1000f;
+    r.blurPx = r.tracking ? ((float) Math.toRadians(angEma) + linEma / 2.5f) * exposureS * fx : -1;
 
     // ---- image statistics (every few frames, cheap subsampled pass) ----
     if (frameCount++ % IMAGE_EVERY == 0) analyseImage(frame);
@@ -108,9 +124,10 @@ public class QualityMonitor {
     if (!r.tracking) {
       r.level = Level.BAD;
       r.message = trackingMessage(camera.getTrackingFailureReason());
-    } else if (angEma > ANG_BAD || linEma > LIN_BAD) {
+    } else if (angEma > ANG_BAD || linEma > LIN_BAD || r.blurPx > BLUR_BAD) {
       r.level = Level.BAD;
-      r.message = angEma > ANG_BAD ? "Turning far too fast - slow down" : "Moving far too fast - slow down";
+      r.message = String.format(Locale.US, "Motion blur ~%.0f px - %s", r.blurPx,
+          exposureS > 0.025f ? "move slower (dim light = long exposure)" : "move slower");
     } else if (lastSharp >= 0 && lastSharp < TEX_BAD && lastBright > DARK_BAD) {
       r.level = Level.BAD;
       r.message = "Too plain - include edges, corners or objects";
@@ -123,9 +140,9 @@ public class QualityMonitor {
     } else if (lastOver >= OVER_BAD) {
       r.level = Level.BAD;
       r.message = "Overexposed - avoid windows / lamps";
-    } else if (angEma > ANG_WARN || linEma > LIN_WARN) {
+    } else if (angEma > ANG_WARN || linEma > LIN_WARN || r.blurPx > BLUR_WARN) {
       r.level = Level.WARN;
-      r.message = angEma > ANG_WARN ? "Turning a bit fast" : "Moving a bit fast";
+      r.message = String.format(Locale.US, "Slight motion blur (~%.0f px) - slow down a little", r.blurPx);
     } else if (lastSharp >= 0 && lastSharp < TEX_WARN && lastBright > DARK_BAD) {
       r.level = Level.WARN;
       r.message = "Low texture - keep some detail in view";

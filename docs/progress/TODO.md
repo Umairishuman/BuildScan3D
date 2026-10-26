@@ -25,6 +25,82 @@ Every experiment writes to its own folder, is compared with `compare_models.py -
 - [ ] **4. PGSR-style geometric regularisation during training** (PGSR paper in `docs/Research Papers`): flatten Gaussians (min-scale loss), unbiased plane-based depth, single-view depth/normal consistency with edge-aware weights, multi-view homography consistency. Rendering quality stays about the same as 3DGS while geometry gets much flatter and sharper. This is the proper way to get flat walls/floors (see the parked flattening project) without losing the glossy floor. Needs a custom splatfacto model: several days.
 - [ ] **5. Anti-aliasing (Mip-Splatting idea / gsplat `rasterize_mode="antialiased"`)** for zooming in/out in the viewer without sparkle or blur. Cheap to try with step 1 or 2. Note: antialiased PLYs need an antialiased-aware viewer, so update `view.py` too.
 
+### App capture-quality audit (2026-10-23, after the rollback), APK built
+Findings from newRoomAttemptSadness / roomAttemptSadness2 and the code:
+- **Vertical plane finding was never enabled** → fixed (`HORIZONTAL_AND_VERTICAL`).
+- **The live IQA motion limits were far too lenient for 3DGS** (warn 30°/s, bad 60°/s; the recordings averaged 8–12°/s, p90 17–27°/s, all shown "Good"). At 1/30 s exposure 10°/s is about 9 px of blur. → Replaced with a **predicted-blur check**: (angular speed + linear/2.5 m) × the camera's live exposure time × focal length; warn > 5 px, bad > 10 px, with a "dim light = long exposure" hint. Logged as `pred_blur_px` and `exposure_ms` in quality.csv.
+- **Dropped camera frames:** 0.7% (newRoom) and 3.6% (room 2) of video frames, because the render thread can't keep up. → Disabled environmental-HDR light estimation (it only lit the demo pawn, every frame), and the IQA image analysis reads ~2.5× fewer pixels (stride 8; the metric is unchanged because the Laplacian uses adjacent pixels).
+- `check_capture.py` now reports dropped-frame gaps and the predicted-blur distribution.
+- **Demo pawn removed** (user request): no pawn assets, PBR shader, HDR cubemap filter, DFG table, virtual-scene framebuffer, tap-to-place, Instant Placement menu, or per-frame virtual-scene composite. Frames now draw only the camera image, point cloud, planes and the coverage overlay.
+- Not changed, for consideration: ARCore depth (AUTOMATIC) costs compute but gives little on this phone (160×90, ~25% valid, stale in large rooms). It feeds only the coverage overlay; disable it if drops persist. Focus stays FIXED (ARCore default). Rooms were dim (newRoom brightness median 96/255): more light means shorter exposure and less blur.
+
+### User priority list (2026-10-23) and status
+1. Run time (4 h is absurd): see "Fast pipeline v7" below; research + new ideas still to do.
+2. **Live room-layout overlay in the app**: first version done (below).
+3. Corner detection: done from plane intersections (live + `structure.py`). **Edge-based corner / blank-wall detection** still to do (gravity-aware line detection; the wall–floor boundary + known floor plane gives a plain wall's position).
+4. Semantic labelling (walls / floors / ceiling, then switches and lights).
+5. Featureless 3DGS (plain walls / ceilings).
+6. Web viewer: replace the server-rendered viser viewer with in-browser splat rendering (SuperSplat / PlayCanvas engine or Spark for Three.js) inside `prototype/web-ui` `Viewer3D`, keeping the measure tool.
+
+**ROLLED BACK 2026-10-23 at the user's request:** all app changes from this day (surface/edge overlay, room-layout overlay, autofocus toggle, vertical plane finding, feature-starvation warning) were reverted to the last commit. Backup: scratchpad `app_overlay_backup.patch` (session-only), plus the notes below for re-implementation.
+
+### Persistent surface + edge map (2026-10-23, REVERTED)
+- The user found the room-layout overlay messy: the minimap reset after rotations, walls slid with drift, and the 4-wall assumption is wrong. It was **removed** (`RoomLayout` / `RoomOverlayView` deleted).
+- New `SurfaceMap.java` + `SurfaceOverlayView.java`, built on ARCore planes only:
+  - ARCore plane fragments are merged into persistent surfaces (floor / wall / ceiling / other; normal < 10°, offset < 6 cm), any number of them;
+  - **each surface is attached to an ARCore Anchor**, so it moves with ARCore's map corrections instead of sliding;
+  - a 10 cm cell memory **never shrinks**; it grows from plane polygons and from feature points lying on the surface;
+  - **edges:** where two surfaces meet (wall–floor, wall–wall, wall–ceiling, > 60° apart) and both are observed within 30 cm of the intersection line over ≥ 0.3 m, the edge is confirmed (bold yellow), and both surfaces are filled exactly up to it ("solidified"). Scanning along room edges locks the bounds.
+  - Drawn as convex outlines per surface (floor green, wall blue, ceiling orange, other grey); the overlay hides while tracking is lost; ARCore's raw plane grid is hidden while the overlay is on. `surfaces.json` is saved with each recording.
+- QualityMonitor: a **feature-starvation warning** (ARCore point count, smoothed) before tracking is lost: "Few tracking features - keep an edge or object in view" / "Losing tracking...".
+- [ ] Device test: stability under rotation, wall–floor / wall–wall edge locking, low light.
+- [ ] Known limits: convex outlines over-fill L-shaped floors; surfaces of the same wall created before ARCore merged its planes may stay separate (add a periodic surface merge); low light reduces ARCore features, so fewer planes.
+
+### Live room layout + autofocus toggle in the app (2026-10-23, REVERTED)
+- `RoomLayout.java` + `RoomOverlayView.java`. ARCore planes are used only for WHERE a surface is, and the extent is inferred:
+  - floor = lowest upward plane or dense low layer of feature points;
+  - ceiling = downward plane or dense high layer, else 2.7 m (shown as estimated);
+  - room orientation = the angle at which the wall-band feature points (+ samples along vertical planes) line up most sharply;
+  - each wall = the outermost dense band beyond the walked area (≥ 60% of the strongest, to skip mirror / doorway points);
+  - corners = wall intersections.
+
+  It recomputes at 2 Hz off-thread (10–45 ms) and draws translucent walls, floor and ceiling, corner lines and a minimap with dimensions, plus status / guidance text.
+- **Vertical plane detection was never enabled** (`configureSession` had no plane-finding mode), which partly explains "planes only appear up close". It is now `HORIZONTAL_AND_VERTICAL`.
+- **Re-anchor watchdog:** one anchor is watched; when ARCore shifts its world, all stored points and the trail are moved with it (without this the room appears twice: replay of newRoom gave 7.76 × 5.40 m and an unstable angle).
+- Offline replay of newRoomAttemptSadness (feature points only, no planes; harness `scratchpad/roomtest/ReplayRoom.java`): orientation stable at 67°, room 7.04 × 4.07 m vs real ~6.70 × 4.46 (5–9%). Errors come from furniture rows in front of walls and mirror reflections. Fine for a live preview and guidance, not for measuring. Needs a real-device test.
+- `room_layout.json` is saved with each recording.
+- Settings menu: "Room layout overlay" on/off; **"Autofocus (experimental)"** switches ARCore `FocusMode` FIXED ↔ AUTO; `meta.json` records `focus_mode`, and `camera.csv` logs focus distance per frame.
+- [ ] Autofocus test: record the same room with FIXED and AUTO, then compare keyframe sharpness (close passes), COLMAP focal stability / reprojection error, and 3DGS quality. AUTO risk: focus breathing changes the focal length per frame, but COLMAP uses one shared camera; we could group cameras by the logged focus distance if needed.
+- [ ] Build note: Android Studio's JBR is now Java 25, which Gradle 8.13 cannot run. Build with `JAVA_HOME="C:\Program Files\Java\jdk-21"`.
+
+### v9 processing experiments (overnight 2026-10-26, branch `feature/processing-v9`, Problems 4.16)
+- [x] (5) Fast SfM lost frames because the global mapper split the walk into 2 components. `sfm_colmap.py --retrieval 20` (vocabulary-tree loop pairs) → one component, 1164/1166 frames, poses 5.8 cm / 0.5° from v6 (was 14 cm / 3.5°). `--bridge` (default 1) re-matches cut-off frames if it still splits.
+- [x] (6) ALIKED + LightGlue (COLMAP 4.2 ONNX, needs `tools/cudnn9`): rejected, slower and folded reconstruction.
+- [x] (4) `fast_mvs.py`: PatchMatch on every 7th frame at 640 px, ~19 min instead of 2 h 15 min; −0.4 dB off-path vs the full MVS, better than the mono init. Hybrid with mono walls: no gain.
+- [x] (3) `plane_seg.py` + `--planar_lambda 0.2`: off-path flatness 1.43 → 0.85 cm, room length 6.675 m (tape 6.70); −0.25 dB, loses more of the hardest frame's picture.
+- [x] (8) `layout.py`: walls (any number), floor, ceiling, corners, wall-to-wall dimensions, plan.png.
+- [x] (1) Motion-blur model (`blur_motion.py` + `--blur_exposure 0.0222`): renders 43% sharper (visibly crisper from the room centre), 40 min training instead of 30. PSNR/SSIM vs the blurred test photos drops slightly (expected).
+- [x] **End to end v9: 96 min from raw capture** (retrieval SfM + fast MVS + planar + blur), best held-out quality so far, hardest frame complete → `saved_models/2026-10-26_v9_e2e/`.
+- [ ] **Metric scale of the fast SfM is 1.9% off v6** (room 6.617 m vs tape 6.70 m): make the Sim3-to-ARCore scale robust, then re-check against the tape measurements.
+- [ ] Retrain the v9 recipe on ALL frames (no `--split`) for the deployable model / web demo.
+- [ ] Planar + blur together on v6's SfM (only tested together inside the e2e run).
+- [ ] Repeat runs to measure run-to-run noise on the hardest off-path frame (one run per setting so far).
+- [ ] Time budget: training 42 min (blur ×1.4) and SfM 22 min dominate; fast_mvs 20 min. Ideas: blur only in the last third, photometric-only PatchMatch, ViT-S prior.
+- [ ] Faster fast_mvs (photometric only or every 10th frame) and plane_seg (~11 min CPU).
+
+### v8 (overnight 2026-10-24): training 64 → 30 min, off-path quality equal or better (Problems 4.15)
+- [x] Off-path evaluation split + `eval_offpath.py` (79 held-out frames, room-centre views).
+- [x] DashGaussian resolution schedule + SfM-anchored Metric3D depth/normal priors (`geo_splatfacto.py`, `mono_prior.py`).
+- [x] **Winner v8geofast15:** priors 0.05/0.05 + DashGaussian, 15k iterations, `--no_eval`: 30.2 min vs 64.3 min for the v6 recipe, SSIM 0.8281 vs 0.8241, best on the hardest off-path frame. Retrained on all frames → `saved_models/2026-10-24_v8_geofast15/`.
+- [x] Rejected: stronger priors (0.1/0.2 over-smooth); mono-depth dense init alone (`mono_init.py`, 12 s) loses things few frames see.
+- [x] Web viewer: `.spz` delivery (148 → 12.5 MB) and mock-only controls hidden on real scans (`prototype/web-ui/STATUS.md`).
+- [ ] **Fast init that keeps detail:** mono init for plain walls + a cheap textured-region source (low-res PatchMatch on ~150 frames, or mono with fewer required views where SfM points exist). Target: replace the 2 h PatchMatch.
+- [x] Metric3D fp16 (default now): 2× faster, same aligned error; ViT-S fp16 5× faster, 2.0% vs 1.8%.
+- [x] End-to-end `run_v8.py` on newRoom: **44 min** total, but worse than v8final (door wall breaks from the room centre). Output `work_v8e2e_sfm/gs_v8e2e/`.
+- [ ] **Register more frames in the fast SfM:** guided matching from scratch kept 956/1166 vs 1108. Try more spatial neighbours (`--spatial 40`), loop pairs by ARCore pose at larger distances, or a second `image_registrator` pass for unregistered frames.
+- [ ] Then rerun `run_v8.py` with the better init and on room 2.
+- [ ] Planar-region priors (PlanarGS-style) for the far walls and corners; COLMAP ALIKED + LightGlue test for plain walls.
+
 ### Fast pipeline v7 (2026-10-21): REJECTED on quality, continue later
 Goal: < 15 min end to end at v6-like quality.
 - Recipe: `select_sharp.py --window 12` (592 frames) → `sfm_colmap.py --pairs arcore` (new: temporal ±10 + 20 nearest by ARCore pose, 13.3k pairs vs 175k exhaustive) → global_mapper → no dense MVS → splatfacto 10k iterations with the schedule scaled down (stop-split 5k, resolution-schedule 1k, sh-interval 333, means/bilateral-grid lr max-steps 10k). Output: `dataset/newRoomAttemptSadness/work_v7_sfm/gs_v7_10000/`.

@@ -28,6 +28,7 @@ myenv/
 
 # COLMAP binary download (380 MB, see TODO.md)
 tools/colmap_dl/
+tools/cudnn9/
 
 
 # saved best models (large binaries, kept locally)

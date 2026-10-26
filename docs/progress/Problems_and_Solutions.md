@@ -409,6 +409,120 @@ PocketGS's own reported quality is 22–23.5 dB PSNR on near-path test views (LL
 - **Kept:** ARCore-guided matching (`sfm_colmap.py --pairs arcore`), a safe and large speed-up.
 - **Next ideas** (TODO "Fast pipeline v7"): half-resolution training with a full-resolution finish, a fast dense initialisation (what keeps off-path views coherent), keeping ~1100 frames with guided matching, faster 3DGS training methods, cloud GPU, and an off-path quality metric.
 
+### 4.15 v8: half the training time, same or better off-path quality (overnight, 2026-10-24)
+- **Goal:** faster training, cleaner far walls and corners from views off the camera path. Research behind each idea: `docs/progress/Research_Notes_2026-10-24.md`.
+- **New off-path test** (`eval_offpath.py`): six contiguous 3 s stretches of the walk (79 frames) are held out of training (`transforms_offpath.json`), so test views look at the room from places the training cameras did not. It reports colour-fit PSNR, SSIM and a sharpness ratio, plus sheets: one frame per stretch, full-resolution crops, and four views from the room centre. All runs share the same SfM solution, so no pose refinement is needed.
+- **What was implemented** (`src/arcore3dgs/geo_splatfacto.py`, a splatfacto subclass):
+  - **DashGaussian resolution schedule** (CVPR 2025): train at 1/8 resolution first and step up to full resolution along the image-spectrum energy curve, reaching full resolution at half the iterations;
+  - **SfM-anchored monocular priors** (`mono_prior.py`): Metric3D depth for every frame, aligned per frame to that frame's metric SfM points by robust least squares (raw median error 19.5% → **2.7%**), normals from the aligned depth;
+  - **two training losses**: relative depth L1, and an edge-aware depth–normal consistency (PGSR form, weighted by (1−|∇I|)² so real edges and corners are not smoothed);
+  - **mono dense init** (`mono_init.py`): back-project the aligned depth of every 6th frame, keep 1.5 cm voxels that ≥ 6 frames agree on at 6 cm. 12 s instead of 2 h PatchMatch; unlike PatchMatch it covers the plain walls.
+- **Results on newRoomAttemptSadness** (79 off-path frames, RTX 3070, training time only):
+
+  | Run | Recipe | Train | PSNR(cf) | SSIM |
+  |---|---|---|---|---|
+  | R0 | v6 recipe (30k, MVS init) | 64.3 min | 25.13 | 0.8241 |
+  | v8dash30 | + DashGaussian | 55.5 min | 25.28 | 0.8267 |
+  | v8geo | + priors 0.05/0.05, 30k | 69.6 min | **25.43** | 0.8272 |
+  | v8fast15 | DashGaussian, 15k | 27.9 min | 24.82 | 0.8227 |
+  | **v8geofast15** | **priors + DashGaussian, 15k** | **30.2 min** | 25.27 | **0.8281** |
+  | strong20 | priors 0.1/0.2, 20k | 38.1 min | 25.03 | 0.8219 |
+  | mono15 | v8geofast15 with mono init | 27.8 min | 24.84 | 0.8210 |
+
+- **Visual check (the deciding factor):**
+  - **v8geofast15 is the winner.** On the hardest off-path frame (high picture at the wall–ceiling junction) it is the only model where the painting stays whole and the wall plain. Its room-centre views are as clean as R0's, minus R0's floater by the door.
+  - The priors do their job at normal strength; at 0.1/0.2 (strong20) they over-smooth and the high picture falls apart.
+  - Mono init alone loses things seen by few frames (the high picture, the strip beside the printer): the multi-view filter drops them, and PatchMatch had them. Not a replacement for MVS yet.
+  - Fine detail (printer vents) is gone in every model, including R0: it comes from motion blur in the frames (see 4.13), not from v8.
+- **Profiling:** ~75 ms/step at low resolution, 110–130 ms at full resolution, ~20 s start-up, and nerfstudio's eval passes cost 2–3 min per run (now `--no_eval`).
+- **Final model:** the v8geofast15 recipe retrained on all 1108 frames → `saved_models/2026-10-24_v8_geofast15/`.
+- **Metric3D speed** (100 frames, 3070): ViT-L 75 s, ViT-L fp16 39 s, ViT-S fp16 14 s; aligned error 1.8 / 1.8 / 2.0%. fp16 is now the default (1108 frames: 14 → ~6 min).
+- **End-to-end fast pipeline** (`run_v8.py`: selection → ARCore-guided SfM → fp16 priors → mono init → v8 training, nothing reused): **44 min total** (select 1.7, SfM 9.6, prior 6.2, init 0.1, train 26.0, export 0.6) vs ~4 h for v6. **Quality not yet acceptable:** the door wall seen from the room centre breaks apart, and few-view areas smear. Two causes: guided SfM from scratch registered only 956 frames (+20 dropped) vs 1108 for v6 (which registered into v3's exhaustive model), and the mono init (see above). Sheets: `dataset/newRoomAttemptSadness/work_v8e2e_sfm/gs_v8e2e/eval/`.
+- **So the remaining time sinks are SfM coverage and the dense init**, not training: the 2 h PatchMatch is still what gives v8final its quality.
+
+### 4.16 v9: processing-stage experiments (overnight, 2026-10-26, branch `feature/processing-v9`)
+User request: better 3D in less processing time, checking (1) IMU motion-blur modelling, (3) planar priors,
+(4) a fast init that keeps detail, (5) SfM coverage on the fast path, (6) learned features / retrieval for plain
+walls, (8) corner / room-layout detection. All training runs use the same SfM solution and off-path split as
+4.15 (79 held-out frames) and are compared with **v8geofast15** (30.2 min, 25.27 dB / SSIM 0.8281).
+
+**New metric: off-path flatness.** `eval_offpath.py` now also reports the median rms (cm) of the rendered
+surface around its best-fit plane inside every planar region (walls, floor, ceiling, doors from `plane_seg.py`),
+rendered from the held-out viewpoints. This measures "walls are not flat from off-path views" directly.
+R0 (v6 recipe) **4.31 cm**, v8geofast15 **1.43 cm**: the v8 priors already made surfaces 3× flatter.
+
+**(5) Why the fast SfM lost 15% of frames, and the fix.** The global mapper split the scene into two
+components (976 + 190 frames, a 39 s stretch of the walk) and only the largest was exported. ARCore-pose
+neighbours cannot close the loop where ARCore drifted. Pose agreement with v6's exhaustive-matching
+solution (`sfm_cmp`, after Sim3) also showed the fast solution was distorted: 14.2 cm / 3.5° median, scale
+0.953. New `sfm_colmap.py` options:
+| Variant (1166 frames) | SfM time | Registered | vs v6: centre / rotation / scale |
+|---|---|---|---|
+| guided pairs (4.15) | 9.6 min | 956 (2 components) | 14.2 cm / 3.46° / 0.953 |
+| + `--bridge 1` (re-match the cut-off frames against the main model, re-map) | 24.6 min | 1142 | 8.5 cm / 1.01° / 0.973 |
+| + `--retrieval 20` (vocabulary-tree loop pairs, faiss tree) | 21.8 min | **1164 (one component)** | **5.8 cm / 0.52° / 0.981** |
+| `--feature aliked` (ALIKED-N16rot + LightGlue, COLMAP 4.2 ONNX) | 33.1 min | 1159 (one component) | 74 cm / 15.7° / 0.959 |
+Retrieval is the fix: one component straight away. A 1.9% scale difference to v6 remains (v6 is the
+tape-validated one); exhaustive matching is still the most accurate. **ALIKED + LightGlue is rejected**:
+slower (extraction 12 min, matching 17 min) and the reconstruction is folded (74 cm median disagreement,
+although its Sim3 to ARCore looked fine at 3.1 cm on the inlier subset -- always compare whole trajectories).
+Setup notes: COLMAP's ONNX models need cuBLAS 12 + cuDNN 9 DLLs (`tools/cudnn9` from NVIDIA's
+`nvidia-cudnn-cu12` wheel + torch/lib, added to PATH by `sfm_colmap.py`); COLMAP ≥ 3.12 needs faiss vocabulary
+trees (`tools/colmap_dl/vocab/`, from the COLMAP 3.11.1 / 3.13.0 releases).
+
+**(4) Fast dense init** (`fast_mvs.py`): COLMAP PatchMatch on every 7th frame (152) at 640 px, sources chosen
+among the same subset by shared SfM points. ~19 min instead of 2 h 15 min, 310k fused points (init 230k vs 459k).
+`--mono` adds mono-depth points where the MVS has nothing (hybrid).
+
+**(3) Planar prior** (`plane_seg.py` + `geo_splatfacto.py --planar_lambda`): per-frame planes by 1-point
+RANSAC on the aligned Metric3D depth + normals (median 4 planes, 52% of pixels; borders eroded so corners stay
+free); in training the rendered points of each region are pulled onto their own best-fit plane (only the mask
+comes from the prior). ~0.6 s/frame on the CPU.
+
+**(1) Motion-blur model** (`blur_motion.py` + `--blur_exposure`): per-frame camera velocity from the 30 Hz
+ARCore poses (rotational blur at 1/45 s: median 5.8 px, p90 12.6 px); a training frame is rendered at 2–5
+poses spread over the exposure and averaged ("Gaussian Splatting on the Move"); densification gradients are
+rescaled by the number of sub-renders.
+
+| Run (15k, DashGaussian, depth+normal priors) | Train | PSNR(cf) | SSIM | flat cm |
+|---|---|---|---|---|
+| R0 (v6 recipe, 30k) | 64.3 min | 25.13 | 0.8241 | 4.31 |
+| v8geofast15 (full MVS init) | 30.2 min | **25.27** | **0.8281** | 1.43 |
+| v9planar (+ planar 0.2) | 30.1 min | 25.02 | 0.8241 | **0.85** |
+| v9fmvs (fast MVS init) | 27.7 min | 24.88 | 0.8232 | 1.39 |
+| v9fmvsmono (fast MVS + mono walls) | 28.0 min | 24.85 | 0.8203 | 1.23 |
+| v9blur (+ motion-blur model, 1/45 s) | 40.0 min | 25.00 | 0.8205 | 1.34 |
+Visual (sheets `work_sharp_sfm/v8/eval_v9/`): room-centre views are close for all; v9planar's walls are the
+smoothest. On the hardest off-path frame (the high picture) v8geofast15 is best, v9fmvs keeps most of the
+painting, v9planar and the hybrid lose more of it. One run per setting: this frame has varied between runs.
+v9blur renders **43% sharper** (render/photo Laplacian ratio 0.80 vs 0.56): pillows, frames, rug and table
+edges are visibly crisper from the room centre. Its PSNR/SSIM drop is expected -- the held-out photos are
+themselves blurred, so a sharper render matches them less well pixel by pixel. The printer vents are still
+lost (too fine for any model at this blur). The first blur run died of CUDA OOM because a layout check ran on
+the GPU at the same time; never share the GPU with a blur run (up to 5 sub-renders per step).
+
+**(8) Room layout** (`layout.py`, any number of walls, any angle): planar regions lifted to world with the
+model's rendered depth → horizontal ones give floor / ceiling, vertical ones are clustered into wall lines;
+furniture fronts (something parallel behind them) and surfaces seen through doorways are dropped; corners =
+intersections of walls in angular order around the room centre. On v8final: 4 walls, 4 corners (~88°),
+height 2.70 m, wall-to-wall 6.616 × 4.429 m. On **v9planar: 6.675 × 4.406 m, height 2.74 m** (tape: 6.70 m,
+−2.5 cm), rendered planes 0.7 cm rms vs 3.4 cm (ceiling 0.8 vs 6.5 cm). Outputs: `layout.json`, `plan.png`,
+`corners.jpg` in `work_sharp_sfm/v9/layout_*`.
+
+**End to end (the result of the night).** `run_v8.py --tag v9e2e --split <offpath_test.txt> --sfm_args
+"--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222`, from the raw capture, nothing reused:
+**96 min** (select 1.9, SfM 22.4, prior 8.1, fast init 20.4 with plane_seg in parallel, train 42.5, export
+0.7) vs ~4 h for v6 and 44 min for the failed v8 fast run. SfM: one component, 1165/1166 frames, poses
+5.5 cm / 0.42° from v6. On the same 79 held-out frames: **PSNR 25.16, SSIM 0.8247, sharpness 0.80, flatness
+0.77 cm** -- better than the v6 recipe on every number, the sharpest and flattest model so far, and the
+**hardest off-path frame (the high picture) is complete for the first time** (every earlier model smeared or
+lost it). Likely cause: the retrieval SfM registers frames the old pipeline lost (1086 training frames vs
+1029), plus the blur and planar terms. Weak spot: a smear at the right edge of the printer frame.
+Saved: `saved_models/2026-10-26_v9_e2e/` (held-out frames NOT used for training).
+**Open issue -- metric scale:** this SfM is 1.9% smaller than v6's after both are aligned to ARCore; the
+layout gives 6.617 m for the room length (tape 6.70 m, v6-based models 6.675 m). The Sim3-to-ARCore step
+needs a more robust scale (e.g. several ARCore segments, anchors.csv corrections) before relying on it.
+
 ## 5. 3DGS training quality
 
 ### 5.1 Scene rotated in the Nerfstudio viewer

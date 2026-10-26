@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-09-10 (Extracted plan reuses Tower A Floor 5) · Branch: `prototype`
+Last updated: 2026-10-24 (Mock-only scene controls hidden on real splat scans) · Branch: `prototype`
 
 ---
 
@@ -131,6 +131,46 @@ real path.** Currently only `/dashboard` has a href.
 ---
 
 ## 4. Completed
+
+### Mock-only controls hidden on real splat scans ✅ (2026-10-24)
+- **Why:** X-Ray, the raw-splat toggle, render mode (Textured/Mesh/Point Cloud) and the Semantic Layers
+  panel only drive the mock `Canvas3D`; on `newroom-scan` they did nothing.
+- **Modified** `ViewportOverlays.tsx`: `ViewportBottomBar` takes `sceneControls?: boolean` (default
+  `true`); when `false` it shows only the fullscreen button. **Modified** `viewer/[id]/page.tsx`: passes
+  `sceneControls={!project.splatUrl}` and hides the Layers toggle for splat projects. Mock projects unchanged.
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` → 0 errors, 1 known
+  warning (ExportModal); `npx next build` (below).
+
+### Compressed splat delivery (.spz) ✅ (2026-10-24)
+- **Why:** the 148 MB PLY took tens of seconds to load and could not be committed (`*.ply` git-ignored).
+- **Converted** with Spark's own encoder (`transcodeSpz` from `@sparkjsdev/spark`, run in Node, 3 s, all
+  SH bands kept) → `public/splats/newroom_v6.spz`, **12.5 MB** (12× smaller), tracked in git. Fixture
+  `newroom-scan` now points at it; the PLY copy was removed (identical to the saved v6 model).
+- **Verification:** headless-Chrome screenshots of `/viewer/newroom-scan` with the PLY and with the SPZ are
+  visually identical (mean abs pixel diff 3.8/255, quantisation + sort noise).
+
+### Real 3DGS scan viewer (Spark) ✅ (2026-10-24, user ask: "web viewer fixes and optimizations ... compared to SuperSplat")
+- **Why:** the old Python viewer rendered every frame on the server and streamed JPEGs (laggy); the web
+  viewer only drew a hand-built mock scene. Real splats now render in the browser like SuperSplat.
+- **Added** `@sparkjsdev/spark@2.3.1` (exact pin; MIT, World Labs; peer `three >=0.180`, we have 0.185).
+  2.4.0 was skipped as < 2 weeks old.
+- **New** `src/components/Viewer3D/SplatCanvas.tsx`: forwardRef exposing the same `Canvas3DHandle`
+  (zoom = dolly 0.5 m, reset/fit = start pose, measurement delete/clear), Spark `SparkRenderer` +
+  `SplatMesh` (dynamic import, client only) + `SparkControls` (drag look/slide, scroll + W/A/S/D move,
+  E/Q up/down), click-to-measure via splat raycast (`raycastable: true`) into the existing
+  `MeasurementManager`, throttled hover XYZ readout, axis-gizmo angles, loading/error pill, "Top/2D"
+  = camera above the start point looking down.
+- **Modified** `src/lib/mockData.ts`: `Project.splatUrl?` + `Project.splatStart?`; new fixture
+  `newroom-scan` "Living Room Scan (Real Capture)" with real numbers (596,638 splats, ±8 mm over 6.7 m
+  tape check, realme RMX5111). **Modified** `src/app/viewer/[id]/page.tsx`: renders `SplatCanvas` when
+  `project.splatUrl` is set, `Canvas3D` otherwise.
+- **Assets:** `public/splats/newroom_v6.ply` (148 MB, copy of `saved_models/2026-10-12_sharp_mvs_v6`;
+  `*.ply` is git-ignored → must be copied on each machine) and `public/thumbnails/newroom_v6.jpg`
+  (rendered from that model, not a stock image).
+- **Verification:** `npx tsc --noEmit` silent; `npx next build` compiled + prerendered all 8 routes;
+  `npx eslint src --max-warnings=0` → 0 errors, 1 known warning (ExportModal). Visual check: headless
+  Chrome (DevTools protocol, 75 s wait) at `/viewer/newroom-scan` renders the living-room splat
+  (sofa, frames, door, printer) inside the project shell.
 
 ### Step 0 — S1 Sign In ✅ (pre-existing)
 `src/app/page.tsx`. Split hero, brand lockup, email/password with show-hide, security badges.
@@ -629,6 +669,9 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | Non-length measurement types are inert | `ProjectDetail/MeasurementsPanel.tsx` (Tools tab) | The five-chip grid shows length/height/pipe/width/beam but only `length` maps to a canvas mode — the others render for demo completeness and ship in Stage 5. |
 | Saved-measurement overflow menu is inert | `ProjectDetail/MeasurementsPanel.tsx` (Saved tab) | The `…` button on saved rows is present but not wired (no rename/export/delete actions yet). |
 | Nav items are inert | `lib/navigation.ts` | Projects/Scans/Reports/Team/Settings have `href: null` by design until built. |
+| ~~Mock-scene controls on real scans~~ | `viewer/[id]/page.tsx` | Resolved 2026-10-24: hidden for splat projects. Bring back once real semantic layers exist. |
+| ~~148 MB PLY over HTTP~~ | `public/splats/` | Resolved 2026-10-24: served as 12.5 MB `.spz`. |
+| Missing project thumbnails | `public/thumbnails/` | All pre-existing fixtures point at `/thumbnails/card*.jpg`, which do not exist (folder was absent until this step added `newroom_v6.jpg`). |
 
 ---
 
@@ -650,6 +693,10 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 ---
 
 ## 8. Changelog
+
+- **2026-10-24** — Splat projects hide the mock-only X-Ray / render-mode / splat toggle / Layers controls.
+- **2026-10-24** — Splat scan served as compressed `newroom_v6.spz` (12.5 MB, Spark `transcodeSpz`) instead of the 148 MB PLY.
+- **2026-10-24** — Real Gaussian-splat scan viewer (`SplatCanvas`, Spark 2.3.1) + `newroom-scan` fixture with the v6 living-room model.
 
 - **2026-09-10** — Extracted plan now reuses Tower A Floor 5: rather than
   showing an Unsplash blueprint image, `ReadyForCaptureViewport` renders

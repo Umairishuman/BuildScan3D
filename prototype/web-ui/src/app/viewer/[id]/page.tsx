@@ -27,6 +27,7 @@ import {
   ViewMode,
   InteractionMode,
 } from "@/components/Viewer3D/Canvas3D";
+import { SplatCanvas } from "@/components/Viewer3D/SplatCanvas";
 import { SemanticLayersState, RenderMode } from "@/components/Viewer3D/SceneBuilder";
 import { MeasurementRecord } from "@/components/Viewer3D/MeasurementTool";
 import { ExportModal } from "@/components/ExportModal";
@@ -221,18 +222,33 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
             <ReportTab project={project} />
           ) : detailTab === "viewer" ? (
             <div ref={viewportRef} className="relative flex-1 min-h-0 bg-[#eef3f9]">
-              <Canvas3D
-                ref={canvasRef}
-                semanticLayers={semanticLayers}
-                renderMode={renderMode}
-                viewMode={viewMode}
-                interactionMode={interactionMode}
-                isMeasureMode={isMeasureMode}
-                xrayMode={xrayMode}
-                onMeasurementsChange={setMeasurements}
-                onHoverCoordinate={setHoveredCoordinate}
-                onOrbitChange={handleOrbitChange}
-              />
+              {project.splatUrl ? (
+                <SplatCanvas
+                  ref={canvasRef}
+                  splatUrl={project.splatUrl}
+                  initialPosition={project.splatStart?.position ?? [0, 0, 0]}
+                  initialTarget={project.splatStart?.target ?? [0, 0, -1]}
+                  viewMode={viewMode}
+                  interactionMode={interactionMode}
+                  isMeasureMode={isMeasureMode}
+                  onMeasurementsChange={setMeasurements}
+                  onHoverCoordinate={setHoveredCoordinate}
+                  onOrbitChange={handleOrbitChange}
+                />
+              ) : (
+                <Canvas3D
+                  ref={canvasRef}
+                  semanticLayers={semanticLayers}
+                  renderMode={renderMode}
+                  viewMode={viewMode}
+                  interactionMode={interactionMode}
+                  isMeasureMode={isMeasureMode}
+                  xrayMode={xrayMode}
+                  onMeasurementsChange={setMeasurements}
+                  onHoverCoordinate={setHoveredCoordinate}
+                  onOrbitChange={handleOrbitChange}
+                />
+              )}
 
               {/* Top-left: view mode */}
               <div className="absolute top-4 left-4 z-20">
@@ -241,14 +257,17 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
 
               {/* Top-right cluster: panel toggles + Export */}
               <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-                <PanelToggleButton
-                  Icon={LayersIcon}
-                  label="Layers"
-                  isActive={openPanel === "layers"}
-                  onClick={() =>
-                    setOpenPanel((p) => (p === "layers" ? null : "layers"))
-                  }
-                />
+                {/* Semantic layers exist only for the mock scene so far */}
+                {!project.splatUrl && (
+                  <PanelToggleButton
+                    Icon={LayersIcon}
+                    label="Layers"
+                    isActive={openPanel === "layers"}
+                    onClick={() =>
+                      setOpenPanel((p) => (p === "layers" ? null : "layers"))
+                    }
+                  />
+                )}
                 <PanelToggleButton
                   Icon={RulerIcon}
                   label="Measurements"
@@ -296,6 +315,7 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
                   onToggleSystems={() => setXrayMode((v) => !v)}
                   onToggleFullscreen={handleToggleFullscreen}
                   isFullscreen={isFullscreen}
+                  sceneControls={!project.splatUrl}
                 />
               </div>
 

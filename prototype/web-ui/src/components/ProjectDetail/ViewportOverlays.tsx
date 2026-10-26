@@ -293,6 +293,8 @@ interface ViewportBottomBarProps {
   onToggleSystems: () => void;
   onToggleFullscreen: () => void;
   isFullscreen: boolean;
+  /** X-Ray, splat toggle and render mode drive the mock scene only; real splat scans hide them. */
+  sceneControls?: boolean;
 }
 
 export const ViewportBottomBar: React.FC<ViewportBottomBarProps> = ({
@@ -304,8 +306,28 @@ export const ViewportBottomBar: React.FC<ViewportBottomBarProps> = ({
   onToggleSystems,
   onToggleFullscreen,
   isFullscreen,
+  sceneControls = true,
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+
+  const fullscreenButton = (
+    <button
+      onClick={onToggleFullscreen}
+      title={isFullscreen ? "Exit fullscreen" : "Fullscreen viewport"}
+      aria-pressed={isFullscreen}
+      className="p-2 rounded-lg text-[#64748b] hover:text-[#0f172a] hover:bg-slate-100 transition-colors cursor-pointer"
+    >
+      <Expand className="w-4 h-4" />
+    </button>
+  );
+
+  if (!sceneControls) {
+    return (
+      <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/95 backdrop-blur-md border border-[#e2e8f0] shadow-md">
+        {fullscreenButton}
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/95 backdrop-blur-md border border-[#e2e8f0] shadow-md">
@@ -346,14 +368,7 @@ export const ViewportBottomBar: React.FC<ViewportBottomBarProps> = ({
         <Diamond className="w-4 h-4" />
       </button>
 
-      <button
-        onClick={onToggleFullscreen}
-        title={isFullscreen ? "Exit fullscreen" : "Fullscreen viewport"}
-        aria-pressed={isFullscreen}
-        className="p-2 rounded-lg text-[#64748b] hover:text-[#0f172a] hover:bg-slate-100 transition-colors cursor-pointer"
-      >
-        <Expand className="w-4 h-4" />
-      </button>
+      {fullscreenButton}
 
       <div className="w-px h-5 bg-[#e2e8f0] mx-0.5" />
 

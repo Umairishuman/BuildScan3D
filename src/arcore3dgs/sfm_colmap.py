@@ -16,7 +16,7 @@ Stages (all into <work_sfm>):
 
   python src/arcore3dgs/sfm_colmap.py --work <dataset>/work --out <dataset>/work_sfm [--stage all]
 """
-import os, json, argparse, subprocess, shutil, struct
+import os, json, argparse, subprocess, shutil, struct, importlib.util
 import numpy as np, cv2
 from scipy.spatial.transform import Rotation as R
 
@@ -32,7 +32,28 @@ ap.add_argument("--pairs", default="exhaustive", choices=["exhaustive", "arcore"
 ap.add_argument("--temporal", type=int, default=10)
 ap.add_argument("--spatial", type=int, default=20)
 ap.add_argument("--stage", default="all", choices=["all", "extract", "match", "map", "undistort", "export"])
+ap.add_argument("--feature", default="sift", choices=["sift", "aliked"],
+                help="aliked = learned ALIKED-N16rot keypoints + LightGlue matching (COLMAP 4.2 ONNX models)")
+ap.add_argument("--max_features", type=int, default=0, help="0 = 8192 SIFT / 4096 ALIKED")
+ap.add_argument("--retrieval", type=int, default=0,
+                help="> 0: also match each frame with its N most similar frames by vocabulary-tree "
+                     "retrieval -- loop closures that ARCore-pose neighbours miss after ARCore drift")
+ap.add_argument("--vocab", default="", help="faiss vocabulary tree (default: tools/colmap_dl/vocab/, SIFT or ALIKED)")
+ap.add_argument("--bridge", type=int, default=1,
+                help="if mapping splits into several components, match the frames outside the largest one against "
+                     "a sample of it and map again (up to N rounds)")
 args = ap.parse_args()
+MATCH_TYPE = "ALIKED_LIGHTGLUE" if args.feature == "aliked" else "SIFT_BRUTEFORCE"
+TOOLS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools")
+VOCAB = args.vocab or os.path.join(TOOLS, "colmap_dl", "vocab", "vocab_tree_faiss_flickr100K_words64K_aliked_n16rot.bin"
+                                   if args.feature == "aliked" else "vocab_tree_faiss_flickr100K_words32K.bin")
+# COLMAP's ONNX models (ALIKED, LightGlue) run on onnxruntime-CUDA, which needs cuBLAS 12 + cuDNN 9 DLLs:
+# tools/cudnn9 (from NVIDIA's nvidia-cudnn-cu12 wheel) + this Python's torch/lib
+_dll = [os.path.abspath(os.path.join(TOOLS, "cudnn9"))]
+_ts = importlib.util.find_spec("torch")
+if _ts and _ts.origin:
+    _dll.append(os.path.join(os.path.dirname(_ts.origin), "lib"))
+ENV = dict(os.environ, PATH=";".join([d for d in _dll if os.path.isdir(d)] + [os.environ.get("PATH", "")]))
 WK = os.path.abspath(args.work); OUT = os.path.abspath(args.out); CM = os.path.abspath(args.colmap)
 os.makedirs(OUT, exist_ok=True)
 db = os.path.join(OUT, "database.db")
@@ -44,7 +65,7 @@ def colmap(*a, log=None):
     cmd = [CM] + [str(x) for x in a]
     print(">", a[0], flush=True)
     with open(os.path.join(OUT, f"{a[0]}.log"), "w") as f:
-        subprocess.run(cmd, check=True, stdout=f, stderr=subprocess.STDOUT)
+        subprocess.run(cmd, check=True, stdout=f, stderr=subprocess.STDOUT, env=ENV)
 
 
 def run(stage):
@@ -60,11 +81,13 @@ if run("extract"):
            "--image_list_path", os.path.join(OUT, "image_list.txt"),
            "--ImageReader.single_camera", 1, "--ImageReader.camera_model", "OPENCV",
            "--ImageReader.camera_params", f"{meta['fx']},{meta['fy']},{meta['cx']},{meta['cy']},0,0,0,0",
-           "--FeatureExtraction.use_gpu", args.extract_gpu, "--SiftExtraction.max_num_features", 8192)
+           "--FeatureExtraction.use_gpu", args.extract_gpu,
+           *(["--FeatureExtraction.type", "ALIKED_N16ROT", "--AlikedExtraction.max_num_features", args.max_features or 4096]
+             if args.feature == "aliked" else ["--SiftExtraction.max_num_features", args.max_features or 8192]))
 
 if run("match"):
     if args.pairs == "exhaustive":
-        colmap("exhaustive_matcher", "--database_path", db, "--FeatureMatching.use_gpu", 1)
+        colmap("exhaustive_matcher", "--database_path", db, "--FeatureMatching.use_gpu", 1, "--FeatureMatching.type", MATCH_TYPE)
     else:
         # ARCore-guided pairs: +-args.temporal neighbours in time, plus the args.spatial nearest cameras by ARCore
         # pose (position + viewing direction). ARCore's world is only locally consistent (silent re-anchors), so
@@ -86,11 +109,51 @@ if run("match"):
         print(f"{len(pairs)} ARCore-guided pairs ({len(pairs) / len(fr):.1f}/frame, exhaustive would be "
               f"{len(fr) * (len(fr) - 1) // 2})", flush=True)
         colmap("matches_importer", "--database_path", db, "--match_list_path", os.path.join(OUT, "pairs.txt"),
-               "--match_type", "pairs", "--FeatureMatching.use_gpu", 1)
+               "--match_type", "pairs", "--FeatureMatching.use_gpu", 1, "--FeatureMatching.type", MATCH_TYPE)
+        if args.retrieval > 0:
+            colmap("vocab_tree_matcher", "--database_path", db, "--VocabTreeMatching.vocab_tree_path", os.path.abspath(VOCAB),
+                   "--VocabTreeMatching.num_images", args.retrieval, "--FeatureMatching.use_gpu", 1,
+                   "--FeatureMatching.type", MATCH_TYPE)
+
+
+def components(sp):
+    """Image names of every model the mapper wrote (largest first)."""
+    comps = []
+    for d in sorted(os.listdir(sp)):
+        if not os.path.isdir(os.path.join(sp, d)):
+            continue
+        tmp = os.path.join(OUT, "_comp_txt"); os.makedirs(tmp, exist_ok=True)
+        colmap("model_converter", "--input_path", os.path.join(sp, d), "--output_path", tmp, "--output_type", "TXT")
+        L = [l for l in open(os.path.join(tmp, "images.txt")) if l[0] != "#"][0::2]
+        comps.append((d, [l.split()[9][:-4] for l in L if len(l.split()) >= 10]))
+        shutil.rmtree(tmp)
+    return sorted(comps, key=lambda c: -len(c[1]))
+
 
 if run("map"):
-    sp = os.path.join(OUT, "sparse"); os.makedirs(sp, exist_ok=True)
-    colmap(args.mapper, "--database_path", db, "--image_path", os.path.join(WK, "images"), "--output_path", sp)
+    sp = os.path.join(OUT, "sparse")
+    for rnd in range(args.bridge + 1):
+        if os.path.exists(sp):
+            shutil.rmtree(sp)
+        os.makedirs(sp)
+        colmap(args.mapper, "--database_path", db, "--image_path", os.path.join(WK, "images"), "--output_path", sp)
+        comps = components(sp)
+        print(f"mapping round {rnd}: components {[len(c[1]) for c in comps]} of {len(fr)} frames", flush=True)
+        if comps and comps[0][0] != "0":                     # export reads sparse/0: make it the largest
+            os.rename(os.path.join(sp, "0"), os.path.join(sp, "_0")); os.rename(os.path.join(sp, comps[0][0]), os.path.join(sp, "0"))
+            os.rename(os.path.join(sp, "_0"), os.path.join(sp, comps[0][0]))
+        if len(comps) < 2 or rnd == args.bridge:
+            break
+        # Bridge: the frames outside the largest component (plus the unregistered ones) are matched against an
+        # even sample of the largest component; ARCore-pose neighbours miss these links after an ARCore drift.
+        main = comps[0][1]; out_ = [x["name"] for x in fr if x["name"] not in set(main)]
+        sample = main[:: max(1, len(main) // 80)]
+        pairs = {(a, b) if a < b else (b, a) for a in out_ for b in sample}
+        with open(os.path.join(OUT, f"pairs_bridge{rnd}.txt"), "w") as f:
+            f.write("\n".join(f"{a}.jpg {b}.jpg" for a, b in sorted(pairs)))
+        print(f"bridge round {rnd}: {len(out_)} frames outside the main component x {len(sample)} -> {len(pairs)} pairs", flush=True)
+        colmap("matches_importer", "--database_path", db, "--match_list_path", os.path.join(OUT, f"pairs_bridge{rnd}.txt"),
+               "--match_type", "pairs", "--FeatureMatching.use_gpu", 1, "--FeatureMatching.type", MATCH_TYPE)
 
 if run("undistort"):
     d = os.path.join(OUT, "undist")
