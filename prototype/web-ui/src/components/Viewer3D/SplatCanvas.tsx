@@ -10,6 +10,7 @@ import React, {
 import * as THREE from "three";
 import { MeasurementManager, MeasurementRecord } from "./MeasurementTool";
 import type { Canvas3DHandle, InteractionMode, ViewMode } from "./Canvas3D";
+import { FIXTURE_COLORS, ScanInfo } from "./scanTypes";
 
 /**
  * Real 3D Gaussian Splatting viewer for captured scans (Spark renderer, in-browser).
@@ -19,30 +20,52 @@ import type { Canvas3DHandle, InteractionMode, ViewMode } from "./Canvas3D";
  * Canvas3DHandle as the mock-scene Canvas3D, so the viewport toolbar and measurement panel work unchanged.
  * Navigation: drag to look / slide, scroll or W/A/S/D to move (Spark's SparkControls).
  * Measurement: click two points; the ray hits the splats (metric model, distances in metres).
+ *
+ * Two sources: a single splat file (`splatUrl`) or a labelled scan bundle (`scanUrl`, see scanTypes.ts):
+ * one splat file per semantic group (shown / hidden / tinted by class), fixture markers, and a surface
+ * mesh (mesh.glb) that replaces the splats in mesh mode.
  */
 interface SplatCanvasProps {
-  splatUrl: string;
+  splatUrl?: string;
+  /** Folder (ending in "/") holding scan.json, the group .spz files and mesh.glb. */
+  scanUrl?: string;
   /** Camera start pose in model (metric) coordinates. */
   initialPosition: [number, number, number];
   initialTarget: [number, number, number];
   viewMode: ViewMode;
   interactionMode: InteractionMode;
   isMeasureMode: boolean;
+  /** Scan bundles: group keys to hide. */
+  hiddenGroups?: string[];
+  /** Scan bundles: tint every group by its class colour. */
+  tintByClass?: boolean;
+  /** Scan bundles: show the surface mesh instead of the splats. */
+  showMesh?: boolean;
+  /** Scan bundles: show fixture markers. */
+  showFixtures?: boolean;
+  onScanLoaded?: (scan: ScanInfo) => void;
   onMeasurementsChange: (measurements: MeasurementRecord[]) => void;
   onHoverCoordinate?: (coordinate: string | null) => void;
   onOrbitChange?: (theta: number, phi: number) => void;
 }
 
 type LoadState = { phase: "loading" | "ready" | "error"; message?: string };
+type Spark = typeof import("@sparkjsdev/spark");
 
 export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
   function SplatCanvas(
     {
       splatUrl,
+      scanUrl,
       initialPosition,
       initialTarget,
       viewMode,
       isMeasureMode,
+      hiddenGroups,
+      tintByClass = false,
+      showMesh = false,
+      showFixtures = true,
+      onScanLoaded,
       onMeasurementsChange,
       onHoverCoordinate,
       onOrbitChange,
@@ -52,18 +75,29 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
     const mountRef = useRef<HTMLDivElement>(null);
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
     const measurementRef = useRef<MeasurementManager | null>(null);
+    // Scene objects that the display props switch on / off.
+    const groupsRef = useRef<Map<string, { mesh: InstanceType<Spark["SplatMesh"]>; color: string }>>(new Map());
+    const markersRef = useRef<THREE.Group | null>(null);
+    const surfaceRef = useRef<THREE.Object3D | null>(null);
+    const sceneRef = useRef<THREE.Scene | null>(null);
+    const meshRequestedRef = useRef(false);
     const [load, setLoad] = useState<LoadState>({ phase: "loading" });
+    const [meshLoading, setMeshLoading] = useState(false);
 
     // Props read by imperative handlers (synced after every render, never during it).
     const onMeasurementsChangeRef = useRef(onMeasurementsChange);
     const onHoverCoordinateRef = useRef(onHoverCoordinate);
     const onOrbitChangeRef = useRef(onOrbitChange);
+    const onScanLoadedRef = useRef(onScanLoaded);
     const initialRef = useRef({ initialPosition, initialTarget });
+    const displayRef = useRef({ hiddenGroups, tintByClass, showMesh, showFixtures });
     useEffect(() => {
       onMeasurementsChangeRef.current = onMeasurementsChange;
       onHoverCoordinateRef.current = onHoverCoordinate;
       onOrbitChangeRef.current = onOrbitChange;
+      onScanLoadedRef.current = onScanLoaded;
       initialRef.current = { initialPosition, initialTarget };
+      displayRef.current = { hiddenGroups, tintByClass, showMesh, showFixtures };
     });
 
     const placeCamera = (mode: ViewMode) => {
@@ -89,6 +123,19 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
       camera.position.addScaledVector(dir, metres);
     };
 
+    /** Look at a point from 1.6 m away, from the side of the scan's start position (inside the room). */
+    const flyTo = (point: [number, number, number]) => {
+      const camera = cameraRef.current;
+      if (!camera) return;
+      const target = new THREE.Vector3(...point);
+      const start = new THREE.Vector3(...initialRef.current.initialPosition);
+      const away = new THREE.Vector3(start.x - target.x, 0, start.z - target.z);
+      if (away.lengthSq() < 1e-6) away.set(0, 0, 1);
+      away.normalize().multiplyScalar(1.6);
+      camera.position.set(target.x + away.x, Math.max(target.y, start.y - 0.3), target.z + away.z);
+      camera.lookAt(target);
+    };
+
     useImperativeHandle(
       ref,
       () => ({
@@ -96,6 +143,7 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
         zoomOut: () => dolly(-0.5),
         resetView: () => placeCamera("3d"),
         fitToScreen: () => placeCamera("3d"),
+        flyTo,
         deleteMeasurement: (id: string) => {
           const m = measurementRef.current;
           if (!m) return;
@@ -113,15 +161,29 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
       []
     );
 
+    /** Apply group visibility / tint, mesh mode and markers to the loaded scene objects. */
+    const applyDisplay = () => {
+      const { hiddenGroups: hidden, tintByClass: tint, showMesh: mesh, showFixtures: fixtures } = displayRef.current;
+      const meshShown = Boolean(mesh && surfaceRef.current);
+      groupsRef.current.forEach(({ mesh: g, color }, key) => {
+        g.visible = !meshShown && !(hidden ?? []).includes(key);
+        g.recolor = tint ? new THREE.Color(color) : new THREE.Color(1, 1, 1);
+      });
+      if (surfaceRef.current) surfaceRef.current.visible = meshShown;
+      if (markersRef.current) markersRef.current.visible = Boolean(fixtures);
+    };
+
     useEffect(() => {
       const container = mountRef.current;
       if (!container) return;
       let disposed = false;
       let frameId = 0;
       const cleanups: Array<() => void> = [];
+      const groups = groupsRef.current;
 
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0xeef3f9);
+      sceneRef.current = scene;
       const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.05, 200);
       cameraRef.current = camera;
       placeCamera("3d");
@@ -140,13 +202,42 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
 
       (async () => {
         try {
-          const { SparkRenderer, SplatMesh, SparkControls } = await import("@sparkjsdev/spark");
+          const spark = await import("@sparkjsdev/spark");
           if (disposed) return;
-          const spark = new SparkRenderer({ renderer });
-          scene.add(spark);
-          const splat = new SplatMesh({ url: splatUrl, raycastable: true });
-          scene.add(splat);
-          const controls = new SparkControls({ canvas: renderer.domElement });
+          scene.add(new spark.SparkRenderer({ renderer }));
+          const pickTargets: THREE.Object3D[] = [];
+          const ready: Promise<unknown>[] = [];
+          if (scanUrl) {
+            const scan: ScanInfo = await (await fetch(`${scanUrl}scan.json`)).json();
+            if (disposed) return;
+            for (const g of scan.groups) {
+              const mesh = new spark.SplatMesh({ url: `${scanUrl}${g.url}`, raycastable: true });
+              scene.add(mesh);
+              groups.set(g.key, { mesh, color: g.color });
+              pickTargets.push(mesh);
+              ready.push(mesh.initialized);
+            }
+            const markers = new THREE.Group();
+            for (const f of scan.fixtures) {
+              const dot = new THREE.Mesh(
+                new THREE.SphereGeometry(0.045, 16, 12),
+                new THREE.MeshBasicMaterial({ color: FIXTURE_COLORS[f.cls] ?? "#ffffff" })
+              );
+              dot.position.set(...f.position);
+              markers.add(dot);
+            }
+            scene.add(markers);
+            markersRef.current = markers;
+            onScanLoadedRef.current?.(scan);
+          } else if (splatUrl) {
+            const splat = new spark.SplatMesh({ url: splatUrl, raycastable: true });
+            scene.add(splat);
+            groups.set("all", { mesh: splat, color: "#ffffff" });
+            pickTargets.push(splat);
+            ready.push(splat.initialized);
+          }
+          applyDisplay();
+          const controls = new spark.SparkControls({ canvas: renderer.domElement });
 
           const raycaster = new THREE.Raycaster();
           const ndc = new THREE.Vector2();
@@ -156,7 +247,9 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
           };
           const hitPoint = (): THREE.Vector3 | null => {
             raycaster.setFromCamera(ndc, camera);
-            const hits = raycaster.intersectObject(splat, false);
+            const surface = surfaceRef.current;
+            const targets = surface?.visible ? [surface] : pickTargets.filter((o) => o.visible);
+            const hits = raycaster.intersectObjects(targets, true);
             return hits.length > 0 ? hits[0].point : null;
           };
 
@@ -195,11 +288,14 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
             container.removeEventListener("mouseup", onUp);
             container.removeEventListener("mousemove", onMove);
             container.removeEventListener("mouseleave", onLeave);
-            scene.remove(splat);
-            splat.dispose();
+            groups.forEach(({ mesh }) => {
+              scene.remove(mesh);
+              mesh.dispose();
+            });
+            groups.clear();
           });
 
-          splat.initialized
+          Promise.all(ready)
             .then(() => !disposed && setLoad({ phase: "ready" }))
             .catch((err: unknown) => !disposed && setLoad({ phase: "error", message: String(err) }));
 
@@ -228,12 +324,46 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
 
       return () => {
         disposed = true;
+        sceneRef.current = null;
+        markersRef.current = null;
+        surfaceRef.current = null;
+        meshRequestedRef.current = false;
         cancelAnimationFrame(frameId);
         resize.disconnect();
         cleanups.forEach((fn) => fn());
       };
-      // Mount once per splat; camera placement helpers only read refs.
-    }, [splatUrl]);
+      // Mount once per source; camera placement helpers only read refs.
+    }, [splatUrl, scanUrl]);
+
+    // The surface mesh (~8 MB) is loaded the first time mesh mode is switched on.
+    useEffect(() => {
+      const scene = sceneRef.current;
+      if (!showMesh || !scanUrl || !scene || meshRequestedRef.current) {
+        applyDisplay();
+        return;
+      }
+      meshRequestedRef.current = true;
+      (async () => {
+        const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
+        setMeshLoading(true);
+        const gltf = await new GLTFLoader().loadAsync(`${scanUrl}mesh.glb`);
+        if (sceneRef.current !== scene) return;               // the scan was unmounted meanwhile
+        // Vertex colours come from the photos (already shaded): draw them unlit.
+        gltf.scene.traverse((o) => {
+          if (o instanceof THREE.Mesh) o.material = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+        });
+        surfaceRef.current = gltf.scene;
+        scene.add(gltf.scene);
+        applyDisplay();
+        setMeshLoading(false);
+      })().catch(() => setMeshLoading(false));
+      // applyDisplay only reads refs.
+    }, [showMesh, scanUrl]);
+
+    useEffect(() => {
+      applyDisplay();
+      // applyDisplay only reads refs (synced above).
+    }, [hiddenGroups, tintByClass, showFixtures]);
 
     useEffect(() => {
       if (measurementRef.current) measurementRef.current.isMeasureModeActive = isMeasureMode;
@@ -246,10 +376,14 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
     return (
       <div className="relative w-full h-full select-none overflow-hidden bg-[#eef3f9]">
         <div ref={mountRef} className={`w-full h-full ${isMeasureMode ? "cursor-crosshair" : "cursor-grab active:cursor-grabbing"}`} />
-        {load.phase !== "ready" && (
+        {(load.phase !== "ready" || meshLoading) && (
           <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
             <div className="px-4 py-2 rounded-full bg-white border border-[#e2e8f0] shadow text-[12px] font-semibold text-[#0f172a]">
-              {load.phase === "loading" ? "Loading Gaussian splat scan…" : `Could not load the scan: ${load.message}`}
+              {load.phase === "error"
+                ? `Could not load the scan: ${load.message}`
+                : meshLoading
+                  ? "Loading surface mesh…"
+                  : "Loading Gaussian splat scan…"}
             </div>
           </div>
         )}

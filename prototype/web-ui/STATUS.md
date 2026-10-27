@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-10-24 (Mock-only scene controls hidden on real splat scans) · Branch: `prototype`
+Last updated: 2026-10-27 (Scan Layers panel, fixture list, mesh mode on the real scan)
 
 ---
 
@@ -131,6 +131,38 @@ real path.** Currently only `/dashboard` has a href.
 ---
 
 ## 4. Completed
+
+### Scan Layers panel, fixtures and mesh mode for the real scan ✅ (2026-10-27)
+- **New** `src/components/ProjectDetail/ScanLayersPanel.tsx`: room summary (floor area, ceiling height, net wall
+  area), the semantic groups with show/hide and splat counts, "Tint by class" and "Fixture markers" switches,
+  walls (length x height, net area, openings) and the detected fixtures (class colour, wall, height above the
+  floor, size, confirming views); clicking a fixture flies the camera to it.
+- **Modified** `viewer/[id]/page.tsx`: projects with `scanUrl` render `SplatCanvas` with the bundle; the Layers
+  button opens "Scan Layers" (mock projects keep the mock Semantic Layers); the render dropdown offers
+  Textured (splats) / Mesh (`mesh.glb`). `ViewportOverlays.tsx`: `ViewportBottomBar.renderModes` (dropdown
+  without the mock-only X-Ray / splat toggle).
+- **Modified** `mockData.ts`: `Project.scanUrl`; `newroom-scan` -> `/scans/newroom/`.
+- **Assets:** `public/scans/newroom/` (scan.json 6 KB, 6 group .spz 12 MB, mesh.glb 8.3 MB) from the final labelled
+  model (`saved_models/2026-10-27_v9_semantic_pgsr`, `export_web.py`); `newroom-scan` text updated to it
+  (605,481 splats, room 6.60 x 4.36 m auto-measured vs 6.70 m tape, floor 28.8 m²).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` -> 0 errors, 1 known warning;
+  `npx next build` compiled + prerendered all routes; headless Chrome (CDP, CPU rendering): default view with
+  the panel, tint-by-class and mesh mode all render.
+
+### Labelled scan bundles in SplatCanvas ✅ (2026-10-27, user ask: semantic labelling + PGSR mesh)
+- **Why:** the pipeline now labels the scan (walls / floor / ceiling / doors / switches / sockets / lights,
+  `src/arcore3dgs/semantic3d.py`) and builds a surface mesh (`mesh.py`); the viewer had only one splat file.
+- **New** `src/components/Viewer3D/scanTypes.ts`: `ScanInfo` / `ScanGroup` / `ScanWall` / `ScanFixture` for
+  the bundle written by `src/arcore3dgs/export_web.py` (`<scanUrl>/scan.json` + one `.spz` per group +
+  `mesh.glb`), `FIXTURE_COLORS`.
+- **Modified** `SplatCanvas.tsx`: optional `scanUrl` (alternative to `splatUrl`): one Spark `SplatMesh` per group
+  (floor, ceiling, walls, openings, electrical, other) with `hiddenGroups` (show/hide) and `tintByClass`
+  (`SplatMesh.recolor`), fixture markers (`showFixtures`), `showMesh` (loads `mesh.glb` on first use with
+  three's GLTFLoader, unlit vertex colours, replaces the splats), `onScanLoaded`, and `flyTo` on the handle.
+  Measurement / hover raycast whatever is visible. Single-file `splatUrl` projects behave as before.
+- **Modified** `Canvas3D.tsx`: `Canvas3DHandle.flyTo?` (optional; the mock scene does not implement it).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` → 0 errors, 1 known warning
+  (ExportModal). Page wiring: next entry.
 
 ### Mock-only controls hidden on real splat scans ✅ (2026-10-24)
 - **Why:** X-Ray, the raw-splat toggle, render mode (Textured/Mesh/Point Cloud) and the Semantic Layers
@@ -694,6 +726,8 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-10-27** — Scan Layers panel (groups, tint, fixtures with fly-to, wall areas) and Mesh render mode on `newroom-scan`.
+- **2026-10-27** — `SplatCanvas` loads labelled scan bundles (class groups, tint, fixture markers, mesh mode, `flyTo`).
 - **2026-10-24** — Splat projects hide the mock-only X-Ray / render-mode / splat toggle / Layers controls.
 - **2026-10-24** — Splat scan served as compressed `newroom_v6.spz` (12.5 MB, Spark `transcodeSpz`) instead of the 148 MB PLY.
 - **2026-10-24** — Real Gaussian-splat scan viewer (`SplatCanvas`, Spark 2.3.1) + `newroom-scan` fixture with the v6 living-room model.

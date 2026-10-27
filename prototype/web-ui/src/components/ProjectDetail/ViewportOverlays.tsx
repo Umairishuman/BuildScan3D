@@ -295,6 +295,8 @@ interface ViewportBottomBarProps {
   isFullscreen: boolean;
   /** X-Ray, splat toggle and render mode drive the mock scene only; real splat scans hide them. */
   sceneControls?: boolean;
+  /** Render modes offered (real labelled scans: textured splats / surface mesh). Default: all. */
+  renderModes?: RenderMode[];
 }
 
 export const ViewportBottomBar: React.FC<ViewportBottomBarProps> = ({
@@ -307,8 +309,10 @@ export const ViewportBottomBar: React.FC<ViewportBottomBarProps> = ({
   onToggleFullscreen,
   isFullscreen,
   sceneControls = true,
+  renderModes,
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const modes = renderModes ?? (Object.keys(RENDER_MODE_LABELS) as RenderMode[]);
 
   const fullscreenButton = (
     <button
@@ -321,10 +325,68 @@ export const ViewportBottomBar: React.FC<ViewportBottomBarProps> = ({
     </button>
   );
 
+  const renderModeDropdown = (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        className="flex items-center gap-1.5 pl-2.5 pr-2 py-1.5 rounded-lg text-[11px] font-bold text-[#0f172a] hover:bg-slate-100 transition-colors cursor-pointer"
+      >
+        <span>{RENDER_MODE_LABELS[renderMode]}</span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-[#64748b] transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {isOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setIsOpen(false)}
+            aria-hidden
+          />
+          <ul
+            role="listbox"
+            className="absolute bottom-full right-0 mb-2 w-36 z-20 p-1 rounded-xl bg-white border border-[#e2e8f0] shadow-lg"
+          >
+            {modes.map((mode) => (
+              <li key={mode}>
+                <button
+                  role="option"
+                  aria-selected={renderMode === mode}
+                  onClick={() => {
+                    onChangeRenderMode(mode);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
+                    renderMode === mode
+                      ? "bg-blue-50 text-[#2563eb]"
+                      : "text-[#64748b] hover:text-[#0f172a] hover:bg-slate-50"
+                  }`}
+                >
+                  {RENDER_MODE_LABELS[mode]}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+
   if (!sceneControls) {
     return (
       <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/95 backdrop-blur-md border border-[#e2e8f0] shadow-md">
         {fullscreenButton}
+        {renderModes && (
+          <>
+            <div className="w-px h-5 bg-[#e2e8f0] mx-0.5" />
+            {renderModeDropdown}
+          </>
+        )}
       </div>
     );
   }
@@ -372,56 +434,7 @@ export const ViewportBottomBar: React.FC<ViewportBottomBarProps> = ({
 
       <div className="w-px h-5 bg-[#e2e8f0] mx-0.5" />
 
-      {/* Render-mode dropdown */}
-      <div className="relative">
-        <button
-          onClick={() => setIsOpen((prev) => !prev)}
-          aria-haspopup="listbox"
-          aria-expanded={isOpen}
-          className="flex items-center gap-1.5 pl-2.5 pr-2 py-1.5 rounded-lg text-[11px] font-bold text-[#0f172a] hover:bg-slate-100 transition-colors cursor-pointer"
-        >
-          <span>{RENDER_MODE_LABELS[renderMode]}</span>
-          <ChevronDown
-            className={`w-3.5 h-3.5 text-[#64748b] transition-transform ${
-              isOpen ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-
-        {isOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-10"
-              onClick={() => setIsOpen(false)}
-              aria-hidden
-            />
-            <ul
-              role="listbox"
-              className="absolute bottom-full right-0 mb-2 w-36 z-20 p-1 rounded-xl bg-white border border-[#e2e8f0] shadow-lg"
-            >
-              {(Object.keys(RENDER_MODE_LABELS) as RenderMode[]).map((mode) => (
-                <li key={mode}>
-                  <button
-                    role="option"
-                    aria-selected={renderMode === mode}
-                    onClick={() => {
-                      onChangeRenderMode(mode);
-                      setIsOpen(false);
-                    }}
-                    className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
-                      renderMode === mode
-                        ? "bg-blue-50 text-[#2563eb]"
-                        : "text-[#64748b] hover:text-[#0f172a] hover:bg-slate-50"
-                    }`}
-                  >
-                    {RENDER_MODE_LABELS[mode]}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </div>
+      {renderModeDropdown}
     </div>
   );
 };

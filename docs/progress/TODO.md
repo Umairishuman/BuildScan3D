@@ -73,6 +73,18 @@ Findings from newRoomAttemptSadness / roomAttemptSadness2 and the code:
 - [ ] Autofocus test: record the same room with FIXED and AUTO, then compare keyframe sharpness (close passes), COLMAP focal stability / reprojection error, and 3DGS quality. AUTO risk: focus breathing changes the focal length per frame, but COLMAP uses one shared camera; we could group cameras by the logged focus distance if needed.
 - [ ] Build note: Android Studio's JBR is now Java 25, which Gradle 8.13 cannot run. Build with `JAVA_HOME="C:\Program Files\Java\jdk-21"`.
 
+### Semantic labelling + PGSR-style mesh (overnight 2026-10-27, branch `feature/semantics-mesh`, Problems 4.17)
+- [x] `semantic2d.py` (Grounding DINO tiny + SAM, `semantic-env`, decoy classes) + `semantic3d.py` (3D votes, layout structure, verified fixture instances): floor / ceiling / 4 walls with net areas, 15 fixtures (doors, switches, sockets, lights, lamp).
+- [x] `mesh.py` (TSDF of rendered depth, expected or PGSR unbiased) + shell-flatness metric; `mesh_labels.py` (labelled mesh, areas, .glb).
+- [x] PGSR-lite training (`geo_splatfacto.py --pgsr`): flat discs, unbiased depth, rendered normals, single-view consistency. Results in 4.17.
+- [x] Web viewer: Scan Layers panel (groups, tint, wall areas, fixtures with fly-to) + Mesh render mode (`export_web.py`, `prototype/web-ui/STATUS.md`).
+- [x] **Bug fixed:** training without a split gave most cameras another frame's priors (Problems 4.17). `saved_models/2026-10-24_v8_geofast15` was trained that way; v9 models are fine.
+- [x] Final model on all frames (PGSR-lite, checkpoints every 2500 steps after a power cut) -> `saved_models/2026-10-27_v9_semantic_pgsr/`, web demo `/scans/newroom/`.
+- [ ] Check the fixture list on site (ground truth: count switches / sockets / lights, heights with a tape).
+- [ ] Open doorways (no door leaf) from gaps in the layout walls; windows on room 2.
+- [ ] Full PGSR multi-view geometric + photometric consistency (1-2 days, ~2x training time).
+- [ ] Ceiling coverage: guide the capture to look up (the ceiling mesh is the weakest surface).
+
 ### v9 processing experiments (overnight 2026-10-26, branch `feature/processing-v9`, Problems 4.16)
 - [x] (5) Fast SfM lost frames because the global mapper split the walk into 2 components. `sfm_colmap.py --retrieval 20` (vocabulary-tree loop pairs) → one component, 1164/1166 frames, poses 5.8 cm / 0.5° from v6 (was 14 cm / 3.5°). `--bridge` (default 1) re-matches cut-off frames if it still splits.
 - [x] (6) ALIKED + LightGlue (COLMAP 4.2 ONNX, needs `tools/cudnn9`): rejected, slower and folded reconstruction.

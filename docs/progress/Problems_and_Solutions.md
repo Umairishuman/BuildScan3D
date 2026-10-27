@@ -523,6 +523,95 @@ Saved: `saved_models/2026-10-26_v9_e2e/` (held-out frames NOT used for training)
 layout gives 6.617 m for the room length (tape 6.70 m, v6-based models 6.675 m). The Sim3-to-ARCore step
 needs a more robust scale (e.g. several ARCore segments, anchors.csv corrections) before relying on it.
 
+### 4.17 Semantic labelling, PGSR-style training and meshing (overnight, 2026-10-27, branch `feature/semantics-mesh`)
+Scope (user): label built rooms -- walls, floor, ceiling, doors / windows, switches, sockets, lights -- and turn
+the model into a mesh the PGSR way. Model: the v9 end-to-end scan (`work_v9e2e_sfm`, 4.16).
+
+**Semantic labelling = 2D proposals, 3D verification.**
+- `semantic2d.py` (separate `semantic-env`: a venv on the system PyTorch 2.1 with transformers 4.46;
+  `truststore` because this network re-signs TLS): every 2nd frame (583) is rotated upright by gravity (the
+  phone video is stored sideways), Grounding DINO tiny finds the fixtures from one text prompt, SAM ViT-B
+  makes masks. 7-8 min. At a permissive threshold (0.28) it over-detects: framed pictures -> "window",
+  microwave -> "socket", wardrobe -> "door", rug -> "ceiling fan". **Decoy classes** in the same prompt
+  (picture frame, wardrobe, cabinet, TV, microwave, mirror, clock, rug, curtain) absorb most of these: a
+  detection goes to the best-scoring class including the decoys (window detections 328 -> 184).
+- `semantic3d.py` (seconds): every frame's depth is rendered; Gaussians on the visible surface vote with the
+  2D label under them. Structure comes from the room layout (`layout.py`): floor / ceiling planes refit on the
+  model (the floor is 0.6 deg off gravity -- enough to leave a flat band over 7 m), walls from the layout lines.
+  Fixtures become instances (4 cm connected components) and must be **seen in >= 6 frames and pass class
+  geometry**: a room door is tall, reaches the floor and sits in the wall (signed distance -0.35..+0.15 m:
+  doors are recessed up to a 9-inch brick wall's depth behind the wall face, wardrobe fronts stand ~0.5 m in
+  front of it); windows have a sill >= 0.5 m; switches / sockets are small and on a wall; ceiling lights are
+  >= 8 cm and at the ceiling; fans are >= 0.6 m wide and away from walls.
+- Result on newRoom: **floor 29.2 m², ceiling 2.72 m, 4 walls with gross / opening / net areas** (e.g. wall 0:
+  6.69 x 2.72 m, 18.2 m² gross, 2 doors 3.4 m², **14.8 m² net**), and 15 fixtures: 4 doors, 1 high window,
+  2 light switches (1.35 / 1.40 m above the floor), 3 sockets (0.28 / 0.82 / 1.80 m -- the high one is a
+  typical AC socket), the pendant light over the table, 2 wall lights and a 1.1 m tube light, a table lamp.
+  45 candidates rejected with the reason recorded (`semantic.json`). Outputs: `semantic.json`, `labels.npy`
+  (per Gaussian), `semantic.ply` (coloured by class), `plan_semantic.png`, `views_semantic.jpg`.
+- Limits: no ground truth yet (the fixture list should be checked on site); open doorways without a door leaf
+  are not detected (no 2D detection) -- the layout's wall gaps could provide them; switch plates are 8-14 cm
+  and need ~30 confirming frames, so a fast walk past a switch may miss it.
+
+**Meshing (`mesh.py`).** Every 2nd training view is rendered (colour + depth) at half resolution and fused
+into a TSDF volume (Open3D 0.19 in nerfstudio-env -- Open3D 0.20's TSDF returns empty meshes here), marching
+cubes, small floating pieces removed: 20 s, 1.9 M triangles. Shell flatness (each wall / floor / ceiling
+region fitted with its own plane): walls 0.7-1.3 cm median deviation (40-64% of vertices within 1 cm),
+wall 3 3.0 cm, floor 1.5 cm, ceiling 3.9 cm (the ceiling is only ever seen at grazing angles from chest
+height -- a capture limit). `mesh_labels.py` labels the mesh (structure by plane + normal, fixtures from the
+verified fixture Gaussians), reports surface area per class and writes 400k-triangle `.glb` files (8 MB).
+
+**PGSR-lite (`geo_splatfacto.py --pgsr`).** PGSR (Chen et al. 2024) without its multi-view terms: Gaussians
+flattened into discs (min-scale loss, weight 100), a second pass at 1/4 resolution renders the disc normals and
+camera-to-plane distances -> PGSR's unbiased depth (ray / plane intersection, on the surface); the depth,
+normal and planar losses use it, plus single-view depth-normal consistency. splatfacto's scale regulariser
+(max/min < 10) forbids discs and is replaced by a max/middle limit. `mesh.py --depth unbiased`.
+Results (v9pgsr vs v9e2e: same SfM, split and recipe; 46 vs 42.5 min training):
+- held-out frames: PSNR 25.09 vs 25.16, SSIM 0.8254 vs 0.8247, sharpness **0.88 vs 0.80**; the hardest
+  off-path frame is complete in both.
+- mesh shell flatness, median deviation (v9e2e expected-depth mesh -> v9pgsr unbiased-depth mesh): floor
+  1.54 -> 1.42 cm, ceiling 3.88 -> 3.57, walls 0.86 -> 0.77, 1.29 -> 1.21, 0.72 -> 1.94, 3.02 -> 3.28. Meshed
+  with alpha-blended depth instead, the PGSR model's walls are 2.1-2.2 cm: the unbiased depth is what makes a
+  disc model mesh well. The meshes look nearly identical; both show faint vertical stripes on plain walls
+  (views disagree by ~1 cm), which is what PGSR's multi-view terms target -- not implemented yet.
+- semantics: both models give the same 15 fixtures, matched within 0.1-9.5 cm (most within 2.6 cm), heights
+  within 3 cm -- the labelling is repeatable.
+- **Verdict: marginal.** The Metric3D depth / normal + planar priors already do most of what PGSR's
+  single-view terms do. Kept for the final model (sharper splats, slightly flatter on 4 of 6 surfaces).
+**Shell denoising (`mesh_labels.py --clean 0.01`)**: floor / ceiling / wall vertices are pulled onto their
+surface's best-fit plane within 1 cm, fading out by 2.5 cm (only the mesh copy). Floor 1.42 -> **0.34 cm**,
+walls 0.77 -> **0.03**, 1.21 -> **0.17**, 1.94 -> **0.78 cm**; the ceiling and wall 3 (rougher than 2.5 cm) are
+untouched; door frames, the rug's edge and furniture keep their relief.
+
+**BUG found and fixed: per-frame priors on the wrong images when training without a split.**
+`geo_splatfacto.py` looks the priors (Metric3D depth / normals, plane masks, blur motion) up by the training
+camera's index. They were packed for every frame of the json, but a json without train/val/test lists makes
+nerfstudio hold out 10% of the frames by itself (`eval_mode="fraction"`), so the training images were a
+subset and **1039 of 1049 cameras got another frame's priors** (offset growing to > 100 frames). Symptom: the
+first all-frames v9 model came out far worse than its held-out twin (walls 1.9-5.0 cm instead of 0.8-3.3 cm,
+a "ceiling" at 2.42 m, a 3.89 m room width). Fix: the dataparser uses `eval_mode="all"` (split lists in the
+json still win), the packed prior stores its frame names, and before training they are compared with the
+trainer's actual image order (rebuilt if different). **Affected earlier:** `saved_models/2026-10-24_v8_geofast15`
+(trained on transforms_mvs.json, no split) -- its priors were misaligned; every model trained with a split
+(all v8 / v9 experiments, v9e2e, v9pgsr) was correct. run_v8.py without --split would have been affected.
+
+**Power cut at 83% of the final run (no checkpoint: only the last step was saved).** `geo_splatfacto.py` now
+checkpoints every `--save_every` 2500 steps (only the latest kept) and `--resume` continues a run name from its
+latest checkpoint; rerunning the same command after a power cut loses at most ~8 min. Two nerfstudio details
+found while testing it: a resumed trainer runs `max_num_iterations` MORE steps (so a resumed run is now given
+only the remaining steps), and `--no_eval` used to schedule the first eval at step iters + 1 -- an over-long run
+then cached every eval image (with `eval_mode="all"` a second copy of all frames) and stalled; eval is now off.
+
+**Final model (all 1165 frames, v9 recipe + PGSR-lite, 46 min) -> `saved_models/2026-10-27_v9_semantic_pgsr/`.**
+Layout: 4 walls, 6.60 x 4.36 m (tape 6.70 m), ceiling 2.72 m. Mesh (unbiased depth): walls 0.69-1.01 cm median
+from flat, wall 3 2.63, floor 1.60, ceiling 3.91 cm; after shell denoising walls 0.03-0.34 cm, floor 0.59 cm.
+Semantics: floor 28.8 m², 4 walls (net 52.6 m²), the same 15 fixtures as on v9e2e / v9pgsr. It is the web demo.
+
+**Web viewer.** `export_web.py` splits the labelled model into 6 groups (floor, ceiling, walls, openings,
+electrical, other; .spz, 12 MB together) + `scan.json` + the mesh; the BuildScan viewer's new Scan Layers
+panel shows / hides / tints the groups, lists walls with net areas and the fixtures (click to fly there), and
+the render dropdown switches between splats and the mesh (`prototype/web-ui/STATUS.md`).
+
 ## 5. 3DGS training quality
 
 ### 5.1 Scene rotated in the Nerfstudio viewer
