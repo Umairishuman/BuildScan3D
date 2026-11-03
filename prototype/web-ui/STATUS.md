@@ -726,6 +726,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-11-03** — `public/scans/newroom/` regenerated with v10 labels (15 fixtures: 6 doors, tube light class); `FIXTURE_COLORS` gains "tube light".
 - **2026-10-27** — Scan Layers panel (groups, tint, fixtures with fly-to, wall areas) and Mesh render mode on `newroom-scan`.
 - **2026-10-27** — `SplatCanvas` loads labelled scan bundles (class groups, tint, fixture markers, mesh mode, `flyTo`).
 - **2026-10-24** — Splat projects hide the mock-only X-Ray / render-mode / splat toggle / Layers controls.

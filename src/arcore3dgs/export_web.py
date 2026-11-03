@@ -26,7 +26,7 @@ sem = json.load(open(os.path.join(args.semantic, "semantic.json"))); names = sem
 lab = np.load(os.path.join(args.semantic, "labels.npy"))
 GROUPS = {"floor": ["floor"], "ceiling": ["ceiling"], "walls": [n for n in names if n.startswith("wall_")],
           "openings": ["door", "window"],
-          "electrical": ["light switch", "power socket", "ceiling light", "lamp", "air conditioner", "ceiling fan"],
+          "electrical": ["light switch", "power socket", "ceiling light", "tube light", "lamp", "air conditioner", "ceiling fan"],
           "other": ["other"]}
 COLORS = {"floor": "#8c5a32", "ceiling": "#ebebeb", "walls": "#78c878", "openings": "#285aff", "electrical": "#ff00c8", "other": "#969696"}
 D = PlyData.read(args.ply)["vertex"].data

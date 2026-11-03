@@ -14,26 +14,33 @@ detection index + 1), and <work>/semantic2d/detections.json (class, score, box, 
 import os, json, argparse, time
 import truststore
 truststore.inject_into_ssl()                                  # this network re-signs TLS: use the Windows store
-import numpy as np, cv2, torch
+import numpy as np, cv2, torch, torchvision
 from PIL import Image
 from transformers import AutoModelForZeroShotObjectDetection, AutoProcessor, SamModel, SamProcessor
 
-CLASSES = ["door", "window", "light switch", "power socket", "ceiling light", "lamp", "air conditioner", "ceiling fan"]
+CLASSES = ["door", "window", "light switch", "power socket", "ceiling light", "tube light", "lamp", "air conditioner", "ceiling fan"]
 # decoys: everyday things the detector otherwise calls a fixture (framed pictures -> "window", microwave ->
 # "socket", wardrobe -> "door"); a detection is assigned to the best-scoring class INCLUDING these, and
 # semantic3d.py ignores decoy classes
-DECOYS = ["picture frame", "wardrobe", "cabinet", "television", "microwave", "mirror", "clock", "rug", "curtain"]
+DECOYS = ["picture frame", "wardrobe", "cabinet", "television", "microwave", "mirror", "clock", "rug", "curtain", "bottle", "sticker"]
+# ... except that furniture does not compete with "door": it took real doors away (door detections 534 -> 366 and
+# a door lost), and semantic3d.py separates the two by geometry (a wardrobe front stands in front of the wall)
+FURNITURE = ["wardrobe", "cabinet"]
+# second pass on zoomed tiles (--tiles): small things are only ~35 px wide once the frame is resized for the detector
+SMALL = ["light switch", "power socket", "picture frame", "mirror", "clock", "bottle", "sticker"]
 ap = argparse.ArgumentParser()
 ap.add_argument("--work", required=True)
 ap.add_argument("--every", type=int, default=3)
 ap.add_argument("--box_thr", type=float, default=0.30)
 ap.add_argument("--classes", default=",".join(CLASSES + DECOYS))
 ap.add_argument("--limit", type=int, default=0)
+ap.add_argument("--out", default="semantic2d", help="output folder inside --work")
+ap.add_argument("--tiles", type=int, default=0, help="> 0: tile size (px) of the second pass for small objects, e.g. 640")
 ap.add_argument("--debug", type=int, default=0, help="write N overlay images to semantic2d/_debug")
 args = ap.parse_args()
 classes = args.classes.split(",")
 dev = "cuda"
-out = os.path.join(args.work, "semantic2d"); os.makedirs(out, exist_ok=True)
+out = os.path.join(args.work, args.out); os.makedirs(out, exist_ok=True)
 meta = json.load(open(os.path.join(args.work, "frames.json")))
 frames = meta["frames"][:: args.every]
 frames = frames[: args.limit] if args.limit else frames
@@ -43,12 +50,20 @@ dp = AutoProcessor.from_pretrained("IDEA-Research/grounding-dino-tiny")
 dm = AutoModelForZeroShotObjectDetection.from_pretrained("IDEA-Research/grounding-dino-tiny").to(dev).eval()
 sp = SamProcessor.from_pretrained("facebook/sam-vit-base")
 sm = SamModel.from_pretrained("facebook/sam-vit-base").to(dev).eval()
-text = ". ".join(classes) + "."
-enc = dp.tokenizer(text, return_offsets_mapping=True)
-spans, pos = [], 0
-for c in classes:                                             # prompt tokens belonging to each class phrase
-    a = text.index(c, pos); b = a + len(c); pos = b
-    spans.append([t for t, (s, e) in enumerate(enc["offset_mapping"]) if s >= a and e <= b and e > s])
+
+
+def make_prompt(names):
+    text = ". ".join(names) + "."
+    enc = dp.tokenizer(text, return_offsets_mapping=True)
+    spans, pos = [], 0
+    for c in names:                                           # prompt tokens belonging to each class phrase
+        a = text.index(c, pos); b = a + len(c); pos = b
+        spans.append([t for t, (s_, e) in enumerate(enc["offset_mapping"]) if s_ >= a and e <= b and e > s_])
+    return dict(text=text, spans=spans, ids=[classes.index(c) for c in names], names=names)
+
+
+FULL = make_prompt(classes)
+TILE = make_prompt([c for c in SMALL if c in classes])
 ROT = [None, cv2.ROTATE_90_CLOCKWISE, cv2.ROTATE_180, cv2.ROTATE_90_COUNTERCLOCKWISE]
 UNROT = [None, cv2.ROTATE_90_COUNTERCLOCKWISE, cv2.ROTATE_180, cv2.ROTATE_90_CLOCKWISE]
 
@@ -69,26 +84,50 @@ def upright_k(c2w_gl):
     return bk
 
 
+def per_class_nms(dets):
+    res = []
+    for c in {d[0] for d in dets}:
+        ds = [d for d in dets if d[0] == c]
+        k = torchvision.ops.nms(torch.tensor([d[2] for d in ds]), torch.tensor([d[1] for d in ds]), 0.5)
+        res += [ds[i] for i in k.tolist()]
+    return res
+
+
 @torch.no_grad()
-def detect(rgb):
+def detect(rgb, prompt):
+    """[(class id in `classes`, score, box)]: each query goes to its best-scoring class"""
     h, w = rgb.shape[:2]
-    inp = dp(images=Image.fromarray(rgb), text=text, return_tensors="pt").to(dev)
+    inp = dp(images=Image.fromarray(rgb), text=prompt["text"], return_tensors="pt").to(dev)
     o = dm(**inp)
     L = o.logits.sigmoid()[0]                                 # [queries, tokens]
-    S = torch.stack([L[:, sp_].max(1).values for sp_ in spans], 1)   # [queries, classes]
+    S = torch.stack([L[:, sp_].max(1).values for sp_ in prompt["spans"]], 1)   # [queries, classes of the prompt]
     sc, ci = S.max(1)
+    if "door" in prompt["names"]:                             # furniture does not compete with door
+        door = prompt["names"].index("door"); furn = [prompt["names"].index(c) for c in FURNITURE if c in prompt["names"]]
+        m = torch.isin(ci, torch.tensor(furn, device=ci.device)) & (S[:, door] > args.box_thr)
+        ci[m] = door; sc[m] = S[m, door]
     keep = sc > args.box_thr
     bx = o.pred_boxes[0][keep]; sc = sc[keep]; ci = ci[keep]
     cx, cy, bw, bh = bx.unbind(1)
     boxes = torch.stack([(cx - bw / 2) * w, (cy - bh / 2) * h, (cx + bw / 2) * w, (cy + bh / 2) * h], 1)
-    res = []
-    for c in ci.unique():                                     # per-class NMS
-        m = ci == c
-        k = torch.ops.torchvision.nms(boxes[m], sc[m], 0.5) if hasattr(torch.ops, "torchvision") else torch.arange(int(m.sum()))
-        idx = torch.nonzero(m).squeeze(1)[k]
-        res += [(int(c), float(sc[i]), boxes[i].tolist()) for i in idx]
+    res = [(prompt["ids"][int(c)], float(v), b.tolist()) for c, v, b in zip(ci, sc, boxes)]
     # a box covering most of the frame is a "the whole scene is a room" hallucination
     return [r for r in res if (r[2][2] - r[2][0]) * (r[2][3] - r[2][1]) < 0.6 * w * h]
+
+
+def detect_tiles(rgb, size):
+    """small objects on overlapping zoomed tiles, boxes back in frame coordinates; a box cut by a tile border is dropped"""
+    h, w = rgb.shape[:2]; step = int(size * 0.7); res = []
+    xs = sorted({*range(0, max(1, w - size), step), max(0, w - size)}); ys = sorted({*range(0, max(1, h - size), step), max(0, h - size)})
+    for y0 in ys:
+        for x0 in xs:
+            cr = rgb[y0:y0 + size, x0:x0 + size]
+            for c, v, b in detect(cr, TILE):
+                cut = (b[0] < 4 and x0 > 0) or (b[1] < 4 and y0 > 0) or (b[2] > cr.shape[1] - 4 and x0 + size < w) or (b[3] > cr.shape[0] - 4 and y0 + size < h)
+                if cut or max(b[2] - b[0], b[3] - b[1]) > 0.6 * size:
+                    continue
+                res.append((c, v, [b[0] + x0, b[1] + y0, b[2] + x0, b[3] + y0]))
+    return res
 
 
 @torch.no_grad()
@@ -102,10 +141,6 @@ def masks(rgb, boxes):
     return [ms[i, best[i]].numpy() for i in range(len(boxes))]
 
 
-try:
-    import torchvision  # noqa: F401  (registers torch.ops.torchvision.nms)
-except ImportError:
-    pass
 dets_all = {}; dbg = 0; t0 = time.time()
 base = [[40, 120, 255], [255, 200, 0], [255, 0, 255], [0, 255, 255], [255, 255, 255], [0, 255, 0], [255, 80, 80], [160, 80, 255]]
 pal = np.array([[0, 0, 0]] + [base[i % len(base)] if c not in DECOYS else [128, 128, 128] for i, c in enumerate(classes)], np.uint8)
@@ -115,7 +150,10 @@ for fi, f in enumerate(frames):
     k = upright_k(f["c2w"])
     up = cv2.rotate(img, ROT[k]) if k else img
     rgb = cv2.cvtColor(up, cv2.COLOR_BGR2RGB)
-    dets = detect(rgb)
+    dets = detect(rgb, FULL)
+    if args.tiles:
+        dets += detect_tiles(rgb, args.tiles)
+    dets = per_class_nms(dets)
     ms = masks(rgb, [d[2] for d in dets])
     cls = np.zeros(up.shape[:2], np.uint8); inst = np.zeros(up.shape[:2], np.uint16)
     order = np.argsort([-(m.sum()) for m in ms]) if ms else []

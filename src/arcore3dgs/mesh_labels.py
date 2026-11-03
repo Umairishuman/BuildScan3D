@@ -96,7 +96,7 @@ json.dump(dict(mesh=os.path.abspath(args.mesh), total_area=round(float(area.sum(
           open(os.path.join(os.path.dirname(args.mesh), "mesh_areas.json"), "w"), indent=1)
 print("surface area by class (m2): " + ", ".join(f"{k} {a_}" for k, a_ in sorted(areas.items(), key=lambda x: -x[1])))
 PAL = {"other": (150, 150, 150), "floor": (140, 90, 50), "ceiling": (235, 235, 235), "door": (40, 90, 255),
-       "window": (0, 200, 255), "light switch": (255, 0, 200), "power socket": (255, 120, 0), "ceiling light": (255, 255, 0),
+       "window": (0, 200, 255), "light switch": (255, 0, 200), "power socket": (255, 120, 0), "ceiling light": (255, 255, 0), "tube light": (255, 255, 0),
        "lamp": (255, 220, 120), "air conditioner": (0, 220, 120), "ceiling fan": (160, 80, 255)}
 WALLC = [(120, 200, 120), (120, 160, 220), (220, 170, 120), (190, 120, 200), (120, 210, 210), (210, 210, 120)]
 col = np.array([PAL.get(nm, WALLC[int(nm.split("_")[1]) % len(WALLC)] if nm.startswith("wall_") else (150, 150, 150))

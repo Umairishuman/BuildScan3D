@@ -80,7 +80,11 @@ Findings from newRoomAttemptSadness / roomAttemptSadness2 and the code:
 - [x] Web viewer: Scan Layers panel (groups, tint, wall areas, fixtures with fly-to) + Mesh render mode (`export_web.py`, `prototype/web-ui/STATUS.md`).
 - [x] **Bug fixed:** training without a split gave most cameras another frame's priors (Problems 4.17). `saved_models/2026-10-24_v8_geofast15` was trained that way; v9 models are fine.
 - [x] Final model on all frames (PGSR-lite, checkpoints every 2500 steps after a power cut) -> `saved_models/2026-10-27_v9_semantic_pgsr/`, web demo `/scans/newroom/`.
-- [ ] Check the fixture list on site (ground truth: count switches / sockets / lights, heights with a tape).
+- [x] Room check of the detected fixtures: 13/15 correct; sockets 1/3 (mirror piece and bottle label false).
+- [x] Counted misses: recall 13/17 (2 doors, 1 tube light, 1 socket).
+- [ ] Tape a switch and a socket height.
+- [x] Semantics v10 (Problems 4.18): 15/15 detections correct, 15/17 found on this room, but tuned on the same list.
+- [ ] Test v10 semantics on a second room (the real test); the user confirms the 3 new detections.
 - [ ] Open doorways (no door leaf) from gaps in the layout walls; windows on room 2.
 - [ ] Full PGSR multi-view geometric + photometric consistency (1-2 days, ~2x training time).
 - [ ] Ceiling coverage: guide the capture to look up (the ceiling mesh is the weakest surface).

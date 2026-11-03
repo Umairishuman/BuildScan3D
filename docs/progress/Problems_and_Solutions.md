@@ -545,11 +545,23 @@ the model into a mesh the PGSR way. Model: the v9 end-to-end scan (`work_v9e2e_s
   >= 8 cm and at the ceiling; fans are >= 0.6 m wide and away from walls.
 - Result on newRoom: **floor 29.2 m², ceiling 2.72 m, 4 walls with gross / opening / net areas** (e.g. wall 0:
   6.69 x 2.72 m, 18.2 m² gross, 2 doors 3.4 m², **14.8 m² net**), and 15 fixtures: 4 doors, 1 high window,
-  2 light switches (1.35 / 1.40 m above the floor), 3 sockets (0.28 / 0.82 / 1.80 m -- the high one is a
-  typical AC socket), the pendant light over the table, 2 wall lights and a 1.1 m tube light, a table lamp.
+  2 light switches (1.35 / 1.40 m above the floor), 3 sockets (0.28 / 0.82 / 1.80 m; two of these are false, see the room check below), the pendant light over the table, 2 wall lights and a 1.1 m tube light, a table lamp.
   45 candidates rejected with the reason recorded (`semantic.json`). Outputs: `semantic.json`, `labels.npy`
   (per Gaussian), `semantic.ply` (coloured by class), `plan_semantic.png`, `views_semantic.jpg`.
-- Limits: no ground truth yet (the fixture list should be checked on site); open doorways without a door leaf
+- **Room check by the user (2026-11-02, final model, `gs_v9final/semantic/audit_ground_truth.json`): 13 of 15 detected
+  fixtures are correct.** Doors 4/4, window 1/1, light switches 2/2, ceiling lights 4/4, lamp 1/1, **power sockets 1/3**:
+  the "socket" at 1.80 m is a hanging mirror piece (an earlier note here called it an AC socket: that was a guess, and
+  wrong) and the one at 0.81 m is a bottle label. Both passed because the rule only asks for small + near a wall.
+  **Missed (user): 4 -> recall 13/17** (doors 4/6, ceiling lights 4/5, sockets 1/2). Sockets hidden behind furniture are excluded.
+  - Tube light on wall 0: detected in 56 views but as "ceiling fan", then rejected by the fan rule "away from walls".
+    I added that rule after wrongly judging this candidate to be the same object as ceiling_light_3; they are 3.5 m apart.
+  - Door next to the fridge: an open doorway. The masks only cover strips of its frame (0.11 m wide) plus the room
+    behind it (3 m past the wall), so it fails the door width rule.
+  - Door left of door_2: not identified with certainty; only a fragment of its top frame is among the rejected candidates.
+    Possibly absorbed by the wardrobe / cabinet decoys (door detections fell from 534 to 366 when they were added): unverified.
+  - Socket under the ironing table: not among the rejected switch / socket candidates with >= 4 views; cause not checked.
+  One room only, and the rules were tuned on it, so these are not general accuracy figures.
+- Limits: open doorways without a door leaf
   are not detected (no 2D detection) -- the layout's wall gaps could provide them; switch plates are 8-14 cm
   and need ~30 confirming frames, so a fast walk past a switch may miss it.
 
@@ -575,7 +587,7 @@ Results (v9pgsr vs v9e2e: same SfM, split and recipe; 46 vs 42.5 min training):
   disc model mesh well. The meshes look nearly identical; both show faint vertical stripes on plain walls
   (views disagree by ~1 cm), which is what PGSR's multi-view terms target -- not implemented yet.
 - semantics: both models give the same 15 fixtures, matched within 0.1-9.5 cm (most within 2.6 cm), heights
-  within 3 cm -- the labelling is repeatable.
+  within 3 cm -- repeatable, but not independent evidence of correctness: all models share the same 2D detections, so they repeat the same mistakes.
 - **Verdict: marginal.** The Metric3D depth / normal + planar priors already do most of what PGSR's
   single-view terms do. Kept for the final model (sharper splats, slightly flatter on 4 of 6 surfaces).
 **Shell denoising (`mesh_labels.py --clean 0.01`)**: floor / ceiling / wall vertices are pulled onto their
@@ -611,6 +623,25 @@ Semantics: floor 28.8 m², 4 walls (net 52.6 m²), the same 15 fixtures as on v9
 electrical, other; .spz, 12 MB together) + `scan.json` + the mesh; the BuildScan viewer's new Scan Layers
 panel shows / hides / tints the groups, lists walls with net areas and the fixtures (click to fly there), and
 the render dropdown switches between splats and the mesh (`prototype/web-ui/STATUS.md`).
+
+### 4.18 Semantics v10: fixes against the user's room check (2026-11-03)
+Same model as 4.17 (only the labels change, `gs_v9final/semantic_v10`, 2D masks in `semantic2d_v10`).
+| | v9 labels | v10 labels |
+|---|---|---|
+| Detections correct | 13/15 | 15/15 (3 new ones judged by me from images, not yet confirmed by the user) |
+| Visible fixtures found | 13/17 | 15/17 |
+| 2D stage | 8 min | 38 min (tiles) |
+What changed: wardrobe / cabinet decoys no longer compete with "door" (they hid a real door; geometry separates them);
+door fragments along a wall merge into one opening (open doorway by the fridge); overlapping doors de-duplicated; a
+"tube light" class and "long, thin, on a wall" fans become tube lights; a second detector pass on zoomed tiles for
+small objects; a candidate failing its class rule tries its next most voted class; `verify_fixtures.py` checks
+switch / socket candidates with CLIP on sharp crops (removed the mirror piece and the bottle label); a plate with
+> 25% switch votes counts as a switchboard.
+Still missed: the socket under the ironing table (never a good candidate) and the round light #14 (the "clock" decoy
+wins its votes: letting clocks count as lights would likely make the real clock a false light).
+**These numbers are not a general accuracy figure:** the fixes were made and scored against the same 17 fixtures. Margins
+are thin: the false sockets scored 0.45-0.47 in the crop check against a 0.5 threshold (real plates 0.69-0.88), and
+the 25% rule rests on 3 plates. The tile pass also caused new errors that the fallback rule then repaired. Next test: a second room.
 
 ## 5. 3DGS training quality
 

@@ -55,6 +55,7 @@ export const FIXTURE_COLORS: Record<string, string> = {
   "light switch": "#ff00c8",
   "power socket": "#ff7800",
   "ceiling light": "#f5c400",
+  "tube light": "#f5c400",
   lamp: "#ffb84d",
   "air conditioner": "#00dc78",
   "ceiling fan": "#a050ff",

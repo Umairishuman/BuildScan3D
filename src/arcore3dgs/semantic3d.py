@@ -32,10 +32,14 @@ ap.add_argument("--band", type=float, default=0.06, help="m: distance to a struc
 ap.add_argument("--min_votes", type=int, default=2); ap.add_argument("--min_frac", type=float, default=0.3)
 ap.add_argument("--min_views", type=int, default=6); ap.add_argument("--voxel", type=float, default=0.04)
 ap.add_argument("--min_gaussians", type=int, default=30)
+ap.add_argument("--switch_share", type=float, default=0.25, help="a plate with more than this share of switch votes is a switchboard")
+ap.add_argument("--dump_votes", default="", help="debug: save the per-Gaussian class votes (.npy)")
+ap.add_argument("--sem2d", default="semantic2d", help="folder of semantic2d.py's output inside --work")
+ap.add_argument("--verdicts", default="", help="verify_fixtures.py's verdicts.json: switch / socket candidates it rejected are dropped")
 args = ap.parse_args()
 os.makedirs(args.out, exist_ok=True)
 dev = "cuda"; G = np.diag([1, -1, -1, 1.0]); t0 = time.time()
-det = json.load(open(os.path.join(args.work, "semantic2d", "detections.json")))
+det = json.load(open(os.path.join(args.work, args.sem2d, "detections.json")))
 FIX = det["classes"]                                         # 2D label i -> FIX[i-1] (fixtures + decoys)
 DECOY = set(det.get("decoys", []))                           # e.g. picture frame: absorbs false "windows", never a fixture
 lay = json.load(open(args.layout))
@@ -56,11 +60,11 @@ C1 = len(FIX) + 1
 votes = torch.zeros(N, C1, dtype=torch.int32, device=dev)   # column 0 = seen, no fixture
 frames_of = {}                                               # (class) -> list of (frame idx, gaussian idx tensor)
 by = {f["name"]: f for f in meta["frames"]}
-names = sorted(n for n in det["frames"] if os.path.exists(os.path.join(args.work, "semantic2d", n + ".npz")))
+names = sorted(n for n in det["frames"] if os.path.exists(os.path.join(args.work, args.sem2d, n + ".npz")))
 seen_frames = torch.zeros(N, dtype=torch.int32, device=dev)
 fix_frame_votes = []                                         # (frame index, gaussian ids, class) for view counting
 for fi, n in enumerate(names):
-    z = np.load(os.path.join(args.work, "semantic2d", n + ".npz"))
+    z = np.load(os.path.join(args.work, args.sem2d, n + ".npz"))
     cls = torch.from_numpy(z["cls"].astype(np.int64)).to(dev)
     c2w = np.array(by[n]["c2w"]) @ G; w2c = torch.tensor(np.linalg.inv(c2w), dtype=torch.float32, device=dev)
     with torch.no_grad():
@@ -83,6 +87,8 @@ for fi, n in enumerate(names):
     if fi % 100 == 0:
         print(f"{fi}/{len(names)} {n}: {int(vis.sum())} visible Gaussians, {int(m.sum())} on fixtures", flush=True)
 votes = votes.cpu().numpy(); seen = seen_frames.cpu().numpy()
+if args.dump_votes:
+    np.save(args.dump_votes, votes)
 fc = votes[:, 1:].argmax(1) + 1; fv = votes[np.arange(N), fc]
 is_decoy = np.array([FIX[c - 1] in DECOY for c in range(1, C1)])[fc - 1]
 is_fix = (fv >= args.min_votes) & (fv >= args.min_frac * np.maximum(seen, 1)) & ~is_decoy
@@ -158,6 +164,8 @@ RULES = {   # (check, reason) on: h0/h1 = bottom/top above the floor, w = width,
     "power socket": lambda q: (q["size"] < 0.4 and q["wd"] < 0.12 and 0.05 < q["hc"] < 1.9, "socket: small, on a wall"),
     "ceiling light": lambda q: (q["h1"] > H_room - 0.6 and q["h0"] > 1.5 and 0.08 < q["size"] < 1.5 and q["h1"] < H_room + 0.1,
                                 "ceiling light: 8 cm - 1.5 m, at the ceiling"),
+    "tube light": lambda q: (H_room - 0.9 < q["h1"] < H_room + 0.1 and 0.3 < q["w"] < 2.0 and q["h1"] - q["h0"] < 0.5,
+                             "tube light: long and thin, near the ceiling"),
     "lamp": lambda q: (q["size"] < 1.8, "lamp: < 1.8 m"),
     "air conditioner": lambda q: (q["wd"] < 0.4 and q["h0"] > 1.4 and 0.4 < q["w"] < 1.6, "AC: high on a wall"),
     "ceiling fan": lambda q: (H_room - 0.9 < q["h1"] < H_room + 0.1 and 0.6 < q["w"] < 1.8 and q["wd"] > 0.4,
@@ -165,6 +173,18 @@ RULES = {   # (check, reason) on: h0/h1 = bottom/top above the floor, w = width,
 }
 fixtures, rejected = [], []
 accepted = np.zeros(N, bool)
+verdicts = json.load(open(args.verdicts)) if args.verdicts else []
+frag_g = {}                                                   # rejected door candidates: rejected index -> Gaussians
+
+
+def verdict_of(cname, pos):
+    for v_ in verdicts:
+        if v_["cls"] == cname and np.linalg.norm(np.array(v_["position"]) - pos) < 0.08:
+            return v_
+    return None
+
+
+
 gid_frames = {}                                               # gaussian -> set of frames where it was labelled
 for fi, ids, labs in fix_frame_votes:
     for g, l in zip(ids, labs):
@@ -197,18 +217,101 @@ for ci, cname in enumerate(FIX):
         fl_ = float(fcoef @ [cen[0], cen[2], 1])              # floor height under the object
         q = dict(h0=float(lo_[1] - fl_), h1=float(hi_[1] - fl_), hc=float(cen[1] - fl_), w=width,
                  size=float(np.max(hi_ - lo_)), wd=float(wd), sd=float(sd))
-        ok, rule = RULES.get(cname, lambda q: (True, ""))(q)
-        rec = dict(cls=cname, position=[round(float(x), 3) for x in cen], height_above_floor=round(q["hc"], 3),
+        eff = cname
+        # the detector calls an unlit tube light a "ceiling fan": long and thin on a wall is not a fan
+        if cname == "ceiling fan" and "tube light" in FIX and q["wd"] < 0.3 and q["w"] > 0.4 and q["h1"] - q["h0"] < 0.4:
+            eff = "tube light"; label[g] = len(STRUCT) + FIX.index("tube light")
+        ok, rule = RULES.get(eff, lambda q: (True, ""))(q)
+        if ok and eff in ("light switch", "power socket"):
+            vd = verdict_of(eff, cen)
+            if vd is not None and not vd["keep"]:
+                ok, rule = False, f"crop check: p(electrical) {vd['p_electrical']}, looks like {vd.get('top')}"
+        # failed its class's rule: maybe the next most voted class fits (the zoomed tile pass only knows small
+        # classes, so it calls a small ceiling light a "socket"). A decoy in line, or a failed crop check, ends it.
+        gv = votes[g, 1:].sum(0)
+        if eff == "power socket" and ok:                      # a socket gets almost no "switch" votes, a switchboard many
+            sw, so = gv[FIX.index("light switch")], gv[FIX.index("power socket")]
+            if sw > args.switch_share * (sw + so):
+                eff = "light switch"; label[g] = len(STRUCT) + FIX.index("light switch")
+        if not ok and not rule.startswith("crop check"):
+            for c2 in np.argsort(-gv):
+                alt = FIX[c2]
+                if alt == eff or gv[c2] < 0.15 * gv.max() or alt in DECOY:
+                    if alt == eff:
+                        continue
+                    break
+                ok2, _ = RULES.get(alt, lambda q: (True, ""))(q)
+                v2 = set()
+                for gg in g:
+                    v2 |= gid_frames.get((int(gg), int(c2) + 1), set())
+                if ok2 and len(v2) >= args.min_views:
+                    eff, ok, views = alt, True, v2; label[g] = len(STRUCT) + int(c2)
+                    break
+        rec = dict(cls=eff, position=[round(float(x), 3) for x in cen], height_above_floor=round(q["hc"], 3),
                    bottom=round(q["h0"], 3), top=round(q["h1"], 3), width=round(width, 3),
                    height=round(q["h1"] - q["h0"], 3), wall=wk, dist_to_wall=round(float(wd), 3) if np.isfinite(wd) else None,
                    into_room=round(float(sd), 3) if np.isfinite(sd) else None,
                    along_wall=round(along, 3) if wk is not None else None, views=len(views), gaussians=int(len(g)))
         if ok and len(views) >= args.min_views:
-            rec["id"] = f"{cname.replace(' ', '_')}_{sum(f['cls'] == cname for f in fixtures) + 1}"
             fixtures.append(rec); accepted[g] = True
         else:
             rec["rejected"] = rule if not ok else f"seen in {len(views)} < {args.min_views} frames"
+            if eff == "door":
+                frag_g[len(rejected)] = g
             rejected.append(rec)
+# an open doorway or a door seen at an angle only gives strips of its frame: door fragments side by side along a
+# wall that together make a door-sized opening become one door; pieces of an accepted door just join it
+door_idx = len(STRUCT) + FIX.index("door") if "door" in FIX else None
+doors_ = [f for f in fixtures if f["cls"] == "door"]
+frags = {}
+for i_, g_ in frag_g.items():
+    r_ = rejected[i_]
+    if r_["wall"] is None or not -0.7 < r_["into_room"] < 0.15 or r_["views"] < args.min_views:
+        continue
+    a0, a1 = r_["along_wall"] - r_["width"] / 2, r_["along_wall"] + r_["width"] / 2
+    if any(d_["wall"] == r_["wall"] and a0 < d_["along_wall"] + d_["width"] / 2 + 0.25 and a1 > d_["along_wall"] - d_["width"] / 2 - 0.25 for d_ in doors_):
+        accepted[g_] = True; label[g_] = door_idx; continue
+    frags.setdefault(r_["wall"], []).append((a0, a1, i_))
+for wk_, fl_list in frags.items():
+    fl_list.sort(); grp = [fl_list[0]]
+    for it in fl_list[1:] + [None]:
+        if it is not None and it[0] - max(x[1] for x in grp) < 1.0 and it[1] - grp[0][0] < 2.0:
+            grp.append(it); continue
+        rs = [rejected[x[2]] for x in grp]; a0, a1 = grp[0][0], max(x[1] for x in grp)
+        h0, h1 = min(r_["bottom"] for r_ in rs), max(r_["top"] for r_ in rs)
+        if len(grp) >= 2 and 0.45 < a1 - a0 < 2.0 and h1 - h0 >= 1.6 and h0 < 0.3:
+            pos = np.mean([r_["position"] for r_ in rs], 0); p0 = np.array(walls[wk_]["p0"]); d_ = np.array(walls[wk_]["p1"]) - p0; d_ = d_ / np.linalg.norm(d_)
+            xz = p0 + d_ * (a0 + a1) / 2
+            fl_ = float(fcoef @ [xz[0], xz[1], 1])
+            fixtures.append(dict(cls="door", position=[round(float(xz[0]), 3), round(float(fl_ + (h0 + h1) / 2), 3), round(float(xz[1]), 3)],
+                                 height_above_floor=round((h0 + h1) / 2, 3), bottom=round(h0, 3), top=round(h1, 3), width=round(a1 - a0, 3),
+                                 height=round(h1 - h0, 3), wall=wk_, dist_to_wall=round(float(np.mean([r_["dist_to_wall"] for r_ in rs])), 3),
+                                 into_room=round(float(np.mean([r_["into_room"] for r_ in rs])), 3), along_wall=round((a0 + a1) / 2, 3),
+                                 views=max(r_["views"] for r_ in rs), gaussians=int(sum(r_["gaussians"] for r_ in rs)), merged_from=len(grp)))
+            for x in grp:
+                accepted[frag_g[x[2]]] = True; label[frag_g[x[2]]] = door_idx
+                rejected[x[2]]["rejected"] += " (merged into a door)"
+        grp = [it] if it is not None else []
+# two door candidates overlapping along the same wall are one door: keep the one seen most
+doors_ = sorted([f for f in fixtures if f["cls"] == "door"], key=lambda f: -f["views"]); drop = []
+for i_, a_ in enumerate(doors_):
+    for b_ in doors_[i_ + 1:]:
+        if a_["wall"] == b_["wall"] and not any(b_ is d_ for d_ in drop) and not any(a_ is d_ for d_ in drop) and \
+                abs(a_["along_wall"] - b_["along_wall"]) < (a_["width"] + b_["width"]) / 2 - 0.1:
+            drop.append(b_)
+fixtures = [f for f in fixtures if not any(f is d_ for d_ in drop)]
+# one light found under two class names: keep the one seen most
+LIGHTS = ("ceiling light", "tube light")
+lights = sorted([f for f in fixtures if f["cls"] in LIGHTS], key=lambda f: -f["views"]); drop = []
+for i_, a_ in enumerate(lights):
+    for b_ in lights[i_ + 1:]:
+        if b_ not in drop and a_ not in drop and np.linalg.norm(np.array(a_["position"]) - np.array(b_["position"])) < 0.4:
+            drop.append(b_)
+fixtures = [f for f in fixtures if not any(f is d_ for d_ in drop)]
+fixtures.sort(key=lambda f: FIX.index(f["cls"]))
+cnt_ = {}
+for f in fixtures:                                            # ids after merging and de-duplicating
+    cnt_[f["cls"]] = cnt_.get(f["cls"], 0) + 1; f["id"] = f"{f['cls'].replace(' ', '_')}_{cnt_[f['cls']]}"
 # fixture votes that did not end up in an accepted instance fall back to their structural label
 label = np.where(is_fix & ~accepted, label_struct, label)
 print(f"{len(fixtures)} fixtures accepted, {len(rejected)} rejected")
@@ -248,7 +351,7 @@ for f_ in fixtures:
 # ---------------- coloured model + sheets ----------------
 PAL = {"other": (150, 150, 150), "floor": (140, 90, 50), "ceiling": (235, 235, 235), "door": (40, 90, 255),
        "window": (0, 200, 255), "light switch": (255, 0, 200), "power socket": (255, 120, 0), "ceiling light": (255, 255, 0),
-       "lamp": (255, 220, 120), "air conditioner": (0, 220, 120), "ceiling fan": (160, 80, 255)}
+       "tube light": (255, 255, 0), "lamp": (255, 220, 120), "air conditioner": (0, 220, 120), "ceiling fan": (160, 80, 255)}
 WALLC = [(120, 200, 120), (120, 160, 220), (220, 170, 120), (190, 120, 200), (120, 210, 210), (210, 210, 120)]
 col = np.array([PAL.get(nm, WALLC[int(nm.split("_")[1]) % len(WALLC)] if nm.startswith("wall_") else (150, 150, 150))
                 for nm in NAMES], np.float32) / 255
