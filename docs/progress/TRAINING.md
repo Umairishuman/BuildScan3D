@@ -277,3 +277,16 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   12. COLMAP GPU test on 4 generated 1920×1080 test images: `feature_extractor` with GPU SIFT (~2,200 features each),
       `exhaustive_matcher` on GPU, `vocab_tree_matcher` with the tree: all exit 0. `global_mapper` and
       `patch_match_stereo` not tested yet (need a real scene).
+  13. **Error:** first `pip install -r envs/linux/requirements-nerfstudio.txt` into `bs-ns` (14:35 → 14:40) failed:
+      `Failed to build installable wheels ... fpsample, pyliblzfse` (`CMAKE_CXX_COMPILER not set`,
+      `No such file or directory: 'gcc'`), so pip installed none of the 228 packages. Cause: pip was run with the env's
+      Python by absolute path, without activating the env, so conda's compiler activation (`CC` / `CXX` →
+      `x86_64-conda-linux-gnu-*`) never ran. → Rerun through `micromamba run -n bs-ns` (CC, CXX and nvcc now found).
+      **Lesson for the setup script and the pipeline:** anything that compiles (pip sdists, gsplat's CUDA JIT) must run
+      inside the activated `bs-ns` env.
+  14. `bs-system`: `pip install -r requirements-system.txt` (cu121 index) OK, 14:40. Pins confirmed: torch 2.1.2+cu121
+      (CUDA available), numpy 1.26.4, scipy 1.11.4, opencv 4.11.0, timm 1.0.30, mmengine 0.10.7, xformers 0.0.23.post1.
+      Unpinned dependencies came in at their newest versions (e.g. huggingface_hub 2.4.0); to compare with Tayyab's `pip freeze`.
+  15. `semantic-env` (repo root, gitignored): `bs-system`'s Python `-m venv --system-site-packages`, then
+      `requirements-semantic.txt`. OK: transformers 4.46.3, tokenizers 0.20.3, huggingface_hub 0.36.2, Pillow 10.1.0,
+      safetensors 0.7.0, and transformers sees torch 2.1.2 (the known pitfall).
