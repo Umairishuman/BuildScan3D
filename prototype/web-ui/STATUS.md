@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-11-03 (v10 semantic labels in the newroom bundle, tube light class)
+Last updated: 2026-11-06 (unused `newroom_v6.spz` taken out of git; `newroom-scan` loads only the labelled bundle)
 
 ---
 
@@ -131,6 +131,15 @@ real path.** Currently only `/dashboard` has a href.
 ---
 
 ## 4. Completed
+
+### Unused single-file splat removed from the repo ✅ (2026-11-06, user decision D-055)
+- **Why:** CI's repo-hygiene check rejects files over 10 MB; `public/splats/newroom_v6.spz` (12.5 MB) was the only one,
+  and the viewer never loaded it: with `scanUrl` set, `viewer/[id]/page.tsx` passes `splatUrl={undefined}`.
+- **Modified** `src/lib/mockData.ts`: dropped `splatUrl` from `newroom-scan` (it keeps `scanUrl: "/scans/newroom/"`).
+  **Removed from git** `public/splats/newroom_v6.spz` (history keeps it; local copy in `saved_models/web/` on the Ubuntu PC).
+  `Project.splatUrl` itself stays for single-file scans.
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` → 0 errors, 1 known warning
+  (ExportModal.tsx:29); `npx next build` compiled + prerendered all 8 routes. Not re-checked in a browser.
 
 ### Scan Layers panel, fixtures and mesh mode for the real scan ✅ (2026-10-27)
 - **New** `src/components/ProjectDetail/ScanLayersPanel.tsx`: room summary (floor area, ceiling height, net wall
@@ -726,6 +735,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-11-06** — `newroom-scan` no longer points at the unused `/splats/newroom_v6.spz`; the file is out of git (CI 10 MB limit).
 - **2026-11-03** — `public/scans/newroom/` regenerated with v10 labels (15 fixtures: 6 doors, tube light class); `FIXTURE_COLORS` gains "tube light".
 - **2026-10-27** — Scan Layers panel (groups, tint, fixtures with fly-to, wall areas) and Mesh render mode on `newroom-scan`.
 - **2026-10-27** — `SplatCanvas` loads labelled scan bundles (class groups, tint, fixture markers, mesh mode, `flyTo`).

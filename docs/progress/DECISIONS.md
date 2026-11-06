@@ -67,6 +67,7 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | D-052 | 2026-11-06 | Delete only fully merged branches, never unmerged ones | Active |
 | D-053 | 2026-11-06 | This PC: no auto-suspend; remote access by Tailscale (plan) | Active |
 | D-054 | 2026-11-06 | CI coverage gate lowered 40% → 35% until the tests are written | Active (temporary) |
+| D-055 | 2026-11-06 | Unused 12.5 MB `newroom_v6.spz` out of git, kept locally | Active |
 
 ---
 
@@ -396,6 +397,13 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **Why:** `master` itself has failed the 40% gate since 2026-10-19 (38%), so CD has published no APK / web bundle since
   then; the PR #1 merge brings it to 37.4% (`sfm_colmap.py` +45 untested lines from v9). 35% leaves headroom while
   still catching a real drop. **Rejected:** writing the missing tests now; merging with CI red. **By:** Umair.
+
+## D-055 · 2026-11-06 · Unused `newroom_v6.spz` out of git
+- **Decision:** `prototype/web-ui/public/splats/newroom_v6.spz` (12.5 MB, added in `6d0cab5`) is no longer tracked; the
+  unused `splatUrl` line is gone from `mockData.ts`. Local copy: `saved_models/web/newroom_v6.spz` (Ubuntu PC). Git
+  history still has it (never-delete rule, D-049).
+- **Why:** CI's 10 MB file limit; the viewer loads `newroom-scan` from the labelled bundle `/scans/newroom/` and never
+  read this file. **Rejected:** exempting `public/splats/` from the limit; Git LFS. **By:** Umair.
 
 ## Open decisions (need the team; agents must not decide these)
 

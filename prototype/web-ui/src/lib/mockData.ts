@@ -43,7 +43,6 @@ export const MOCK_PROJECTS: Project[] = [
     captureDevice: "realme RMX5111 (ARCore)",
     description:
       "Real 4-minute phone video reconstructed with the BuildScan pipeline (v9: retrieval SfM scaled by ARCore, fast dense init, geometry priors, motion-blur model, PGSR-lite) and labelled automatically: walls, floor, ceiling, doors, switches, sockets and lights, plus a surface mesh. Floor 28.8 m², ceiling 2.72 m.",
-    splatUrl: "/splats/newroom_v6.spz",
     scanUrl: "/scans/newroom/",
     splatStart: { position: [-0.98, -0.06, -0.2], target: [-1.98, -0.36, -0.2] },
   },
