@@ -110,7 +110,7 @@ These are GitHub settings, not files, so they cannot be committed:
 
 - **Coverage is only counted for files the tests import.** The reported percentage covers `server/` and the few `src/` modules that tests can import; scripts that run their logic at the top level are not in the number, so it overstates how much of the project is tested.
 - **Newest parts are untested on GitHub.** The CI jobs (Python, web UI, Android debug build, hygiene) have passed on GitHub. The shared signing key step and the `publish-latest` job are new and are only proven by their first run on `master`. The workflow files pass `actionlint`, and the Python, lint and web UI steps pass when run locally (section 4).
-- **No GPU stages.** Training, Metric3D, bundle adjustment on real data and the viewer are not run in CI. Their results are documented in `docs/Problems_and_Solutions.md` and the experiment notes.
+- **No GPU stages.** Training, Metric3D, bundle adjustment on real data and the viewer are not run in CI. Their results are documented in `docs/progress/Problems_and_Solutions.md` and `docs/progress/TRAINING.md`.
 - **Only the Python scripts' building blocks are tested.** Most of `src/arcore3dgs` runs its logic at the top level of a script, so it cannot be imported by a test. Moving that logic into functions would let us test more.
 - **The Android sample has no unit tests** in this repository yet; CI only proves that it compiles.
 - **CD does not deploy to a server.** The web UI uses server-side rendering, so it cannot be published as static pages. Delivery means a downloadable bundle (`npm ci --omit=dev && npm start`) and a release. Deploying to a hosting service later needs an account or tokens that the repository owner controls.
