@@ -16,7 +16,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 export MAMBA_ROOT_PREFIX="${MAMBA_ROOT_PREFIX:-$HOME/micromamba}"
 MM="${BUILDSCAN_MAMBA:-$HOME/.local/bin/micromamba}"
-PORT="${PORT:-8000}"
+export PORT="${PORT:-8000}"
 
 if [[ -f .env ]]; then set -a; source .env; set +a; fi
 export PROCESSING_MODE="${PROCESSING_MODE:-dry_run}"

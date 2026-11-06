@@ -123,9 +123,50 @@ class ErrorLogger:
             raise
 
 
+DISCOVERY_PORT = int(os.environ.get("DISCOVERY_PORT", "8001"))
+DISCOVERY_MAGIC = b"BUILDSCAN_DISCOVER"
+
+
+def _discovery_loop():
+    """Answer the app's UDP broadcast "BUILDSCAN_DISCOVER" with this server's URL, so the app's server list finds it
+    on any network size (the app's own address sweep only covers its /24)."""
+    import json
+    import socket
+    port = int(os.environ.get("PORT", "8000"))
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(("0.0.0.0", DISCOVERY_PORT))
+    except OSError as e:
+        log.warning("Discovery off: cannot listen on UDP %d (%s); the app can still use the URL typed in", DISCOVERY_PORT, e)
+        return
+    log.info("Discovery: answering the app's server search on UDP %d", DISCOVERY_PORT)
+    while True:
+        try:
+            data, addr = sock.recvfrom(1024)
+            if not data.startswith(DISCOVERY_MAGIC):
+                continue
+            probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            probe.connect((addr[0], addr[1]))           # no packet is sent: only picks the local address toward the phone
+            ip = probe.getsockname()[0]
+            probe.close()
+            url = f"http://{ip}:{port}"
+            reply = {"service": "buildscan3d", "url": url, "mode": processing_config["mode"], "host": socket.gethostname()}
+            sock.sendto(json.dumps(reply).encode(), addr)
+            log.info("DISCOVERY search from %s, answered %s", addr[0], url)
+        except Exception as e:                              # never let one bad packet stop discovery
+            log.warning("Discovery error: %s", e)
+
+
 app = FastAPI(title="BuildScan 3D Processing Server")
 app.add_middleware(UploadProgressLogger)
 app.add_middleware(ErrorLogger)
+
+
+@app.on_event("startup")
+async def _start_discovery():
+    import threading
+    threading.Thread(target=_discovery_loop, name="discovery", daemon=True).start()
 
 jobs: dict[str, Job] = {}
 
