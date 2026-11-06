@@ -186,3 +186,17 @@ Template:
 - Umair revoked the leaked RunPod key; the repo stays public (D-056). Screen "sleep" checked: the PC never suspended,
   it only locks after 5 min idle; lock kept.
 - Next: the server port and `.sh` launchers (STATUS 7.1 1f); the first run when Tayyab's data arrives.
+
+## 2026-11-06 (sixth session) · Umair · `exp/first-linux-run`, `fix/android-app`
+- Did: plan for STATUS 7.1 step 1h with Umair's own new recording (not yet uploaded). Tailscale checked: running,
+  SSH on, key expires 2027-05-05; laptop not yet in the tailnet. Upload server on Linux: env `bs-server`,
+  `scripts/start_server.sh` (`dry_run`); the server now logs devices that connect, uploads as they arrive, failed
+  requests, and answers a UDP server search on port 8001 (all tested on a copy on ports 8010/8011). App: server list
+  failed because it only swept the phone's /24 while the lab Wi-Fi is a /19 → UDP search + saved servers; update
+  checker fixed (repo name, menu item, in-app install, errors shown); package name `com.buildscan3d.app`; CD builds a
+  release APK signed with a new private key (`~/.buildscan3d-keys/`, GitHub secrets). Python tests: 212 passed.
+- Decisions: D-057 (server env), D-058 (package name), D-059 (release key), D-060 (PR → merge → CD).
+- Problems: system Python has no `ensurepip` (no venv without sudo) → micromamba env; conda download of `openjdk`
+  stalled (as in R-027) → key made with `openssl`; `ufw` is active (phone access untested).
+- Next: CI on the PR, merge, CD release v0.3.4; Umair uploads today's recording, then installs v0.3.4 (next to the old app,
+  a separate package); ufw rules; then `check_capture.py` and the R-028 run options.

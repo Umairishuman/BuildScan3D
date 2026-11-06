@@ -237,6 +237,9 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     } else if (item.getItemId() == R.id.server_settings) {
       launchServerUrlDialog();
       return true;
+    } else if (item.getItemId() == R.id.check_updates) {
+      new UpdateChecker(this).check(true);
+      return true;
     }
     return false;
   }
@@ -251,7 +254,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     layout.setPadding(48, 24, 48, 0);
 
     android.widget.TextView tvStatus = new android.widget.TextView(this);
-    tvStatus.setText("Scanning network for servers...");
+    tvStatus.setText("Searching for servers (about 10 s)...");
     tvStatus.setTextSize(13);
     tvStatus.setPadding(0, 0, 0, 16);
     layout.addView(tvStatus);
@@ -280,6 +283,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
           String url = input.getText().toString().trim();
           if (!url.isEmpty()) {
             prefs.edit().putString(ProcessingActivity.PREF_SERVER_URL, url).apply();
+            rememberServer(this, url);
             Toast.makeText(this, "Server: " + url, Toast.LENGTH_SHORT).show();
           }
         })
@@ -292,7 +296,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
       List<String> found = scanForServers();
       runOnUiThread(() -> {
         if (found.isEmpty()) {
-          tvStatus.setText("No servers found on local network.");
+          tvStatus.setText("No servers found. Is the server running, and is the phone on the same Wi-Fi? You can type the URL below.");
         } else {
           tvStatus.setText("Found " + found.size() + " server(s) — tap to select:");
         }
@@ -313,6 +317,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
           btn.setOnClickListener(v -> {
             input.setText(url);
             prefs.edit().putString(ProcessingActivity.PREF_SERVER_URL, url).apply();
+            rememberServer(this, url);
             Toast.makeText(this, "Server: " + url, Toast.LENGTH_SHORT).show();
             dialog.dismiss();
           });
@@ -322,67 +327,123 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
     }).start();
   }
 
+  static final String PREF_RECENT_SERVERS = "recent_servers";
+  static final int DISCOVERY_PORT = 8001;
+
+  /** Remember a server URL (newest first, at most 5) so the server list can offer it again. */
+  static void rememberServer(android.content.Context ctx, String url) {
+    android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(ctx);
+    List<String> recent = new ArrayList<>();
+    recent.add(url);
+    for (String u : prefs.getString(PREF_RECENT_SERVERS, "").split("\n")) {
+      if (!u.isEmpty() && !u.equals(url) && recent.size() < 5) recent.add(u);
+    }
+    prefs.edit().putString(PREF_RECENT_SERVERS, android.text.TextUtils.join("\n", recent)).apply();
+  }
+
+  /** True if url answers GET /health like our server. */
+  private static boolean isOurServer(String url) {
+    okhttp3.OkHttpClient quick = new okhttp3.OkHttpClient.Builder()
+        .connectTimeout(2, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(2, java.util.concurrent.TimeUnit.SECONDS)
+        .build();
+    okhttp3.Request req = new okhttp3.Request.Builder().url(url + "/health").build();
+    try (okhttp3.Response resp = quick.newCall(req).execute()) {
+      String body = resp.body() != null ? resp.body().string() : "";
+      return resp.isSuccessful() && body.contains("\"ok\"");
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  /**
+   * Finds servers three ways: (1) UDP broadcast "BUILDSCAN_DISCOVER" on port 8001, answered by the server with its URL
+   * (works on networks larger than /24, like the lab Wi-Fi); (2) the saved and recently used servers; (3) a sweep of the
+   * phone's own /24 on port 8000. Networks that isolate Wi-Fi clients block all three: then type the URL.
+   */
   private List<String> scanForServers() {
-    List<String> results = new ArrayList<>();
+    java.util.Set<String> found = java.util.Collections.synchronizedSet(new java.util.LinkedHashSet<>());
     try {
-      // Get the device's local IPs to find which subnets to scan
-      java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
+      // (1) UDP broadcast
+      java.util.Set<java.net.InetAddress> targets = new java.util.LinkedHashSet<>();
+      targets.add(java.net.InetAddress.getByName("255.255.255.255"));
       java.util.Set<String> subnets = new java.util.LinkedHashSet<>();
-      while (interfaces.hasMoreElements()) {
+      java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
+      while (interfaces != null && interfaces.hasMoreElements()) {
         java.net.NetworkInterface ni = interfaces.nextElement();
         if (ni.isLoopback() || !ni.isUp()) continue;
         for (java.net.InterfaceAddress addr : ni.getInterfaceAddresses()) {
-          java.net.InetAddress inet = addr.getAddress();
-          if (inet instanceof java.net.Inet4Address) {
-            String ip = inet.getHostAddress();
-            String subnet = ip.substring(0, ip.lastIndexOf('.'));
-            subnets.add(subnet);
+          if (addr.getAddress() instanceof java.net.Inet4Address) {
+            if (addr.getBroadcast() != null) targets.add(addr.getBroadcast());
+            String ip = addr.getAddress().getHostAddress();
+            subnets.add(ip.substring(0, ip.lastIndexOf('.')));
           }
         }
       }
+      try (java.net.DatagramSocket udp = new java.net.DatagramSocket()) {
+        udp.setBroadcast(true);
+        udp.setSoTimeout(500);
+        byte[] probe = "BUILDSCAN_DISCOVER".getBytes("UTF-8");
+        for (java.net.InetAddress t : targets) {
+          try {
+            udp.send(new java.net.DatagramPacket(probe, probe.length, t, DISCOVERY_PORT));
+          } catch (Exception e) {
+            Log.w(TAG, "Discovery broadcast to " + t + " failed", e);
+          }
+        }
+        long until = System.currentTimeMillis() + 2500;
+        byte[] buf = new byte[1024];
+        while (System.currentTimeMillis() < until) {
+          java.net.DatagramPacket reply = new java.net.DatagramPacket(buf, buf.length);
+          try {
+            udp.receive(reply);
+          } catch (java.net.SocketTimeoutException e) {
+            continue;
+          }
+          try {
+            org.json.JSONObject j = new org.json.JSONObject(new String(reply.getData(), 0, reply.getLength(), "UTF-8"));
+            if ("buildscan3d".equals(j.optString("service"))) found.add(j.getString("url"));
+          } catch (Exception e) {
+            Log.w(TAG, "Bad discovery reply", e);
+          }
+        }
+      } catch (Exception e) {
+        Log.w(TAG, "UDP discovery failed", e);
+      }
 
-      // Scan each subnet in parallel (common IPs first, then sweep .1-.254)
+      // (2) saved + recent servers, (3) sweep of the phone's /24
+      java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(64);
+      android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
+      java.util.Set<String> known = new java.util.LinkedHashSet<>();
+      known.add(prefs.getString(ProcessingActivity.PREF_SERVER_URL, ProcessingActivity.DEFAULT_SERVER_URL));
+      for (String u : prefs.getString(PREF_RECENT_SERVERS, "").split("\n")) if (!u.isEmpty()) known.add(u);
+      for (String u : known) {
+        if (!found.contains(u)) executor.submit(() -> { if (isOurServer(u)) found.add(u); });
+      }
       int port = 8000;
-      java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(50);
-      java.util.concurrent.CopyOnWriteArrayList<String> found = new java.util.concurrent.CopyOnWriteArrayList<>();
-      List<java.util.concurrent.Future<?>> futures = new ArrayList<>();
-
       for (String subnet : subnets) {
         for (int i = 1; i <= 254; i++) {
           String ip = subnet + "." + i;
-          futures.add(executor.submit(() -> {
-            try {
-              java.net.Socket socket = new java.net.Socket();
+          executor.submit(() -> {
+            try (java.net.Socket socket = new java.net.Socket()) {
               socket.connect(new java.net.InetSocketAddress(ip, port), 300);
-              socket.close();
-              // Verify it's our server by hitting /health
-              String url = "http://" + ip + ":" + port;
-              okhttp3.OkHttpClient quick = new okhttp3.OkHttpClient.Builder()
-                  .connectTimeout(2, java.util.concurrent.TimeUnit.SECONDS)
-                  .readTimeout(2, java.util.concurrent.TimeUnit.SECONDS)
-                  .build();
-              okhttp3.Request req = new okhttp3.Request.Builder().url(url + "/health").build();
-              try (okhttp3.Response resp = quick.newCall(req).execute()) {
-                if (resp.isSuccessful()) {
-                  String body = resp.body() != null ? resp.body().string() : "";
-                  if (body.contains("ok")) {
-                    found.add(url);
-                  }
-                }
-              }
-            } catch (Exception ignored) {}
-          }));
+            } catch (Exception e) {
+              return;
+            }
+            String url = "http://" + ip + ":" + port;
+            if (isOurServer(url)) found.add(url);
+          });
         }
       }
-
-      // Wait for all scans (max 5 seconds)
       executor.shutdown();
-      executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS);
-      results.addAll(found);
+      executor.awaitTermination(8, java.util.concurrent.TimeUnit.SECONDS);
+      executor.shutdownNow();
     } catch (Exception e) {
       Log.e(TAG, "Network scan error", e);
     }
-    return results;
+    synchronized (found) {
+      return new ArrayList<>(found);
+    }
   }
 
   @Override

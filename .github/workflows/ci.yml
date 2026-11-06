@@ -188,7 +188,7 @@ jobs:
       - name: Build debug APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug assembleRelease --stacktrace   # release too: catches release-only build problems before CD (D-060)
 
       - name: Sign with the shared key, then check the built APK
         run: |
@@ -202,7 +202,7 @@ jobs:
           cat "$RUNNER_TEMP/signer.txt"
           echo "--- manifest inside the APK (first lines):"; head -c 2500 "$RUNNER_TEMP/apk_manifest.xml"; echo
           { echo "### APK checks"; cat "$RUNNER_TEMP/signer.txt"; } >> "$GITHUB_STEP_SUMMARY"
-          python3 "$GITHUB_WORKSPACE/.github/android/check_apk.py" apk --manifest "$RUNNER_TEMP/apk_manifest.xml" --signer "$RUNNER_TEMP/signer.txt" --apk "$APK"
+          python3 "$GITHUB_WORKSPACE/.github/android/check_apk.py" apk --manifest "$RUNNER_TEMP/apk_manifest.xml" --signer "$RUNNER_TEMP/signer.txt" --apk "$APK" --key debug
 
       - name: Keep the APK
         uses: actions/upload-artifact@v4

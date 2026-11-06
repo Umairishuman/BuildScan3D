@@ -158,7 +158,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does |
 |---|---|
-| `main.py` | FastAPI app: `/upload`, `/status`, `/jobs`, `/logs`, `/retry`, `/datasets`, `/reprocess`, `/download`, `/config`, `/health`; modes local / runpod / remote / dry_run |
+| `main.py` | FastAPI app: `/upload`, `/status`, `/jobs`, `/logs`, `/retry`, `/datasets`, `/reprocess`, `/download`, `/config`, `/health`; modes local / runpod / remote / dry_run. Logs devices that connect, uploads while they arrive and every failed request; answers the app's server search on UDP 8001 (D-057) |
 | `pipeline.py` | Local runner: fallback → prepare → sfm_colmap → export_nerfstudio → ns-train splatfacto → ns-export (the **v3** recipe). Windows paths (`nerfstudio-env\Scripts\*.exe`) |
 | `runpod_client.py` | RunPod API: create pod from `umairishuman/buildscan-gpu:latest`, setup script (skipped if nerfstudio exists), SCP up, run, SCP down, always terminate, watchdog |
 | `remote_gpu.py` | Same flow over SSH to an always-on machine (a friend's GPU) |
@@ -174,23 +174,27 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `run_arcore3dgs_legacy.bat` | [legacy] ARCore-pose pipeline: fallback → prepare → ba → relocalize_pnp → ba → mvs → pocket_prior → train.py |
 | `view_splat.bat` | Starts `view.py` (http://localhost:7010) |
 | `start_server.bat` | Loads `.env`, starts the FastAPI server on port 8000, prints the IP for the phone |
+| `start_server.sh` | Linux twin of `start_server.bat`: loads `.env`, mode defaults to `dry_run`, runs uvicorn on port 8000 in the small `bs-server` micromamba env (not the pipeline envs), prints the phone URLs. Detached: `screen -dmS bs-server scripts/start_server.sh` |
 | `jobs.bat` / `jobs.py` | Job manager CLI (list, watch, logs, retry, reprocess, mode) |
 | `release.bat` | Bumps the app version and tags a release |
 | `run_train.bat`, `run_train_fast.bat`, `run_post.bat`, `run_post_fast.bat`, `run_viewer.bat` | [dead] first splatfacto runs on roomAttemptSadness (Sept/Oct 2026): ns-train / ns-eval / ns-export / ns-viewer with MSVC set up |
 
 ## 6. Android capture app: `googleARCore/samples/hello_ar_java/`
 
-Built on Google's `hello_ar_java` sample. Our code is in `app/src/main/java/com/google/ar/core/examples/java/helloar/`:
+Built on Google's `hello_ar_java` sample. Package name (`applicationId`) `com.buildscan3d.app` since 2026-11-06 (D-058); the Java
+package is still Google's. **App UI:** the screens are the `*Activity.java` files below, their layouts in
+`app/src/main/res/layout/`, the menu in `res/menu/settings_menu.xml`, texts in `res/values/strings.xml`.
+Our code is in `app/src/main/java/com/google/ar/core/examples/java/helloar/`:
 
 | File | Does |
 |---|---|
-| `HelloArActivity.java` | Main AR screen (Google's sample, heavily modified): ARCore session, recording, rendering, menus |
+| `HelloArActivity.java` | Main AR screen (Google's sample, heavily modified): ARCore session, recording, rendering, menus, server list (UDP search + saved servers + /24 sweep) |
 | `CaptureLogger.java` | Writes poses, tracking, points, depth, `camera.csv`, `anchors.csv`, lens metadata on a background thread |
 | `QualityMonitor.java` | Live IQA: predicted blur, dark / overexposed, low texture, tracking; `quality.csv` |
 | `CoverageMap.java`, `CoverageOverlayView.java` | Live coverage map (red / yellow / green dots) |
 | `ProcessingActivity.java` | Upload & process screen: multipart upload, status polling |
 | `GalleryActivity.java`, `ScanDetailActivity.java` | List of recordings and their details |
-| `UpdateChecker.java` | In-app update check against GitHub releases |
+| `UpdateChecker.java` | Update check against GitHub Releases at start and from the menu ("Check for updates"); downloads the APK in the app and opens Android's installer (FileProvider `res/xml/update_paths.xml`) |
 
 The other `googleARCore/samples/*` folders, `libraries/`, `assets/`, `media/` are Google's and unused. Build: Android
 Studio or `./gradlew assembleDebug` with JDK 21 (STATUS §7.7).

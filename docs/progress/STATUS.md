@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-06 by Umair. `master` now holds v9/v10, the project records and the Linux port (PR #1, D-051).
+Last updated: 2026-11-06 by Umair (evening: upload server on Linux, app fixes, D-057 – D-060). `master` holds v9/v10, the project records and the Linux port (PR #1, D-051).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -160,6 +160,9 @@ Log every run in [TRAINING.md](TRAINING.md).
 Older pipelines: `scripts/run_arcore3dgs.bat <dataset>` (v3: COLMAP + splatfacto, ~75 min, what the server runs) and
 `scripts/run_arcore3dgs_legacy.bat` (ARCore poses + own BA / MVS / PocketGS prior). Viewer: `scripts/view_splat.bat`
 (port 7010). Phone-upload server: `scripts/start_server.bat` + `scripts/jobs.bat` ([PROCESSING_GUIDE.md](../PROCESSING_GUIDE.md)).
+On Linux (this PC): `screen -dmS bs-server scripts/start_server.sh` (reattach `screen -r bs-server`; env `bs-server`,
+created once with `micromamba create -n bs-server -c conda-forge python=3.10 pip` + `pip install -r server/requirements.txt`).
+Mode defaults to `dry_run` (uploads saved to `dataset/scan_<id>/`, nothing processed). Phone URL: this PC's LAN IP, port 8000.
 
 ## 6. Machines and environments
 
@@ -219,7 +222,7 @@ script, step 3 RunPod and the friend's PC.**
       packages (`msvc_runtime`, `pywinpty`); make Linux pins (env `.yml` + requirement files) and keep the versions equal.
 - [x] **[new] 1e. COLMAP ≥ 4.2 with CUDA on Linux** — done 2026-11-06: conda-forge 4.2.0 `cuda_129` + OpenImageIO 3.1; GPU SIFT / matching / vocab tree tested; mapper and PatchMatch wait for real data. (check whether conda-forge has 4.2 with CUDA, else build from source
       in the env) + the faiss vocabulary trees (from the COLMAP 3.11.1 / 3.13.0 releases), as on Windows.
-- [ ] **[new] 1f. Port the Windows-only paths in code** — partly done 2026-11-06 on `feature/linux-port`: `toolpaths.py`, `run_v8.py`, `sfm_colmap.py`, `fast_mvs.py`, `mvs_init.py`, `colmap_mvs.py`. Still open: `server/pipeline.py`, `.sh` launchers. `run_v8.py` (`nerfstudio-env/Scripts/python.exe`,
+- [ ] **[new] 1f. Port the Windows-only paths in code** — partly done 2026-11-06 on `feature/linux-port`: `toolpaths.py`, `run_v8.py`, `sfm_colmap.py`, `fast_mvs.py`, `mvs_init.py`, `colmap_mvs.py`. Still open: `server/pipeline.py`, `.sh` launchers (`scripts/start_server.sh` done 2026-11-06, D-057). `run_v8.py` (`nerfstudio-env/Scripts/python.exe`,
       `ns-export.exe`), `sfm_colmap.py` (`tools/colmap_dl/.../COLMAP.bat`, `tools/cudnn9` DLL path), `server/pipeline.py`;
       the `.bat` launchers need `.sh` equivalents.
 - [x] **[new] 1g. All of 1b–1f as one script** — done 2026-11-06: `scripts/setup_linux.sh` (+ `--check`); run here OK, fresh-machine run not yet tested. (`scripts/setup_linux.sh` + env files), so step 2 and the friend's PC reuse it (D-048).
@@ -233,8 +236,18 @@ script, step 3 RunPod and the friend's PC.**
       is not sleep, runs and Tailscale continue. Lock kept on purpose (Umair, D-053).
 - [ ] **[new] Login-screen suspend** (applies when nobody is logged in, e.g. after a reboot; needs sudo): GDM's own
       power setting, or `sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target` (lab policy?).
-- [ ] **[new] Tailscale on this PC** (Umair, sudo): install, `sudo tailscale up --ssh`; laptop: `ssh i230662@<name>` /
-      VS Code Remote-SSH; long runs in `tmux` / `screen`. Check the lab allows it.
+- [x] **[new] Tailscale on this PC** — done 2026-11-06: `gpu-lab-precision-3680`, 100.102.13.24, Tailscale SSH on,
+      starts at boot, MagicDNS on. Used **only** for Umair's laptop → this PC (the phone uploads over the Wi-Fi).
+- [ ] **[new] Tailscale: Umair's laptop** joins the tailnet and `ssh i230662@gpu-lab-precision-3680` is tested (the
+      only other own device, `desktop-hnumpvk`, was last seen 2026-09-30); then VS Code Remote-SSH.
+- [ ] **[new] Tailscale: disable key expiry** for this PC in the admin console (key expires 2027-05-05).
+- [ ] **[new] Firewall (`ufw` is active) for phone uploads** (Umair, sudo): allow TCP 8000 and UDP 8001 (server search)
+      from the Wi-Fi, e.g. `sudo ufw allow from 172.15.32.0/19 to any port 8000 proto tcp` and the same with
+      `port 8001 proto udp`. Not yet tested from the phone. The PC is on Wi-Fi now (`wlp0s20f3`, 172.15.40.53/19);
+      the wired card had no address on 2026-11-06.
+- [ ] **[new] Back up the release signing key** `~/.buildscan3d-keys/` (D-059) somewhere other than this PC.
+- [ ] **[new] Dockerise the upload server** so it runs the same on Windows and Linux (asked by Umair 2026-11-06;
+      deferred with step 2, Docker not on this PC for now, D-045 / D-057).
 - [x] **[new] Remote power-on — not needed (2026-11-06, D-053):** Umair has no BIOS access, and the lab agreed to leave
       the PC on. Notes kept in case that changes: wired NIC `enp0s31f6` (Intel I219-LM, MAC `ac:b4:80:3b:91:2e`, LAN
       172.17.170.120/24) has device wake-up enabled; Wake-on-LAN also needs the BIOS setting and `sudo ethtool -s
@@ -369,6 +382,12 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.7 Android app
 
+- [ ] **[new] Test the 2026-11-06 app fixes on the phone** (v0.3.4+, D-058 – D-060): install from GitHub Releases (it installs
+      next to the old app; uninstall the old one only after its recordings are uploaded), check whether Play Protect still warns, the server list
+      finds this PC, and "Check for updates" installs the next build. Not tested on a device.
+- [ ] **[new] Move the app code** out of `googleARCore/samples/hello_ar_java/` and Google's Java package into its own
+      folder / package (D-049 step 2, MAP §10); asked by Umair 2026-11-06 because the app UI is hard to find.
+
 - [ ] App bug: ARCore depth was stale in newRoomAttemptSadness (every map identical, confidence ≈ 0). Investigate. *(from TODO 2026-10-10)*
 - [ ] Tune the IQA thresholds on the phone (predicted-blur warn > 5 px / bad > 10 px is new and untested on device). *(from TODO)*
 - [ ] Coverage overlay and tier-2 guidance: show what is left to scan (few viewpoints, ceiling / floor missing, depth
@@ -452,6 +471,11 @@ Dated milestones; details in [LOG.md](LOG.md), reasons in [DECISIONS.md](DECISIO
   branches deleted (D-052). Ubuntu PC set up (R-027), `scripts/setup_linux.sh`, Tailscale SSH, auto-suspend off.
 - **2026-11-06: per-environment requirements files**, README setup, docs for v10. Project reorganisation: these logs,
   `report/mid-eval/`, archive, CLAUDE.md workflow and member sections.
+
+- **2026-11-06 (evening): upload server on Linux and app fixes** (Umair): `scripts/start_server.sh` in env `bs-server`;
+  server logs devices, upload progress, failures and answers a UDP server search (D-057). App: server search that
+  works on the /19 lab Wi-Fi, in-app updates, own package name `com.buildscan3d.app`, release builds signed with a
+  private key (D-058 – D-060). Branch `fix/android-app`.
 
 ## 9. Known limits
 
