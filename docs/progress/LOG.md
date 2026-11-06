@@ -200,3 +200,18 @@ Template:
   stalled (as in R-027) → key made with `openssl`; `ufw` is active (phone access untested).
 - Next: CI on the PR, merge, CD release v0.3.4; Umair uploads today's recording, then installs v0.3.4 (next to the old app,
   a separate package); ufw rules; then `check_capture.py` and the R-028 run options.
+
+## 2026-11-06 (eighth session) · Umair · `exp/first-linux-run`
+- Did: `scan_056fe94d3399` (Umair's room, Infinix X6833B, 46 s) checked: READY with warnings; the upload had dropped
+  `camera.csv`, `anchors.csv` and the lens files (fixed on `fix/upload-all-files`, not pushed). `scripts/run_full.sh`
+  (whole pipeline, one command) + `run_v8.py --pgsr --save_every`; `select_sharp.py` now extracts `imu.npz`. R-028
+  (agent) stopped by Umair after ~5 min; R-029 is his own run (tag `umair`). `run_full.sh` prints GPU use /
+  temperature / training progress every 30 s; guide `docs/RUN_PIPELINE.md`; MAP quick finder + app UI files.
+  Tailscale: offline on the lab Wi-Fi (cannot reach the coordination server), works on the cable; Umair's laptop
+  connects (direct). VS Code Remote-SSH steps given.
+- Runs: R-028 (abandoned), R-029 (running).
+- Problems: `ffprobe` not on PATH without env activation; `imu.npz` missing on fresh recordings; terminal silent
+  during training; placeholder `<new id>` typed literally; Tailscale blocked on the lab Wi-Fi.
+- Next: finish R-029 (results, verdict); push + release `fix/upload-all-files` (v0.3.5) when Umair agrees; firewall
+  rules for the wired card `enp0s31f6`; disable Tailscale key expiry; record a room with v0.3.5 (`camera.csv`).
+

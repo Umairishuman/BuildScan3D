@@ -61,6 +61,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-026 | 2026-11-03 | `.ksplat` compression v1 / v2 (Zaid) | not recorded (software rendering) | — | v1 18.4 MB (−88%), v2-A 40.2 MB (−73%) | Branch only (OD-1) |
 | R-027 | 2026-11-06 | Environment setup of this PC (STATUS §7.1 step 1) | this PC (Ubuntu, RTX 4000 Ada) | ~2.5 h | all checks pass; `scripts/setup_linux.sh` | Envs ready; first data run pending |
 | R-028 | 2026-11-06 | First Linux run: Umair's room, full v9 + PGSR → semantics → mesh → web | this PC (Ubuntu, RTX 4000 Ada) | stopped after ~5 min | select / SfM / prior OK on Linux | Abandoned (stopped by Umair) |
+| R-029 | 2026-11-06 | Umair's own run of the same recording, full pipeline (`--tag umair`) | this PC (Ubuntu, RTX 4000 Ada) | running | — | — |
 
 ## Runs
 
@@ -352,3 +353,22 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   166 of 207 frames went into the priors (aligned median depth error 2.1%).
 - **Result:** none (stopped). Partial outputs left in `dataset/scan_056fe94d3399/work_v9/` and `work_v9_sfm/`.
 - **Verdict:** abandoned (stopped by Umair). His own run gets the next run ID.
+
+### R-029 · 2026-11-06 · Umair's run of scan_056fe94d3399, full pipeline to the web bundle
+- **Who / machine:** Umair (started it himself in a terminal on the PC) · this PC (Ubuntu 26.04, RTX 4000 Ada 20 GB)
+- **Branch / commit:** `exp/first-linux-run` @ `84a267f` (uncommitted changes: no)
+- **Dataset:** `dataset/scan_056fe94d3399` (Infinix X6833B, 46 s, 1293 frames; capture check and missing `camera.csv` /
+  `anchors.csv`: see R-028).
+- **Command(s):** `scripts/run_full.sh dataset/scan_056fe94d3399 umair -- --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
+  (same recipe as R-028; new tag so the outputs do not mix with R-028's partial ones).
+- **Goal:** as R-028: first complete run on Linux, second room, second phone.
+- **Start → end:** 18:01 → (running). Stage times so far (`timing.json`, min): select 0.09 (207 frames), sfm 1.49
+  (174 / 207 cameras registered; Sim3 to ARCore from 174 cameras, scale 0.24571), export 0.01, prior 0.75, init 2.05
+  (PatchMatch 2.0 min, 13,622 fused + 4,905 SfM points → 17,592 at 1 cm); train from 18:05, 15,000 steps, at 18:29
+  step 13,980 (93%), GPU 97%, 4.6 / 20 GB, 76 °C, 101 W.
+- **Errors during the run:**
+  1. 18:05–18:22 train — looked stuck to Umair: the terminal showed nothing after `== train:`. Cause: `run_v8.py`
+     writes the training output only to `train.log`; training was running (step 11,900 at 18:22). → `run_full.sh` now
+     prints a GPU / training status line every 30 s (`b8aef7a`, used from the next run) (resolved: yes).
+- **Result:** (pending)
+- **Verdict:** (pending)
