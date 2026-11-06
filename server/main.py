@@ -28,13 +28,61 @@ from .pipeline import Job, JobStatus, start_pipeline_thread
 from .runpod_client import start_runpod_pipeline_thread, start_existing_pod_pipeline_thread
 from .remote_gpu import start_remote_pipeline_thread
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
 log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATASET_ROOT = PROJECT_ROOT / "dataset"
 
+
+class UploadProgressLogger:
+    """ASGI middleware: logs POST /upload while its body is still arriving (start, progress, done or cut off).
+
+    FastAPI only calls the /upload handler after the whole multipart body is received, so without this the
+    server is silent for the whole network transfer of the video.
+    """
+
+    def __init__(self, app, every_s: float = 5.0):
+        self.app = app
+        self.every_s = every_s
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope["method"] != "POST" or scope["path"] != "/upload":
+            return await self.app(scope, receive, send)
+
+        headers = dict(scope.get("headers") or [])
+        total = int(headers.get(b"content-length", b"0") or 0)
+        client = (scope.get("client") or ("?",))[0]
+        mb = 1024 * 1024
+        state = {"got": 0, "t0": time.monotonic(), "last": time.monotonic(), "done": False}
+        log.info("Upload started from %s: %s", client, f"{total / mb:.1f} MB" if total else "size unknown")
+
+        def line():
+            el = max(time.monotonic() - state["t0"], 1e-6)
+            pct = f" ({100 * state['got'] / total:.0f}%)" if total else ""
+            return f"{state['got'] / mb:.1f}{f' / {total / mb:.1f}' if total else ''} MB{pct}, " \
+                   f"{state['got'] / mb / el:.2f} MB/s, {el:.0f} s"
+
+        async def logged_receive():
+            msg = await receive()
+            if msg["type"] == "http.request":
+                state["got"] += len(msg.get("body", b""))
+                now = time.monotonic()
+                if not msg.get("more_body", False):
+                    state["done"] = True
+                    log.info("Upload received from %s: %s", client, line())
+                elif now - state["last"] >= self.every_s:
+                    state["last"] = now
+                    log.info("Upload receiving: %s", line())
+            elif msg["type"] == "http.disconnect" and not state["done"]:
+                log.warning("Upload from %s cut off: %s", client, line())
+            return msg
+
+        await self.app(scope, logged_receive, send)
+
+
 app = FastAPI(title="BuildScan 3D Processing Server")
+app.add_middleware(UploadProgressLogger)
 
 jobs: dict[str, Job] = {}
 
@@ -130,9 +178,14 @@ async def upload_dataset(
                     f.write(chunk)
             shutil.unpack_archive(zip_path, dataset_dir)
             zip_path.unlink()
-            log.info("Extracted depth.zip")
+            log.info("Extracted depth.zip (%d depth files)", sum(1 for _ in depth_dir.iterdir()))
+        else:
+            log.warning("No depth.zip in this upload")
+
+        log.info("Upload complete: %s", dataset_dir)
 
     except Exception as e:
+        log.error("Upload failed, %s removed: %s", dataset_dir.name, e)
         shutil.rmtree(dataset_dir, ignore_errors=True)
         raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
 
