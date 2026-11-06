@@ -21,6 +21,7 @@ diagnostics · [v3] = the older SfM pipeline the server still runs · [legacy] =
 | Phone-upload server | `server/` (start: `scripts/start_server.sh`) | 4, 5 |
 | Web dashboard + 3D viewer | `prototype/web-ui/` | 7 |
 | **One command for everything** (server, runs, viewers, status) | `scripts/buildscan` (`scripts/buildscan help`) | 5 |
+| **Which command, which arguments** (cheat sheet) | [docs/COMMANDS.md](docs/COMMANDS.md) | 8 |
 | **How to run the full pipeline** | [docs/RUN_PIPELINE.md](docs/RUN_PIPELINE.md) | 8 |
 | Launch / setup scripts | `scripts/` | 5 |
 | Python environments | `envs/linux/` (Linux), `requirements*.txt` (Windows) | 1 |
@@ -267,6 +268,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `progress/Research_Notes_2026-10-24.md` | Literature behind v8/v9 |
 | `progress/archive/` | Retired files (old TODO, Training_Analysis, early notes) |
 | `Flow.md` | System flow app → server → GPU → model |
+| `COMMANDS.md` | **Cheat sheet**: every `scripts/buildscan` command, what to type for each argument, examples |
 | `RUN_PIPELINE.md` | **How to run the full pipeline on Linux** (`scripts/run_full.sh`): setup, upload, check, run, watch, restart, results, known problems |
 | `PROCESSING_GUIDE.md` | Using the phone-upload server and job manager |
 | `CI_CD.md` | What CI/CD checks and how to run it locally |

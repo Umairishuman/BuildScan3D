@@ -22,7 +22,9 @@
 #   scripts/buildscan gpu                        live GPU use / memory / temperature
 #
 # <scan>: a folder in dataset/ (scan_056fe94d3399, dataset/scan_056fe94d3399) or `latest` (newest recording).
-# [tag]: names the run's output folders (work_<tag>_sfm/gs_<tag>/); default v9. A new tag never mixes with older runs.
+# [tag]: names the run's output folders (work_<tag>_sfm/gs_<tag>/). A new tag never mixes with older runs.
+# Leave an argument out and buildscan asks: a numbered list of recordings / runs / sessions to pick from.
+# Cheat sheet with every argument explained: docs/COMMANDS.md
 # Default run recipe (best model, R-023): --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr
 # Guide: docs/RUN_PIPELINE.md
 set -euo pipefail
@@ -47,9 +49,23 @@ start_session() {   # start_session <name> <command string>
   running "$1" && say "started '$1'  (watch: scripts/buildscan attach $1   stop: scripts/buildscan stop $1)"
 }
 
-scan_dir() {   # scan name / path / latest -> dataset/<name>
+pick() {   # pick <question> <options...>: numbered menu on the terminal, prints the choice
+  local q=$1; shift
+  [[ $# -gt 0 ]] || return 1
+  [[ -t 0 ]] || die "$q (no terminal to ask in: give it as an argument)"
+  if [[ $# -eq 1 ]]; then echo "$q $1" >&2; echo "$1"; return; fi
+  echo "$q" >&2
+  local PS3="number: " c
+  select c in "$@"; do [[ -n "$c" ]] && { echo "$c"; return; }; done
+}
+
+scan_dir() {   # scan name / path / latest / nothing (asks) -> dataset/<name>
   local s=${1:-}
-  [[ -n "$s" ]] || die "which recording? (scripts/buildscan datasets)"
+  if [[ -z "$s" ]]; then
+    local all=(); for x in $(ls -td dataset/*/ 2>/dev/null); do x=${x%/}; all+=("${x#dataset/}"); done
+    [[ ${#all[@]} -gt 0 ]] || die "no recordings in dataset/ (upload one from the app first)"
+    s=$(pick "Which recording? (newest first)" "${all[@]}")
+  fi
   if [[ "$s" == latest ]]; then
     s=$(ls -td dataset/*/ 2>/dev/null | head -1) || true
     [[ -n "$s" ]] || die "no recordings in dataset/"
@@ -59,6 +75,12 @@ scan_dir() {   # scan name / path / latest -> dataset/<name>
   echo "dataset/$s"
 }
 out_dir() { echo "$1/work_${2}_sfm/gs_${2}"; }
+run_tag() {   # run_tag <dataset dir> [tag]: the given tag, or ask among that recording's runs
+  [[ -n "${2:-}" ]] && { echo "$2"; return; }
+  local tags=(); for x in "$1"/work_*_sfm/gs_*; do [[ -d "$x" ]] && tags+=("${x##*/gs_}"); done
+  [[ ${#tags[@]} -gt 0 ]] || die "$1 has no runs yet (scripts/buildscan run $(basename "$1"))"
+  pick "Which run of $(basename "$1")?" "${tags[@]}"
+}
 
 my_ips() { ip -4 -br addr | awk '$1 != "lo" && $1 != "tailscale0" && $2 == "UP" {split($3, a, "/"); print $1, a[1]}'; }
 
@@ -113,7 +135,12 @@ case "$cmd" in
 
   run)
     d=$(scan_dir "${1:-}"); shift || true
-    tag=v9; [[ $# -gt 0 && "$1" != --* ]] && { tag=$1; shift; }
+    tag=""; [[ $# -gt 0 && "$1" != --* ]] && { tag=$1; shift; }
+    if [[ -z "$tag" ]]; then
+      [[ -t 0 ]] || die "give a name (tag) for the run"
+      def="r$(date +%m%d)"; [[ -d "$(out_dir "$d" "$def")" ]] && def="r$(date +%m%d-%H%M)"
+      read -r -p "Name for this run (letters/digits, names its output folders) [$def]: " tag; tag=${tag:-$def}
+    fi
     from=(); [[ "${1:-}" == "--from" ]] && { from=(--from "$2"); shift 2; }
     [[ "${1:-}" == "--" ]] && shift
     args=("$@"); [[ ${#args[@]} -eq 0 ]] && args=("${RECIPE[@]}")
@@ -128,13 +155,13 @@ case "$cmd" in
     say "Record the run in docs/progress/TRAINING.md (CLAUDE.md §2)." ;;
 
   watch)
-    d=$(scan_dir "${1:-}"); m=$(out_dir "$d" "${2:-v9}")
-    [[ -d "$m" ]] || die "no run '${2:-v9}' for $d (scripts/buildscan datasets)"
+    d=$(scan_dir "${1:-}"); m=$(out_dir "$d" "$(run_tag "$d" "${2:-}")")
+    [[ -d "$m" ]] || die "no such run for $d (scripts/buildscan datasets)"
     say "following $m/{run_full.log,train.log}  (Ctrl+C stops watching, not the run)"
     tail -n 30 -F "$m/run_full.log" "$m/train.log" 2>/dev/null ;;
 
   results)
-    d=$(scan_dir "${1:-}"); tag=${2:-v9}; m=$(out_dir "$d" "$tag")
+    d=$(scan_dir "${1:-}"); tag=$(run_tag "$d" "${2:-}"); m=$(out_dir "$d" "$tag")
     [[ -d "$m" ]] || die "no run '$tag' for $d"
     say "model:     $m/splat.ply"
     say "layout:    $m/layout/  (plan.png)"
@@ -144,7 +171,7 @@ case "$cmd" in
     say "== stage times"; cat "$m/stages.tsv" 2>/dev/null || say "(none yet)" ;;
 
   view)
-    d=$(scan_dir "${1:-}"); m=$(out_dir "$d" "${2:-v9}")
+    d=$(scan_dir "${1:-}"); m=$(out_dir "$d" "$(run_tag "$d" "${2:-}")")
     [[ -f "$m/splat.ply" ]] || die "no $m/splat.ply yet"
     start_session viewer "$MM run -n bs-ns python -W ignore src/arcore3dgs/view.py --ply $m/splat.ply"
     say "open http://localhost:7010  (from the laptop: forward port 7010 in VS Code Remote-SSH)" ;;
@@ -154,13 +181,13 @@ case "$cmd" in
     say "open http://localhost:3000  (a scan shows up only with a project entry in src/lib/mockData.ts)" ;;
 
   attach)
-    [[ -n "${1:-}" ]] || die "attach which session? ($(sessions | tr '\n' ' '))"
-    screen -r "$1" ;;
+    n=${1:-}; [[ -n "$n" ]] || { mapfile -t ss < <(sessions); [[ ${#ss[@]} -gt 0 ]] || die "nothing is running"; n=$(pick "Open which session?" "${ss[@]}"); }
+    screen -r "$n" ;;
 
   stop)
-    [[ -n "${1:-}" ]] || die "stop which session? ($(sessions | tr '\n' ' '))"
-    running "$1" || die "'$1' is not running"
-    screen -S "$1" -X quit && say "stopped $1" ;;
+    n=${1:-}; [[ -n "$n" ]] || { mapfile -t ss < <(sessions); [[ ${#ss[@]} -gt 0 ]] || die "nothing is running"; n=$(pick "Stop which session?" "${ss[@]}"); }
+    running "$n" || die "'$n' is not running"
+    screen -S "$n" -X quit && say "stopped $n" ;;
 
   gpu) watch -n 2 nvidia-smi ;;
 

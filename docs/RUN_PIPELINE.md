@@ -24,6 +24,7 @@ scripts/buildscan stop <session>            # bs-server, run-<tag>, viewer, web
 scripts/buildscan help                      # everything else (attach, ip, gpu, --from, custom recipe)
 ```
 
+Leave arguments out and it asks (numbered lists). Cheat sheet: [COMMANDS.md](COMMANDS.md).
 `latest` = the newest recording; or give its folder name (`scan_056fe94d3399`). Everything long-running is in a
 named `screen` session, so it keeps running when the terminal or SSH closes. The sections below explain the steps and
 the scripts underneath (`start_server.sh`, `run_full.sh`).
