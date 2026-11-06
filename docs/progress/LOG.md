@@ -179,3 +179,10 @@ Template:
   (STATUS §7.1).
 - Decisions: D-054, D-055.
 - Next: merge PR #1 (merge commit), delete the fully merged branches, keep Zaid's unmerged ones.
+
+## 2026-11-06 (fifth session) · Umair · `docs/repo-public`
+- Did: PR #1 merged into `master` (`9ce4d68`); the 8 fully merged branches deleted on GitHub and locally (Zaid's two
+  unmerged branches kept); first green `master` CD since 2026-10-19 (APK + web bundle + "latest" release published).
+- Umair revoked the leaked RunPod key; the repo stays public (D-056). Screen "sleep" checked: the PC never suspended,
+  it only locks after 5 min idle; lock kept.
+- Next: the server port and `.sh` launchers (STATUS 7.1 1f); the first run when Tayyab's data arrives.
