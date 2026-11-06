@@ -4,3 +4,5 @@ name: bs-colmap
 channels: [conda-forge]
 dependencies:
   - colmap=4.2.0=cuda_129*
+  # the 4.2.0 build links libOpenImageIO.so.3.1 but does not declare it (packaging bug, 2026-11-06, R-027)
+  - openimageio=3.1

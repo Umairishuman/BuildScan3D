@@ -252,4 +252,15 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
      download crawled at ~22 KB/s on micromamba's connection (22 MB after 6 min), with no error message. A fresh `curl`
      to the same URL got ~57 MB/s, so the server was fine; one stalled connection. → Stopped the job at ~12:58, removed
      the partial file and the lock files, and restarted with a watchdog that kills and retries `micromamba create` after
-     120 s without progress (up to 3 attempts). Resolution pending.
+     120 s without progress (up to 3 attempts). The restart crawled again (~34 KB/s on the same file), too slow for the
+     watchdog to fire. → Downloaded the file with `curl` (113 MB in ~6 s), checked it against the conda-forge sha256
+     (`758ca758…a2be3`, OK) and put it in `~/micromamba/pkgs/`; micromamba used it from the cache. Resolved.
+     (Side errors of my own: the scratchpad `tools/` folder had been wiped by the reboot, so the first watchdog run found
+     no script; `pkill -f <pattern>` also killed its own shell because the pattern was in its command line.)
+  7. `bs-ns` and `bs-system` created 13:01 (seconds, all cached). Checked: Python 3.10.22, nvcc 12.1.105, gcc 11.4.0,
+     Node 22.23.4, ffmpeg 9.0.2, ninja 1.13.2, cmake 4.4.5.
+  8. **Error:** `colmap: error while loading shared libraries: libOpenImageIO.so.3.1: cannot open shared object file` —
+     the conda-forge `colmap 4.2.0 cuda_129` build links OpenImageIO 3.1 (+ `libOpenImageIO_Util.so.3.1`) but declares
+     only FreeImage, so it was never installed. → Added `openimageio=3.1` to `envs/linux/colmap.yml` and installed it
+     (74 packages, 1 changed, 3 downgraded). `colmap help` → "COLMAP 4.2.0 (Commit Unknown on Unknown with CUDA)",
+     no missing libraries. Resolved. GPU use not yet tested on real images.
