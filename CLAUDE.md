@@ -121,9 +121,8 @@ and changes need agreement.
 - **Branches:** wants to use (and try out) the feature-branch flow: a new branch per piece of work, tested before it is
   merged.
 - **Decisions:** do not decide for him. Bring every choice to him with options and a recommendation; record his answer in DECISIONS.md.
-- **His machine:** this Ubuntu PC (`gpu-lab-Precision-3680`, RTX 4000 Ada). Git has no user identity configured there
-  yet: until it is, commit with `git -c user.name=... -c user.email=...` using the identity of his earlier commits
-  (`git log --author=UmairisHuman -1 --format='%an <%ae>'`). Do not install Docker on this PC for now (2026-11-06).
+- **His machine:** this Ubuntu PC (`gpu-lab-Precision-3680`, RTX 4000 Ada). Git identity configured (2026-11-06); GitHub
+  over SSH. Do not install Docker on this PC for now (2026-11-06).
 
 ### Muhammad Tayyab (23i-0636) · GitHub `BlazingBeam`
 - **Proposal ownership:** cloud orchestration and 3DGS reconstruction engine (Workflow B). **Work so far:** capture app

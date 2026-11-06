@@ -169,7 +169,7 @@ The goal is that the full pipeline runs the same way on three places: **this PC,
 | Machine | Hardware / OS | State (2026-11-06) |
 |---|---|---|
 | RTX 3070 PC | Windows, RTX 3070 8 GB VRAM, 16 GB RAM | Every run so far. Holds `dataset/`, `saved_models/`, `tools/colmap_dl/` (COLMAP 4.2 CUDA), `tools/cudnn9/`, the three envs (all gitignored) |
-| This PC (`gpu-lab-Precision-3680`) | Ubuntu 26.04.1 LTS (kernel 7.0.0-43), NVIDIA RTX 4000 Ada (20 GB), 28 threads, 30 GB RAM, 366 GB free | Setup in progress (R-027). **NVIDIA driver 595.99.02 working** (installed 2026-11-06, was `nouveau`), Secure Boot enabled; micromamba 2.10.0 in `~/.local/bin`; conda envs `bs-colmap` (COLMAP 4.2.0 CUDA, starts), `bs-ns` (Python 3.10, CUDA 12.1, gcc 11.4, Node 22, ffmpeg) and `bs-system` (Python 3.10, ffmpeg) built 2026-11-06; pip packages not installed yet. Still missing system-wide (by design, provided by the envs): no gcc / make / cmake / ninja, no ffmpeg / ffprobe, no Node.js, no Docker, no COLMAP, no conda; system Python 3.14.4 only (torch 2.1.2 needs ≤ 3.11); `sudo` needs Umair's password; git user identity not configured; no datasets or models |
+| This PC (`gpu-lab-Precision-3680`) | Ubuntu 26.04.1 LTS (kernel 7.0.0-43), NVIDIA RTX 4000 Ada (20 GB), 28 threads, 30 GB RAM, 366 GB free | Setup in progress (R-027). **NVIDIA driver 595.99.02 working** (installed 2026-11-06, was `nouveau`), Secure Boot enabled; micromamba 2.10.0 in `~/.local/bin`; conda envs `bs-colmap` (COLMAP 4.2.0 CUDA, starts), `bs-ns` (Python 3.10, CUDA 12.1, gcc 11.4, Node 22, ffmpeg) and `bs-system` (Python 3.10, ffmpeg) built 2026-11-06; pip packages not installed yet. Still missing system-wide (by design, provided by the envs): no gcc / make / cmake / ninja, no ffmpeg / ffprobe, no Node.js, no Docker, no COLMAP, no conda; system Python 3.14.4 only (torch 2.1.2 needs ≤ 3.11); `sudo` needs Umair's password; git identity configured and GitHub over SSH (2026-11-06); no datasets or models |
 | Friend's PC | Not recorded yet | Fill in: owner, GPU, OS, what is installed |
 | RunPod | On-demand pod (default "RTX 4090"; an earlier commit set RTX 3090), image `umairishuman/buildscan-gpu:latest` | Integrated in `server/`, works poorly per the user; no recorded end-to-end run |
 
@@ -207,7 +207,7 @@ script, step 3 RunPod and the friend's PC.**
 - [x] **[new] 1a. NVIDIA driver (Umair, needs sudo)** — done 2026-11-06: driver 595.99.02, `nvidia-smi` sees the RTX 4000 Ada (R-027). `sudo ubuntu-drivers install nvidia-driver-595-open`, reboot,
       check `nvidia-smi` lists the RTX 4000 Ada. Secure Boot is on: if the installer asks for a MOK password, enrol it on
       the blue MOK screen at the next boot, otherwise the driver will not load.
-- [ ] **[new] 1b. micromamba** in the user's home (no sudo), and set the git identity (`git config user.name/user.email`).
+- [x] **[new] 1b. micromamba** in the user's home (no sudo), and set the git identity — done 2026-11-06 (micromamba 2.10.0; Umair set `git config --global user.name/user.email`).
 - [x] **[new] 1b2. GitHub access from this PC** — done 2026-11-06: Umair added an SSH key (`~/.ssh/id_ed25519`), remote switched to `git@github.com:Umairishuman/BuildScan3D.git`, `docs/project-organisation` pushed. Before: no `gh`, no SSH key, no credential helper, so `git push` fails with
       `could not read Username for 'https://github.com'` (2026-11-06). Set up an SSH key (or a personal access token).
 - [ ] **[new] 1c. Three envs mirroring the Windows ones** (timm 0.6.7 for nerfstudio vs timm 1.0.30 for Metric3D, and
