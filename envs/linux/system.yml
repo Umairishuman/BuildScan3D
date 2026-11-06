@@ -5,4 +5,6 @@ channels: [conda-forge]
 dependencies:
   - python=3.10
   - pip
+  # torch 2.1.2's cpp_extension imports pkg_resources.packaging, gone in setuptools >= 70 (R-027)
+  - setuptools<70
   - ffmpeg

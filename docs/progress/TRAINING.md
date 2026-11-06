@@ -290,3 +290,19 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   15. `semantic-env` (repo root, gitignored): `bs-system`'s Python `-m venv --system-site-packages`, then
       `requirements-semantic.txt`. OK: transformers 4.46.3, tokenizers 0.20.3, huggingface_hub 0.36.2, Pillow 10.1.0,
       safetensors 0.7.0, and transformers sees torch 2.1.2 (the known pitfall).
+  16. `bs-ns` pins installed (activated rerun, 14:41 → ~14:50). Confirmed: torch 2.1.2+cu121 (CUDA available), numpy
+      1.26.4, nerfstudio 1.1.5, gsplat 1.4.0, open3d 0.19.0, nerfacc 0.5.2; `pip check`: no broken requirements.
+      **tiny-cuda-nn left out:** nothing in `src/`, `server/` or nerfstudio's splatfacto imports it; build it later only if needed.
+  17. Model weights (cached in `~/.cache/torch/hub` 1.6 GB and `~/.cache/huggingface` 1.6 GB): Metric3D ViT-L
+      (`metric_depth_vit_large_800k.pth`, loaded the way `mono_prior.py` does) loads in 34 s, one fp16 forward 0.38 s,
+      finite, 2.9 GiB peak VRAM; Grounding DINO tiny, SAM ViT-B, CLIP ViT-B/16 load and run once on the GPU. Note:
+      `torch.hub` takes the Metric3D code from `yvanyin/metric3d` `main` (not pinned to a commit).
+  18. **Error:** first gsplat call → `ModuleNotFoundError: No module named 'pkg_resources'` in torch 2.1.2's
+      `cpp_extension`. Cause: conda installed setuptools 84, which no longer ships `pkg_resources` (Windows never showed
+      this: `pip freeze` doesn't list setuptools). → `setuptools<70` added to `nerfstudio.yml` and `system.yml`,
+      69.5.1 installed in both. Resolved.
+  19. **Error:** gsplat JIT build → `ninja: build stopped`, `fatal error: cuda_runtime_api.h: No such file or directory`
+      (only `ext.o`, compiled by g++; the `.cu` files built). Cause: conda's CUDA 12.1 keeps headers in
+      `targets/x86_64-linux/include`, has no `lib64/`, and `CUDA_HOME` was unset. → `envs/linux/bs-ns-activate.sh`
+      (CUDA_HOME, CPATH, LIBRARY_PATH, TORCH_CUDA_ARCH_LIST=8.9) installed as
+      `bs-ns/etc/conda/activate.d/zz-buildscan.sh`. Retest running.
