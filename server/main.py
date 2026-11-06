@@ -81,8 +81,41 @@ class UploadProgressLogger:
         await self.app(scope, logged_receive, send)
 
 
+class ErrorLogger:
+    """ASGI middleware: logs every request that fails (status >= 400 or a crash) with the client, the path and the
+    reason the server sent back, so an app-side failure is visible in the server terminal."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        client = (scope.get("client") or ("?",))[0]
+        what = f"{scope['method']} {scope['path']} from {client}"
+        state = {"status": 0, "body": b""}
+
+        async def logged_send(msg):
+            if msg["type"] == "http.response.start":
+                state["status"] = msg["status"]
+            elif msg["type"] == "http.response.body" and state["status"] >= 400 and len(state["body"]) < 1000:
+                state["body"] += msg.get("body", b"")
+                if not msg.get("more_body", False):
+                    level = logging.ERROR if state["status"] >= 500 else logging.WARNING
+                    log.log(level, "FAILED %s -> %d: %s", what, state["status"],
+                            state["body"][:1000].decode("utf-8", "replace"))
+            await send(msg)
+
+        try:
+            await self.app(scope, receive, logged_send)
+        except Exception:
+            log.exception("CRASH while handling %s", what)
+            raise
+
+
 app = FastAPI(title="BuildScan 3D Processing Server")
 app.add_middleware(UploadProgressLogger)
+app.add_middleware(ErrorLogger)
 
 jobs: dict[str, Job] = {}
 
