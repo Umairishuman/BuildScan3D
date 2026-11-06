@@ -60,6 +60,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-025 | 2026-11-03 | Semantics v10 | 3070 | 38 min 2D | 15/15 correct, 15/17 found | Kept (D-027) |
 | R-026 | 2026-11-03 | `.ksplat` compression v1 / v2 (Zaid) | not recorded (software rendering) | — | v1 18.4 MB (−88%), v2-A 40.2 MB (−73%) | Branch only (OD-1) |
 | R-027 | 2026-11-06 | Environment setup of this PC (STATUS §7.1 step 1) | this PC (Ubuntu, RTX 4000 Ada) | ~2.5 h | all checks pass; `scripts/setup_linux.sh` | Envs ready; first data run pending |
+| R-028 | 2026-11-06 | First Linux run: Umair's room, full v9 + PGSR → semantics → mesh → web | this PC (Ubuntu, RTX 4000 Ada) | running | — | — |
 
 ## Runs
 
@@ -322,3 +323,27 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
       **Not yet tested: a run on a fresh machine** (the Docker build or the friend's PC will be the first).
 - **State after 2026-11-06 15:00:** environments ready. Still open in step 1: `server/pipeline.py` and `.sh` versions of the
   `.bat` launchers (1f), and the first real run (1h, needs Tayyab's dataset).
+
+### R-028 · 2026-11-06 · First Linux run: Umair's own recording, full pipeline to the web bundle
+- **Who / machine:** Umair (agent runs it) · this PC (Ubuntu 26.04, RTX 4000 Ada 20 GB, 30 GB RAM)
+- **Branch / commit:** `exp/first-linux-run` @ `76a68cc` (uncommitted changes: no)
+- **Dataset:** `dataset/scan_056fe94d3399` — recorded 2026-11-06 by Umair on an **Infinix X6833B** (first capture from this
+  phone; all earlier runs used the realme RMX5111), uploaded through the server (`dry_run`). 1293 video frames, 46 s,
+  1920×1080 @ 28 fps, 1203 poses, 131 ARCore depth maps, 204 MB.
+- **Capture check** (`check_capture.py`): READY TO PROCESS; warnings: duration < 1 min, live IQA good 43% / ok 26% /
+  bad 31%, 47 dropped-frame gaps (3.6%, longest 124 ms), **`camera.csv` and `anchors.csv` missing** (the app records
+  them but its upload does not send them, STATUS §7.7) → frame selection runs without exposure data, re-anchors are
+  not detected. Tracking lost 3.0%; video↔pose sync +0.05 s, correlation 0.95.
+- **Command(s):** `screen -dmS r028 bash -c 'scripts/run_full.sh dataset/scan_056fe94d3399 v9 -- --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr'`
+  (recipe chosen by Umair: v9 + PGSR in one training as in R-023; `--blur 0.0222` is the realme's measured exposure,
+  this phone's is not known; stages to the web bundle).
+- **Goal:** STATUS §7.1 step 1h: the whole pipeline runs on Linux (first run on this PC), and the first result on a
+  second room and a second phone. Not comparable with R-020 / R-023 (other room); the machine-agreement check on
+  newRoomAttemptSadness stays open.
+- **Start → end:** 17:53 → (running)
+- **Errors during the run:**
+  1. 17:53 check_capture — `FileNotFoundError: 'ffprobe'` when run with the env's python directly: ffmpeg is in the
+     env but only on `PATH` when the env is activated → run through `micromamba run -n bs-system` (resolved: yes;
+     `run_full.sh` always uses `micromamba run`).
+- **Result:** (pending)
+- **Verdict:** (pending)
