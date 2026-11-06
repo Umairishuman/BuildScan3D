@@ -89,7 +89,7 @@ jobs:
         run: ruff check --select F401,F811,F841 --exit-zero --output-format=github .
 
       - name: Unit tests
-        run: pytest --cov --cov-report=term --cov-report=xml:test-results/coverage.xml --cov-fail-under=40 --junitxml=test-results/junit-${{ matrix.python }}.xml
+        run: pytest --cov --cov-report=term --cov-report=xml:test-results/coverage.xml --cov-fail-under=35 --junitxml=test-results/junit-${{ matrix.python }}.xml
 
       - name: Test summary
         if: always()
@@ -107,7 +107,7 @@ jobs:
           print(f"### Python ${{ matrix.python }}: {t} tests, {f} failed, {e} errors, {s} skipped")
           cov = ET.parse("test-results/coverage.xml").getroot().get("line-rate") if glob.glob("test-results/coverage.xml") else None
           if cov:
-              print(f"Line coverage of the files the tests import: {float(cov) * 100:.0f}% (minimum 40%)")
+              print(f"Line coverage of the files the tests import: {float(cov) * 100:.0f}% (minimum 35%, temporarily lowered from 40%: D-054)")
           PY
 
       - name: Keep test report

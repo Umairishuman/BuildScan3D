@@ -44,7 +44,7 @@ Details of the design:
 
 | Job | Checks | Fails when |
 |---|---|---|
-| python | `ruff` for real errors only (syntax errors, undefined names); unused code is reported as a non-blocking warning; `pytest` with a minimum line coverage of 40% | an error is found, a test fails or coverage drops below 40% |
+| python | `ruff` for real errors only (syntax errors, undefined names); unused code is reported as a non-blocking warning; `pytest` with a minimum line coverage of 35% (temporarily lowered from 40% on 2026-11-06, D-054; back to 40% once the tests are written) | an error is found, a test fails or coverage drops below 35% |
 | web-ui | `npm ci` (exactly the locked versions), ESLint, `tsc --noEmit`, `next build` | lint error, type error or build failure |
 | android | official Gradle wrapper check, `./gradlew assembleDebug`, then signs and checks the APK (see below) and an informational Android lint | the app does not compile, or an APK check fails |
 | repo-hygiene | no tracked file over 10 MB (the ARCore samples and `docs/Research Papers` are exempt), no `.ply`/`.mp4`/`.pt`/`.pth`/`.ckpt`/`.npz`/key files, no private keys or access tokens | a rule is broken |

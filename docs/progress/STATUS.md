@@ -264,6 +264,14 @@ script, step 3 RunPod and the friend's PC.**
 
 **Other organisation items**
 
+- [ ] **[new] URGENT: revoke the leaked RunPod API key** (Umair): commit `00bc021` (2026-10-18) committed `.env` with a
+      real `RUNPOD_API_KEY`; untracking it on 2026-10-22 did not remove it from history, and the repository is
+      **public**. Revoke it in the RunPod console and make a new one (local `.env` only). Removing it from git history
+      as well needs a history rewrite + force-push: to be discussed with the team.
+- [ ] **[new] Repository visibility:** GitHub shows the repo as PUBLIC; docs/CI_CD.md §9 says it is private. Decide
+      which it should be and fix the doc or the setting.
+- [ ] **[new] Raise the coverage gate back to 40%** when the tests are written (D-054; now 35%, measured 37.4%).
+
 - [ ] **[new] Code reorganisation, step 2 of D-049:** regroup `src/arcore3dgs/` by stage (proposal in
       [MAP.md](../../MAP.md) §10) on its own branch, **after** step 1 works so every move can be checked with a real run.
 - [ ] Wire the v9 / v10 pipeline into the server and RunPod (they still run the v3 recipe). [PROCESSING_GUIDE]

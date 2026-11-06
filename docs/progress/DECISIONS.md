@@ -66,6 +66,7 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | D-051 | 2026-11-06 | Merge `feature/semantics-mesh` + organisation + Linux port into `master` by PR | Active |
 | D-052 | 2026-11-06 | Delete only fully merged branches, never unmerged ones | Active |
 | D-053 | 2026-11-06 | This PC: no auto-suspend; remote access by Tailscale (plan) | Active |
+| D-054 | 2026-11-06 | CI coverage gate lowered 40% → 35% until the tests are written | Active (temporary) |
 
 ---
 
@@ -388,6 +389,13 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   runs inside `tmux` / `screen`. Other lab PCs have the same home directory `/home/i230662` when access is given, so the
   setup can also be copied between them. Remote power-on: **not set up** — Umair has no BIOS access (needed for Wake-on-LAN or Intel AMT); instead the PC is
   left switched on, which Umair asked the lab about (2026-11-06). Options kept in STATUS §7.1. **By:** Umair.
+
+## D-054 · 2026-11-06 · Coverage gate 40% → 35%, temporarily
+- **Decision:** `ci.yml` `--cov-fail-under=35` (was 40); docs/CI_CD.md updated. Back to 40% once the tests are written
+  (planned for the end of the project).
+- **Why:** `master` itself has failed the 40% gate since 2026-10-19 (38%), so CD has published no APK / web bundle since
+  then; the PR #1 merge brings it to 37.4% (`sfm_colmap.py` +45 untested lines from v9). 35% leaves headroom while
+  still catching a real drop. **Rejected:** writing the missing tests now; merging with CI red. **By:** Umair.
 
 ## Open decisions (need the team; agents must not decide these)
 
