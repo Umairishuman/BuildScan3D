@@ -19,7 +19,7 @@ android {
     namespace "com.google.ar.core.examples.java.helloar"
     compileSdkVersion 36
     defaultConfig {
-        applicationId "com.google.ar.core.examples.java.helloar"
+        applicationId "com.buildscan3d.app"
 
         // AR Optional apps must declare minSdkVersion >= 14.
         // AR Required apps must declare minSdkVersion >= 24.

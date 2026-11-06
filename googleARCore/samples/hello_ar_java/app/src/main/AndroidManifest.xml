@@ -21,6 +21,8 @@
   <uses-permission android:name="android.permission.CAMERA"/>
   <uses-permission android:name="android.permission.VIBRATE"/>
   <uses-permission android:name="android.permission.INTERNET"/>
+  <!-- In-app updates: download the new APK from GitHub Releases and open Android's installer -->
+  <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
   <!-- Required to post notifications for Android T+ devices -->
 
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -73,5 +75,15 @@
         android:screenOrientation="locked" />
     <!-- Indicates whether "Google Play Services for AR" (ARCore) is "required" or "optional". -->
     <meta-data android:name="com.google.ar.core" android:value="required" />
+    <!-- Shares the downloaded update APK with Android's installer (UpdateChecker) -->
+    <provider
+        android:name="androidx.core.content.FileProvider"
+        android:authorities="${applicationId}.updates"
+        android:exported="false"
+        android:grantUriPermissions="true">
+      <meta-data
+          android:name="android.support.FILE_PROVIDER_PATHS"
+          android:resource="@xml/update_paths"/>
+    </provider>
   </application>
 </manifest>

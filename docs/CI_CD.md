@@ -18,7 +18,7 @@ manual run ───────────────────────
                                         ├─ changes        which areas were touched?
                                         ├─ python         lint + unit tests + coverage gate (3.10, 3.11, 3.12)
                                         ├─ web-ui         npm ci, lint, type check, production build
-                                        ├─ android        Gradle assembleDebug -> APK (shared debug signing key)
+                                        ├─ android        Gradle assembleDebug + assembleRelease -> APK (CI: shared debug key; CD release: private key, D-059)
                                         ├─ repo-hygiene   size limit, no datasets/keys, no obvious secrets
                                         ├─ workflow-lint  checks these workflow files themselves
                                         └─ ci-ok          one pass/fail status for everything
@@ -52,7 +52,7 @@ Details of the design:
 
 ### APK checks (Android job and CD)
 
-After the build, the pipeline **signs the APK with the shared debug key** (`apksigner sign`), so the result never depends on where Gradle looks for a key file. It then reads the manifest from inside the APK (`apkanalyzer manifest print`) and the signing certificate (`apksigner verify --print-certs`), and compares them with `.github/android/apk_expectations.json`: package name, minimum Android version (ARCore needs 24 or higher), camera and internet permissions, the AR camera feature, the processing screen, the launcher activity, the file size, and above all that it is signed with the shared debug key. A wrong key would force an uninstall on every update, which deletes the recordings, so it fails the pipeline. The source manifest is checked in the Python tests as well (the processing screen must stay declared, the ARCore entry must stay present). The signing certificate is also written to the run's summary page. Android lint runs afterwards for information and never fails the build; its report is kept as an artifact.
+After the build, the pipeline **signs the APK** (CI: the shared debug key; CD: the private release key, see section 9) (`apksigner sign`), so the result never depends on where Gradle looks for a key file. It then reads the manifest from inside the APK (`apkanalyzer manifest print`) and the signing certificate (`apksigner verify --print-certs`), and compares them with `.github/android/apk_expectations.json`: package name, minimum Android version (ARCore needs 24 or higher), camera and internet permissions, the AR camera feature, the processing screen, the launcher activity, the file size, and above all that it is signed with the shared debug key. A wrong key would force an uninstall on every update, which deletes the recordings, so it fails the pipeline. The source manifest is checked in the Python tests as well (the processing screen must stay declared, the ARCore entry must stay present). The signing certificate is also written to the run's summary page. Android lint runs afterwards for information and never fails the build; its report is kept as an artifact.
 
 ### What the Python tests cover
 
@@ -130,7 +130,16 @@ There are two ways. Either is fine; the second needs no PC.
 
 Things to know:
 
-- **One signing key for every build.** All APKs from CI/CD are signed with the shared debug key in `.github/android/debug.keystore` (a debug key, which is public by design, not a release secret). Because the key never changes, a new APK installs over the old one and **keeps the recordings**, which live in the app's private folder. A random key per build would force an uninstall each time, which deletes the recordings.
+- **Two keys (since 2026-11-06, D-059).** The CI check builds of pull requests are signed with the shared debug key
+  `.github/android/debug.keystore` (public, never distributed). The **released** APKs (CD: GitHub Releases and the
+  "latest" pre-release) are `assembleRelease` builds signed with a **private release key** that lives only in two
+  GitHub Actions secrets, `ANDROID_RELEASE_KEYSTORE_B64` (the PKCS12 keystore, base64) and
+  `ANDROID_RELEASE_KEYSTORE_PASSWORD` (key alias `buildscan3d`). The original is on Umair's Ubuntu PC in
+  `~/.buildscan3d-keys/` (`release.p12`, `password.txt`); keep a backup elsewhere. **Losing the key means phones cannot
+  update to new builds** (uninstall needed, which deletes the recordings in the app's folder). The expected certificate
+  fingerprints are in `.github/android/apk_expectations.json` (`signing_sha256` release, `debug_signing_sha256` debug);
+  `check_apk.py --key release|debug` checks them. The app's package name is `com.buildscan3d.app` (D-058); APKs before
+  v0.3.4 used Google's sample name and the public debug key, so moving to v0.3.4 needs one uninstall.
 - **Switching from route A to route B once needs an uninstall,** because Android Studio signs with the developer's own debug key. Copy the recordings off the phone first.
 - **The phone needs ARCore** (Google Play Services for AR) and must be a supported device. The app is an AR app.
 - **The app uploads recordings** to the server URL set in the app (default `http://192.168.1.100:8000`), which is the FastAPI server in `server/`. The server hands the work to a local GPU or to RunPod. The APK and RunPod are separate things: the APK is the phone side, and RunPod only does the heavy processing. Restarting or reconnecting a RunPod session does not affect an installed app, but the server URL in the app must point at the machine that runs `server/`.

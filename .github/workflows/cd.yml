@@ -158,31 +158,39 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build debug APK
+      - name: Build release APK (unsigned)
         working-directory: googleARCore/samples/hello_ar_java
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleRelease --stacktrace
 
-      - name: Sign with the shared key, then check the built APK
+      - name: Sign with the private release key (D-059), then check the built APK
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEYSTORE_PASSWORD }}
         run: |
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::error::Secrets ANDROID_RELEASE_KEYSTORE_B64 / ANDROID_RELEASE_KEYSTORE_PASSWORD are not set (docs/CI_CD.md)"; exit 1
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.p12"
           BT=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
-          APK=googleARCore/samples/hello_ar_java/app/build/outputs/apk/debug/app-debug.apk
-          "$BT/apksigner" sign --ks "$GITHUB_WORKSPACE/.github/android/debug.keystore" --ks-pass pass:android \
-            --key-pass pass:android --ks-key-alias androiddebugkey --out "$RUNNER_TEMP/signed.apk" "$APK"
-          mv "$RUNNER_TEMP/signed.apk" "$APK"
+          UNSIGNED=googleARCore/samples/hello_ar_java/app/build/outputs/apk/release/app-release-unsigned.apk
+          APK=googleARCore/samples/hello_ar_java/app/build/outputs/apk/release/app-release.apk
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/release.p12" --ks-type PKCS12 --ks-pass env:KEYSTORE_PASSWORD \
+            --key-pass env:KEYSTORE_PASSWORD --ks-key-alias buildscan3d --out "$APK" "$UNSIGNED"
+          rm -f "$RUNNER_TEMP/release.p12"
           "$BT/apksigner" verify --print-certs "$APK" > "$RUNNER_TEMP/signer.txt"
           "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest print "$APK" > "$RUNNER_TEMP/apk_manifest.xml"
           cat "$RUNNER_TEMP/signer.txt"
           echo "--- manifest inside the APK (first lines):"; head -c 2500 "$RUNNER_TEMP/apk_manifest.xml"; echo
           { echo "### APK checks"; cat "$RUNNER_TEMP/signer.txt"; } >> "$GITHUB_STEP_SUMMARY"
-          python3 .github/android/check_apk.py apk --manifest "$RUNNER_TEMP/apk_manifest.xml" --signer "$RUNNER_TEMP/signer.txt" --apk "$APK"
+          python3 .github/android/check_apk.py apk --manifest "$RUNNER_TEMP/apk_manifest.xml" --signer "$RUNNER_TEMP/signer.txt" --apk "$APK" --key release
 
       - name: Name the APK
         run: |
           mkdir -p dist
           VERSION="${{ steps.version.outputs.version_name }}"
-          cp googleARCore/samples/hello_ar_java/app/build/outputs/apk/debug/*.apk "dist/BuildScan3D-v${VERSION}.apk"
+          cp googleARCore/samples/hello_ar_java/app/build/outputs/apk/release/app-release.apk "dist/BuildScan3D-v${VERSION}.apk"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -246,5 +254,5 @@ jobs:
           prerelease: true
           files: dist/buildscan3d-latest.apk
           body: |
-            Debug APK built automatically from master, commit ${{ github.sha }}.
-            Install it over the previous version. Every build is signed with the same key, so recordings and settings are kept.
+            Release APK built automatically from master, commit ${{ github.sha }}.
+            Install it over the previous version (from v0.3.4 on). Every build is signed with the same private key, so recordings and settings are kept.

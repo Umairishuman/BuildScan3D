@@ -23,4 +23,6 @@
       android:title="Depth API"/>
   <item android:id="@+id/server_settings"
       android:title="Server URL"/>
+  <item android:id="@+id/check_updates"
+      android:title="Check for updates"/>
 </menu>
