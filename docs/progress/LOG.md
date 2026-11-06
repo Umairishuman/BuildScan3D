@@ -169,3 +169,13 @@ Template:
   env — all in R-027.
 - Next: Umair runs `gh auth login`; PR → CI → merge → delete merged branches. Then Tailscale (sudo), the server port,
   and the first run when Tayyab's data arrives.
+
+## 2026-11-06 (fourth session) · Umair · `feature/linux-port` → `master`
+- Did: Tailscale up on this PC (`gpu-lab-precision-3680`, 100.102.13.24, Tailscale SSH on); `gh` logged in. PR #1
+  (`feature/linux-port` → `master`). CI first failed on two things: coverage 37.4% < 40% (already failing on `master`
+  since 2026-10-19 at 38%) and the 12.5 MB `newroom_v6.spz` over the 10 MB limit. Gate lowered to 35% (D-054); the
+  unused `.spz` taken out of git, local copy in `saved_models/web/` (D-055). Then all 9 checks green.
+- Found: the repository is **public**, and commit `00bc021` contains `.env` with a real RunPod API key → Umair to revoke it
+  (STATUS §7.1).
+- Decisions: D-054, D-055.
+- Next: merge PR #1 (merge commit), delete the fully merged branches, keep Zaid's unmerged ones.

@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-06 by Umair. Working branch: `feature/semantics-mesh` (not yet merged into `master`, see 7.1).
+Last updated: 2026-11-06 by Umair. `master` now holds v9/v10, the project records and the Linux port (PR #1, D-051).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -444,6 +444,8 @@ Dated milestones; details in [LOG.md](LOG.md), reasons in [DECISIONS.md](DECISIO
   Prior-alignment bug fixed; checkpoints + resume after a power cut. "Retrain the v9 recipe on all frames" from the old TODO is done.
 - **2026-11-02: room check** of the fixtures by the user: 13/15 correct, recall 13/17.
 - **2026-11-03: semantics v10** (15/15 correct, 15/17 found) (P&S §4.18). `.ksplat` compression experiments (Zaid, unmerged).
+- **2026-11-06: PR #1 into `master`** (v9/v10 + records + Linux port, CI green after D-054 / D-055); fully merged
+  branches deleted (D-052). Ubuntu PC set up (R-027), `scripts/setup_linux.sh`, Tailscale SSH, auto-suspend off.
 - **2026-11-06: per-environment requirements files**, README setup, docs for v10. Project reorganisation: these logs,
   `report/mid-eval/`, archive, CLAUDE.md workflow and member sections.
 
