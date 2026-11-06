@@ -198,5 +198,5 @@ Template:
 - Decisions: D-057 (server env), D-058 (package name), D-059 (release key), D-060 (PR → merge → CD).
 - Problems: system Python has no `ensurepip` (no venv without sudo) → micromamba env; conda download of `openjdk`
   stalled (as in R-027) → key made with `openssl`; `ufw` is active (phone access untested).
-- Next: CI on the PR, merge, CD release v0.3.4; Umair uploads today's recording, then uninstalls the old app and installs
-  v0.3.4; ufw rules; then `check_capture.py` and the R-028 run options.
+- Next: CI on the PR, merge, CD release v0.3.4; Umair uploads today's recording, then installs v0.3.4 (next to the old app,
+  a separate package); ufw rules; then `check_capture.py` and the R-028 run options.

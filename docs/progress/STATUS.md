@@ -382,8 +382,8 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.7 Android app
 
-- [ ] **[new] Test the 2026-11-06 app fixes on the phone** (v0.3.4+, D-058 – D-060): uninstall the old app once (upload
-      its recordings first), install from GitHub Releases, check whether Play Protect still warns, the server list
+- [ ] **[new] Test the 2026-11-06 app fixes on the phone** (v0.3.4+, D-058 – D-060): install from GitHub Releases (it installs
+      next to the old app; uninstall the old one only after its recordings are uploaded), check whether Play Protect still warns, the server list
       finds this PC, and "Check for updates" installs the next build. Not tested on a device.
 - [ ] **[new] Move the app code** out of `googleARCore/samples/hello_ar_java/` and Google's Java package into its own
       folder / package (D-049 step 2, MAP §10); asked by Umair 2026-11-06 because the app UI is hard to find.

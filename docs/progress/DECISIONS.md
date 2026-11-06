@@ -429,8 +429,9 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   to `com.buildscan3d.app`. The Java package / Gradle `namespace` stay as they are for now (moving the code is part of
   the D-049 reorganisation).
 - **Why:** Android warns the APK "may be dangerous" on install; an app using Google's own sample package name is
-  a main reason Play Protect flags it. **Cost:** Android sees a new app: the old one must be uninstalled once, which
-  deletes the recordings stored inside it (upload them first). **Rejected:** keeping the name. **By:** Umair.
+  a main reason Play Protect flags it. **Cost:** Android sees a new app: it installs **next to** the old one (no
+  uninstall needed); recordings made in the old app stay in the old app until it is uninstalled, which deletes them
+  (upload them first). **Rejected:** keeping the name. **By:** Umair.
 
 ## D-059 · 2026-11-06 · Release APKs signed with a private key
 - **Decision:** CD signs release APKs with a new private release key, stored only as GitHub Actions secrets (and a

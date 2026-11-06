@@ -139,7 +139,8 @@ Things to know:
   update to new builds** (uninstall needed, which deletes the recordings in the app's folder). The expected certificate
   fingerprints are in `.github/android/apk_expectations.json` (`signing_sha256` release, `debug_signing_sha256` debug);
   `check_apk.py --key release|debug` checks them. The app's package name is `com.buildscan3d.app` (D-058); APKs before
-  v0.3.4 used Google's sample name and the public debug key, so moving to v0.3.4 needs one uninstall.
+  v0.3.4 used Google's sample name and the public debug key: v0.3.4 installs as a separate app next to them; uninstall
+  the old app only after its recordings are uploaded.
 - **Switching from route A to route B once needs an uninstall,** because Android Studio signs with the developer's own debug key. Copy the recordings off the phone first.
 - **The phone needs ARCore** (Google Play Services for AR) and must be a supported device. The app is an AR app.
 - **The app uploads recordings** to the server URL set in the app (default `http://192.168.1.100:8000`), which is the FastAPI server in `server/`. The server hands the work to a local GPU or to RunPod. The APK and RunPod are separate things: the APK is the phone side, and RunPod only does the heavy processing. Restarting or reconnecting a RunPod session does not affect an installed app, but the server URL in the app must point at the machine that runs `server/`.
