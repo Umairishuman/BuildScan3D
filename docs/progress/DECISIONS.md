@@ -59,6 +59,10 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | D-044 | 2026-11-06 | Project records: STATUS / DECISIONS / LOG / TRAINING; mid-eval to `report/`; archive | Active |
 | D-045 | 2026-11-06 | Pipeline must run on this PC, a friend's PC and RunPod; Docker not installed here yet | Active |
 | D-046 | 2026-11-06 | Umair's next focus: semantic labelling, after the organisation work | Active |
+| D-047 | 2026-11-06 | Set up this PC first, same versions as the 3070 PC, in conda envs; Docker after | Active |
+| D-048 | 2026-11-06 | One setup script for this PC, the friend's PC and the Docker image | Active |
+| D-049 | 2026-11-06 | Reorganise in two steps; never delete files, archive them | Active |
+| D-050 | 2026-11-06 | `MAP.md` is the first file every session reads | Active |
 
 ---
 
@@ -328,6 +332,39 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 
 ## D-046 · 2026-11-06 · Umair's next focus
 - **Decision:** semantic labelling, after the organisation work; processing-time optimisation added as a priority to-do. **By:** Umair.
+- **Updated by D-047:** the setup of this PC and the Docker rebuild come first.
+
+## D-047 · 2026-11-06 · Set up this PC first, with the same versions, in conda envs
+- **Decision:** step 1 is getting the pipeline running on this Ubuntu PC (RTX 4000 Ada); the Docker image comes after.
+  Use the **same versions as the RTX 3070 PC** (Python 3.10, torch 2.1.2 + cu121, nerfstudio 1.1.5, gsplat 1.4.0,
+  Open3D 0.19, transformers 4.46.3) in **micromamba / conda envs** that also provide CUDA toolkit 12.1, gcc 11, ffmpeg
+  and Node.js. Only the NVIDIA driver is installed system-wide (Umair, with sudo). Plan: STATUS §7.1 step 1.
+- **Why:** this PC has Python 3.14, no compiler and no CUDA toolkit, and gsplat / tiny-cuda-nn compile CUDA code
+  that needs a gcc CUDA 12.1 accepts. Equal versions keep results comparable with the 3070 PC. The conda recipe also
+  becomes the Docker recipe.
+- **Rejected:** uv + system CUDA and gcc from apt (needs sudo, and Ubuntu 26.04's gcc is likely too new for CUDA 12.1);
+  upgrading the stack on Linux (easier install, but the two machines would diverge and every result would need re-checking).
+- **By:** Umair.
+
+## D-048 · 2026-11-06 · One setup script for every machine and the Docker image
+- **Decision:** the setup of this PC is written as a script plus env files (`scripts/setup_linux.sh`, planned); the
+  friend's PC runs it, and the new `docker/Dockerfile.gpu` runs the same script.
+- **Why:** dependencies are written down in one place, so this PC, the friend's PC and RunPod get identical environments;
+  the old image drifted from the pipeline because it was maintained separately.
+- **Rejected:** a separately written Dockerfile. **By:** Umair.
+
+## D-049 · 2026-11-06 · Reorganise in two steps; never delete, archive
+- **Decision:** step 1 now: `MAP.md` with status markers for every file; unused files are **archived, never deleted**
+  (`git mv` into an archive / legacy folder with a note), once their owner agrees. Step 2, after the pipeline runs on
+  Linux: regroup `src/arcore3dgs/` by stage (proposal in MAP.md §10) on its own branch, verified with a real run.
+- **Why:** moving code changes script paths in `run_v8.py`, imports, the server, launchers and tests; with no working
+  GPU setup here, moves could only be checked by CI. Umair: "deleting never ends well".
+- **Rejected:** regrouping the code now; keeping the flat layout with a map only. **By:** Umair.
+
+## D-050 · 2026-11-06 · `MAP.md` is the first read
+- **Decision:** a root `MAP.md` says what is where and what every file does (status markers v9 / eval / v3 / legacy / exp /
+  dead); every session (person or agent) reads it first, then CLAUDE.md and STATUS.md. Whoever adds, moves or retires a
+  file updates MAP.md in the same commit. **By:** Umair.
 
 ---
 
@@ -341,6 +378,6 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | OD-4 | Merge, keep or close `origin/feat/splat-compress` and `origin/exp/trainer-arkitscenes`? | Both by Zaid, unmerged |
 | OD-5 | Re-implement any of the app overlay features reverted on 2026-10-23? | Notes in archive/TODO.md; the patch is lost |
 | OD-6 | Should the v9 pipeline use the IMU fallback (the stated novelty)? | SfM now registers 1165/1166 frames on newRoom |
-| OD-7 | Server / RunPod: wire in the v9/v10 pipeline, and as one container? Which torch / CUDA base for the image? | Image uses torch 2.4, local envs torch 2.1.2 |
-| OD-8 | Delete `train_fixed2_backup.py`, `train_v3_backup.py`, `scratch/`, `ViewerHUD.tsx`? | Owners must agree |
+| OD-7 | Server / RunPod: wire in the v9/v10 pipeline? | The image's torch / CUDA base is settled by D-047 / D-048 (same versions, same script) |
+| OD-8 | Archive (never delete, D-049) `train_fixed2_backup.py`, `train_v3_backup.py`, the old `run_*.bat`, `scratch/`, `ViewerHUD.tsx`? Into which folder? | Owners must agree |
 | OD-9 | Update README / AGENTS.md content that no longer matches (MEP layers, ~75 min, `structure.py`)? | Facts changed by D-023, D-024, D-033 |

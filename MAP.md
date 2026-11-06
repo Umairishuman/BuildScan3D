@@ -1,0 +1,267 @@
+# BuildScan3D: Map of the repository
+
+**What is where, and what each file does.** Read this first in a new session (human or agent), then
+[CLAUDE.md](CLAUDE.md) (how we work) and [docs/progress/STATUS.md](docs/progress/STATUS.md) (where the project stands).
+Last checked against the code: 2026-11-06 (branch `docs/project-organisation`, off `feature/semantics-mesh`).
+When you add, move, retire or repurpose a file, update this map in the same commit.
+
+Markers: **[v9]** = part of the current best pipeline (v9 processing + v10 semantics) · [eval] = evaluation /
+diagnostics · [v3] = the older SfM pipeline the server still runs · [legacy] = the ARCore-pose pipeline from before
+2026-10-11, kept for the record · [exp] = experiment, not used by any pipeline · [dead] = backup copy, unused.
+
+## 1. Top level
+
+| Path | What it is |
+|---|---|
+| `MAP.md` | This file |
+| `CLAUDE.md` | Team workflow, logging rules, git rules, per-member preferences |
+| `AGENTS.md` | Brand assets, UI theme, five-stage architecture, commit conventions |
+| `README.md` | Overview and setup (its folder tree is out of date, STATUS §7.1) |
+| `src/arcore3dgs/` | **The reconstruction pipeline** (all Python stages, section 3) |
+| `src/Metric3D_v2/`, `src/process_dataset.py`, `src/visualize_trajectory.py` | First prototype (Sept 2026): Metric3D depth + ARCore poses → dense cloud. Superseded; `process_dataset.py` still has a test |
+| `server/` | Phone-upload processing server (FastAPI) + RunPod / remote-GPU runners (section 4) |
+| `scripts/` | Windows `.bat` launchers + the job-manager CLI (section 5) |
+| `googleARCore/` | Google's ARCore SDK samples, vendored. **Only `samples/hello_ar_java/` is ours** (the capture app, section 6) |
+| `prototype/web-ui/` | Next.js dashboard + 3D scan viewer (section 7) |
+| `prototype/requirements.md`, `prototype/POC_requirements.md` | Early product / POC requirements |
+| `tests/` | pytest suite (CPU-only logic, runs in CI) |
+| `docker/Dockerfile.gpu` | GPU image for RunPod (`umairishuman/buildscan-gpu:latest`); **out of date** (STATUS §6) |
+| `.github/` | CI (`ci.yml`), CD (`cd.yml`), Docker build (`docker-gpu.yml`), APK checks (`android/`), PR template |
+| `docs/` | Records, guides, proposal, papers (section 8) |
+| `report/mid-eval/` | Everything submitted for the FYP-1 mid evaluation (frozen) |
+| `UI designs/` | Two design reference images for the web UI |
+| `scratch/` | One-off Python scripts that once patched web-UI files (dashboard, logo, login image). Not used; to be archived once the owner agrees (D-049) |
+| `requirements.txt` | `nerfstudio-env` (Windows `pip freeze`) |
+| `requirements-system.txt` | System Python 3.10: `run_v8.py`, COLMAP wrappers, Metric3D |
+| `requirements-semantic.txt` | `semantic-env`: Grounding DINO, SAM, CLIP |
+| `pytest.ini`, `.coveragerc`, `ruff.toml` | Test / lint config |
+| `.env.example` | Template for `.env` (RunPod key, processing mode); `.env` is never committed |
+
+**Not in git (gitignored), on the RTX 3070 PC only:** `dataset/`, `saved_models/`, `outputs/`, `tools/colmap_dl/`
+(COLMAP 4.2 CUDA + vocabulary trees), `tools/cudnn9/`, `nerfstudio-env/`, `semantic-env/` (section 9).
+
+## 2. The current pipeline (v9 processing + v10 semantics), in order
+
+Commands with all flags: STATUS §5. Python environment in brackets.
+
+```
+phone app (hello_ar_java) ── dataset/<capture>/  (dataset.mp4, poses.csv, ...)
+   │  check_capture.py                                  [system]  sanity check before processing
+   ▼
+run_v8.py  [system Python; calls nerfstudio-env for export/train]
+   select   select_sharp.py      gyro-aware sharpest frame per 0.2 s            -> dataset/<c>/work_v9/
+   sfm      sfm_colmap.py        COLMAP 4.2 SfM, lens, undistort, Sim3 to ARCore -> dataset/<c>/work_v9_sfm/
+   export   export_nerfstudio.py transforms.json for nerfstudio
+   prior    mono_prior.py        Metric3D depth + normals aligned to SfM points
+            plane_seg.py         planar regions (CPU, in parallel)               (--planar)
+            blur_motion.py       camera motion during exposure (in parallel)     (--blur)
+   init     fast_mvs.py          fast PatchMatch dense init (or mono_init.py)    (--init fmvs)
+   train    geo_splatfacto.py    splatfacto + DashGaussian + priors (+ --pgsr)   [nerfstudio-env]
+   ply      ns-export            -> work_v9_sfm/gs_v9/splat.ply, timing.json
+   ▼
+layout.py          walls / floor / ceiling / corners / dimensions          [nerfstudio-env] -> gs_v9/layout/
+semantic2d.py      2D fixture masks (Grounding DINO + SAM)                  [semantic-env]   -> work_v9_sfm/semantic2d_v10/
+semantic3d.py      labels on the Gaussians, walls with areas, fixtures      [nerfstudio-env] -> gs_v9/semantic_v10/
+verify_fixtures.py CLIP check of switches / sockets -> verdicts.json        [semantic-env]
+semantic3d.py      again with --verdicts
+mesh.py            TSDF mesh of rendered depth                              [nerfstudio-env] -> gs_v9/mesh/
+mesh_labels.py     labels onto the mesh, areas, .glb                        [nerfstudio-env]
+export_web.py      .spz groups + scan.json + mesh for the viewer (to_spz.mjs, Node) -> prototype/web-ui/public/scans/<name>/
+```
+
+## 3. `src/arcore3dgs/`, file by file
+
+Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the only shared modules are `common.py`
+(imported by 7 scripts) and `imu.py`. Each script's docstring has its full usage.
+
+**Capture loading and frame selection**
+
+| File | Does | Status |
+|---|---|---|
+| `common.py` | Loads a capture (video + poses + points), pose interpolation at frame time, intrinsics, OpenGL→OpenCV, tracking gaps | **[v9]** shared |
+| `check_capture.py` | Validates a recording before processing (files, sync, tracking, dropped frames, blur, exposure, re-anchors) | **[v9]** |
+| `select_sharp.py` | Gyro-aware keyframes: least predicted blur per window, uses `camera.csv` exposure | **[v9]** |
+| `prepare.py` | Laplacian keyframes + Metric3D depth cache, tracking-loss settle | [v3] [legacy] |
+| `filter_frames.py` | Drops post-tracking-loss frames from an existing work dir | [legacy] |
+| `imu.py` | Extracts gyro + accelerometer from the ARCore MP4's protobuf tracks | used by fallback / select |
+
+**Camera poses**
+
+| File | Does | Status |
+|---|---|---|
+| `sfm_colmap.py` | COLMAP 4.2: features, ARCore-guided / retrieval pairs, global mapper, lens self-calibration, undistortion, Sim3 to ARCore, mis-registration filter. Hard-codes `tools/colmap_dl/.../COLMAP.bat` and `tools/cudnn9` | **[v9]** [v3] |
+| `fallback.py` | IMU featureless-tracking fallback: bridge tracking gaps, detect heading jumps | [v3] [legacy]; not in `run_v8.py` (OD-6) |
+| `relocalize_pnp.py` | Re-aligns post-gap segments to the map with PnP | [legacy] |
+| `relocalize.py` | Earlier image-content relocalisation of post-gap segments | [legacy] |
+| `validate_realign.py` | Checks the re-alignment with independent SIFT matches | [eval] [legacy] |
+| `ba.py` | Own GPU bundle adjustment (Schur LM) with ARCore priors | [legacy] |
+
+**Depth, priors, initialisation**
+
+| File | Does | Status |
+|---|---|---|
+| `mono_prior.py` | Metric3D depth + normals per frame, aligned to SfM points (fp16 default) | **[v9]** |
+| `plane_seg.py` | Per-frame planar regions for the planar prior | **[v9]** |
+| `blur_motion.py` | Per-frame camera motion during exposure for the blur model | **[v9]** |
+| `fast_mvs.py` | Fast dense init: PatchMatch on every 7th frame at 640 px | **[v9]** |
+| `mono_init.py` | Dense init from aligned mono depth (12 s, loses few-view detail) | [exp] option `--init mono` |
+| `mvs_init.py` | Dense init from a full COLMAP PatchMatch (v6, 2 h 15 min) | [exp] v6 recipe |
+| `colmap_mvs.py` | COLMAP PatchMatch on our fixed BA poses | [legacy] |
+| `mvs.py` | Own plane-sweep MVS guided by Metric3D | [legacy] |
+| `align_fuse.py` | Per-frame Metric3D scale + two-pass TSDF fusion | [legacy] |
+| `pocket_prior.py` | PocketGS-style keyframes + dense consistent prior | [legacy] |
+| `make_init.py` | Init from BA + MVS-measured points | [legacy] |
+
+**Training**
+
+| File | Does | Status |
+|---|---|---|
+| `run_v8.py` | One-command driver for the v9 pipeline, times every stage. Hard-codes `nerfstudio-env/Scripts/python.exe` and `ns-export.exe` | **[v9]** |
+| `geo_splatfacto.py` | Splatfacto subclass: DashGaussian, depth / normal / planar priors, blur model, PGSR-lite, checkpoints + `--resume` | **[v9]** |
+| `export_nerfstudio.py` | Writes `transforms.json` for nerfstudio | **[v9]** [v3] |
+| `train.py` | Own gsplat trainer (experiments only, D-010) | [exp] |
+| `train_fixed2_backup.py`, `train_v3_backup.py` | Old copies of `train.py` | [dead] |
+
+**Structure, semantics, mesh, export**
+
+| File | Does | Status |
+|---|---|---|
+| `layout.py` | Room layout: any number of walls, floor, ceiling, corners, dimensions, `plan.png` | **[v9]** |
+| `semantic2d.py` | Grounding DINO + SAM fixture masks on upright frames, decoy classes, tile pass | **[v9]** semantic-env |
+| `semantic3d.py` | Votes 2D labels onto Gaussians, structure from layout, fixture instances + geometry rules | **[v9]** |
+| `verify_fixtures.py` | CLIP crop check of switch / socket candidates | **[v9]** semantic-env |
+| `mesh.py` | TSDF mesh from rendered depth (Open3D 0.19), PGSR unbiased depth, shell flatness | **[v9]** |
+| `mesh_labels.py` | Labels onto the mesh, shell denoising, areas, `.glb` | **[v9]** |
+| `export_web.py` | Splits the model into label groups (`.spz`), `scan.json`, mesh for the viewer | **[v9]** |
+| `to_spz.mjs` | PLY → `.spz` with Spark's encoder (run from `prototype/web-ui`, Node) | **[v9]** |
+| `structure.py` | Older box-room structural layer (planes, walls, openings) | [exp] superseded by `layout.py` |
+| `planarize.py` | Post-hoc snapping of splats to planes | [exp] rejected (D-017) |
+| `clean_splats.py` | Floater pruning by measured free space | [exp] not default (D-040) |
+
+**Evaluation, diagnostics, viewing**
+
+| File | Does | Status |
+|---|---|---|
+| `eval_offpath.py` | Off-path split metrics (PSNR, SSIM, sharpness, flatness) + sheets | [eval] current |
+| `fair_compare.py` | Compares models from different SfM runs (trimmed Sim3 + test-pose refinement) | [eval] current |
+| `compare_models.py` | Photometric + geometric metrics and sheets on held-out frames | [eval] |
+| `compare.py` | Older held-out comparison | [eval] [legacy] |
+| `fit_diag.py` | Full-res fit on training views + optical-flow misalignment | [eval] |
+| `diagnose.py` | Render-only "why is it blurry" check (train vs held-out, splat stats) | [eval] |
+| `consistency.py` | Finds frames whose depth contradicts other views | [eval] [legacy] |
+| `before_after.py`, `grazing_views.py` | Comparison image sheets | [eval] |
+| `view.py` | gsplat browser viewer with measure tool, port 7010 | viewer |
+
+## 4. `server/`
+
+| File | Does |
+|---|---|
+| `main.py` | FastAPI app: `/upload`, `/status`, `/jobs`, `/logs`, `/retry`, `/datasets`, `/reprocess`, `/download`, `/config`, `/health`; modes local / runpod / remote / dry_run |
+| `pipeline.py` | Local runner: fallback → prepare → sfm_colmap → export_nerfstudio → ns-train splatfacto → ns-export (the **v3** recipe). Windows paths (`nerfstudio-env\Scripts\*.exe`) |
+| `runpod_client.py` | RunPod API: create pod from `umairishuman/buildscan-gpu:latest`, setup script (skipped if nerfstudio exists), SCP up, run, SCP down, always terminate, watchdog |
+| `remote_gpu.py` | Same flow over SSH to an always-on machine (a friend's GPU) |
+| `test_upload.py` | Manual test: upload a dataset to a running server and poll |
+| `requirements.txt` | Server-only deps (fastapi, uvicorn, ...) |
+
+## 5. `scripts/` (Windows)
+
+| File | Does |
+|---|---|
+| `run_arcore3dgs.bat` | [v3] pipeline: fallback → prepare → sfm_colmap → export_nerfstudio → ns-train → ns-export |
+| `run_arcore3dgs_legacy.bat` | [legacy] ARCore-pose pipeline: fallback → prepare → ba → relocalize_pnp → ba → mvs → pocket_prior → train.py |
+| `view_splat.bat` | Starts `view.py` (http://localhost:7010) |
+| `start_server.bat` | Loads `.env`, starts the FastAPI server on port 8000, prints the IP for the phone |
+| `jobs.bat` / `jobs.py` | Job manager CLI (list, watch, logs, retry, reprocess, mode) |
+| `release.bat` | Bumps the app version and tags a release |
+| `run_train.bat`, `run_train_fast.bat`, `run_post.bat`, `run_post_fast.bat`, `run_viewer.bat` | [dead] first splatfacto runs on roomAttemptSadness (Sept/Oct 2026): ns-train / ns-eval / ns-export / ns-viewer with MSVC set up |
+
+## 6. Android capture app: `googleARCore/samples/hello_ar_java/`
+
+Built on Google's `hello_ar_java` sample. Our code is in `app/src/main/java/com/google/ar/core/examples/java/helloar/`:
+
+| File | Does |
+|---|---|
+| `HelloArActivity.java` | Main AR screen (Google's sample, heavily modified): ARCore session, recording, rendering, menus |
+| `CaptureLogger.java` | Writes poses, tracking, points, depth, `camera.csv`, `anchors.csv`, lens metadata on a background thread |
+| `QualityMonitor.java` | Live IQA: predicted blur, dark / overexposed, low texture, tracking; `quality.csv` |
+| `CoverageMap.java`, `CoverageOverlayView.java` | Live coverage map (red / yellow / green dots) |
+| `ProcessingActivity.java` | Upload & process screen: multipart upload, status polling |
+| `GalleryActivity.java`, `ScanDetailActivity.java` | List of recordings and their details |
+| `UpdateChecker.java` | In-app update check against GitHub releases |
+
+The other `googleARCore/samples/*` folders, `libraries/`, `assets/`, `media/` are Google's and unused. Build: Android
+Studio or `./gradlew assembleDebug` with JDK 21 (STATUS §7.7).
+
+A recording (`dataset/<capture>/`): `dataset.mp4` (video + IMU tracks), `poses.csv`, `tracking.csv`, `points.csv`,
+`quality.csv`, `camera.csv`, `anchors.csv`, `depth/` (5 Hz), `meta.json`, `lens_metadata.json`, `camera_characteristics.json`.
+
+## 7. Web UI: `prototype/web-ui/`
+
+Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and its own AGENTS.md / CLAUDE.md).
+
+| Path | What |
+|---|---|
+| `src/app/` | Routes: `/` login, `/dashboard`, `/projects`, `/projects/new`, `/viewer/[id]`, `/floorplan/[id]`, `/workspace/boiler-room` |
+| `src/components/Viewer3D/SplatCanvas.tsx` | **Real scan viewer** (Spark, `.spz`, label groups, mesh mode, measuring) |
+| `src/components/Viewer3D/Canvas3D.tsx`, `SceneBuilder.ts`, `MeasurementTool.ts` | Mock 3D scene (procedural room) and measuring for mock projects |
+| `src/components/ProjectDetail/ScanLayersPanel.tsx` | Scan Layers panel for real scans |
+| `src/components/...` | Dashboard, projects, floor plan, notifications, modals (mostly mock data) |
+| `src/lib/mockData.ts` | All mock projects / scans (the real scan is `newroom-scan`) |
+| `public/scans/newroom/` | The real labelled scan bundle (from `export_web.py`) |
+| `public/splats/newroom_v6.spz` | v6 splat for the viewer |
+
+## 8. `docs/`
+
+| Path | What |
+|---|---|
+| `progress/STATUS.md`, `DECISIONS.md`, `LOG.md`, `TRAINING.md` | The four live project records (CLAUDE.md §1) |
+| `progress/Problems_and_Solutions.md` | Technical evidence for every problem and fix (P&S §x) |
+| `progress/Research_Notes_2026-10-24.md` | Literature behind v8/v9 |
+| `progress/archive/` | Retired files (old TODO, Training_Analysis, early notes) |
+| `Flow.md` | System flow app → server → GPU → model |
+| `PROCESSING_GUIDE.md` | Using the phone-upload server and job manager |
+| `CI_CD.md` | What CI/CD checks and how to run it locally |
+| `proposal/` | Proposal v1–v4 (+ unversioned copy), defence slides, guidelines, POC plans, workflow docs |
+| `Research Papers/` | 3DGS, PGSR, PocketGS, VIGS-SLAM papers and notes |
+
+## 9. Data and outputs on disk (gitignored)
+
+| Path | What |
+|---|---|
+| `dataset/<capture>/` | A recording (section 6). Captures: `roomAttemptSadness`, `roomAttemptSadness2`, `newRoomAttemptSadness` |
+| `dataset/<c>/work/` | [legacy] work dir |
+| `dataset/<c>/work_sfm/gs_sfm*` | [v3] SfM work dir and models |
+| `dataset/<c>/work_sharp_sfm/` | v6 work dir; v8 / v9 experiments under it (`v8/`, `v9/`, `eval_v9/`, `layout_*`) |
+| `dataset/<c>/work_<tag>/`, `work_<tag>_sfm/gs_<tag>/` | `run_v8.py --tag <tag>` output (e.g. `work_v9e2e_sfm/gs_v9e2e/`, `gs_v9final/`) |
+| `outputs/v8/splatfacto/<name>/` | nerfstudio run folder (`config.yml`, checkpoints deleted after export) |
+| `saved_models/YYYY-MM-DD_<tag>/` | Kept models with a `README.txt` (best: `2026-10-27_v9_semantic_pgsr/`) |
+| `tools/colmap_dl/`, `tools/cudnn9/` | COLMAP 4.2 CUDA for Windows + vocabulary trees; cuDNN 9 DLLs |
+| `nerfstudio-env/`, `semantic-env/` | Python venvs (Windows) |
+
+## 10. Reorganisation plan (agreed 2026-11-06, DECISIONS D-049)
+
+The flat `src/arcore3dgs/` mixes the current pipeline with legacy, experiments and backups, which is why it is hard to
+tell what is current. **Nothing is ever deleted: retired files are archived** (`git mv` into an `archive/` or
+`legacy/` folder, with a note of why). Two steps:
+
+1. **Now, low risk:** this map plus the status markers. Archive the `[dead]` files (`train_*_backup.py`, the five old
+   `run_*.bat`, `scratch/`) once their owners agree.
+2. **After the pipeline runs on Linux** (STATUS §7.1 step 1, so every move can be checked with a real run): group the
+   code by stage and move the legacy pipeline out of the way, e.g.
+
+   ```
+   src/arcore3dgs/
+     capture/    common.py imu.py check_capture.py select_sharp.py
+     poses/      sfm_colmap.py fallback.py relocalize_pnp.py
+     priors/     mono_prior.py plane_seg.py blur_motion.py fast_mvs.py mono_init.py mvs_init.py
+     train/      run_v8.py geo_splatfacto.py export_nerfstudio.py
+     scene/      layout.py semantic2d.py semantic3d.py verify_fixtures.py mesh.py mesh_labels.py
+     export/     export_web.py to_spz.mjs
+     eval/       eval_offpath.py fair_compare.py compare_models.py fit_diag.py diagnose.py view.py ...
+     legacy/     ba.py mvs.py align_fuse.py pocket_prior.py make_init.py colmap_mvs.py train.py prepare.py ...
+   ```
+
+   This touches `run_v8.py` (script paths), the 7 `from common import` lines, `server/pipeline.py`, the `.bat`
+   launchers, `tests/` and every command in STATUS / README, so it should be one dedicated branch and PR.
+   Moving the capture app out of the vendored `googleARCore/` (e.g. to `app/android/`) is a similar, separate step
+   (CI paths point at `googleARCore/samples/hello_ar_java`).

@@ -2,6 +2,9 @@
 
 Instructions for everyone working on BuildScan 3D: the three of us and any AI agent working for us.
 
+**Start every session by reading [MAP.md](MAP.md)** (what is where, what every file does, which files are current),
+then this file, then [docs/progress/STATUS.md](docs/progress/STATUS.md).
+
 - [AGENTS.md](AGENTS.md): brand assets, UI theme, the five-stage FYP architecture, commit conventions. Read it.
 - This file: **how we work**: the project records, when and how to write to them, the git workflow, and each member's
   personal preferences (section 6).
@@ -19,6 +22,7 @@ All in `docs/progress/`. They are the project's memory: if it is not written the
 
 | File | Purpose | Who writes, when |
 |---|---|---|
+| [MAP.md](MAP.md) (repo root) | **What is where and what every file does**, with status markers (current v9 / eval / v3 / legacy / experiment / dead) | In the same commit that adds, moves, retires or repurposes a file |
 | [STATUS.md](docs/progress/STATUS.md) | **Everything done and everything left.** Best model, module status, proposal requirements, machines, open work (§7), done (§8), known limits | Anyone, at the end of every session that changed something |
 | [DECISIONS.md](docs/progress/DECISIONS.md) | **Every decision**: what, why, evidence, rejected alternatives, who decided, status. Open decisions (OD-x) at the end | Whenever a decision is made or an option is rejected |
 | [LOG.md](docs/progress/LOG.md) | **Dated project log**: what each person did on each day, which runs and decisions it produced | Every working session, one block per day and person |
@@ -31,8 +35,8 @@ Other status files: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (we
 
 ## 2. Logging rules
 
-**Start of a session.** Read `STATUS.md` (at least §1, §6 and the §7 part you will work on) and the last few `LOG.md`
-blocks. Check `DECISIONS.md` before changing anything a decision covers; don't re-open an Active decision without new
+**Start of a session.** Read `MAP.md`, then `STATUS.md` (at least §1, §6 and the §7 part you will work on) and the
+last few `LOG.md` blocks. Check `DECISIONS.md` before changing anything a decision covers; don't re-open an Active decision without new
 evidence, and say so if you do.
 
 **TRAINING.md: its purpose is the run log.** For every run of the pipeline or any stage of it (SfM, priors, training,
@@ -74,8 +78,10 @@ not deleted. Update the "Last updated" line.
 - Records in `docs/progress/` (section 1). Proposals in `docs/proposal/`, papers in `docs/Research Papers/`.
 - Evaluation material per milestone in `report/<milestone>/` (e.g. `report/mid-eval/`, later `report/final-eval/`).
   Once a milestone is submitted its folder is not edited.
-- Retiring a file: move it to `docs/progress/archive/` with `git mv`, add a row to `archive/README.md` (why, what
-  replaces it), and leave a one-line pointer at the old path if a report or document cites that path. Ask the owner first.
+- **Never delete a file: archive it** (D-049). Retiring a file means `git mv` into an archive folder
+  (`docs/progress/archive/` for docs; a `legacy/` or `archive/` folder next to the code for code), a row in that
+  folder's `README.md` (why, what replaces it), a one-line pointer at the old path if a report or document cites it,
+  and the MAP.md entry updated. Ask the file's owner first.
 - Datasets (`dataset/`), models (`saved_models/`, named `YYYY-MM-DD_<tag>/` with a `README.txt`), environments and
   `tools/` are gitignored and live on the machine that made them; STATUS §6 says which machine has what.
 - Never commit `.env`, keys, datasets, `.ply` / `.mp4` / checkpoints (CI rejects them, see docs/CI_CD.md).
@@ -106,7 +112,9 @@ and changes need agreement.
 ### Muhammad Umair (23i-0662) · GitHub `UmairisHuman`
 - **Proposal ownership:** mobile edge capture and validation (Workflow A). **Work so far:** web prototype, processing
   server, RunPod integration, CD / APK releases, GPU Docker image workflow, mid report, project organisation.
-- **Current focus:** semantic labelling (after the 2026-11-06 organisation work); processing-time optimisation is a priority to-do.
+- **Current focus:** setting up this Ubuntu PC, then rebuilding the Docker image from the same setup script (STATUS §7.1),
+  then semantic labelling; processing-time optimisation is a priority to-do.
+- **Files:** never delete anything, archive it ("deleting never ends well").
 - **Commits:** likes to commit often, in small logical steps, so he can revert to any point. Agents working for Umair
   commit automatically after each logical step **on a feature branch**, without asking each time; they never push,
   merge, rebase or touch `master` without asking.
@@ -120,7 +128,7 @@ and changes need agreement.
 ### Muhammad Tayyab (23i-0636) · GitHub `BlazingBeam`
 - **Proposal ownership:** cloud orchestration and 3DGS reconstruction engine (Workflow B). **Work so far:** capture app
   (ARCore logging, IQA, coverage), reconstruction pipeline v1 → v9, semantics v9 / v10, mesh, web scan viewer.
-  Runs on the RTX 3070 PC.
+  Runs on the RTX 3070 PC. (`BlazingBeam` = Tayyab, confirmed by Umair 2026-11-06.)
 - **Preferences:** *to be filled in by Tayyab* (commit style, branches, how agents should work for him). Noted in the
   report fix brief: works in large batches rather than many small commits.
 

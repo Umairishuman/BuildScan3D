@@ -8,6 +8,7 @@ section 7, every finished one in section 8. How to keep this file up to date: [C
 
 | Other record | What it holds |
 |---|---|
+| [MAP.md](../../MAP.md) | What is where and what every file does (read first) |
 | [DECISIONS.md](DECISIONS.md) | Every decision: what, why, evidence, alternatives rejected, who |
 | [LOG.md](LOG.md) | Dated project log: what was done on each day, by whom |
 | [TRAINING.md](TRAINING.md) | One entry per processing / training run: command, machine, errors hit, result |
@@ -30,7 +31,8 @@ section 7, every finished one in section 8. How to keep this file up to date: [C
   It takes ~96 min + ~40 min semantics on the RTX 3070, has only been tested on one room, and runs only on the
   Windows RTX 3070 PC. The phone-upload server and RunPod still run the older v3 recipe.
 - **FYP-1 mid evaluation:** submitted (material in [report/mid-eval/](../../report/mid-eval/)).
-- **Current focus (Umair):** project organisation (this file, the logs), then **semantic labelling**.
+- **Current focus (Umair):** set up this Ubuntu PC (7.1 step 1), then rebuild the Docker image from the same setup
+  script (step 2), then **semantic labelling**. What each file does: [MAP.md](../../MAP.md).
 
 ## 2. Best model and results
 
@@ -167,7 +169,7 @@ The goal is that the full pipeline runs the same way on three places: **this PC,
 | Machine | Hardware / OS | State (2026-11-06) |
 |---|---|---|
 | RTX 3070 PC | Windows, RTX 3070 8 GB VRAM, 16 GB RAM | Every run so far. Holds `dataset/`, `saved_models/`, `tools/colmap_dl/` (COLMAP 4.2 CUDA), `tools/cudnn9/`, the three envs (all gitignored) |
-| This PC (`gpu-lab-Precision-3680`) | Ubuntu 26.04.1 LTS, NVIDIA RTX 4000 Ada (20 GB) on the PCI bus, 28 threads, 30 GB RAM | Repo only. **NVIDIA driver not loaded** (`nvidia-smi` missing), no Docker, no COLMAP, no Node.js, system Python 3.14.4 (torch 2.1.2 needs ≤ 3.11), git user identity not configured, no datasets or models. Nothing has been run here |
+| This PC (`gpu-lab-Precision-3680`) | Ubuntu 26.04.1 LTS (kernel 7.0.0-42), NVIDIA RTX 4000 Ada (20 GB), 28 threads, 30 GB RAM, 366 GB free | Repo only, nothing run yet. GPU is on the open-source **`nouveau`** driver, no NVIDIA driver (`ubuntu-drivers` recommends `nvidia-driver-595-open`); **Secure Boot enabled**; no gcc / make / cmake / ninja, no ffmpeg / ffprobe, no Node.js, no Docker, no COLMAP, no conda; system Python 3.14.4 only (torch 2.1.2 needs ≤ 3.11); `sudo` needs Umair's password; git user identity not configured; no datasets or models |
 | Friend's PC | Not recorded yet | Fill in: owner, GPU, OS, what is installed |
 | RunPod | On-demand pod (default "RTX 4090"; an earlier commit set RTX 3090), image `umairishuman/buildscan-gpu:latest` | Integrated in `server/`, works poorly per the user; no recorded end-to-end run |
 
@@ -197,16 +199,53 @@ Tags: **[new]** added 2026-11-06; *(from TODO, date)* carried over from the old 
 
 ### 7.1 Organisation, environments and infrastructure
 
-- [ ] **[new] Make the pipeline run the same on this PC, the friend's PC and RunPod.** Per machine: driver + CUDA,
-      COLMAP ≥ 4.2, the three Python envs (or one container), Node.js; then one recorded run per machine in TRAINING.md.
-- [ ] **[new] This PC: install / load the NVIDIA driver** for the RTX 4000 Ada (nothing GPU-related works until then),
-      Python 3.10 alongside the system 3.14, and set the git identity (`git config user.name/user.email`).
-- [ ] **[new] Docker: update the image's dependencies** to match `requirements*.txt` (section 6 list), rebuild and push
-      `umairishuman/buildscan-gpu`. Docker is **not installed on this PC and should not be installed yet** (Umair,
-      2026-11-06); install it later, then test the image locally before RunPod.
+**Order agreed on 2026-11-06 (Umair, D-047 – D-049): step 1 this PC, step 2 the Docker image from the same setup
+script, step 3 RunPod and the friend's PC.**
+
+**Step 1: set up this PC** (same versions as the RTX 3070 PC, in conda/micromamba envs; D-047)
+
+- [ ] **[new] 1a. NVIDIA driver (Umair, needs sudo):** `sudo ubuntu-drivers install nvidia-driver-595-open`, reboot,
+      check `nvidia-smi` lists the RTX 4000 Ada. Secure Boot is on: if the installer asks for a MOK password, enrol it on
+      the blue MOK screen at the next boot, otherwise the driver will not load.
+- [ ] **[new] 1b. micromamba** in the user's home (no sudo), and set the git identity (`git config user.name/user.email`).
+- [ ] **[new] 1c. Three envs mirroring the Windows ones** (timm 0.6.7 for nerfstudio vs timm 1.0.30 for Metric3D, and
+      transformers 4.46.3, can't share one env): system-equivalent, nerfstudio, semantic. Each: Python 3.10, and where
+      CUDA code is compiled (gsplat 1.4.0, tiny-cuda-nn) CUDA toolkit 12.1 + gcc 11 from conda; then pip
+      `torch==2.1.2+cu121 torchvision==0.16.2+cu121` and the pinned packages; `TORCH_CUDA_ARCH_LIST=8.9` (Ada).
+      ffmpeg / ffprobe and Node.js from conda too, so nothing else needs sudo.
+- [ ] **[new] 1d. Linux requirement files:** the Windows `requirements.txt` is a `pip freeze` with Windows-only
+      packages (`msvc_runtime`, `pywinpty`); make Linux pins (env `.yml` + requirement files) and keep the versions equal.
+- [ ] **[new] 1e. COLMAP ≥ 4.2 with CUDA on Linux** (check whether conda-forge has 4.2 with CUDA, else build from source
+      in the env) + the faiss vocabulary trees (from the COLMAP 3.11.1 / 3.13.0 releases), as on Windows.
+- [ ] **[new] 1f. Port the Windows-only paths in code:** `run_v8.py` (`nerfstudio-env/Scripts/python.exe`,
+      `ns-export.exe`), `sfm_colmap.py` (`tools/colmap_dl/.../COLMAP.bat`, `tools/cudnn9` DLL path), `server/pipeline.py`;
+      the `.bat` launchers need `.sh` equivalents.
+- [ ] **[new] 1g. All of 1b–1f as one script** (`scripts/setup_linux.sh` + env files), so step 2 and the friend's PC reuse it (D-048).
+- [ ] **[new] 1h. First run here:** copy `newRoomAttemptSadness` from the RTX 3070 PC, run the v9 pipeline, log it in
+      TRAINING.md (every setup and run error), and compare with R-020 / R-023 to confirm the machines agree.
+
+**Step 2: rebuild the Docker image** (after step 1 works)
+
+- [ ] **[new] 2a. New `docker/Dockerfile.gpu` that runs the same setup script** (D-048), from a CUDA 12.1 base, with
+      COLMAP 4.2, all three envs, Node.js and the model weights it needs (Metric3D, Grounding DINO, SAM, CLIP) or a
+      download step. The current image's problems are listed in section 6.
+- [ ] **[new] 2b. Build it.** Docker is **not installed on this PC and should not be installed yet** (Umair, 2026-11-06,
+      D-045). `.github/workflows/docker-gpu.yml` builds and pushes on GitHub without local Docker; check the runner's disk
+      is big enough for a CUDA + torch + COLMAP image. Consider dated / commit tags next to `:latest`.
+- [ ] **[new] 2c. Test the image** on RunPod (or here, once Docker is allowed), and make the RunPod setup script stop
+      silently skipping installs on a stale image.
+
+**Step 3: RunPod and the friend's PC**
+
+- [ ] **[new] Make the pipeline run the same on this PC, the friend's PC and RunPod;** one recorded run per machine in TRAINING.md.
 - [ ] **[new] RunPod: find out why it works poorly.** Run one end-to-end job (create pod → process → download →
       terminate) and log every error in TRAINING.md. *(from TODO 2026-10-12: "End-to-end test of RunPod flow")*
-- [ ] **[new] Remove the Windows-only paths** from `server/pipeline.py` and the launch scripts (or add Linux equivalents).
+- [ ] **[new] Friend's PC:** record owner, GPU, OS in section 6; run `setup_linux.sh` (or a Windows equivalent).
+
+**Other organisation items**
+
+- [ ] **[new] Code reorganisation, step 2 of D-049:** regroup `src/arcore3dgs/` by stage (proposal in
+      [MAP.md](../../MAP.md) §10) on its own branch, **after** step 1 works so every move can be checked with a real run.
 - [ ] Wire the v9 / v10 pipeline into the server and RunPod (they still run the v3 recipe). [PROCESSING_GUIDE]
 - [ ] Merge `feature/semantics-mesh` (v9, v10, docs; 5 commits ahead) into `master` through a PR. Needs a team decision.
 - [ ] Decide what to do with the unmerged branches `origin/feat/splat-compress` (Zaid, `.ksplat`) and
@@ -217,8 +256,9 @@ Tags: **[new]** added 2026-11-06; *(from TODO, date)* carried over from the old 
 - [ ] README is out of date: folder tree (`d:/FYP/`, `docs/Proposal Slides/`, `mobile-ui/`, `FloorPlanView.tsx`), and it
       still advertises YOLOv8-Seg MEP layers, which were dropped. AGENTS.md §3 still says ~75 min (v3) and names only
       `structure.py` for Stage 4.
-- [ ] Code clean-up candidates (ask the owner first): `src/arcore3dgs/train_fixed2_backup.py`, `train_v3_backup.py`,
-      `scratch/` scripts, `ViewerHUD.tsx` (dead code, the user declined deletion once).
+- [ ] Archive (never delete, D-049) the unused files once their owners agree: `src/arcore3dgs/train_fixed2_backup.py`,
+      `train_v3_backup.py`, the five old `scripts/run_train*.bat` / `run_post*.bat` / `run_viewer.bat`, `scratch/`,
+      `ViewerHUD.tsx` (the user declined its deletion once). Marked `[dead]` in MAP.md.
 - [ ] CI limits (CI_CD.md §7): coverage counts only imported files; most `src/arcore3dgs` logic runs at script top level
       and is untested; no Android unit tests; no GPU stages in CI.
 

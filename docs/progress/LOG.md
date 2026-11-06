@@ -7,7 +7,7 @@ day (or per session if several people worked that day). Runs get a one-line ment
 
 Entries up to 2026-11-05 were backfilled on 2026-11-06 from git history, Problems_and_Solutions.md (P&S), the old
 TODO ([archive/TODO.md](archive/TODO.md)) and branch notes. Names: Umair = UmairisHuman, Tayyab = BlazingBeam
-(per the report fix brief), Zaid = Zaid Fareed.
+(confirmed by Umair on 2026-11-06), Zaid = Zaid Fareed.
 
 Template:
 
@@ -146,3 +146,15 @@ Template:
   driver loaded, no Docker / COLMAP / Node.js, and Python 3.14 (STATUS §6).
 - Next: Tayyab and Zaid fill in their CLAUDE.md sections; team settles the open decisions (DECISIONS OD-1 – OD-9); set up
   this PC (driver, Python 3.10); then semantic labelling.
+
+## 2026-11-06 (second session) · Umair · `docs/project-organisation`
+- Did: `MAP.md` at the repo root: what is where and what every file does, with status markers (v9 / eval / v3 / legacy /
+  exp / dead), the v9 pipeline in order, data folders, and the two-step reorganisation plan. CLAUDE.md: read MAP.md
+  first; never delete files, archive them. Checked this PC (STATUS §6): GPU on `nouveau`, Secure Boot on,
+  `nvidia-driver-595-open` recommended, no compiler / ffmpeg / Node / conda, Python 3.14 only. STATUS §7.1 now has the
+  ordered plan: step 1 this PC, step 2 Docker image, step 3 RunPod and the friend's PC.
+- Confirmed: BlazingBeam = Tayyab.
+- Decisions: D-047 (this PC first, same versions, conda envs), D-048 (one setup script for PC + Docker), D-049 (two-step
+  reorganisation; never delete, archive), D-050 (MAP.md first).
+- Next: Umair installs the NVIDIA driver (`sudo ubuntu-drivers install nvidia-driver-595-open`, reboot, `nvidia-smi`);
+  then micromamba, the envs and `scripts/setup_linux.sh` (STATUS §7.1 1b–1h).

@@ -21,4 +21,4 @@
 - This applies to every commit and PR in this repository, with no exceptions.
 
 ## 5. Project Records & Team Workflow
-- **Read [CLAUDE.md](CLAUDE.md)** before working. It applies to every agent, not only Claude: the project records in `docs/progress/` (STATUS, DECISIONS, LOG, TRAINING), when and how to write to them, the git workflow, and each team member's preferences.
+- **Read [MAP.md](MAP.md) (what every file does) and [CLAUDE.md](CLAUDE.md)** before working. It applies to every agent, not only Claude: the project records in `docs/progress/` (STATUS, DECISIONS, LOG, TRAINING), when and how to write to them, the git workflow, and each team member's preferences.
