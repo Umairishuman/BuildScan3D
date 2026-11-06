@@ -8,6 +8,26 @@ web viewer bundle. The Windows commands are in [STATUS §5](progress/STATUS.md);
 Last checked: 2026-11-06 on this PC (RTX 4000 Ada 20 GB), first full runs R-028 / R-029 in
 [TRAINING.md](progress/TRAINING.md).
 
+## 0. Short version: `scripts/buildscan` (one command for everything)
+
+```bash
+scripts/buildscan status                    # what is running, upload server + phone URL, GPU, newest recordings
+scripts/buildscan server start              # phone-upload server (stop: server stop, see it: server log)
+scripts/buildscan datasets                  # recordings, newest first, with their runs
+scripts/buildscan check latest              # capture check of the newest recording
+scripts/buildscan run latest mytag          # full pipeline, best recipe, in screen session run-mytag
+scripts/buildscan watch latest mytag        # follow its logs (Ctrl+C stops watching only)
+scripts/buildscan results latest mytag      # where the outputs are + stage times
+scripts/buildscan view latest mytag         # 3D viewer, http://localhost:7010
+scripts/buildscan web                       # web dashboard, http://localhost:3000
+scripts/buildscan stop <session>            # bs-server, run-<tag>, viewer, web
+scripts/buildscan help                      # everything else (attach, ip, gpu, --from, custom recipe)
+```
+
+`latest` = the newest recording; or give its folder name (`scan_056fe94d3399`). Everything long-running is in a
+named `screen` session, so it keeps running when the terminal or SSH closes. The sections below explain the steps and
+the scripts underneath (`start_server.sh`, `run_full.sh`).
+
 ## 1. Once per machine
 
 ```bash
