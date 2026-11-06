@@ -241,10 +241,13 @@ script, step 3 RunPod and the friend's PC.**
 - [ ] **[new] Tailscale: Umair's laptop** joins the tailnet and `ssh i230662@gpu-lab-precision-3680` is tested (the
       only other own device, `desktop-hnumpvk`, was last seen 2026-09-30); then VS Code Remote-SSH.
 - [ ] **[new] Tailscale: disable key expiry** for this PC in the admin console (key expires 2027-05-05).
-- [ ] **[new] Firewall (`ufw` is active) for phone uploads** (Umair, sudo): allow TCP 8000 and UDP 8001 (server search)
-      from the Wi-Fi, e.g. `sudo ufw allow from 172.15.32.0/19 to any port 8000 proto tcp` and the same with
-      `port 8001 proto udp`. Not yet tested from the phone. The PC is on Wi-Fi now (`wlp0s20f3`, 172.15.40.53/19);
-      the wired card had no address on 2026-11-06.
+- [x] **[new] Firewall (`ufw` is active) for phone uploads** — done 2026-11-06 by Umair: TCP 8000 and UDP 8001 (server
+      search) allowed on the Wi-Fi card, so they work on the lab Wi-Fi and on the phone's hotspot:
+      `sudo ufw allow in on wlp0s20f3 to any port 8000 proto tcp` and the same with `port 8001 proto udp`.
+      Phone access not yet tested. The PC is on Wi-Fi (`wlp0s20f3`, 172.15.40.53/19 on the lab Wi-Fi); the wired card had no address.
+- [ ] **[new] SSH into this PC from the laptop: test.** No OpenSSH server is installed (no `sshd`, nothing on port 22);
+      remote login is **Tailscale SSH** only (`RunSSH` on, ssh capability granted, 2026-11-06). A test from this PC to its
+      own address is not possible (local traffic bypasses Tailscale); test from the laptop once it is in the tailnet.
 - [ ] **[new] Back up the release signing key** `~/.buildscan3d-keys/` (D-059) somewhere other than this PC.
 - [ ] **[new] Dockerise the upload server** so it runs the same on Windows and Linux (asked by Umair 2026-11-06;
       deferred with step 2, Docker not on this PC for now, D-045 / D-057).
