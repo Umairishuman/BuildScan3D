@@ -1,0 +1,6 @@
+# bs-colmap: COLMAP 4.2.0 with CUDA (same version as tools/colmap_dl/colmap-4.2.0 on the RTX 3070 PC).
+# Separate env because its CUDA runtime (12.9) differs from the torch envs (12.1). Driver 595 supports up to CUDA 13.2.
+name: bs-colmap
+channels: [conda-forge]
+dependencies:
+  - colmap=4.2.0=cuda_129*

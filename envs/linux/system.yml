@@ -1,0 +1,8 @@
+# bs-system: Linux equivalent of the Windows "system Python 3.10": run_v8.py, COLMAP wrappers, Metric3D (mono_prior.py).
+# pip part: requirements-system.txt at the repo root (same pins as Windows). semantic-env is a venv on top of this env.
+name: bs-system
+channels: [conda-forge]
+dependencies:
+  - python=3.10
+  - pip
+  - ffmpeg

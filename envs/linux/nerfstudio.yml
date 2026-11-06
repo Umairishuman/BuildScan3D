@@ -1,0 +1,19 @@
+# bs-ns: Linux equivalent of nerfstudio-env (training, layout, mesh, semantic3d, export_web, viewer).
+# CUDA toolkit 12.1 + gcc 11 are here so gsplat 1.4.0 / tiny-cuda-nn can compile (torch 2.1.2 + cu121). D-047.
+# pip part: envs/linux/requirements-nerfstudio.txt (installed by scripts/setup_linux.sh).
+name: bs-ns
+channels: [conda-forge]
+dependencies:
+  - python=3.10
+  - pip
+  - cuda-version=12.1
+  - cuda-nvcc=12.1
+  - cuda-cudart-dev=12.1
+  - cuda-libraries-dev=12.1
+  - gxx_linux-64=11.4
+  - gcc_linux-64=11.4
+  - ninja
+  - cmake
+  - ffmpeg
+  - nodejs=22
+  - git

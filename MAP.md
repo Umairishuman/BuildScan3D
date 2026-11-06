@@ -31,6 +31,7 @@ diagnostics · [v3] = the older SfM pipeline the server still runs · [legacy] =
 | `report/mid-eval/` | Everything submitted for the FYP-1 mid evaluation (frozen) |
 | `UI designs/` | Two design reference images for the web UI |
 | `scratch/` | One-off Python scripts that once patched web-UI files (dashboard, logo, login image). Not used; to be archived once the owner agrees (D-049) |
+| `envs/linux/` | Linux micromamba env files (`colmap.yml` → `bs-colmap`, `nerfstudio.yml` → `bs-ns`, `system.yml` → `bs-system`) and `requirements-nerfstudio.txt` (the Windows freeze minus Windows-only packages). Used by this PC and, later, the Docker image (D-047, D-048) |
 | `requirements.txt` | `nerfstudio-env` (Windows `pip freeze`) |
 | `requirements-system.txt` | System Python 3.10: `run_v8.py`, COLMAP wrappers, Metric3D |
 | `requirements-semantic.txt` | `semantic-env`: Grounding DINO, SAM, CLIP |

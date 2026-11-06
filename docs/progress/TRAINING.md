@@ -59,6 +59,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-024 | 2026-10-27 | Semantics v9 (`semantic2d` + `semantic3d`), mesh | 3070 | 7–8 min 2D; seconds 3D; 20 s mesh | 15 fixtures, 13 correct | Kept |
 | R-025 | 2026-11-03 | Semantics v10 | 3070 | 38 min 2D | 15/15 correct, 15/17 found | Kept (D-027) |
 | R-026 | 2026-11-03 | `.ksplat` compression v1 / v2 (Zaid) | not recorded (software rendering) | — | v1 18.4 MB (−88%), v2-A 40.2 MB (−73%) | Branch only (OD-1) |
+| R-027 | 2026-11-06 | Environment setup of this PC (STATUS §7.1 step 1) | this PC (Ubuntu, RTX 4000 Ada) | in progress | driver 595.99.02 working | In progress |
 
 ## Runs
 
@@ -227,3 +228,22 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - Converter: GaussianSplats3D `create-ksplat.js`; sample 596,638 splats, 148 MB, SH 3.
 - **Result:** pruned PLY (opacity < 0.05, SH 1) 51.3 MB; `.ksplat` v1 18.4 MB (37.7 / 32.3 / 24.1 dB vs original
   render), v2-A 40.2 MB (63.8 / 55.4 dB, visually identical). Rendered with software graphics; FPS on a real GPU not measured.
+
+### R-027 · 2026-11-06 · Environment setup of this PC (STATUS §7.1 step 1)
+- **Who / machine:** Umair (+ Claude) · this PC (`gpu-lab-Precision-3680`, Ubuntu 26.04.1, RTX 4000 Ada 20 GB, compute 8.9)
+- **Branch / commit:** `docs/project-organisation` @ b27b1b7
+- **Goal:** same versions as the RTX 3070 PC (D-047) in micromamba envs; captured as `scripts/setup_linux.sh` (D-048).
+- **Steps and errors during the setup:**
+  1. 1a NVIDIA driver (Umair, sudo): `sudo ubuntu-drivers install nvidia-driver-595-open`, reboot → `nvidia-smi`:
+     driver 595.99.02, "CUDA Version 13.2" (the newest CUDA the driver supports; CUDA 12.1 wheels run on it), 20475 MiB.
+     Secure Boot still enabled and the driver loads. The kernel moved from 7.0.0-42 to 7.0.0-43 over the reboot. No errors.
+  2. 1b micromamba 2.10.0 into `~/.local/bin/micromamba`, root prefix `~/micromamba` (no sudo, `.bashrc` untouched).
+     **Error:** `tar (child): bzip2: Cannot exec: No such file or directory` — the micromamba download is `.tar.bz2` and
+     this PC has no `bzip2` → unpacked with Python's `tarfile` instead. Resolved.
+  3. Package check on conda-forge (2026-11-06): COLMAP 4.2.0 exists with CUDA builds `cuda_129` and `cuda_130`; the
+     newest 4.2.1 `cuda_134` builds need a CUDA 13.4 driver (ours supports 13.2) and would not run. Chosen:
+     **4.2.0 `cuda_129`** (same version as the 3070 PC's `colmap-4.2.0`), in its own env `bs-colmap` because its CUDA
+     runtime (12.9) differs from the torch envs (12.1). Also available: cuda-nvcc 12.1.105, gxx 11.4, Python 3.10, Node 22, ffmpeg.
+  4. Env files written: `envs/linux/{colmap,nerfstudio,system}.yml`, `envs/linux/requirements-nerfstudio.txt`
+     (the Windows freeze minus `msvc_runtime`, `pywinpty`, torch / torchvision, tinycudann; other versions unchanged).
+     Conda envs `bs-colmap`, `bs-ns`, `bs-system` being created.
