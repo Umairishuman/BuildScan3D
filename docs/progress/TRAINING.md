@@ -335,8 +335,8 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   them but its upload does not send them, STATUS §7.7) → frame selection runs without exposure data, re-anchors are
   not detected. Tracking lost 3.0%; video↔pose sync +0.05 s, correlation 0.95.
 - **Command(s):** `screen -dmS r028 bash -c 'scripts/run_full.sh dataset/scan_056fe94d3399 v9 -- --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr'`
-  (recipe chosen by Umair: v9 + PGSR in one training as in R-023; `--blur 0.0222` is the realme's measured exposure,
-  this phone's is not known; stages to the web bundle).
+  (recipe chosen by Umair: v9 + PGSR in one training as in R-023; `--blur 0.0222` = 1/45 s, the exposure select_sharp.py
+  assumes (ARCore does not record it; `camera.csv` would have it, but the upload dropped it); stages to the web bundle).
 - **Goal:** STATUS §7.1 step 1h: the whole pipeline runs on Linux (first run on this PC), and the first result on a
   second room and a second phone. Not comparable with R-020 / R-023 (other room); the machine-agreement check on
   newRoomAttemptSadness stays open.
@@ -345,5 +345,8 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   1. 17:53 check_capture — `FileNotFoundError: 'ffprobe'` when run with the env's python directly: ffmpeg is in the
      env but only on `PATH` when the env is activated → run through `micromamba run -n bs-system` (resolved: yes;
      `run_full.sh` always uses `micromamba run`).
+  2. 17:53 select — `FileNotFoundError: .../scan_056fe94d3399/imu.npz`: `select_sharp.py` loads the IMU cache but nothing
+     in `run_v8.py` creates it (on Windows an earlier script had made it for every capture) → `select_sharp.py` now
+     calls `imu.extract_imu()` when the cache is missing; restarted from `select` (resolved: see below).
 - **Result:** (pending)
 - **Verdict:** (pending)
