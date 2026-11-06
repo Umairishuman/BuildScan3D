@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-10-27 (Scan Layers panel, fixture list, mesh mode on the real scan)
+Last updated: 2026-11-03 (v10 semantic labels in the newroom bundle, tube light class)
 
 ---
 

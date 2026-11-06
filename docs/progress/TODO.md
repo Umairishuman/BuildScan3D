@@ -1,5 +1,7 @@
 # BuildScan3D — To Do
 
+Current status on one page (best model, commands, results, next steps): [STATUS.md](STATUS.md). The sections below are in chronological order; the newest work is under "Semantic labelling + PGSR-style mesh".
+
 ## IMMEDIATE PRIORITY: make v3 top-notch (run overnight, one experiment per night)
 
 Baseline: `saved_models/2026-10-11_sfm_v3/` (newRoomAttemptSadness: held-out SSIM 0.857, PSNR(cf) 25.57, geometry median 0.59%). It is never overwritten.
@@ -84,6 +86,8 @@ Findings from newRoomAttemptSadness / roomAttemptSadness2 and the code:
 - [x] Counted misses: recall 13/17 (2 doors, 1 tube light, 1 socket).
 - [ ] Tape a switch and a socket height.
 - [x] Semantics v10 (Problems 4.18): 15/15 detections correct, 15/17 found on this room, but tuned on the same list.
+- [x] v10 labels saved with the final model: `saved_models/2026-10-27_v9_semantic_pgsr/newRoomAttemptSadness/semantic_v10/`.
+- [x] Requirements per environment (2026-11-06): `requirements.txt` (nerfstudio-env), `requirements-system.txt` (system Python, Metric3D), `requirements-semantic.txt` (semantic-env); README setup updated.
 - [ ] Test v10 semantics on a second room (the real test); the user confirms the 3 new detections.
 - [ ] Open doorways (no door leaf) from gaps in the layout walls; windows on room 2.
 - [ ] Full PGSR multi-view geometric + photometric consistency (1-2 days, ~2x training time).

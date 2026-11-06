@@ -126,10 +126,18 @@ cd prototype\web-ui; npm install
 
 #### Running the Pipelines:
 
-- **ARCore capture → metric 3DGS (current pipeline, best results):**
+- **ARCore capture → metric 3DGS, labels and mesh (current pipeline, v9/v10, best results):**
+  ```powershell
+  python src/arcore3dgs/run_v8.py --dataset dataset\<recording> --tag v9 --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222
+  view_splat.bat <path\to\splat.ply>          # viewer at http://localhost:7010 (measure tool included)
+  ```
+  About 96 min on an RTX 3070. Layout, semantic labelling, meshing and the web export follow as separate steps.
+  - Commands, the best model (`saved_models\2026-10-27_v9_semantic_pgsr\`) and current results: [docs/progress/STATUS.md](docs/progress/STATUS.md).
+  - Rationale and results: `docs/progress/Problems_and_Solutions.md` §4.15–4.18.
+
+- **Older ARCore → 3DGS pipeline (v3, `run_arcore3dgs.bat`):**
   ```powershell
   run_arcore3dgs.bat dataset\<recording>      # -> dataset\<recording>\work_sfm\gs_sfm\splat.ply
-  view_splat.bat <path\to\splat.ply>          # viewer at http://localhost:7010 (measure tool included)
   ```
   The pipeline runs in four stages:
   1. Extract sharp keyframes from the video.
@@ -137,8 +145,8 @@ cd prototype\web-ui; npm install
   3. Align to ARCore's poses, which gives real-world scale and the up direction.
   4. Train Nerfstudio splatfacto at full resolution, with per-image colour correction.
 
-  - Best saved models: `saved_models\2026-10-11_sfm_v3\`.
-  - Rationale and results: `docs/Problems_and_Solutions.md` §4.11–4.12.
+  - Saved model: `saved_models\2026-10-11_sfm_v3\`.
+  - Rationale and results: `docs/progress/Problems_and_Solutions.md` §4.11–4.12.
   - Old ARCore-pose pipeline: `run_arcore3dgs_legacy.bat`.
 
 - **Interactive Reviewer & 3DGS Exporter (early prototype):**
