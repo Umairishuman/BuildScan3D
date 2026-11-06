@@ -78,7 +78,7 @@ public class CaptureLogger {
     tracking = new BufferedWriter(new FileWriter(new File(dir, "tracking.csv")), 1 << 16);
     points = new BufferedWriter(new FileWriter(new File(dir, "points.csv")), 1 << 16);
     quality = new BufferedWriter(new FileWriter(new File(dir, "quality.csv")), 1 << 16);
-    quality.write("timestamp_ns,level,sharpness,sharpness_rel,brightness,overexposed_frac,ang_speed_deg_s,lin_speed_m_s,tracking\n");
+    quality.write("timestamp_ns,level,sharpness,sharpness_rel,brightness,overexposed_frac,ang_speed_deg_s,lin_speed_m_s,tracking,pred_blur_px,exposure_ms\n");
     cameraMeta = new BufferedWriter(new FileWriter(new File(dir, "camera.csv")), 1 << 16);
     cameraMeta.write("timestamp_ns,exposure_ns,rolling_shutter_skew_ns,frame_duration_ns,iso,focus_distance_diopter,ae_state,awb_state,lens_state\n");
     anchorsOut = new BufferedWriter(new FileWriter(new File(dir, "anchors.csv")), 1 << 16);

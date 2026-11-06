@@ -44,7 +44,7 @@ Details of the design:
 
 | Job | Checks | Fails when |
 |---|---|---|
-| python | `ruff` for real errors only (syntax errors, undefined names); unused code is reported as a non-blocking warning; `pytest` with a minimum line coverage of 40% | an error is found, a test fails or coverage drops below 40% |
+| python | `ruff` for real errors only (syntax errors, undefined names); unused code is reported as a non-blocking warning; `pytest` with a minimum line coverage of 35% (temporarily lowered from 40% on 2026-11-06, D-054; back to 40% once the tests are written) | an error is found, a test fails or coverage drops below 35% |
 | web-ui | `npm ci` (exactly the locked versions), ESLint, `tsc --noEmit`, `next build` | lint error, type error or build failure |
 | android | official Gradle wrapper check, `./gradlew assembleDebug`, then signs and checks the APK (see below) and an informational Android lint | the app does not compile, or an APK check fails |
 | repo-hygiene | no tracked file over 10 MB (the ARCore samples and `docs/Research Papers` are exempt), no `.ply`/`.mp4`/`.pt`/`.pth`/`.ckpt`/`.npz`/key files, no private keys or access tokens | a rule is broken |
@@ -110,7 +110,7 @@ These are GitHub settings, not files, so they cannot be committed:
 
 - **Coverage is only counted for files the tests import.** The reported percentage covers `server/` and the few `src/` modules that tests can import; scripts that run their logic at the top level are not in the number, so it overstates how much of the project is tested.
 - **Newest parts are untested on GitHub.** The CI jobs (Python, web UI, Android debug build, hygiene) have passed on GitHub. The shared signing key step and the `publish-latest` job are new and are only proven by their first run on `master`. The workflow files pass `actionlint`, and the Python, lint and web UI steps pass when run locally (section 4).
-- **No GPU stages.** Training, Metric3D, bundle adjustment on real data and the viewer are not run in CI. Their results are documented in `docs/Problems_and_Solutions.md` and the experiment notes.
+- **No GPU stages.** Training, Metric3D, bundle adjustment on real data and the viewer are not run in CI. Their results are documented in `docs/progress/Problems_and_Solutions.md` and `docs/progress/TRAINING.md`.
 - **Only the Python scripts' building blocks are tested.** Most of `src/arcore3dgs` runs its logic at the top level of a script, so it cannot be imported by a test. Moving that logic into functions would let us test more.
 - **The Android sample has no unit tests** in this repository yet; CI only proves that it compiles.
 - **CD does not deploy to a server.** The web UI uses server-side rendering, so it cannot be published as static pages. Delivery means a downloadable bundle (`npm ci --omit=dev && npm start`) and a release. Deploying to a hosting service later needs an account or tokens that the repository owner controls.

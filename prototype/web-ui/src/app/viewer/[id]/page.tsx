@@ -16,6 +16,7 @@ import {
   ViewportBottomBar,
 } from "@/components/ProjectDetail/ViewportOverlays";
 import { FloatingSidePanel } from "@/components/ProjectDetail/FloatingSidePanel";
+import { ScanLayersPanel } from "@/components/ProjectDetail/ScanLayersPanel";
 import { MeasurementsPanel } from "@/components/ProjectDetail/MeasurementsPanel";
 import { ComparisonView } from "@/components/ProjectDetail/ComparisonView";
 import { OverviewTab } from "@/components/ProjectDetail/OverviewTab";
@@ -27,6 +28,8 @@ import {
   ViewMode,
   InteractionMode,
 } from "@/components/Viewer3D/Canvas3D";
+import { SplatCanvas } from "@/components/Viewer3D/SplatCanvas";
+import type { ScanInfo } from "@/components/Viewer3D/scanTypes";
 import { SemanticLayersState, RenderMode } from "@/components/Viewer3D/SceneBuilder";
 import { MeasurementRecord } from "@/components/Viewer3D/MeasurementTool";
 import { ExportModal } from "@/components/ExportModal";
@@ -95,6 +98,12 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isChromeVisible, setIsChromeVisible] = useState(true);
+  // Labelled real scans (project.scanUrl): what the Scan Layers panel switches
+  const [scanInfo, setScanInfo] = useState<ScanInfo | null>(null);
+  const [hiddenGroups, setHiddenGroups] = useState<string[]>([]);
+  const [tintByClass, setTintByClass] = useState(false);
+  const [showFixtures, setShowFixtures] = useState(true);
+  const isRealScan = Boolean(project.splatUrl || project.scanUrl);
   const chromeTimeoutRef = useRef<number | null>(null);
 
   const handleToggleLayer = (layer: keyof SemanticLayersState) => {
@@ -221,18 +230,39 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
             <ReportTab project={project} />
           ) : detailTab === "viewer" ? (
             <div ref={viewportRef} className="relative flex-1 min-h-0 bg-[#eef3f9]">
-              <Canvas3D
-                ref={canvasRef}
-                semanticLayers={semanticLayers}
-                renderMode={renderMode}
-                viewMode={viewMode}
-                interactionMode={interactionMode}
-                isMeasureMode={isMeasureMode}
-                xrayMode={xrayMode}
-                onMeasurementsChange={setMeasurements}
-                onHoverCoordinate={setHoveredCoordinate}
-                onOrbitChange={handleOrbitChange}
-              />
+              {isRealScan ? (
+                <SplatCanvas
+                  ref={canvasRef}
+                  splatUrl={project.scanUrl ? undefined : project.splatUrl}
+                  scanUrl={project.scanUrl}
+                  initialPosition={project.splatStart?.position ?? [0, 0, 0]}
+                  initialTarget={project.splatStart?.target ?? [0, 0, -1]}
+                  viewMode={viewMode}
+                  interactionMode={interactionMode}
+                  isMeasureMode={isMeasureMode}
+                  hiddenGroups={hiddenGroups}
+                  tintByClass={tintByClass}
+                  showMesh={renderMode === "mesh"}
+                  showFixtures={showFixtures}
+                  onScanLoaded={setScanInfo}
+                  onMeasurementsChange={setMeasurements}
+                  onHoverCoordinate={setHoveredCoordinate}
+                  onOrbitChange={handleOrbitChange}
+                />
+              ) : (
+                <Canvas3D
+                  ref={canvasRef}
+                  semanticLayers={semanticLayers}
+                  renderMode={renderMode}
+                  viewMode={viewMode}
+                  interactionMode={interactionMode}
+                  isMeasureMode={isMeasureMode}
+                  xrayMode={xrayMode}
+                  onMeasurementsChange={setMeasurements}
+                  onHoverCoordinate={setHoveredCoordinate}
+                  onOrbitChange={handleOrbitChange}
+                />
+              )}
 
               {/* Top-left: view mode */}
               <div className="absolute top-4 left-4 z-20">
@@ -241,14 +271,17 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
 
               {/* Top-right cluster: panel toggles + Export */}
               <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-                <PanelToggleButton
-                  Icon={LayersIcon}
-                  label="Layers"
-                  isActive={openPanel === "layers"}
-                  onClick={() =>
-                    setOpenPanel((p) => (p === "layers" ? null : "layers"))
-                  }
-                />
+                {/* Layers: the mock scene's systems, or a labelled scan's semantic groups */}
+                {(!isRealScan || project.scanUrl) && (
+                  <PanelToggleButton
+                    Icon={LayersIcon}
+                    label="Layers"
+                    isActive={openPanel === "layers"}
+                    onClick={() =>
+                      setOpenPanel((p) => (p === "layers" ? null : "layers"))
+                    }
+                  />
+                )}
                 <PanelToggleButton
                   Icon={RulerIcon}
                   label="Measurements"
@@ -296,6 +329,8 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
                   onToggleSystems={() => setXrayMode((v) => !v)}
                   onToggleFullscreen={handleToggleFullscreen}
                   isFullscreen={isFullscreen}
+                  sceneControls={!isRealScan}
+                  renderModes={project.scanUrl ? ["textured", "mesh"] : undefined}
                 />
               </div>
 
@@ -317,7 +352,31 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
               {/* Floating panels dock in the top-right column below the toolbar */}
               {openPanel && (
                 <div className="absolute top-16 right-4 z-30">
-                  {openPanel === "layers" ? (
+                  {openPanel === "layers" && project.scanUrl ? (
+                    <FloatingSidePanel
+                      title="Scan Layers"
+                      Icon={LayersIcon}
+                      badge={
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-[#2563eb] font-bold border border-blue-100">
+                          Auto-labelled
+                        </span>
+                      }
+                      onClose={() => setOpenPanel(null)}
+                    >
+                      <ScanLayersPanel
+                        scan={scanInfo}
+                        hiddenGroups={hiddenGroups}
+                        onToggleGroup={(key) =>
+                          setHiddenGroups((h) => (h.includes(key) ? h.filter((k) => k !== key) : [...h, key]))
+                        }
+                        tintByClass={tintByClass}
+                        onToggleTint={() => setTintByClass((v) => !v)}
+                        showFixtures={showFixtures}
+                        onToggleFixtures={() => setShowFixtures((v) => !v)}
+                        onFlyTo={(point) => canvasRef.current?.flyTo?.(point)}
+                      />
+                    </FloatingSidePanel>
+                  ) : openPanel === "layers" ? (
                     <FloatingSidePanel
                       title="Semantic Layers"
                       Icon={LayersIcon}

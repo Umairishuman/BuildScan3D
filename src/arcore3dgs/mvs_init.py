@@ -11,12 +11,13 @@ transforms.json pointing at it (the original transforms.json is untouched).
 import os, json, argparse, subprocess
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+import toolpaths
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--work", required=True); ap.add_argument("--sparse", required=True); ap.add_argument("--fused", required=True)
 ap.add_argument("--voxel", type=float, default=0.01)
 ap.add_argument("--out_ply", default="init_mvs.ply"); ap.add_argument("--out_json", default="transforms_mvs.json")
-ap.add_argument("--colmap", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools", "colmap_dl", "colmap-4.2.0", "COLMAP.bat"))
+ap.add_argument("--colmap", default=toolpaths.colmap())
 args = ap.parse_args()
 
 txt = args.sparse.rstrip("/\\") + "_txt"; os.makedirs(txt, exist_ok=True)

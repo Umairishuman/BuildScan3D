@@ -1,3 +1,6 @@
+# nerfstudio-env (pip freeze): training (geo_splatfacto), layout, mesh, semantic3d, export_web, viewer.
+# Other steps: requirements-system.txt (Metric3D, COLMAP wrappers) and requirements-semantic.txt (semantic2d).
+# Web export also needs Node.js and prototype/web-ui `npm install` (to_spz.mjs uses @sparkjsdev/spark).
 absl-py==2.5.0
 annotated-types==0.8.0
 anyio==4.14.2

@@ -1,5 +1,6 @@
 # Virtual Environment
 nerfstudio-env/
+semantic-env/
 
 # Datasets and Video Files
 dataset/
@@ -28,6 +29,7 @@ myenv/
 
 # COLMAP binary download (380 MB, see TODO.md)
 tools/colmap_dl/
+tools/cudnn9/
 
 
 # saved best models (large binaries, kept locally)
@@ -44,7 +46,7 @@ saved_models/
 !*.cls
 !*.sty
 !*.bib
-!F26_FYP1_Mid_Report_LaTeX_Complete/ThesisFigs/*.jpg
+!report/mid-eval/F26_FYP1_Mid_Report_LaTeX_Complete/ThesisFigs/*.jpg
 
 # LaTeX build artefacts (the PDF and .bbl stay tracked)
 *.aux

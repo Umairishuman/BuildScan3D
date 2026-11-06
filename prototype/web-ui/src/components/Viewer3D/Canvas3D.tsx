@@ -21,6 +21,8 @@ export interface Canvas3DHandle {
   fitToScreen: () => void;
   deleteMeasurement: (id: string) => void;
   clearMeasurements: () => void;
+  /** Real scans only: move the camera to look at a point (metric model coordinates). */
+  flyTo?: (point: [number, number, number]) => void;
 }
 
 interface Canvas3DProps {

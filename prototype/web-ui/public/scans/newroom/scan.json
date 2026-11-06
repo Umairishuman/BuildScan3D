@@ -1,0 +1,359 @@
+{
+ "floor_area": 28.81,
+ "ceiling_height": 2.733,
+ "walls": [
+  {
+   "id": 0,
+   "length": 6.644,
+   "height": 2.733,
+   "gross_area": 18.16,
+   "openings_area": 3.58,
+   "net_area": 14.58,
+   "openings": [
+    "door_3",
+    "door_4"
+   ],
+   "fixtures": [
+    "light_switch_1",
+    "light_switch_2",
+    "power_socket_1",
+    "ceiling_light_3",
+    "tube_light_1",
+    "lamp_1"
+   ]
+  },
+  {
+   "id": 1,
+   "length": 4.37,
+   "height": 2.733,
+   "gross_area": 11.94,
+   "openings_area": 0,
+   "net_area": 11.94,
+   "openings": [],
+   "fixtures": [
+    "ceiling_light_1"
+   ]
+  },
+  {
+   "id": 2,
+   "length": 6.575,
+   "height": 2.733,
+   "gross_area": 17.97,
+   "openings_area": 3.74,
+   "net_area": 14.22,
+   "openings": [
+    "door_5",
+    "door_6"
+   ],
+   "fixtures": []
+  },
+  {
+   "id": 3,
+   "length": 4.35,
+   "height": 2.733,
+   "gross_area": 11.89,
+   "openings_area": 4.64,
+   "net_area": 7.24,
+   "openings": [
+    "door_1",
+    "door_2",
+    "window_1"
+   ],
+   "fixtures": []
+  }
+ ],
+ "fixtures": [
+  {
+   "id": "door_1",
+   "cls": "door",
+   "position": [
+    -1.684,
+    -0.396,
+    -3.124
+   ],
+   "height_above_floor": 1.091,
+   "wall": 3,
+   "along_wall": 2.376,
+   "width": 1.02,
+   "height": 1.919,
+   "views": 33
+  },
+  {
+   "id": "door_2",
+   "cls": "door",
+   "position": [
+    -0.359,
+    -0.34,
+    -3.683
+   ],
+   "height_above_floor": 1.131,
+   "wall": 3,
+   "along_wall": 3.814,
+   "width": 1.008,
+   "height": 1.841,
+   "views": 46
+  },
+  {
+   "id": "door_3",
+   "cls": "door",
+   "position": [
+    1.283,
+    -0.411,
+    -1.499
+   ],
+   "height_above_floor": 1.06,
+   "wall": 0,
+   "along_wall": 4.032,
+   "width": 1.001,
+   "height": 1.928,
+   "views": 55
+  },
+  {
+   "id": "door_4",
+   "cls": "door",
+   "position": [
+    1.825,
+    -0.387,
+    -0.199
+   ],
+   "height_above_floor": 1.087,
+   "wall": 0,
+   "along_wall": 2.625,
+   "width": 0.923,
+   "height": 1.789,
+   "views": 87
+  },
+  {
+   "id": "door_5",
+   "cls": "door",
+   "position": [
+    -3.68,
+    -0.391,
+    -1.615
+   ],
+   "height_above_floor": 1.124,
+   "wall": 2,
+   "along_wall": 0.601,
+   "width": 1.117,
+   "height": 1.864,
+   "views": 42
+  },
+  {
+   "id": "door_6",
+   "cls": "door",
+   "position": [
+    -2.325,
+    -0.449,
+    1.836
+   ],
+   "height_above_floor": 1.077,
+   "wall": 2,
+   "along_wall": 4.309,
+   "width": 0.903,
+   "height": 1.839,
+   "views": 43
+  },
+  {
+   "id": "window_1",
+   "cls": "window",
+   "position": [
+    -0.33,
+    1.085,
+    -3.622
+   ],
+   "height_above_floor": 2.557,
+   "wall": 3,
+   "along_wall": 3.817,
+   "width": 1.074,
+   "height": 0.774,
+   "views": 33
+  },
+  {
+   "id": "light_switch_1",
+   "cls": "light switch",
+   "position": [
+    0.829,
+    -0.072,
+    -2.308
+   ],
+   "height_above_floor": 1.397,
+   "wall": 0,
+   "along_wall": 4.951,
+   "width": 0.133,
+   "height": 0.107,
+   "views": 36
+  },
+  {
+   "id": "light_switch_2",
+   "cls": "light switch",
+   "position": [
+    2.064,
+    -0.124,
+    0.936
+   ],
+   "height_above_floor": 1.356,
+   "wall": 0,
+   "along_wall": 1.48,
+   "width": 0.131,
+   "height": 0.098,
+   "views": 30
+  },
+  {
+   "id": "power_socket_1",
+   "cls": "power socket",
+   "position": [
+    0.816,
+    -1.204,
+    -2.299
+   ],
+   "height_above_floor": 0.265,
+   "wall": 0,
+   "along_wall": 4.947,
+   "width": 0.108,
+   "height": 0.106,
+   "views": 65
+  },
+  {
+   "id": "ceiling_light_1",
+   "cls": "ceiling light",
+   "position": [
+    0.525,
+    0.956,
+    3.193
+   ],
+   "height_above_floor": 2.465,
+   "wall": 1,
+   "along_wall": 2.194,
+   "width": 0.126,
+   "height": 0.12,
+   "views": 16
+  },
+  {
+   "id": "ceiling_light_2",
+   "cls": "ceiling light",
+   "position": [
+    -0.725,
+    0.706,
+    -0.006
+   ],
+   "height_above_floor": 2.205,
+   "wall": 2,
+   "along_wall": 3.161,
+   "width": 0.374,
+   "height": 0.394,
+   "views": 146
+  },
+  {
+   "id": "ceiling_light_3",
+   "cls": "ceiling light",
+   "position": [
+    0.795,
+    0.945,
+    -2.298
+   ],
+   "height_above_floor": 2.415,
+   "wall": 0,
+   "along_wall": 4.955,
+   "width": 1.11,
+   "height": 0.265,
+   "views": 21
+  },
+  {
+   "id": "tube_light_1",
+   "cls": "tube light",
+   "position": [
+    2.051,
+    0.951,
+    1.0
+   ],
+   "height_above_floor": 2.431,
+   "wall": 0,
+   "along_wall": 1.425,
+   "width": 1.09,
+   "height": 0.099,
+   "views": 49
+  },
+  {
+   "id": "lamp_1",
+   "cls": "lamp",
+   "position": [
+    0.627,
+    -0.693,
+    -2.271
+   ],
+   "height_above_floor": 0.779,
+   "wall": 0,
+   "along_wall": 4.99,
+   "width": 0.16,
+   "height": 0.366,
+   "views": 78
+  }
+ ],
+ "groups": [
+  {
+   "key": "floor",
+   "url": "floor.spz",
+   "splats": 99241,
+   "color": "#8c5a32",
+   "classes": [
+    "floor"
+   ]
+  },
+  {
+   "key": "ceiling",
+   "url": "ceiling.spz",
+   "splats": 11887,
+   "color": "#ebebeb",
+   "classes": [
+    "ceiling"
+   ]
+  },
+  {
+   "key": "walls",
+   "url": "walls.spz",
+   "splats": 110428,
+   "color": "#78c878",
+   "classes": [
+    "wall_0",
+    "wall_1",
+    "wall_2",
+    "wall_3"
+   ]
+  },
+  {
+   "key": "openings",
+   "url": "openings.spz",
+   "splats": 49067,
+   "color": "#285aff",
+   "classes": [
+    "door",
+    "window"
+   ]
+  },
+  {
+   "key": "electrical",
+   "url": "electrical.spz",
+   "splats": 11869,
+   "color": "#ff00c8",
+   "classes": [
+    "light switch",
+    "power socket",
+    "ceiling light",
+    "tube light",
+    "lamp",
+    "air conditioner",
+    "ceiling fan"
+   ]
+  },
+  {
+   "key": "other",
+   "url": "other.spz",
+   "splats": 322989,
+   "color": "#969696",
+   "classes": [
+    "other"
+   ]
+  }
+ ],
+ "mesh": "mesh.glb"
+}

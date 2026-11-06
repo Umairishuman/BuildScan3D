@@ -2,6 +2,11 @@
 
 End-to-end guide for scanning on the phone, processing on a GPU, and viewing the 3D result.
 
+> **Two pipelines.** This guide covers the phone-upload server (`server/`). It runs the older, simpler
+> pipeline: COLMAP SfM and plain splatfacto. The best results come from the v9/v10 command-line pipeline
+> (`src/arcore3dgs/run_v8.py`, then layout, semantic labelling, mesh and web export). It isn't wired into the
+> server yet. For its commands, timings and current results, see [progress/STATUS.md](progress/STATUS.md).
+
 ---
 
 ## Prerequisites
@@ -20,12 +25,9 @@ cd FYP
 pip install fastapi uvicorn python-multipart requests
 ```
 
-For **local GPU** processing (your partner's machine), also install:
-
-```bash
-pip install nerfstudio==1.1.5 open3d pyquaternion scipy opencv-python-headless plyfile
-# Also install COLMAP: https://colmap.github.io/install.html
-```
+For **local GPU** processing (your partner's machine), also set up the Python environments from the
+README "Quick Start Guide" (`requirements.txt`, `requirements-system.txt`, `requirements-semantic.txt`) and the
+COLMAP 4.2 CUDA build in `tools\colmap_dl\`.
 
 ---
 
@@ -189,7 +191,7 @@ MAX_POD_LIFETIME=7200            # Safety: kill RunPod pod after this many secon
 If your partner has their own NVIDIA GPU:
 
 1. Clone the repo on their machine
-2. Install dependencies: `pip install -r requirements.txt` + COLMAP + Nerfstudio
+2. Install dependencies: the three Python environments from the README "Quick Start Guide", plus COLMAP 4.2 in `tools\colmap_dl\`
 3. Run `scripts\start_server.bat`
 4. In another terminal: `scripts\jobs.bat` → option **7** → pick **local**
 5. Upload from the phone to their server IP
