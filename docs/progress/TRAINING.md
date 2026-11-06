@@ -60,7 +60,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-025 | 2026-11-03 | Semantics v10 | 3070 | 38 min 2D | 15/15 correct, 15/17 found | Kept (D-027) |
 | R-026 | 2026-11-03 | `.ksplat` compression v1 / v2 (Zaid) | not recorded (software rendering) | — | v1 18.4 MB (−88%), v2-A 40.2 MB (−73%) | Branch only (OD-1) |
 | R-027 | 2026-11-06 | Environment setup of this PC (STATUS §7.1 step 1) | this PC (Ubuntu, RTX 4000 Ada) | ~2.5 h | all checks pass; `scripts/setup_linux.sh` | Envs ready; first data run pending |
-| R-028 | 2026-11-06 | First Linux run: Umair's room, full v9 + PGSR → semantics → mesh → web | this PC (Ubuntu, RTX 4000 Ada) | running | — | — |
+| R-028 | 2026-11-06 | First Linux run: Umair's room, full v9 + PGSR → semantics → mesh → web | this PC (Ubuntu, RTX 4000 Ada) | stopped after ~5 min | select / SfM / prior OK on Linux | Abandoned (stopped by Umair) |
 
 ## Runs
 
@@ -340,13 +340,15 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Goal:** STATUS §7.1 step 1h: the whole pipeline runs on Linux (first run on this PC), and the first result on a
   second room and a second phone. Not comparable with R-020 / R-023 (other room); the machine-agreement check on
   newRoomAttemptSadness stays open.
-- **Start → end:** 17:53 → (running)
 - **Errors during the run:**
   1. 17:53 check_capture — `FileNotFoundError: 'ffprobe'` when run with the env's python directly: ffmpeg is in the
      env but only on `PATH` when the env is activated → run through `micromamba run -n bs-system` (resolved: yes;
      `run_full.sh` always uses `micromamba run`).
   2. 17:53 select — `FileNotFoundError: .../scan_056fe94d3399/imu.npz`: `select_sharp.py` loads the IMU cache but nothing
      in `run_v8.py` creates it (on Windows an earlier script had made it for every capture) → `select_sharp.py` now
-     calls `imu.extract_imu()` when the cache is missing; restarted from `select` (resolved: see below).
-- **Result:** (pending)
-- **Verdict:** (pending)
+     calls `imu.extract_imu()` when the cache is missing; restarted from `select` at 17:54 (resolved: yes, select wrote 207 frames).
+- **Start → end:** 17:54 → 18:00, **stopped by Umair** during the dense init (fast_mvs / PatchMatch): he wants to run
+  this dataset himself. Stage times until then (`timing.json`): select 0.1, sfm 1.46, export 0.01, prior 0.75 min;
+  166 of 207 frames went into the priors (aligned median depth error 2.1%).
+- **Result:** none (stopped). Partial outputs left in `dataset/scan_056fe94d3399/work_v9/` and `work_v9_sfm/`.
+- **Verdict:** abandoned (stopped by Umair). His own run gets the next run ID.
