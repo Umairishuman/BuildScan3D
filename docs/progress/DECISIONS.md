@@ -69,6 +69,10 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | D-054 | 2026-11-06 | CI coverage gate lowered 40% → 35% until the tests are written | Active (temporary) |
 | D-055 | 2026-11-06 | Unused 12.5 MB `newroom_v6.spz` out of git, kept locally | Active |
 | D-056 | 2026-11-06 | The GitHub repository stays public | Active |
+| D-057 | 2026-11-06 | Linux upload server: own env `bs-server` + `scripts/start_server.sh`, `dry_run` by default | Active |
+| D-058 | 2026-11-06 | App package name `com.buildscan3d.app` instead of Google's sample name | Active |
+| D-059 | 2026-11-06 | Release APKs signed with a private key kept in GitHub Secrets | Active |
+| D-060 | 2026-11-06 | App fixes ship by PR → merge → CD release | Active |
 
 ---
 
@@ -410,6 +414,37 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **Decision:** `Umairishuman/BuildScan3D` stays public. The RunPod key that commit `00bc021` exposed was revoked by Umair
   the same day; secrets go only in the untracked `.env` (`.env.example` is the template). docs/CI_CD.md no longer
   calls the repo private. Removing the revoked key from history is optional (STATUS §7.1). **By:** Umair.
+
+## D-057 · 2026-11-06 · Linux upload server in its own env, `dry_run` by default
+- **Decision:** on Linux the phone-upload server runs from `scripts/start_server.sh` in a small micromamba env
+  `bs-server` (Python 3.10 + `server/requirements.txt`), not in the pipeline envs; mode defaults to `dry_run`. The
+  server logs each device that connects, uploads while they arrive (progress, cut off), and every failed request.
+- **Why:** Umair asked for a separate small env or venv and for upload / error / device messages in the server
+  terminal. A venv is not possible without sudo (system Python 3.14 has no `ensurepip`).
+- **Rejected / deferred:** a venv (needs `sudo apt install python3-venv`); a pipeline env; Docker for the server
+  (asked by Umair; deferred, Docker is not installed on this PC for now, D-045, STATUS §7.1). **By:** Umair.
+
+## D-058 · 2026-11-06 · App package name `com.buildscan3d.app`
+- **Decision:** the Android `applicationId` changes from Google's sample name `com.google.ar.core.examples.java.helloar`
+  to `com.buildscan3d.app`. The Java package / Gradle `namespace` stay as they are for now (moving the code is part of
+  the D-049 reorganisation).
+- **Why:** Android warns the APK "may be dangerous" on install; an app using Google's own sample package name is
+  a main reason Play Protect flags it. **Cost:** Android sees a new app: the old one must be uninstalled once, which
+  deletes the recordings stored inside it (upload them first). **Rejected:** keeping the name. **By:** Umair.
+
+## D-059 · 2026-11-06 · Release APKs signed with a private key
+- **Decision:** CD signs release APKs with a new private release key, stored only as GitHub Actions secrets (and a
+  backup copy kept by Umair). `.github/android/debug.keystore` (public password) stays for the CI check builds of pull
+  requests only, which are not distributed.
+- **Why:** with the key and its password public in the repository, anyone can sign an APK that installs as an update
+  of ours; a public debug key also adds to Play Protect's warning. **Risk:** losing the key means phones cannot update
+  to new builds (uninstall needed again). **Rejected:** keeping the public key. **By:** Umair.
+
+## D-060 · 2026-11-06 · App fixes ship through PR → merge → CD release
+- **Decision:** the app fixes (server discovery, in-app updates, D-058, D-059) go on `fix/android-app`, through a pull
+  request with CI green, merged into `master`; CD then bumps the version and publishes the APK on GitHub Releases.
+- **Rejected:** also building locally first (would need JDK + Android SDK on this PC); PR only with Umair merging.
+  **By:** Umair.
 
 ## Open decisions (need the team; agents must not decide these)
 
