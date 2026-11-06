@@ -165,10 +165,11 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `test_upload.py` | Manual test: upload a dataset to a running server and poll |
 | `requirements.txt` | Server-only deps (fastapi, uvicorn, ...) |
 
-## 5. `scripts/` (Windows)
+## 5. `scripts/` (Windows `.bat`, plus the Linux setup)
 
 | File | Does |
 |---|---|
+| `setup_linux.sh` | **Linux setup** (no sudo): micromamba, envs `bs-colmap` / `bs-ns` / `bs-system`, `semantic-env`, vocabulary tree, web-ui packages, then checks (GPU, COLMAP, gsplat, Open3D). `--check` = checks only. Same script for the Docker image (D-048) |
 | `run_arcore3dgs.bat` | [v3] pipeline: fallback → prepare → sfm_colmap → export_nerfstudio → ns-train → ns-export |
 | `run_arcore3dgs_legacy.bat` | [legacy] ARCore-pose pipeline: fallback → prepare → ba → relocalize_pnp → ba → mvs → pocket_prior → train.py |
 | `view_splat.bat` | Starts `view.py` (http://localhost:7010) |

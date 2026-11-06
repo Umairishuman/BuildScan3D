@@ -210,19 +210,19 @@ script, step 3 RunPod and the friend's PC.**
 - [x] **[new] 1b. micromamba** in the user's home (no sudo), and set the git identity — done 2026-11-06 (micromamba 2.10.0; Umair set `git config --global user.name/user.email`).
 - [x] **[new] 1b2. GitHub access from this PC** — done 2026-11-06: Umair added an SSH key (`~/.ssh/id_ed25519`), remote switched to `git@github.com:Umairishuman/BuildScan3D.git`, `docs/project-organisation` pushed. Before: no `gh`, no SSH key, no credential helper, so `git push` fails with
       `could not read Username for 'https://github.com'` (2026-11-06). Set up an SSH key (or a personal access token).
-- [ ] **[new] 1c. Three envs mirroring the Windows ones** (timm 0.6.7 for nerfstudio vs timm 1.0.30 for Metric3D, and
+- [x] **[new] 1c. Three envs mirroring the Windows ones** — done 2026-11-06 (`bs-colmap`, `bs-ns`, `bs-system` + `semantic-env`; R-027). (timm 0.6.7 for nerfstudio vs timm 1.0.30 for Metric3D, and
       transformers 4.46.3, can't share one env): system-equivalent, nerfstudio, semantic. Each: Python 3.10, and where
       CUDA code is compiled (gsplat 1.4.0, tiny-cuda-nn) CUDA toolkit 12.1 + gcc 11 from conda; then pip
       `torch==2.1.2+cu121 torchvision==0.16.2+cu121` and the pinned packages; `TORCH_CUDA_ARCH_LIST=8.9` (Ada).
       ffmpeg / ffprobe and Node.js from conda too, so nothing else needs sudo.
-- [ ] **[new] 1d. Linux requirement files:** the Windows `requirements.txt` is a `pip freeze` with Windows-only
+- [x] **[new] 1d. Linux requirement files** — done 2026-11-06 (`envs/linux/`; versions equal to Windows; setuptools < 70 added; tiny-cuda-nn left out, unused). the Windows `requirements.txt` is a `pip freeze` with Windows-only
       packages (`msvc_runtime`, `pywinpty`); make Linux pins (env `.yml` + requirement files) and keep the versions equal.
-- [ ] **[new] 1e. COLMAP ≥ 4.2 with CUDA on Linux** (check whether conda-forge has 4.2 with CUDA, else build from source
+- [x] **[new] 1e. COLMAP ≥ 4.2 with CUDA on Linux** — done 2026-11-06: conda-forge 4.2.0 `cuda_129` + OpenImageIO 3.1; GPU SIFT / matching / vocab tree tested; mapper and PatchMatch wait for real data. (check whether conda-forge has 4.2 with CUDA, else build from source
       in the env) + the faiss vocabulary trees (from the COLMAP 3.11.1 / 3.13.0 releases), as on Windows.
-- [ ] **[new] 1f. Port the Windows-only paths in code:** `run_v8.py` (`nerfstudio-env/Scripts/python.exe`,
+- [ ] **[new] 1f. Port the Windows-only paths in code** — partly done 2026-11-06 on `feature/linux-port`: `toolpaths.py`, `run_v8.py`, `sfm_colmap.py`, `fast_mvs.py`, `mvs_init.py`, `colmap_mvs.py`. Still open: `server/pipeline.py`, `.sh` launchers. `run_v8.py` (`nerfstudio-env/Scripts/python.exe`,
       `ns-export.exe`), `sfm_colmap.py` (`tools/colmap_dl/.../COLMAP.bat`, `tools/cudnn9` DLL path), `server/pipeline.py`;
       the `.bat` launchers need `.sh` equivalents.
-- [ ] **[new] 1g. All of 1b–1f as one script** (`scripts/setup_linux.sh` + env files), so step 2 and the friend's PC reuse it (D-048).
+- [x] **[new] 1g. All of 1b–1f as one script** — done 2026-11-06: `scripts/setup_linux.sh` (+ `--check`); run here OK, fresh-machine run not yet tested. (`scripts/setup_linux.sh` + env files), so step 2 and the friend's PC reuse it (D-048).
 - [ ] **[new] 1h. First run here:** copy `newRoomAttemptSadness` from the RTX 3070 PC, run the v9 pipeline, log it in
       TRAINING.md (every setup and run error), and compare with R-020 / R-023 to confirm the machines agree.
 

@@ -59,7 +59,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-024 | 2026-10-27 | Semantics v9 (`semantic2d` + `semantic3d`), mesh | 3070 | 7–8 min 2D; seconds 3D; 20 s mesh | 15 fixtures, 13 correct | Kept |
 | R-025 | 2026-11-03 | Semantics v10 | 3070 | 38 min 2D | 15/15 correct, 15/17 found | Kept (D-027) |
 | R-026 | 2026-11-03 | `.ksplat` compression v1 / v2 (Zaid) | not recorded (software rendering) | — | v1 18.4 MB (−88%), v2-A 40.2 MB (−73%) | Branch only (OD-1) |
-| R-027 | 2026-11-06 | Environment setup of this PC (STATUS §7.1 step 1) | this PC (Ubuntu, RTX 4000 Ada) | in progress | driver 595.99.02 working | In progress |
+| R-027 | 2026-11-06 | Environment setup of this PC (STATUS §7.1 step 1) | this PC (Ubuntu, RTX 4000 Ada) | ~2.5 h | all checks pass; `scripts/setup_linux.sh` | Envs ready; first data run pending |
 
 ## Runs
 
@@ -316,3 +316,9 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
       empty-mesh bug does not apply here.
   22. Test suite on this PC (throwaway venv on `bs-system`'s Python + `tests/requirements.txt`, run inside `bs-ns` for
       ffmpeg): `pytest` 210 passed, 1 skipped (`test_apk_checks.py:163`, no Java `keytool`); `ruff check .` all checks passed.
+  23. `scripts/setup_linux.sh` written from steps 1–22 and run on this PC (14:54:16 → 14:54:37, exit 0): every step
+      skipped or completed (env update changed no packages, `npm ci` added 383 packages, vocab tree size OK), all checks
+      passed (torch + GPU in bs-ns / bs-system, semantic-env transformers 4.46.3, COLMAP 4.2.0 CUDA, gsplat, Open3D TSDF).
+      **Not yet tested: a run on a fresh machine** (the Docker build or the friend's PC will be the first).
+- **State after 2026-11-06 15:00:** environments ready. Still open in step 1: `server/pipeline.py` and `.sh` versions of the
+  `.bat` launchers (1f), and the first real run (1h, needs Tayyab's dataset).
