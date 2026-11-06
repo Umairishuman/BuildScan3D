@@ -240,6 +240,12 @@ script, step 3 RunPod and the friend's PC.**
       starts at boot, MagicDNS on. Used **only** for Umair's laptop → this PC (the phone uploads over the Wi-Fi).
 - [ ] **[new] Tailscale: Umair's laptop** joins the tailnet and `ssh i230662@gpu-lab-precision-3680` is tested (the
       only other own device, `desktop-hnumpvk`, was last seen 2026-09-30); then VS Code Remote-SSH.
+- [ ] **[new] Tailscale offline on the lab Wi-Fi** (found 2026-11-06 18:02): `tailscale status` says this PC is
+      offline, "Unable to connect to the Tailscale coordination server". UDP / DERP work (netcheck: Singapore 131 ms) and
+      the TLS handshake with `controlplane.tailscale.com` succeeds (Let's Encrypt cert, so no TLS interception), but
+      the HTTPS requests time out / are closed (`tailscaled`: "read tcp 172.15.40.53 → 192.200.0.x:443: use of closed
+      network connection"). It worked earlier on the wired network (172.17.170.120). Likely the lab Wi-Fi cuts these
+      connections. Options: wired network, or ask lab IT whether Tailscale is blocked on the Wi-Fi.
 - [ ] **[new] Tailscale: disable key expiry** for this PC in the admin console (key expires 2027-05-05).
 - [x] **[new] Firewall (`ufw` is active) for phone uploads** — done 2026-11-06 by Umair: TCP 8000 and UDP 8001 (server
       search) allowed on the Wi-Fi card, so they work on the lab Wi-Fi and on the phone's hotspot:
