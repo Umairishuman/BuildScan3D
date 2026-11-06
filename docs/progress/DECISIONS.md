@@ -68,6 +68,7 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | D-053 | 2026-11-06 | This PC: no auto-suspend; remote access by Tailscale (plan) | Active |
 | D-054 | 2026-11-06 | CI coverage gate lowered 40% → 35% until the tests are written | Active (temporary) |
 | D-055 | 2026-11-06 | Unused 12.5 MB `newroom_v6.spz` out of git, kept locally | Active |
+| D-056 | 2026-11-06 | The GitHub repository stays public | Active |
 
 ---
 
@@ -388,7 +389,7 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **Decision:** GNOME auto-suspend on AC turned off (`sleep-inactive-ac-type 'nothing'`; the timeout was already 0 =
   never). Remote access from Umair's laptop by Tailscale (SSH over the tailnet), to be set up with Umair's sudo; long
   runs inside `tmux` / `screen`. Other lab PCs have the same home directory `/home/i230662` when access is given, so the
-  setup can also be copied between them. Remote power-on: **not set up** — Umair has no BIOS access (needed for Wake-on-LAN or Intel AMT); instead the PC is
+  setup can also be copied between them. Screen lock after 5 min idle kept on purpose (lab PC; locking does not stop runs or Tailscale). Remote power-on: **not set up** — Umair has no BIOS access (needed for Wake-on-LAN or Intel AMT); instead the PC is
   left switched on, which Umair asked the lab about (2026-11-06). Options kept in STATUS §7.1. **By:** Umair.
 
 ## D-054 · 2026-11-06 · Coverage gate 40% → 35%, temporarily
@@ -404,6 +405,11 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   history still has it (never-delete rule, D-049).
 - **Why:** CI's 10 MB file limit; the viewer loads `newroom-scan` from the labelled bundle `/scans/newroom/` and never
   read this file. **Rejected:** exempting `public/splats/` from the limit; Git LFS. **By:** Umair.
+
+## D-056 · 2026-11-06 · The repository stays public
+- **Decision:** `Umairishuman/BuildScan3D` stays public. The RunPod key that commit `00bc021` exposed was revoked by Umair
+  the same day; secrets go only in the untracked `.env` (`.env.example` is the template). docs/CI_CD.md no longer
+  calls the repo private. Removing the revoked key from history is optional (STATUS §7.1). **By:** Umair.
 
 ## Open decisions (need the team; agents must not decide these)
 

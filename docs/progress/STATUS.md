@@ -228,7 +228,9 @@ script, step 3 RunPod and the friend's PC.**
 
 **Remote access and moving between lab PCs** (D-053)
 
-- [x] **[new] Auto-suspend off** on this PC (2026-11-06, GNOME `sleep-inactive-ac-type 'nothing'`).
+- [x] **[new] Auto-suspend off** on this PC (2026-11-06, GNOME `sleep-inactive-ac-type 'nothing'`). Checked later the
+      same day: no suspend since boot (journal). The screen still **locks** after 5 min idle (and on Win + L); locking
+      is not sleep, runs and Tailscale continue. Lock kept on purpose (Umair, D-053).
 - [ ] **[new] Login-screen suspend** (applies when nobody is logged in, e.g. after a reboot; needs sudo): GDM's own
       power setting, or `sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target` (lab policy?).
 - [ ] **[new] Tailscale on this PC** (Umair, sudo): install, `sudo tailscale up --ssh`; laptop: `ssh i230662@<name>` /
@@ -264,12 +266,14 @@ script, step 3 RunPod and the friend's PC.**
 
 **Other organisation items**
 
-- [ ] **[new] URGENT: revoke the leaked RunPod API key** (Umair): commit `00bc021` (2026-10-18) committed `.env` with a
+- [x] **[new] Revoke the leaked RunPod API key** — done 2026-11-06 by Umair (the old key no longer works; the new one is
+      only in the local `.env`). History:  commit `00bc021` (2026-10-18) committed `.env` with a
       real `RUNPOD_API_KEY`; untracking it on 2026-10-22 did not remove it from history, and the repository is
       **public**. Revoke it in the RunPod console and make a new one (local `.env` only). Removing it from git history
       as well needs a history rewrite + force-push: to be discussed with the team.
-- [ ] **[new] Repository visibility:** GitHub shows the repo as PUBLIC; docs/CI_CD.md §9 says it is private. Decide
-      which it should be and fix the doc or the setting.
+- [x] **[new] Repository visibility** — stays **public** (Umair, 2026-11-06, D-056); docs/CI_CD.md §9 corrected.
+- [ ] Optional: remove the revoked key from git history (`00bc021`); needs a history rewrite + force-push, team decision.
+      Not urgent now that the key is revoked.
 - [ ] **[new] Raise the coverage gate back to 40%** when the tests are written (D-054; now 35%, measured 37.4%).
 
 - [ ] **[new] Code reorganisation, step 2 of D-049:** regroup `src/arcore3dgs/` by stage (proposal in
