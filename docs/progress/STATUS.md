@@ -208,7 +208,7 @@ script, step 3 RunPod and the friend's PC.**
       check `nvidia-smi` lists the RTX 4000 Ada. Secure Boot is on: if the installer asks for a MOK password, enrol it on
       the blue MOK screen at the next boot, otherwise the driver will not load.
 - [ ] **[new] 1b. micromamba** in the user's home (no sudo), and set the git identity (`git config user.name/user.email`).
-- [ ] **[new] 1b2. GitHub access from this PC:** no `gh`, no SSH key, no credential helper, so `git push` fails with
+- [x] **[new] 1b2. GitHub access from this PC** — done 2026-11-06: Umair added an SSH key (`~/.ssh/id_ed25519`), remote switched to `git@github.com:Umairishuman/BuildScan3D.git`, `docs/project-organisation` pushed. Before: no `gh`, no SSH key, no credential helper, so `git push` fails with
       `could not read Username for 'https://github.com'` (2026-11-06). Set up an SSH key (or a personal access token).
 - [ ] **[new] 1c. Three envs mirroring the Windows ones** (timm 0.6.7 for nerfstudio vs timm 1.0.30 for Metric3D, and
       transformers 4.46.3, can't share one env): system-equivalent, nerfstudio, semantic. Each: Python 3.10, and where
