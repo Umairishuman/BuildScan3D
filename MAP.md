@@ -20,6 +20,7 @@ diagnostics · [v3] = the older SfM pipeline the server still runs · [legacy] =
 | Trained 3D models (results) | not in git: `saved_models/`, `dataset/<capture>/work_*` | 9 |
 | Phone-upload server | `server/` (start: `scripts/start_server.sh`) | 4, 5 |
 | Web dashboard + 3D viewer | `prototype/web-ui/` | 7 |
+| **How to run the full pipeline** | [docs/RUN_PIPELINE.md](docs/RUN_PIPELINE.md) | 8 |
 | Launch / setup scripts | `scripts/` | 5 |
 | Python environments | `envs/linux/` (Linux), `requirements*.txt` (Windows) | 1 |
 | Tests | `tests/` | 11 |
@@ -187,6 +188,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does |
 |---|---|
+| `run_full.sh` | **Linux: the whole pipeline in one command**, recording → 3DGS → layout → semantics → mesh → web bundle, each stage in its env; `--from <stage>` restarts; prints GPU use / temperature / training progress every 30 s (`gpu.csv`). Guide: [docs/RUN_PIPELINE.md](docs/RUN_PIPELINE.md) |
 | `setup_linux.sh` | **Linux setup** (no sudo): micromamba, envs `bs-colmap` / `bs-ns` / `bs-system`, `semantic-env`, vocabulary tree, web-ui packages, then checks (GPU, COLMAP, gsplat, Open3D). `--check` = checks only. Same script for the Docker image (D-048) |
 | `run_arcore3dgs.bat` | [v3] pipeline: fallback → prepare → sfm_colmap → export_nerfstudio → ns-train → ns-export |
 | `run_arcore3dgs_legacy.bat` | [legacy] ARCore-pose pipeline: fallback → prepare → ba → relocalize_pnp → ba → mvs → pocket_prior → train.py |
@@ -263,6 +265,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `progress/Research_Notes_2026-10-24.md` | Literature behind v8/v9 |
 | `progress/archive/` | Retired files (old TODO, Training_Analysis, early notes) |
 | `Flow.md` | System flow app → server → GPU → model |
+| `RUN_PIPELINE.md` | **How to run the full pipeline on Linux** (`scripts/run_full.sh`): setup, upload, check, run, watch, restart, results, known problems |
 | `PROCESSING_GUIDE.md` | Using the phone-upload server and job manager |
 | `CI_CD.md` | What CI/CD checks and how to run it locally |
 | `proposal/` | Proposal v1–v4 (+ unversioned copy), defence slides, guidelines, POC plans, workflow docs |
