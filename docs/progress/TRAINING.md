@@ -61,7 +61,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-026 | 2026-11-03 | `.ksplat` compression v1 / v2 (Zaid) | not recorded (software rendering) | — | v1 18.4 MB (−88%), v2-A 40.2 MB (−73%) | Branch only (OD-1) |
 | R-027 | 2026-11-06 | Environment setup of this PC (STATUS §7.1 step 1) | this PC (Ubuntu, RTX 4000 Ada) | ~2.5 h | all checks pass; `scripts/setup_linux.sh` | Envs ready; first data run pending |
 | R-028 | 2026-11-06 | First Linux run: Umair's room, full v9 + PGSR → semantics → mesh → web | this PC (Ubuntu, RTX 4000 Ada) | stopped after ~5 min | select / SfM / prior OK on Linux | Abandoned (stopped by Umair) |
-| R-029 | 2026-11-06 | Umair's own run of the same recording, full pipeline (`--tag umair`) | this PC (Ubuntu, RTX 4000 Ada) | running | — | — |
+| R-029 | 2026-11-06 | Umair's own run of the same recording, full pipeline (`--tag umair`) | this PC (Ubuntu, RTX 4000 Ada) | 34.7 min | **first complete run on Linux**; corridor end, 0 fixtures, 1 wall | Kept as pipeline test (scene not a room) |
 
 ## Runs
 
@@ -362,7 +362,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Command(s):** `scripts/run_full.sh dataset/scan_056fe94d3399 umair -- --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
   (same recipe as R-028; new tag so the outputs do not mix with R-028's partial ones).
 - **Goal:** as R-028: first complete run on Linux, second room, second phone.
-- **Start → end:** 18:01 → (running). Stage times so far (`timing.json`, min): select 0.09 (207 frames), sfm 1.49
+- **Start → end:** 18:01 → 18:35:54 (34.7 min). Stage times so far (`timing.json`, min): select 0.09 (207 frames), sfm 1.49
   (174 / 207 cameras registered; Sim3 to ARCore from 174 cameras, scale 0.24571), export 0.01, prior 0.75, init 2.05
   (PatchMatch 2.0 min, 13,622 fused + 4,905 SfM points → 17,592 at 1 cm); train from 18:05, 15,000 steps, at 18:29
   step 13,980 (93%), GPU 97%, 4.6 / 20 GB, 76 °C, 101 W.
@@ -374,5 +374,19 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   (2 s): 68 flat of 119 planar regions from 29 frames, rendered-plane rms median 4.5 cm; floor y −2.988, ceiling y
   1.204 → **room height 4.193 m**; 11 vertical plane clusters → **only 1 wall, 0.873 m long, 0 corners**. Looks wrong
   (to compare with the real room; likely the 46 s capture saw too little wall). sem2d running on 87 frames.
-- **Result:** (pending)
-- **Verdict:** (pending)
+  **Scene (Umair, 18:40):** the end of a corridor, poor lighting, recorded only to test the pipeline, so one short wall
+  and a tall space are plausible; the room-oriented layout / semantics rules do not fit a corridor end.
+- **Stage times after the 3DGS** (`stages.tsv`, min): layout 0.0 (2 s), sem2d 2.8 (87 frames), sem3d 0.1, verify 0.1,
+  sem3d2 0.1, mesh 0.1, meshlabels 0.4, web 0.1. No errors in these stages.
+- **Result:** `dataset/scan_056fe94d3399/work_umair_sfm/gs_umair/` (`splat.ply` 121 MB, `layout/`, `semantic_v10/`,
+  `mesh/`), web bundle `prototype/web-ui/public/scans/scan_056fe94d3399_umair/` (18.0 MB).
+  Semantics: floor plane tilt 0.28°, residual 6.9 cm; ceiling fit rejected, set at the layout height 4.177 m;
+  **0 fixtures accepted, 61 rejected**; CLIP check: 1 of 4 rejected candidates kept (light switch, p 0.52 "an
+  electrical outlet"), 3 dropped (sticker / paper label, picture frame); Gaussians per class: other 449,883, floor
+  8,639, ceiling 28,082, wall_0 584. Mesh: 1,568,501 triangles → 1,430,921 after removing small pieces; areas (m²):
+  other 95.19, floor 12.79, ceiling 3.02, wall 0.09; `mesh_web.glb` 400k triangles 8.5 MB. Model quality not
+  measured (no held-out split, no tape measurements).
+- **Verdict:** kept as a **pipeline test**: the whole v9 / v10 pipeline ran end to end on Linux for the first time
+  (34.7 min on the RTX 4000 Ada; 207 selected frames, so not comparable with the 96 + 40 min of R-020 / R-025 on
+  1165 frames). Scene results are not meaningful (corridor end, poor light, 46 s). STATUS §7.1 1h: Linux run done; the
+  machine-agreement check on newRoomAttemptSadness stays open.
