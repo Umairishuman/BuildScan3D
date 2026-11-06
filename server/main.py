@@ -82,11 +82,14 @@ class UploadProgressLogger:
 
 
 class ErrorLogger:
-    """ASGI middleware: logs every request that fails (status >= 400 or a crash) with the client, the path and the
-    reason the server sent back, so an app-side failure is visible in the server terminal."""
+    """ASGI middleware: logs when a device first talks to the server (or comes back after 5 min of silence), and
+    every request that fails (status >= 400 or a crash) with the client, the path and the reason the server sent
+    back, so an app-side failure is visible in the server terminal."""
 
-    def __init__(self, app):
+    def __init__(self, app, quiet_s: float = 300.0):
         self.app = app
+        self.quiet_s = quiet_s
+        self.seen: dict[str, float] = {}
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
@@ -94,6 +97,13 @@ class ErrorLogger:
         client = (scope.get("client") or ("?",))[0]
         what = f"{scope['method']} {scope['path']} from {client}"
         state = {"status": 0, "body": b""}
+        now = time.monotonic()
+        last = self.seen.get(client)
+        if last is None or now - last > self.quiet_s:
+            ua = dict(scope.get("headers") or []).get(b"user-agent", b"?").decode("utf-8", "replace")
+            log.info("DEVICE %s %s (%s, first request: %s %s)", client,
+                     "connected" if last is None else "back after a pause", ua, scope["method"], scope["path"])
+        self.seen[client] = now
 
         async def logged_send(msg):
             if msg["type"] == "http.response.start":
