@@ -158,3 +158,14 @@ Template:
   reorganisation; never delete, archive), D-050 (MAP.md first).
 - Next: Umair installs the NVIDIA driver (`sudo ubuntu-drivers install nvidia-driver-595-open`, reboot, `nvidia-smi`);
   then micromamba, the envs and `scripts/setup_linux.sh` (STATUS §7.1 1b–1h).
+
+## 2026-11-06 (third session) · Umair · `feature/linux-port`
+- Did: this PC set up (R-027, ~2.5 h): driver, micromamba, envs `bs-colmap` / `bs-ns` / `bs-system`, `semantic-env`,
+  model weights, vocabulary tree; gsplat compiled; tests pass. Code port (`toolpaths.py`, `run_v8.py` and the COLMAP
+  scripts) and `scripts/setup_linux.sh`. Auto-suspend off; `gh` installed in `~/.local/bin`.
+- Decisions: D-051 (merge everything into `master` by PR; Tayyab informed), D-052 (delete only fully merged branches),
+  D-053 (PC stays awake; Tailscale remote access).
+- Problems: stalled conda download, COLMAP's undeclared OpenImageIO, setuptools too new, gsplat needing the activated
+  env — all in R-027.
+- Next: Umair runs `gh auth login`; PR → CI → merge → delete merged branches. Then Tailscale (sudo), the server port,
+  and the first run when Tayyab's data arrives.

@@ -63,6 +63,9 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | D-048 | 2026-11-06 | One setup script for this PC, the friend's PC and the Docker image | Active |
 | D-049 | 2026-11-06 | Reorganise in two steps; never delete files, archive them | Active |
 | D-050 | 2026-11-06 | `MAP.md` is the first file every session reads | Active |
+| D-051 | 2026-11-06 | Merge `feature/semantics-mesh` + organisation + Linux port into `master` by PR | Active |
+| D-052 | 2026-11-06 | Delete only fully merged branches, never unmerged ones | Active |
+| D-053 | 2026-11-06 | This PC: no auto-suspend; remote access by Tailscale (plan) | Active |
 
 ---
 
@@ -368,13 +371,30 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 
 ---
 
+## D-051 · 2026-11-06 · Merge the v9/v10 work and the organisation into `master`
+- **Decision:** one PR from `feature/linux-port` into `master`, which brings in `feature/semantics-mesh` (Tayyab's v9 + v10,
+  5 commits), `docs/project-organisation` and the Linux port (22 commits, no conflicts: none of the branches is behind
+  `master`). Merge method: merge commit, so every small commit stays revertible. CI must pass first (CLAUDE.md §4).
+- **Why:** `master` (2026-10-23) had neither v9 nor v10 nor the new records. Settles OD-3. **By:** Umair; Tayyab informed.
+
+## D-052 · 2026-11-06 · Delete only fully merged branches
+- **Decision:** after the merge, delete the branches whose every commit is in `master` (local and on GitHub); never a
+  branch with unmerged commits (Zaid's `feat/splat-compress` and `exp/trainer-arkitscenes` stay). Deleting a merged
+  branch loses nothing: its commits live in `master`. **By:** Umair.
+
+## D-053 · 2026-11-06 · This PC stays awake; remote access by Tailscale
+- **Decision:** GNOME auto-suspend on AC turned off (`sleep-inactive-ac-type 'nothing'`; the timeout was already 0 =
+  never). Remote access from Umair's laptop by Tailscale (SSH over the tailnet), to be set up with Umair's sudo; long
+  runs inside `tmux` / `screen`. Other lab PCs have the same home directory `/home/i230662` when access is given, so the
+  setup can also be copied between them. Remote power-on: Wake-on-LAN or Intel AMT, see STATUS §7.1. **By:** Umair.
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |
 |---|---|---|
 | OD-1 | `.spz` (in the viewer now) or `.ksplat` (proposal, Zaid's `feat/splat-compress`)? | `.spz` 148 → 12.5 MB; `.ksplat` v2-A 40 MB visually lossless, v1 18 MB with a small loss |
 | OD-2 | Keep the FastAPI + thread server, or build the proposal's Redis / Node queue (FR4)? | Proposal CCP claim 5 ("beyond standard practice") cites the queue |
-| OD-3 | When to merge `feature/semantics-mesh` into `master`? | `master` lacks v9 and v10 |
+| ~~OD-3~~ | ~~When to merge `feature/semantics-mesh` into `master`?~~ | Settled by D-051 (2026-11-06) |
 | OD-4 | Merge, keep or close `origin/feat/splat-compress` and `origin/exp/trainer-arkitscenes`? | Both by Zaid, unmerged |
 | OD-5 | Re-implement any of the app overlay features reverted on 2026-10-23? | Notes in archive/TODO.md; the patch is lost |
 | OD-6 | Should the v9 pipeline use the IMU fallback (the stated novelty)? | SfM now registers 1165/1166 frames on newRoom |

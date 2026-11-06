@@ -169,7 +169,7 @@ The goal is that the full pipeline runs the same way on three places: **this PC,
 | Machine | Hardware / OS | State (2026-11-06) |
 |---|---|---|
 | RTX 3070 PC | Windows, RTX 3070 8 GB VRAM, 16 GB RAM | Every run so far. Holds `dataset/`, `saved_models/`, `tools/colmap_dl/` (COLMAP 4.2 CUDA), `tools/cudnn9/`, the three envs (all gitignored) |
-| This PC (`gpu-lab-Precision-3680`) | Ubuntu 26.04.1 LTS (kernel 7.0.0-43), NVIDIA RTX 4000 Ada (20 GB), 28 threads, 30 GB RAM, 366 GB free | Setup in progress (R-027). **NVIDIA driver 595.99.02 working** (installed 2026-11-06, was `nouveau`), Secure Boot enabled; micromamba 2.10.0 in `~/.local/bin`; conda envs `bs-colmap` (COLMAP 4.2.0 CUDA, starts), `bs-ns` (Python 3.10, CUDA 12.1, gcc 11.4, Node 22, ffmpeg) and `bs-system` (Python 3.10, ffmpeg) built 2026-11-06; pip packages not installed yet. Still missing system-wide (by design, provided by the envs): no gcc / make / cmake / ninja, no ffmpeg / ffprobe, no Node.js, no Docker, no COLMAP, no conda; system Python 3.14.4 only (torch 2.1.2 needs ≤ 3.11); `sudo` needs Umair's password; git identity configured and GitHub over SSH (2026-11-06); no datasets or models |
+| This PC (`gpu-lab-Precision-3680`) | Ubuntu 26.04.1 LTS (kernel 7.0.0-43), NVIDIA RTX 4000 Ada (20 GB), 28 threads, 30 GB RAM, 366 GB free | Setup in progress (R-027). **NVIDIA driver 595.99.02 working** (installed 2026-11-06, was `nouveau`), Secure Boot enabled; micromamba 2.10.0 in `~/.local/bin`; conda envs `bs-colmap` (COLMAP 4.2.0 CUDA, starts), `bs-ns` (Python 3.10, CUDA 12.1, gcc 11.4, Node 22, ffmpeg) and `bs-system` (Python 3.10, ffmpeg) built 2026-11-06; pip packages not installed yet. Still missing system-wide (by design, provided by the envs): no gcc / make / cmake / ninja, no ffmpeg / ffprobe, no Node.js, no Docker, no COLMAP, no conda; system Python 3.14.4 only (torch 2.1.2 needs ≤ 3.11); `sudo` needs Umair's password; git identity configured and GitHub over SSH, `gh` 2.103.3 in `~/.local/bin`, auto-suspend off (2026-11-06); no Tailscale / SSH server yet; no datasets or models |
 | Friend's PC | Not recorded yet | Fill in: owner, GPU, OS, what is installed |
 | RunPod | On-demand pod (default "RTX 4090"; an earlier commit set RTX 3090), image `umairishuman/buildscan-gpu:latest` | Integrated in `server/`, works poorly per the user; no recorded end-to-end run |
 
@@ -225,6 +225,23 @@ script, step 3 RunPod and the friend's PC.**
 - [x] **[new] 1g. All of 1b–1f as one script** — done 2026-11-06: `scripts/setup_linux.sh` (+ `--check`); run here OK, fresh-machine run not yet tested. (`scripts/setup_linux.sh` + env files), so step 2 and the friend's PC reuse it (D-048).
 - [ ] **[new] 1h. First run here:** copy `newRoomAttemptSadness` from the RTX 3070 PC, run the v9 pipeline, log it in
       TRAINING.md (every setup and run error), and compare with R-020 / R-023 to confirm the machines agree.
+
+**Remote access and moving between lab PCs** (D-053)
+
+- [x] **[new] Auto-suspend off** on this PC (2026-11-06, GNOME `sleep-inactive-ac-type 'nothing'`).
+- [ ] **[new] Login-screen suspend** (applies when nobody is logged in, e.g. after a reboot; needs sudo): GDM's own
+      power setting, or `sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target` (lab policy?).
+- [ ] **[new] Tailscale on this PC** (Umair, sudo): install, `sudo tailscale up --ssh`; laptop: `ssh i230662@<name>` /
+      VS Code Remote-SSH; long runs in `tmux` / `screen`. Check the lab allows it.
+- [ ] **[new] Remote power-on** (open): wired NIC `enp0s31f6` (Intel I219-LM, MAC `ac:b4:80:3b:91:2e`, LAN
+      172.17.170.120/24) has device wake-up enabled; Wake-on-LAN also needs the BIOS setting and `sudo ethtool -s
+      enp0s31f6 wol g`, plus an always-on device **on the same LAN** to send the packet (WoL does not cross Tailscale).
+      Alternatives: Intel AMT (Intel ME present; needs lab provisioning), BIOS "Auto On" schedule, or asking the lab to
+      keep it on.
+- [ ] **[new] Moving to another lab PC** (same `/home/i230662`): run `scripts/setup_linux.sh` (needs the driver first), or
+      copy `~/micromamba`, `~/.local/bin`, the model caches and the repo extras with `rsync` (~27 GB, works because the
+      path is the same); then `setup_linux.sh --check`. Data (datasets, saved models) is copied either way; where its
+      master copy lives is still open. Proposed: `scripts/sync_to_pc.sh` + a new-PC checklist.
 
 **Step 2: rebuild the Docker image** (after step 1 works)
 
