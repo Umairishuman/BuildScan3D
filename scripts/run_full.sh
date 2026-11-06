@@ -15,6 +15,8 @@
 #   verify                                   verify_fixtures.py, CLIP check    (semantic-env)
 #   sem3d2                                   semantic3d.py again with verdicts (bs-ns)
 #   mesh meshlabels web                      mesh.py, mesh_labels.py, export_web.py (bs-ns; Node for .spz)
+# Every GPU_EVERY seconds (default 30) a status line shows GPU use, memory, temperature, power and, while training,
+# the step and time left (training itself writes only to train.log); also saved to gpu.csv. GPU_EVERY=0 turns it off.
 # A run that dies in training continues with: --from train (geo_splatfacto checkpoints every 2500 steps; see R-023
 # for --resume). Output: <dataset>/work_<tag>_sfm/gs_<tag>/ (+ run_full.log, stages.tsv), web bundle in
 # prototype/web-ui/public/scans/<capture>_<tag>/.
@@ -49,6 +51,28 @@ echo "    run_v8 args: ${V8_ARGS[*]:-(none)}"
 
 ns()  { "$MM" run -n bs-ns python -u -W ignore "$@"; }
 sem() { "$MM" run -n bs-system "$ROOT/semantic-env/bin/python" -u -W ignore "$@"; }
+
+gpu_monitor() {   # one status line every GPU_EVERY s: GPU use / memory / temperature / power (+ training step)
+  local every=${GPU_EVERY:-30} q u mu mt t p tr warn
+  [[ -f "$M/gpu.csv" ]] || echo "time,util_pct,mem_used_mib,mem_total_mib,temp_c,power_w" > "$M/gpu.csv"
+  while sleep "$every"; do
+    q=$(nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw \
+        --format=csv,noheader,nounits 2>/dev/null | head -1) || continue
+    IFS=', ' read -r u mu mt t p <<< "$q"
+    echo "$(date '+%F %T'),$u,$mu,$mt,$t,$p" >> "$M/gpu.csv"
+    tr=""
+    if [[ -n "$(find "$M/train.log" -mmin -1 2>/dev/null)" ]]; then   # training is writing its log
+      tr=$(tail -c 4000 "$M/train.log" | tr '\r' '\n' | grep -aE '^[0-9]+ \([0-9.]+%\)' | tail -1 |
+           awk '{printf " | train step %s %s, ETA %s %s %s %s", $1, $2, $5, $6, $7, $8}')
+    fi
+    warn=""; [[ "${t:-0}" =~ ^[0-9]+$ && $t -ge 85 ]] && warn="  << HOT"
+    printf '  [gpu %s] %s%% | %s / %s MiB | %s C | %s W%s%s\n' "$(date '+%T')" "$u" "$mu" "$mt" "$t" "${p%.*}" "$tr" "$warn"
+  done
+}
+if [[ "${GPU_EVERY:-30}" != 0 ]]; then
+  gpu_monitor & MON=$!
+  trap 'kill $MON 2>/dev/null' EXIT
+fi
 
 stage() {   # stage <name> <command...>: skipped before --from, timed, recorded in stages.tsv
   local name=$1; shift
