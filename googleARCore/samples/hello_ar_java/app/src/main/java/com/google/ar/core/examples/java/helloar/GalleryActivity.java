@@ -215,6 +215,11 @@ public class GalleryActivity extends AppCompatActivity {
         addFilePart(builder, "points", new File(dir, "points.csv"), "text/csv");
         addFilePart(builder, "quality", new File(dir, "quality.csv"), "text/csv");
         addFilePart(builder, "meta", new File(dir, "meta.json"), "application/json");
+        // sensor metadata (exposure, rolling shutter), re-anchor log, lens calibration: optional, sent when recorded
+        addFilePart(builder, "camera", new File(dir, "camera.csv"), "text/csv");
+        addFilePart(builder, "anchors", new File(dir, "anchors.csv"), "text/csv");
+        addFilePart(builder, "lens_metadata", new File(dir, "lens_metadata.json"), "application/json");
+        addFilePart(builder, "camera_characteristics", new File(dir, "camera_characteristics.json"), "application/json");
 
         if (depthZip != null && depthZip.exists()) {
           addFilePart(builder, "depth_zip", depthZip, "application/zip");

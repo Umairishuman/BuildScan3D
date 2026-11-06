@@ -108,6 +108,24 @@ def test_upload_unpacks_the_optional_depth_zip(api):
     assert not (folder / "depth.zip").exists()                      # the archive is removed after unpacking
 
 
+def test_upload_saves_the_optional_sensor_and_lens_files(api):
+    extra = {"camera": ("camera.csv", b"timestamp_ns,exposure_ns\n1,22000000\n"),
+             "anchors": ("anchors.csv", b"timestamp_ns,anchor_id\n"),
+             "lens_metadata": ("lens_metadata.json", b"{}"),
+             "camera_characteristics": ("camera_characteristics.json", b"{}")}
+    job_id = upload(api, files=dict(FILES, **extra)).json()["job_id"]
+    folder = api.root / "dataset" / f"scan_{job_id}"
+    assert (folder / "camera.csv").read_bytes().endswith(b"22000000\n")
+    for name in ("anchors.csv", "lens_metadata.json", "camera_characteristics.json"):
+        assert (folder / name).exists()
+
+
+def test_upload_from_an_older_app_without_the_optional_files_still_works(api):
+    job_id = upload(api).json()["job_id"]
+    folder = api.root / "dataset" / f"scan_{job_id}"
+    assert (folder / "poses.csv").exists() and not (folder / "camera.csv").exists()
+
+
 def test_upload_with_a_corrupt_depth_zip_fails_cleanly(api):
     files = dict(FILES, depth_zip=("depth.zip", b"this is not a zip"))
     r = upload(api, files=files)
