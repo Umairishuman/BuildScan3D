@@ -124,7 +124,7 @@ case "$cmd" in
   datasets)
     for d in $(ls -td dataset/*/ 2>/dev/null); do
       d=${d%/}
-      runs=$(ls -d "$d"/work_*_sfm/gs_* 2>/dev/null | sed 's|.*/gs_||' | tr '\n' ' ')
+      runs=$(ls -d "$d"/work_*_sfm/gs_* 2>/dev/null | sed 's|.*/gs_||' | tr '\n' ' ' || true)
       printf '%-32s %6s  %s  runs: %s\n' "$(basename "$d")" "$(du -sh "$d" 2>/dev/null | cut -f1)" \
         "$(date -r "$d" '+%F %H:%M')" "${runs:-none}"
     done ;;
