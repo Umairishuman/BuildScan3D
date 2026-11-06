@@ -19,3 +19,6 @@
 ## 4. Git & Commit Conventions
 - **No AI attribution in commits.** Do NOT add `Co-Authored-By: Claude ...`, `Generated with Claude Code`, or any similar AI attribution trailer to commit messages or pull request descriptions. Commits are authored by the student team only.
 - This applies to every commit and PR in this repository, with no exceptions.
+
+## 5. Project Records & Team Workflow
+- **Read [CLAUDE.md](CLAUDE.md)** before working. It applies to every agent, not only Claude: the project records in `docs/progress/` (STATUS, DECISIONS, LOG, TRAINING), when and how to write to them, the git workflow, and each team member's preferences.
