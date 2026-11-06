@@ -2,12 +2,30 @@
 
 **What is where, and what each file does.** Read this first in a new session (human or agent), then
 [CLAUDE.md](CLAUDE.md) (how we work) and [docs/progress/STATUS.md](docs/progress/STATUS.md) (where the project stands).
-Last checked against the code: 2026-11-06 (branch `docs/project-organisation`, off `feature/semantics-mesh`).
+Last checked against the code: 2026-11-06 (branch `exp/first-linux-run`; quick finder §0 and app UI files §6 added).
 When you add, move, retire or repurpose a file, update this map in the same commit.
 
 Markers: **[v9]** = part of the current best pipeline (v9 processing + v10 semantics) · [eval] = evaluation /
 diagnostics · [v3] = the older SfM pipeline the server still runs · [legacy] = the ARCore-pose pipeline from before
 2026-10-11, kept for the record · [exp] = experiment, not used by any pipeline · [dead] = backup copy, unused.
+
+## 0. Where is ...? (quick finder)
+
+| Looking for | Folder | Section |
+|---|---|---|
+| **Mobile app UI** (screens, buttons, menus, texts) | `googleARCore/samples/hello_ar_java/app/src/main/` → screens in `java/.../helloar/*Activity.java`, layouts in `res/layout/`, menu in `res/menu/`, texts in `res/values/strings.xml` | 6 |
+| Mobile app logic (recording, IQA, coverage, upload, updates) | same `java/.../helloar/` folder | 6 |
+| Reconstruction pipeline + "models" code (SfM, priors, 3DGS training, semantics, mesh) | `src/arcore3dgs/` | 2, 3 |
+| AI model weights (Metric3D, Grounding DINO, SAM, CLIP) | not in git: `~/.cache/torch/hub`, `~/.cache/huggingface` (downloaded on first use) | 9 |
+| Trained 3D models (results) | not in git: `saved_models/`, `dataset/<capture>/work_*` | 9 |
+| Phone-upload server | `server/` (start: `scripts/start_server.sh`) | 4, 5 |
+| Web dashboard + 3D viewer | `prototype/web-ui/` | 7 |
+| Launch / setup scripts | `scripts/` | 5 |
+| Python environments | `envs/linux/` (Linux), `requirements*.txt` (Windows) | 1 |
+| Tests | `tests/` | 11 |
+| CI/CD (GitHub Actions) and APK checks | `.github/` | 11 |
+| Project records (status, decisions, log, runs) | `docs/progress/` | 8 |
+| Reports for evaluations | `report/` | 1 |
 
 ## 1. Top level
 
@@ -196,6 +214,25 @@ Our code is in `app/src/main/java/com/google/ar/core/examples/java/helloar/`:
 | `GalleryActivity.java`, `ScanDetailActivity.java` | List of recordings and their details |
 | `UpdateChecker.java` | Update check against GitHub Releases at start and from the menu ("Check for updates"); downloads the APK in the app and opens Android's installer (FileProvider `res/xml/update_paths.xml`) |
 
+**App UI files** (`app/src/main/`):
+
+| File | Screen / use |
+|---|---|
+| `res/layout/activity_main.xml` | Main AR screen (`HelloArActivity`): camera view, record button, IQA / coverage text, gallery and menu buttons |
+| `res/layout/activity_gallery.xml`, `res/layout/item_scan.xml` | Recordings list (`GalleryActivity`) and one row of it |
+| `res/layout/activity_scan_detail.xml` | One recording's details (`ScanDetailActivity`) |
+| `res/layout/activity_processing.xml` | Upload & processing status (`ProcessingActivity`) |
+| `res/menu/settings_menu.xml` | ⋮ menu: camera, depth, Server URL, Check for updates |
+| `res/values/strings.xml`, `styles.xml` | Texts and theme; `res/drawable/bg_record_*.xml` record-button looks |
+| `res/xml/update_paths.xml` | Folder shared with the installer for in-app updates |
+| `java/com/google/ar/core/examples/java/common/` | Google's helpers (rendering, camera permission, display rotation, ...), unchanged sample code |
+| `assets/models/`, `assets/shaders/` | Google's sample 3D models and shaders for the AR rendering |
+| `AndroidManifest.xml` | Screens, permissions, update file provider |
+
+**Known gap (2026-11-06):** the app records `camera.csv`, `anchors.csv`, `lens_metadata.json` and
+`camera_characteristics.json`, but the upload (`GalleryActivity` / `ProcessingActivity`) does not send them, so
+server uploads lack them (STATUS §7.7).
+
 The other `googleARCore/samples/*` folders, `libraries/`, `assets/`, `media/` are Google's and unused. Build: Android
 Studio or `./gradlew assembleDebug` with JDK 21 (STATUS §7.7).
 
@@ -244,6 +281,26 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `saved_models/YYYY-MM-DD_<tag>/` | Kept models with a `README.txt` (best: `2026-10-27_v9_semantic_pgsr/`) |
 | `tools/colmap_dl/`, `tools/cudnn9/` | COLMAP 4.2 CUDA for Windows + vocabulary trees; cuDNN 9 DLLs |
 | `nerfstudio-env/`, `semantic-env/` | Python venvs (Windows) |
+
+## 10a. Tests, CI and other folders
+
+| Path | What |
+|---|---|
+| `tests/conftest.py` | Shared fixtures (synthetic captures) |
+| `tests/test_common_*.py`, `test_imu.py`, `test_fallback.py`, `test_relocalize_and_sfm.py` | Pipeline maths: capture loading, poses, IMU, fallback, SfM helpers |
+| `tests/test_process_dataset.py` | First-prototype script |
+| `tests/test_server_api.py`, `test_server_pipeline.py`, `test_runpod_client.py` | Upload server, local runner, RunPod client |
+| `tests/test_apk_checks.py` | APK / manifest checker and signing keys |
+| `tests/test_sources_compile.py` | Every Python file compiles |
+| `tests/requirements.txt` | Light test dependencies (no GPU) |
+| `.github/workflows/ci.yml` | CI: lint, tests (Python 3.10–3.12), web build, Android debug + release build, repo hygiene |
+| `.github/workflows/cd.yml` | CD on `master`: version bump, release APK signed with the private key (D-059), GitHub Release |
+| `.github/workflows/docker-gpu.yml` | Builds / pushes the RunPod GPU image |
+| `.github/android/` | `check_apk.py` + `apk_expectations.json` (what a correct APK looks like), `debug.keystore` (CI builds only) |
+| `envs/linux/` | Linux env files (section 1) |
+| `docker/` | `Dockerfile.gpu` (out of date, STATUS §6) |
+| `report/mid-eval/` | FYP-1 mid evaluation: LaTeX report, fix notes (frozen) |
+| `UI designs/`, `.vscode/`, `scratch/` | Design images, editor settings, old one-off scripts (section 1) |
 
 ## 10. Reorganisation plan (agreed 2026-11-06, DECISIONS D-049)
 
