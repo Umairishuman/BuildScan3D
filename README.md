@@ -79,7 +79,9 @@ d:/FYP/
 │   └── Web designs.png                      # Dark theme & HUD reference layouts
 │
 ├── .gitignore                               # Git ignored files (datasets, build caches, checkpoints)
-├── requirements.txt                         # Python dependencies (PyTorch, Metric3D, Open3D, gsplat)
+├── requirements.txt                         # nerfstudio-env: training, mesh, layout, semantic3d, viewer
+├── requirements-system.txt                  # system Python: pipeline driver, COLMAP wrappers, Metric3D
+├── requirements-semantic.txt                # semantic-env: Grounding DINO + SAM, CLIP crop check
 └── README.md                                # Repository documentation and setup guide
 ```
 
@@ -90,23 +92,36 @@ d:/FYP/
 ### 1. Python ML & Depth Fusion Pipeline Setup
 
 #### Prerequisites:
-- **Python 3.10 or 3.11**
-- **NVIDIA GPU** with CUDA 11.8 or 12.1
+- **Python 3.10** (the system install, plus two venvs)
+- **NVIDIA GPU** with CUDA 12.1
 - **Git** with Long Paths enabled (required on Windows)
+- **COLMAP 4.2** CUDA build unpacked in `tools\colmap_dl\`, and **Node.js** for the web export
+
+The pipeline uses three Python environments:
+
+| Environment | Requirements file | Runs |
+|---|---|---|
+| System Python 3.10 | `requirements-system.txt` | `run_v8.py`, the COLMAP wrappers, Metric3D (`mono_prior.py`) |
+| `nerfstudio-env` | `requirements.txt` | Training, layout, mesh, `semantic3d.py`, `export_web.py`, viewer |
+| `semantic-env` | `requirements-semantic.txt` | `semantic2d.py` and `verify_fixtures.py` (Grounding DINO, SAM, CLIP) |
 
 ```powershell
 # 1. Enable long path support in Git (prevents MAX_PATH errors on Windows)
 git config --global core.longpaths true
 
-# 2. Create and activate a virtual environment
-python -m venv venv
-.\venv\Scripts\Activate.ps1
+# 2. System Python: pipeline driver and Metric3D
+python -m pip install -r requirements-system.txt --extra-index-url https://download.pytorch.org/whl/cu121
 
-# 3. Install PyTorch with CUDA 12.1 support
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+# 3. nerfstudio-env: training and post-processing
+python -m venv nerfstudio-env
+nerfstudio-env\Scripts\python.exe -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu121
 
-# 4. Install remaining requirements
-pip install -r requirements.txt
+# 4. semantic-env: semantic labelling (reuses the system Python's torch)
+python -m venv semantic-env --system-site-packages
+semantic-env\Scripts\python.exe -m pip install -r requirements-semantic.txt
+
+# 5. Web viewer and the .spz export
+cd prototype\web-ui; npm install
 ```
 
 #### Running the Pipelines:

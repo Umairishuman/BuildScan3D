@@ -1,0 +1,13 @@
+# semantic-env: Grounding DINO + SAM (semantic2d.py) and the CLIP crop check (verify_fixtures.py).
+# A venv on top of the system Python's torch (requirements-system.txt): transformers is pinned to 4.46.3 because
+# newer versions need torch >= 2.4 and silently disable PyTorch on 2.1.2.
+#   python -m venv semantic-env --system-site-packages
+#   semantic-env\Scripts\python.exe -m pip install -r requirements-semantic.txt
+# Behind a TLS-intercepting network, truststore makes the Hugging Face downloads use the Windows certificate store.
+transformers==4.46.3
+tokenizers==0.20.3
+huggingface_hub==0.36.2
+truststore==0.10.5
+# from the system Python
+Pillow==10.1.0
+safetensors==0.7.0

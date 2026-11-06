@@ -1,0 +1,14 @@
+# System Python 3.10 (not a venv): runs src/arcore3dgs/run_v8.py, the COLMAP wrappers and mono_prior.py (Metric3D).
+# The nerfstudio steps run in nerfstudio-env (requirements.txt); semantic2d / verify_fixtures in semantic-env
+# (requirements-semantic.txt).
+#   python -m pip install -r requirements-system.txt --extra-index-url https://download.pytorch.org/whl/cu121
+torch==2.1.2+cu121
+torchvision==0.16.2+cu121
+numpy==1.26.4
+scipy==1.11.4
+opencv-python==4.11.0.86
+# Metric3D (loaded with torch.hub from yvanyin/metric3d; mono_prior.py stubs out mmcv)
+timm==1.0.30
+mmengine==0.10.7
+xformers==0.0.23.post1        # optional: faster ViT attention
+# not pip: COLMAP 4.2 CUDA build in tools/colmap_dl/ (sfm_colmap.py --colmap)
