@@ -247,3 +247,9 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   4. Env files written: `envs/linux/{colmap,nerfstudio,system}.yml`, `envs/linux/requirements-nerfstudio.txt`
      (the Windows freeze minus `msvc_runtime`, `pywinpty`, torch / torchvision, tinycudann; other versions unchanged).
      Conda envs `bs-colmap`, `bs-ns`, `bs-system` being created.
+  5. `bs-colmap` created 12:37 → 12:50 (COLMAP 4.2.0 `cuda_129`, ~10 GB of packages incl. CUDA libraries). OK.
+  6. **Stall:** `bs-ns` (221 packages, 1 GB) had every package by 12:51 except `libcusparse-12.1.0.106` (113 MB), whose
+     download crawled at ~22 KB/s on micromamba's connection (22 MB after 6 min), with no error message. A fresh `curl`
+     to the same URL got ~57 MB/s, so the server was fine; one stalled connection. → Stopped the job at ~12:58, removed
+     the partial file and the lock files, and restarted with a watchdog that kills and retries `micromamba create` after
+     120 s without progress (up to 3 attempts). Resolution pending.
