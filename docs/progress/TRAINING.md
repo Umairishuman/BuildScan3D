@@ -264,3 +264,16 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
      only FreeImage, so it was never installed. → Added `openimageio=3.1` to `envs/linux/colmap.yml` and installed it
      (74 packages, 1 changed, 3 downgraded). `colmap help` → "COLMAP 4.2.0 (Commit Unknown on Unknown with CUDA)",
      no missing libraries. Resolved. GPU use not yet tested on real images.
+  9. pip `torch==2.1.2+cu121 torchvision==0.16.2+cu121` into `bs-ns` (14:33 → 14:35, 2.2 GB wheel). Check: torch sees
+     the "NVIDIA RTX 4000 Ada Generation", capability (8, 9), 19.5 GiB; a 4096² matmul runs. The torch install pulled
+     NumPy 2.2.6, which torch 2.1.2 cannot use (`Failed to initialize NumPy: _ARRAY_API not found`); the pinned list
+     (`numpy==1.26.4`) installed next replaces it — to re-check after the pins are in.
+  10. Code port on branch `feature/linux-port` (commit 09c7f6e): `toolpaths.py` + five scripts (MAP.md §3). Compiles;
+      `toolpaths` resolves `~/micromamba/envs/bs-colmap/bin/colmap`, `bs-ns/bin/python`, `bs-ns/bin/ns-export`; the
+      symlink replacement for `mklink /J` tested (link removed, target kept).
+  11. SIFT vocabulary tree `vocab_tree_faiss_flickr100K_words32K.bin` from the COLMAP 3.11.1 release into
+      `tools/colmap_dl/vocab/` (9,477,067 bytes = the release size; sha256 `921e894b…c639e`; compare with Tayyab's copy).
+      ALIKED tree not downloaded (rejected path, D-022).
+  12. COLMAP GPU test on 4 generated 1920×1080 test images: `feature_extractor` with GPU SIFT (~2,200 features each),
+      `exhaustive_matcher` on GPU, `vocab_tree_matcher` with the tree: all exit 0. `global_mapper` and
+      `patch_match_stereo` not tested yet (need a real scene).
