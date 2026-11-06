@@ -305,4 +305,10 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
       (only `ext.o`, compiled by g++; the `.cu` files built). Cause: conda's CUDA 12.1 keeps headers in
       `targets/x86_64-linux/include`, has no `lib64/`, and `CUDA_HOME` was unset. → `envs/linux/bs-ns-activate.sh`
       (CUDA_HOME, CPATH, LIBRARY_PATH, TORCH_CUDA_ARCH_LIST=8.9) installed as
-      `bs-ns/etc/conda/activate.d/zz-buildscan.sh`. Retest running.
+      `bs-ns/etc/conda/activate.d/zz-buildscan.sh`. Resolved: gsplat 1.4.0 compiled for compute 8.9 in 124 s (one-time,
+      cached in `~/.cache/torch_extensions`, 21 MB); then 100k Gaussians at 1920×1080 render in 1.2 ms per frame.
+  20. **Error:** the cached gsplat build does not load when `bs-ns`'s Python is started by path without activation
+      (`AttributeError: 'NoneType' object has no attribute 'CameraModelType'`), which is how `run_v8.py` started it.
+      → `toolpaths.ns_cmd()` returns `micromamba run -r ~/micromamba -n bs-ns <program>` on Linux (the program path on
+      Windows); `run_v8.py` uses it for export, train and ns-export. Tested from an unactivated `bs-system` shell: gsplat
+      loads from the cache in < 1 s (no rebuild), `ns-export --help` exits 0. Resolved.

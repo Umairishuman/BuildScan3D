@@ -61,12 +61,12 @@ def run(stage, cmd, log=None, extra_env=None):
     print(f"   {stage} {timing[stage]:.1f} min", flush=True)
 
 
-py, nspy = sys.executable, toolpaths.ns_tool("python")
+py, nspy = sys.executable, toolpaths.ns_cmd("python")   # nspy is a command list
 run("select", [py, os.path.join(HERE, "select_sharp.py"), "--dataset", D, "--out", W, "--window", str(args.window)])
 run("sfm", [py, os.path.join(HERE, "sfm_colmap.py"), "--work", W, "--out", S, "--pairs", "arcore"] + args.sfm_args.split())
 if STAGES.index(args.from_stage) <= STAGES.index("export"):
     shutil.rmtree(os.path.join(S, "undist", "images"), ignore_errors=True)   # export copies what it needs
-run("export", [nspy, os.path.join(HERE, "export_nerfstudio.py"), "--work", S, "--downscale", "1"])
+run("export", nspy + [os.path.join(HERE, "export_nerfstudio.py"), "--work", S, "--downscale", "1"])
 data = "transforms.json"
 if args.split and STAGES.index(args.from_stage) <= STAGES.index("export"):
     held = set(open(args.split).read().split())
@@ -102,12 +102,12 @@ for p_ in side:
 if side:
     timing["init_wait_cpu"] = round((time.time() - t_side) / 60, 2)
 half = str(args.iters // 2)
-run("train", [nspy, "-W", "ignore", os.path.join(HERE, "geo_splatfacto.py"), "--data", os.path.join(S, init_json),
+run("train", nspy + ["-W", "ignore", os.path.join(HERE, "geo_splatfacto.py"), "--data", os.path.join(S, init_json),
               "--name", NAME, "--iters", str(args.iters), "--dash_res_steps", half, "--stop_split_at", half, "--no_eval",
               "--prior", os.path.join(S, "mono_prior", f"train_{args.tag}.npz"),
               "--planar_lambda", str(args.planar), "--blur_exposure", str(args.blur)], log=os.path.join(OUT, "train.log"))
 cfg = os.path.join(ROOT, "outputs", "v8", "splatfacto", NAME, "config.yml")
-run("ply", [toolpaths.ns_tool("ns-export"), "gaussian-splat", "--load-config", cfg, "--output-dir", OUT],
+run("ply", toolpaths.ns_cmd("ns-export") + ["gaussian-splat", "--load-config", cfg, "--output-dir", OUT],
     log=os.path.join(OUT, "export.log"), extra_env={"PYTHONPATH": HERE})
 shutil.rmtree(os.path.join(ROOT, "outputs", "v8", "splatfacto", NAME, "nerfstudio_models"), ignore_errors=True)
 timing["total"] = round(sum(v for k, v in timing.items() if k in STAGES + ["init_wait_cpu"]), 1)

@@ -79,7 +79,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does | Status |
 |---|---|---|
-| `toolpaths.py` | Where COLMAP and the nerfstudio env live on Windows (old layout) or Linux (micromamba envs); `BUILDSCAN_COLMAP` / `BUILDSCAN_NS_ENV` override; directory link helpers. Used by `run_v8.py`, `sfm_colmap.py`, `fast_mvs.py`, `mvs_init.py`, `colmap_mvs.py` | **[v9]** shared |
+| `toolpaths.py` | Where COLMAP and the nerfstudio env live on Windows (old layout) or Linux (micromamba envs); `BUILDSCAN_COLMAP` / `BUILDSCAN_NS_ENV` / `BUILDSCAN_MAMBA` override; `ns_cmd()` runs nerfstudio programs inside the activated `bs-ns` env on Linux (needed for gsplat); directory link helpers. Used by `run_v8.py`, `sfm_colmap.py`, `fast_mvs.py`, `mvs_init.py`, `colmap_mvs.py` | **[v9]** shared |
 | `common.py` | Loads a capture (video + poses + points), pose interpolation at frame time, intrinsics, OpenGL→OpenCV, tracking gaps | **[v9]** shared |
 | `check_capture.py` | Validates a recording before processing (files, sync, tracking, dropped frames, blur, exposure, re-anchors) | **[v9]** |
 | `select_sharp.py` | Gyro-aware keyframes: least predicted blur per window, uses `camera.csv` exposure | **[v9]** |
