@@ -312,3 +312,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
       → `toolpaths.ns_cmd()` returns `micromamba run -r ~/micromamba -n bs-ns <program>` on Linux (the program path on
       Windows); `run_v8.py` uses it for export, train and ns-export. Tested from an unactivated `bs-system` shell: gsplat
       loads from the cache in < 1 s (no rebuild), `ns-export --help` exits 0. Resolved.
+  21. Open3D 0.19.0 TSDF check (synthetic wall, 3 views, `ScalableTSDFVolume`): 104,668 triangles, i.e. the Open3D 0.20
+      empty-mesh bug does not apply here.
+  22. Test suite on this PC (throwaway venv on `bs-system`'s Python + `tests/requirements.txt`, run inside `bs-ns` for
+      ffmpeg): `pytest` 210 passed, 1 skipped (`test_apk_checks.py:163`, no Java `keytool`); `ruff check .` all checks passed.
