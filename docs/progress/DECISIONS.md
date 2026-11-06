@@ -386,7 +386,8 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **Decision:** GNOME auto-suspend on AC turned off (`sleep-inactive-ac-type 'nothing'`; the timeout was already 0 =
   never). Remote access from Umair's laptop by Tailscale (SSH over the tailnet), to be set up with Umair's sudo; long
   runs inside `tmux` / `screen`. Other lab PCs have the same home directory `/home/i230662` when access is given, so the
-  setup can also be copied between them. Remote power-on: Wake-on-LAN or Intel AMT, see STATUS §7.1. **By:** Umair.
+  setup can also be copied between them. Remote power-on: **not set up** — Umair has no BIOS access (needed for Wake-on-LAN or Intel AMT); instead the PC is
+  left switched on, which Umair asked the lab about (2026-11-06). Options kept in STATUS §7.1. **By:** Umair.
 
 ## Open decisions (need the team; agents must not decide these)
 

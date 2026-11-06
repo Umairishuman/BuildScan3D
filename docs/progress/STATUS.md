@@ -233,7 +233,8 @@ script, step 3 RunPod and the friend's PC.**
       power setting, or `sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target` (lab policy?).
 - [ ] **[new] Tailscale on this PC** (Umair, sudo): install, `sudo tailscale up --ssh`; laptop: `ssh i230662@<name>` /
       VS Code Remote-SSH; long runs in `tmux` / `screen`. Check the lab allows it.
-- [ ] **[new] Remote power-on** (open): wired NIC `enp0s31f6` (Intel I219-LM, MAC `ac:b4:80:3b:91:2e`, LAN
+- [x] **[new] Remote power-on — not needed (2026-11-06, D-053):** Umair has no BIOS access, and the lab agreed to leave
+      the PC on. Notes kept in case that changes: wired NIC `enp0s31f6` (Intel I219-LM, MAC `ac:b4:80:3b:91:2e`, LAN
       172.17.170.120/24) has device wake-up enabled; Wake-on-LAN also needs the BIOS setting and `sudo ethtool -s
       enp0s31f6 wol g`, plus an always-on device **on the same LAN** to send the packet (WoL does not cross Tailscale).
       Alternatives: Intel AMT (Intel ME present; needs lab provisioning), BIOS "Auto On" schedule, or asking the lab to
