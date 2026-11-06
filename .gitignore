@@ -46,7 +46,7 @@ saved_models/
 !*.cls
 !*.sty
 !*.bib
-!F26_FYP1_Mid_Report_LaTeX_Complete/ThesisFigs/*.jpg
+!report/mid-eval/F26_FYP1_Mid_Report_LaTeX_Complete/ThesisFigs/*.jpg
 
 # LaTeX build artefacts (the PDF and .bbl stay tracked)
 *.aux
