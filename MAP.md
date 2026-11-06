@@ -174,6 +174,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `run_arcore3dgs_legacy.bat` | [legacy] ARCore-pose pipeline: fallback → prepare → ba → relocalize_pnp → ba → mvs → pocket_prior → train.py |
 | `view_splat.bat` | Starts `view.py` (http://localhost:7010) |
 | `start_server.bat` | Loads `.env`, starts the FastAPI server on port 8000, prints the IP for the phone |
+| `start_server.sh` | Linux twin of `start_server.bat`: loads `.env`, mode defaults to `dry_run`, runs uvicorn on port 8000 in the small `bs-server` micromamba env (not the pipeline envs), prints the phone URLs. Detached: `screen -dmS bs-server scripts/start_server.sh` |
 | `jobs.bat` / `jobs.py` | Job manager CLI (list, watch, logs, retry, reprocess, mode) |
 | `release.bat` | Bumps the app version and tags a release |
 | `run_train.bat`, `run_train_fast.bat`, `run_post.bat`, `run_post_fast.bat`, `run_viewer.bat` | [dead] first splatfacto runs on roomAttemptSadness (Sept/Oct 2026): ns-train / ns-eval / ns-export / ns-viewer with MSVC set up |

@@ -160,6 +160,9 @@ Log every run in [TRAINING.md](TRAINING.md).
 Older pipelines: `scripts/run_arcore3dgs.bat <dataset>` (v3: COLMAP + splatfacto, ~75 min, what the server runs) and
 `scripts/run_arcore3dgs_legacy.bat` (ARCore poses + own BA / MVS / PocketGS prior). Viewer: `scripts/view_splat.bat`
 (port 7010). Phone-upload server: `scripts/start_server.bat` + `scripts/jobs.bat` ([PROCESSING_GUIDE.md](../PROCESSING_GUIDE.md)).
+On Linux (this PC): `screen -dmS bs-server scripts/start_server.sh` (reattach `screen -r bs-server`; env `bs-server`,
+created once with `micromamba create -n bs-server -c conda-forge python=3.10 pip` + `pip install -r server/requirements.txt`).
+Mode defaults to `dry_run` (uploads saved to `dataset/scan_<id>/`, nothing processed). Phone URL: this PC's LAN IP, port 8000.
 
 ## 6. Machines and environments
 
