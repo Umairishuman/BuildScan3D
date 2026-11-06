@@ -11,16 +11,16 @@ MVS has nothing (plain walls) -> a hybrid init.
   python src/arcore3dgs/fast_mvs.py --work <work_sfm> --json transforms_offpath.json --out_json transforms_offpath_fmvs.json
 Needs <work>/undist/sparse (sfm_colmap.py undistort stage) and <work>/images (undistorted).
 """
-import os, json, argparse, subprocess, shutil, time
+import os, sys, json, argparse, subprocess, shutil, time
 import numpy as np
+import toolpaths
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--work", required=True); ap.add_argument("--json", required=True); ap.add_argument("--out_json", required=True)
 ap.add_argument("--every", type=int, default=7); ap.add_argument("--size", type=int, default=640)
 ap.add_argument("--sources", type=int, default=6); ap.add_argument("--min_pixels", type=int, default=3)
 ap.add_argument("--mono", action="store_true", help="add mono-depth points where the MVS cloud is empty")
-ap.add_argument("--colmap", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools",
-                                                 "colmap_dl", "colmap-4.2.0", "COLMAP.bat"))
+ap.add_argument("--colmap", default=toolpaths.colmap())
 args = ap.parse_args()
 HERE = os.path.dirname(os.path.abspath(__file__)); WK = os.path.abspath(args.work); CM = os.path.abspath(args.colmap)
 ws = os.path.join(WK, "undist_fast")
@@ -34,15 +34,13 @@ def colmap(*a):
 
 
 if os.path.exists(ws):
-    if os.path.exists(os.path.join(ws, "images")):
-        os.rmdir(os.path.join(ws, "images"))                # removes the junction only (fails safely on a real dir)
+    toolpaths.unlink_dir(os.path.join(ws, "images"))        # removes the link only (fails safely on a real dir)
     shutil.rmtree(ws)
 os.makedirs(os.path.join(ws, "stereo", "depth_maps")); os.makedirs(os.path.join(ws, "stereo", "normal_maps"))
 os.makedirs(os.path.join(ws, "stereo", "consistency_graphs"))
 shutil.copytree(os.path.join(WK, "undist", "sparse"), os.path.join(ws, "sparse"))
-# the workspace's images/ = the undistorted training images (directory junction: no copy)
-subprocess.run(["cmd", "/c", "mklink", "/J", os.path.join(ws, "images"), os.path.join(WK, "images")], check=True,
-               capture_output=True)
+# the workspace's images/ = the undistorted training images (junction / symlink: no copy)
+toolpaths.link_dir(os.path.join(WK, "images"), os.path.join(ws, "images"))
 
 meta = json.load(open(os.path.join(WK, "frames.json"))); fr = meta["frames"]
 sub = list(range(0, len(fr), args.every))
@@ -75,11 +73,12 @@ colmap("stereo_fusion", "--workspace_path", ws, "--workspace_format", "COLMAP", 
        "--StereoFusion.max_image_size", args.size)
 t2 = time.time()
 ply = "init_fmvs.ply"
-subprocess.run(["python", os.path.join(HERE, "mvs_init.py"), "--work", WK, "--sparse", os.path.join(ws, "sparse"),
-                "--fused", os.path.join(ws, "fused.ply"), "--out_ply", ply, "--out_json", "_tmp_fmvs.json"], check=True)
+subprocess.run([sys.executable, os.path.join(HERE, "mvs_init.py"), "--work", WK, "--sparse", os.path.join(ws, "sparse"),
+                "--fused", os.path.join(ws, "fused.ply"), "--out_ply", ply, "--out_json", "_tmp_fmvs.json",
+                "--colmap", CM], check=True)
 os.remove(os.path.join(WK, "_tmp_fmvs.json"))
 if args.mono:                                                # hybrid: mono points only where MVS found nothing
-    subprocess.run(["python", os.path.join(HERE, "mono_init.py"), "--work", WK, "--json", args.json, "--out_json", "_tmp_mono.json",
+    subprocess.run([sys.executable, os.path.join(HERE, "mono_init.py"), "--work", WK, "--json", args.json, "--out_json", "_tmp_mono.json",
                     "--every", "6", "--voxel", "0.015", "--min_views", "6", "--base", ply, "--fill_only", "0.05",
                     "--out_ply", "init_fmvs_mono.ply"], check=True)
     os.remove(os.path.join(WK, "_tmp_mono.json")); ply = "init_fmvs_mono.ply"

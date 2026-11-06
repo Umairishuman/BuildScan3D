@@ -18,13 +18,13 @@ Stages (all into <work_sfm>):
 """
 import os, json, argparse, subprocess, shutil, struct, importlib.util
 import numpy as np, cv2
+import toolpaths
 from scipy.spatial.transform import Rotation as R
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--work", required=True, help="existing work dir (frames.json + images/ from prepare.py)")
 ap.add_argument("--out", required=True)
-ap.add_argument("--colmap", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools",
-                                                 "colmap_dl", "colmap-4.2.0", "COLMAP.bat"))
+ap.add_argument("--colmap", default=toolpaths.colmap(), help="COLMAP 4.2 executable (default: see toolpaths.py)")
 ap.add_argument("--mapper", default="global_mapper", choices=["global_mapper", "mapper"])
 ap.add_argument("--extract_gpu", type=int, default=1, help="0 = CPU SIFT (e.g. while the GPU is training)")
 ap.add_argument("--pairs", default="exhaustive", choices=["exhaustive", "arcore"],
@@ -53,7 +53,7 @@ _dll = [os.path.abspath(os.path.join(TOOLS, "cudnn9"))]
 _ts = importlib.util.find_spec("torch")
 if _ts and _ts.origin:
     _dll.append(os.path.join(os.path.dirname(_ts.origin), "lib"))
-ENV = dict(os.environ, PATH=";".join([d for d in _dll if os.path.isdir(d)] + [os.environ.get("PATH", "")]))
+ENV = dict(os.environ, PATH=os.pathsep.join([d for d in _dll if os.path.isdir(d)] + [os.environ.get("PATH", "")]))
 WK = os.path.abspath(args.work); OUT = os.path.abspath(args.out); CM = os.path.abspath(args.colmap)
 os.makedirs(OUT, exist_ok=True)
 db = os.path.join(OUT, "database.db")

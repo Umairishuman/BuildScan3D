@@ -11,6 +11,7 @@ Output: <dataset>/work_<tag>_sfm/gs_<tag>/splat.ply (metric, ARCore world, +Y up
 Run with system python (Metric3D and COLMAP wrappers); nerfstudio steps use nerfstudio-env automatically.
 """
 import os, sys, json, time, shutil, argparse, subprocess
+import toolpaths
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--dataset", required=True)
@@ -31,7 +32,6 @@ args = ap.parse_args()
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 HERE = os.path.join(ROOT, "src", "arcore3dgs")
-NS = os.path.join(ROOT, "nerfstudio-env", "Scripts")
 D = os.path.abspath(args.dataset)
 W, S = os.path.join(D, f"work_{args.tag}"), os.path.join(D, f"work_{args.tag}_sfm")
 NAME = f"{os.path.basename(D)}_{args.tag}"
@@ -61,7 +61,7 @@ def run(stage, cmd, log=None, extra_env=None):
     print(f"   {stage} {timing[stage]:.1f} min", flush=True)
 
 
-py, nspy = sys.executable, os.path.join(NS, "python.exe")
+py, nspy = sys.executable, toolpaths.ns_tool("python")
 run("select", [py, os.path.join(HERE, "select_sharp.py"), "--dataset", D, "--out", W, "--window", str(args.window)])
 run("sfm", [py, os.path.join(HERE, "sfm_colmap.py"), "--work", W, "--out", S, "--pairs", "arcore"] + args.sfm_args.split())
 if STAGES.index(args.from_stage) <= STAGES.index("export"):
@@ -107,9 +107,9 @@ run("train", [nspy, "-W", "ignore", os.path.join(HERE, "geo_splatfacto.py"), "--
               "--prior", os.path.join(S, "mono_prior", f"train_{args.tag}.npz"),
               "--planar_lambda", str(args.planar), "--blur_exposure", str(args.blur)], log=os.path.join(OUT, "train.log"))
 cfg = os.path.join(ROOT, "outputs", "v8", "splatfacto", NAME, "config.yml")
-run("ply", [os.path.join(NS, "ns-export.exe"), "gaussian-splat", "--load-config", cfg, "--output-dir", OUT],
+run("ply", [toolpaths.ns_tool("ns-export"), "gaussian-splat", "--load-config", cfg, "--output-dir", OUT],
     log=os.path.join(OUT, "export.log"), extra_env={"PYTHONPATH": HERE})
 shutil.rmtree(os.path.join(ROOT, "outputs", "v8", "splatfacto", NAME, "nerfstudio_models"), ignore_errors=True)
 timing["total"] = round(sum(v for k, v in timing.items() if k in STAGES + ["init_wait_cpu"]), 1)
 json.dump(timing, open(timing_file, "w"), indent=1)
-print(f"Done: {OUT}\\splat.ply  timing (min): {timing}")
+print(f"Done: {os.path.join(OUT, 'splat.ply')}  timing (min): {timing}")

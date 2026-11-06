@@ -13,11 +13,11 @@ dense/fused.ply, and <work>/depth_colmap/<name>.npy (metric depth, depth_scale r
 import os, json, argparse, sqlite3, subprocess, warnings
 import numpy as np, cv2
 from scipy.spatial.transform import Rotation as R
+import toolpaths
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--work", required=True)
-ap.add_argument("--colmap", default=os.path.join(os.path.dirname(__file__), "..", "..", "tools", "colmap_dl",
-                                                 "colmap-4.2.0", "COLMAP.bat"))
+ap.add_argument("--colmap", default=toolpaths.colmap())
 ap.add_argument("--frames_file", default="frames.json")
 ap.add_argument("--pairs_per_image", type=int, default=25)
 ap.add_argument("--min_shared", type=int, default=15, help="min shared BA points for a matching pair")

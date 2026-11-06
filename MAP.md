@@ -72,13 +72,14 @@ export_web.py      .spz groups + scan.json + mesh for the viewer (to_spz.mjs, No
 
 ## 3. `src/arcore3dgs/`, file by file
 
-Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the only shared modules are `common.py`
-(imported by 7 scripts) and `imu.py`. Each script's docstring has its full usage.
+Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the shared modules are `common.py`
+(imported by 7 scripts), `imu.py` and `toolpaths.py` (tool locations per OS). Each script's docstring has its full usage.
 
 **Capture loading and frame selection**
 
 | File | Does | Status |
 |---|---|---|
+| `toolpaths.py` | Where COLMAP and the nerfstudio env live on Windows (old layout) or Linux (micromamba envs); `BUILDSCAN_COLMAP` / `BUILDSCAN_NS_ENV` override; directory link helpers. Used by `run_v8.py`, `sfm_colmap.py`, `fast_mvs.py`, `mvs_init.py`, `colmap_mvs.py` | **[v9]** shared |
 | `common.py` | Loads a capture (video + poses + points), pose interpolation at frame time, intrinsics, OpenGL→OpenCV, tracking gaps | **[v9]** shared |
 | `check_capture.py` | Validates a recording before processing (files, sync, tracking, dropped frames, blur, exposure, re-anchors) | **[v9]** |
 | `select_sharp.py` | Gyro-aware keyframes: least predicted blur per window, uses `camera.csv` exposure | **[v9]** |
@@ -90,7 +91,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does | Status |
 |---|---|---|
-| `sfm_colmap.py` | COLMAP 4.2: features, ARCore-guided / retrieval pairs, global mapper, lens self-calibration, undistortion, Sim3 to ARCore, mis-registration filter. Hard-codes `tools/colmap_dl/.../COLMAP.bat` and `tools/cudnn9` | **[v9]** [v3] |
+| `sfm_colmap.py` | COLMAP 4.2: features, ARCore-guided / retrieval pairs, global mapper, lens self-calibration, undistortion, Sim3 to ARCore, mis-registration filter. COLMAP path from `toolpaths.py`; `tools/cudnn9` only for the rejected ALIKED path | **[v9]** [v3] |
 | `fallback.py` | IMU featureless-tracking fallback: bridge tracking gaps, detect heading jumps | [v3] [legacy]; not in `run_v8.py` (OD-6) |
 | `relocalize_pnp.py` | Re-aligns post-gap segments to the map with PnP | [legacy] |
 | `relocalize.py` | Earlier image-content relocalisation of post-gap segments | [legacy] |
@@ -117,7 +118,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does | Status |
 |---|---|---|
-| `run_v8.py` | One-command driver for the v9 pipeline, times every stage. Hard-codes `nerfstudio-env/Scripts/python.exe` and `ns-export.exe` | **[v9]** |
+| `run_v8.py` | One-command driver for the v9 pipeline, times every stage. Finds the nerfstudio env through `toolpaths.py` | **[v9]** |
 | `geo_splatfacto.py` | Splatfacto subclass: DashGaussian, depth / normal / planar priors, blur model, PGSR-lite, checkpoints + `--resume` | **[v9]** |
 | `export_nerfstudio.py` | Writes `transforms.json` for nerfstudio | **[v9]** [v3] |
 | `train.py` | Own gsplat trainer (experiments only, D-010) | [exp] |
