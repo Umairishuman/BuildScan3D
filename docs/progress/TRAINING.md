@@ -370,5 +370,9 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   1. 18:05–18:22 train — looked stuck to Umair: the terminal showed nothing after `== train:`. Cause: `run_v8.py`
      writes the training output only to `train.log`; training was running (step 11,900 at 18:22). → `run_full.sh` now
      prints a GPU / training status line every 30 s (`b8aef7a`, used from the next run) (resolved: yes).
+- **Progress (18:34):** train 26.45 min, ply 0.25 min, run_v8 total 31.1 min → `gs_umair/splat.ply` (121 MB). Layout
+  (2 s): 68 flat of 119 planar regions from 29 frames, rendered-plane rms median 4.5 cm; floor y −2.988, ceiling y
+  1.204 → **room height 4.193 m**; 11 vertical plane clusters → **only 1 wall, 0.873 m long, 0 corners**. Looks wrong
+  (to compare with the real room; likely the 46 s capture saw too little wall). sem2d running on 87 frames.
 - **Result:** (pending)
 - **Verdict:** (pending)
