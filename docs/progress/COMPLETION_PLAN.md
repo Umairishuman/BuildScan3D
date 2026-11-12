@@ -28,13 +28,13 @@ evaluation needs new rooms recorded with tape measurements.
 
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1.1 | Ask Tayyab whether he has app changes that are not pushed | Answer recorded in LOG; any changes on a branch | — | Must | W1 |  |  |
-| 1.2 | Install v0.3.5 on the phone: Play Protect warning, server search finds the PC, "Check for updates" works | All three checked on the Infinix, noted in STATUS 7.7 | 2.1 | Must | W1 |  |  |
-| 1.3 | Upload one recording from v0.3.5 | `camera.csv`, `anchors.csv` and the lens files arrive on the server | 2.1 | Must | W1 |  |  |
-| 1.4 | Record 2–3 real rooms with the capture protocol (two loops at chest and knee height, 360° turns from 2–3 points, every wall at two heights, close passes, all lights on) | Rooms on the PC, each checked READY by `buildscan check` | 1.2 | Must | W1 |  |  |
-| 1.5 | Tape-measure every recorded room: lengths, room height, doors, one switch and one socket height, 3 repeated readings each | Tape sheet per room saved next to the dataset | 1.4 | Must | W1 |  |  |
-| 1.6 | Re-measure dropped frames (NFR1, ≥ 30 FPS) and the quality-check time per frame (NFR2, < 16 ms) | Both numbers measured on the phone, in STATUS §4 | 1.2 | Should | W2 |  |  |
-| 1.7 | Find out why ARCore depth was stale in newRoomAttemptSadness (all maps identical, confidence ≈ 0) | Cause found and fixed, or depth turned off (1.12) | — | Should | W2 |  |  |
+| 1.1 | Ask Tayyab whether he has app changes that are not pushed | Answer recorded in LOG; any changes on a branch | — | Must | W1 | Umair | Done 2026-11-12 (asked Tayyab; answer to note in LOG) |
+| 1.2 | Install v0.3.5 on the phone: Play Protect warning, server search finds the PC, "Check for updates" works | All three checked on the Infinix, noted in STATUS 7.7 | 2.1 | Must | W1 | Umair | Done 2026-11-12 (Umair) |
+| 1.3 | Upload one recording from v0.3.5 | `camera.csv`, `anchors.csv` and the lens files arrive on the server | 2.1 | Must | W1 | Umair | Done 2026-11-12 (scan #3, all files arrived) |
+| 1.4 | Record 2–3 real rooms with the capture protocol (two loops at chest and knee height, 360° turns from 2–3 points, every wall at two heights, close passes, all lights on) | Rooms on the PC, each checked READY by `buildscan check` | 1.2 | Must | W1 | Umair | In progress: scan #3 processing (R-031) |
+| 1.5 | Tape-measure every recorded room: lengths, room height, doors, one switch and one socket height, 3 repeated readings each | Tape sheet per room saved next to the dataset | 1.4 | Must | W1 | Umair | Measured (Umair); sheet not yet in the dataset folder |
+| 1.6 | Re-measure dropped frames (NFR1, ≥ 30 FPS) and the quality-check time per frame (NFR2, < 16 ms) | Both numbers measured on the phone, in STATUS §4 | 1.2 | Should | W2 |  | NFR1 measured on scan #3 (0.24% dropped, R-031); NFR2 needs IQA timing in the app |
+| 1.7 | Find out why ARCore depth was stale in newRoomAttemptSadness (all maps identical, confidence ≈ 0) | Cause found and fixed, or depth turned off (1.12) | — | Should | W2 |  | Not reproduced on scan #3 (782 distinct maps, R-031); old recording to check on the 3070 PC |
 | 1.8 | Tune the quality thresholds on the phone (predicted blur warn > 5 px, bad > 10 px) | Thresholds checked on a test walk, values recorded | 1.2 | Should | W2 |  |  |
 | 1.9 | Coverage overlay and tier-2 guidance: show what is left to scan (ceiling, floor, depth holes, blur, dark, tracking) | Overlay tested on the phone | — | Should | W2 |  |  |
 | 1.10 | Download and preview the finished model on the phone | A processed scan opens on the phone | 2.4 | Should | W2 |  |  |

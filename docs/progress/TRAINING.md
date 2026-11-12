@@ -63,6 +63,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-028 | 2026-11-06 | First Linux run: Umair's room, full v9 + PGSR → semantics → mesh → web | this PC (Ubuntu, RTX 4000 Ada) | stopped after ~5 min | select / SfM / prior OK on Linux | Abandoned (stopped by Umair) |
 | R-029 | 2026-11-06 | Umair's own run of the same recording, full pipeline (`--tag umair`) | this PC (Ubuntu, RTX 4000 Ada) | 34.7 min | **first complete run on Linux**; corridor end, 0 fixtures, 1 wall | Kept as pipeline test (scene not a room) |
 | R-030 | 2026-11-06 | `scan_646070948603` (lab room, 97 s), full pipeline through `scripts/buildscan` (`--tag r1106`) | this PC (Ubuntu, RTX 4000 Ada) | 50.2 min | ran clean; 2 walls, 8 fixtures; **room height 1.50 m looks wrong** | Inconclusive (scale / ceiling not checked) |
+| R-031 | 2026-11-12 | `scan_003_6de634cbb8b2` (#3, first v0.3.5 recording, 185 s), full pipeline (`--tag r1112`) | this PC (Ubuntu, RTX 4000 Ada) | running | — | — |
 
 ## Runs
 
@@ -424,3 +425,23 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Follow-up 2026-11-12:** Zaid's `analyze.py` (`feat/splat-compress`) on this `splat.ply`: 652,392 splats, extent
   p1–p99 8.46 × 3.08 × 4.78 m. The model itself is ~3.1 m tall, so the 1.50 m height is the layout taking a wrong
   plane as the ceiling, not a scale error (not yet confirmed by viewing the model or a tape).
+
+### R-031 · 2026-11-12 · scan #3 (`scan_003_6de634cbb8b2`) full pipeline (tag `r1112`)
+*Header written by the agent while the run was going, from `run_full.log` and the dataset files.*
+- **Who / machine:** Umair · this PC (Ubuntu, RTX 4000 Ada), in `screen` session `run-r1112`
+- **Branch / commit:** `feature/numbered-scans` @ `e4c3ee6` (from the `run_full.log` header; uncommitted changes: no)
+- **Dataset:** `scan_003_6de634cbb8b2` (#3), Infinix X6833B, app v0.3.5, uploaded 2026-11-12 14:53 with `camera.csv`,
+  `anchors.csv`, `lens_metadata.json`, `camera_characteristics.json` (first recording with all of them). 184.7 s,
+  5,335 ARCore poses; 885 of 5,346 frames selected (predicted blur median 6.6 px over all frames, 5.3 px selected;
+  recorded exposure median 30.0 ms, used instead of the fixed 1/45 s).
+- **Command(s):** `scripts/run_full.sh dataset/scan_003_6de634cbb8b2 r1112 -- --sfm_args "--retrieval 20" --init fmvs
+  --planar 0.2 --blur 0.0222 --pgsr`
+- **Goal:** first room recorded with v0.3.5 (COMPLETION_PLAN 1.4 / 3.2); check the layout height against tape (4.1).
+- **Start → end:** 15:04:02 → (running)
+- **Errors during the run:** none so far.
+- **Capture facts measured on 2026-11-12 (agent, from the dataset files, for COMPLETION_PLAN 1.6 / 1.7):** frame gaps in
+  `poses.csv`: median 33.84 ms, 7 gaps, ~13 missing frames (0.24%), longest gap 234 ms. ARCore depth: 782 maps
+  (160 × 90), all 782 different, median valid fraction 0.86, median depth 0–5.5 m across maps, mean confidence
+  0–81: **not stale** in this recording. IQA levels in `quality.csv`: GOOD 1,279, WARN 2,894, BAD 1,164.
+- **Result:** (to fill in at the end)
+- **Verdict:** (to fill in at the end)
