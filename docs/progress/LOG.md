@@ -215,3 +215,28 @@ Template:
 - Next: finish R-029 (results, verdict); push + release `fix/upload-all-files` (v0.3.5) when Umair agrees; firewall
   rules for the wired card `enp0s31f6`; disable Tailscale key expiry; record a room with v0.3.5 (`camera.csv`).
 
+## 2026-11-06 (ninth session, backfilled 2026-11-12) · Umair · `exp/first-linux-run`
+- Did: `scripts/buildscan` (one command for server, runs, viewers, status; asks for missing arguments) and
+  `docs/COMMANDS.md` cheat sheet (`908ef6f`, `60c6611`, `718f884`). Recorded `scan_646070948603` (lab room, 97 s) and
+  processed it with `scripts/buildscan run` (tag `r1106`).
+- Runs: R-030 (50.2 min, no errors; room height 1.50 m looks wrong). Not logged at the time.
+
+## 2026-11-12 · Umair · `exp/first-linux-run`, `fix/upload-all-files`
+- Did: reviewed the records and listed everything still open in STATUS §7 for the end-of-month deadline
+  (2026-11-30). Found why `prototype/web-ui/public/scans/` held two untracked folders: the `web` stage of every run
+  writes `<scan>_<tag>/` there (R-029, R-030) → gitignored (D-061, `56d7517`), MAP.md row added. Wrote the missing
+  R-030 entry. Checked whether Tayyab changed the app: his last app commit is `6d0cab5` (2026-10-26, shipped in
+  v0.3.3: demo pawn / Instant Placement removed, motion-blur IQA messages); his only push since is the poster guide
+  (`f33aeaf`, 2026-11-11). Unpushed work on his PC cannot be seen. v0.3.3 → v0.3.4 changed only server search,
+  updates, package name and key (no ARCore / recording code). Confirmed the ARCore point-cloud dots are drawn on
+  screen only and never while recording; the MP4 is ARCore's raw camera stream (a frame of R-030 checked, clean).
+  ARCore is still used for metric scale / gravity (R-030: Sim3 with 242 inliers, median 5.25 cm), poses come from
+  COLMAP (D-014). Pushed `fix/upload-all-files`, PR #4 (CI green: app build, Python 3.10–3.12), merged; CD published
+  **v0.3.5** (`BuildScan3D-v0.3.5.apk`, 5.7 MB, 2026-11-12 08:16 UTC).
+- Runs: R-030 entry backfilled.
+- Decisions: D-061 (per-run web bundles out of git).
+- Problems: no local env has pytest + FastAPI, so the server tests ran only in CI. Local `master` is 12+ commits
+  behind `origin/master`; the upload server on this PC runs from `exp/first-linux-run`, which lacks the PR #4 server
+  change.
+- Next: install v0.3.5 on the phone (not tested on a device) and record a room with it (`camera.csv` must arrive);
+  update the server checkout to include PR #4; check R-030's room height; ask Tayyab about unpushed app work.

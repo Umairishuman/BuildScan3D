@@ -62,6 +62,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-027 | 2026-11-06 | Environment setup of this PC (STATUS §7.1 step 1) | this PC (Ubuntu, RTX 4000 Ada) | ~2.5 h | all checks pass; `scripts/setup_linux.sh` | Envs ready; first data run pending |
 | R-028 | 2026-11-06 | First Linux run: Umair's room, full v9 + PGSR → semantics → mesh → web | this PC (Ubuntu, RTX 4000 Ada) | stopped after ~5 min | select / SfM / prior OK on Linux | Abandoned (stopped by Umair) |
 | R-029 | 2026-11-06 | Umair's own run of the same recording, full pipeline (`--tag umair`) | this PC (Ubuntu, RTX 4000 Ada) | 34.7 min | **first complete run on Linux**; corridor end, 0 fixtures, 1 wall | Kept as pipeline test (scene not a room) |
+| R-030 | 2026-11-06 | `scan_646070948603` (lab room, 97 s), full pipeline through `scripts/buildscan` (`--tag r1106`) | this PC (Ubuntu, RTX 4000 Ada) | 50.2 min | ran clean; 2 walls, 8 fixtures; **room height 1.50 m looks wrong** | Inconclusive (scale / ceiling not checked) |
 
 ## Runs
 
@@ -390,3 +391,30 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   (34.7 min on the RTX 4000 Ada; 207 selected frames, so not comparable with the 96 + 40 min of R-020 / R-025 on
   1165 frames). Scene results are not meaningful (corridor end, poor light, 46 s). STATUS §7.1 1h: Linux run done; the
   machine-agreement check on newRoomAttemptSadness stays open.
+
+### R-030 · 2026-11-06 · scan_646070948603 full pipeline (tag `r1106`), first run through `scripts/buildscan`
+*Not logged at the time; written on 2026-11-12 from `run_full.log`, `stages.tsv`, `timing.json` and the output files.*
+- **Who / machine:** started on Umair's PC; the person who started it was not recorded · this PC (Ubuntu, RTX 4000 Ada)
+- **Branch / commit:** `exp/first-linux-run` @ `718f884` (from the `run_full.log` header; uncommitted changes: not recorded)
+- **Dataset:** `scan_646070948603`: a computer lab (desks, red chairs, glass partition), Infinix X6833B, 97.3 s,
+  2,899 ARCore poses; 482 frames selected. Uploaded with app ≤ v0.3.4, so no `camera.csv` / `anchors.csv` (fixed in
+  v0.3.5, PR #4).
+- **Command(s):** `scripts/buildscan run latest r1106` → `scripts/run_full.sh` with the default recipe
+  `--sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr` (15,000 steps).
+- **Goal:** first real room on Linux with the best-model recipe (R-023); first run started through `scripts/buildscan`.
+- **Start → end:** 18:58:05 → 19:48:15 (50.2 min). run_v8 41.7 min: select 0.2, SfM 4.93, prior 1.92, init 6.57,
+  train 27.76, ply 0.29. Then layout 0.1, sem2d 7.7, sem3d 0.1, verify 0.1, sem3d2 0.1, mesh 0.1, meshlabels 0.2,
+  web 0.1. GPU during training: 92–100%, up to 5.9 of 20.5 GB, 59–76 °C.
+- **Errors during the run:** none in `run_full.log` (only timm `FutureWarning`s).
+- **Result:** `dataset/scan_646070948603/work_r1106_sfm/gs_r1106/` (`splat.ply` 162 MB); web bundle
+  `prototype/web-ui/public/scans/scan_646070948603_r1106/` (20.4 MB, gitignored by D-061).
+  SfM: 482 / 482 frames registered; Sim3 to ARCore scale 0.0937, 242 inliers, median 5.25 cm (`report.json`).
+  Metric3D prior aligned median error 3.6%. Layout: 2 walls (3.86 m, 4.45 m), 0 corners, floor y −1.205, ceiling y
+  0.291 → **height 1.50 m**. Semantics v10: floor tilt 2.13°, ceiling height 1.528 m; 8 fixtures accepted (window,
+  2 light switches, 2 power sockets, ceiling light, lamp, air conditioner), 44 rejected. Mesh: 663,551 → 576,792
+  triangles; area 46.63 m² (other 32.1, wall_0 7.65, floor 3.99, ceiling 2.49). Model quality not measured (no
+  held-out split, no tape measurements); fixtures not checked by a person.
+- **Verdict:** **inconclusive.** The pipeline ran end to end without errors, but a 1.50 m room height cannot be right
+  for this lab (the ceiling plane is probably not the real ceiling, or the scale is off); not checked against the
+  room or a tape. To do: view the model (`scripts/buildscan view scan_646070948603 r1106`), check the ceiling plane
+  and one tape length.

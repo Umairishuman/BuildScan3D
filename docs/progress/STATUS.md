@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-06 by Umair (evening: upload server on Linux, app fixes, D-057 – D-060). `master` holds v9/v10, the project records and the Linux port (PR #1, D-051).
+Last updated: 2026-11-12 by Umair (v0.3.5 released, R-030 logged, D-061). `master` holds v9/v10, the project records, the Linux port (PR #1, D-051) and the app fixes (PR #3, PR #4).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -202,6 +202,9 @@ Tags: **[new]** added 2026-11-06; *(from TODO, date)* carried over from the old 
 
 ### 7.1 Organisation, environments and infrastructure
 
+- [ ] **[new 2026-11-12] Update the server checkout on this PC** to a branch that includes PR #4 (local `master` is
+      behind `origin/master`; the server runs from `exp/first-linux-run`), so v0.3.5 uploads keep the new files.
+
 **Order agreed on 2026-11-06 (Umair, D-047 – D-049): step 1 this PC, step 2 the Docker image from the same setup
 script, step 3 RunPod and the friend's PC.**
 
@@ -336,6 +339,9 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.3 Reconstruction quality
 
+- [ ] **[new 2026-11-12] R-030 (`scan_646070948603`, lab room): room height 1.50 m cannot be right.** View the model,
+      check which plane the layout took as the ceiling and whether the scale is off; measure one length with a tape.
+
 - [ ] **Second room** (roomAttemptSadness2): full v9 pipeline + semantics (~2 h GPU), then a room check by the user. The
       real test of v9/v10. *(from TODO 2026-10-24 / 2026-10-27)*
 - [ ] Full PGSR multi-view geometric + photometric consistency (1–2 days, ~2× training time); removes the faint vertical
@@ -393,7 +399,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.7 Android app
 
-- [ ] **[new] Test the 2026-11-06 app fixes on the phone** (v0.3.4+, D-058 – D-060): install from GitHub Releases (it installs
+- [ ] **[new 2026-11-12] Ask Tayyab whether he has unpushed app changes.** GitHub shows none after `6d0cab5`
+      (2026-10-26); work only on his PC cannot be seen.
+
+- [ ] **[new] Test the 2026-11-06 app fixes on the phone** (now **v0.3.5**, released 2026-11-12 with PR #4; D-058 – D-060; also check that an upload now brings `camera.csv`, `anchors.csv` and the lens files): install from GitHub Releases (it installs
       next to the old app; uninstall the old one only after its recordings are uploaded), check whether Play Protect still warns, the server list
       finds this PC, and "Check for updates" installs the next build. Not tested on a device.
 - [ ] **[new] Move the app code** out of `googleARCore/samples/hello_ar_java/` and Google's Java package into its own
@@ -487,6 +496,9 @@ Dated milestones; details in [LOG.md](LOG.md), reasons in [DECISIONS.md](DECISIO
   server logs devices, upload progress, failures and answers a UDP server search (D-057). App: server search that
   works on the /19 lab Wi-Fi, in-app updates, own package name `com.buildscan3d.app`, release builds signed with a
   private key (D-058 – D-060). Branch `fix/android-app`.
+
+- **2026-11-12: app v0.3.5** (Umair, PR #4): uploads `camera.csv`, `anchors.csv` and the lens files; server accepts
+  them as optional. Per-run web bundles gitignored (D-061). R-030 (lab room, 50.2 min on Linux) logged.
 
 ## 9. Known limits
 
