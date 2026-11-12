@@ -52,7 +52,7 @@ class UploadProgressLogger:
 
         headers = dict(scope.get("headers") or [])
         total = int(headers.get(b"content-length", b"0") or 0)
-        client = (scope.get("client") or ("?",))[0]
+        client = _who(scope)
         mb = 1024 * 1024
         state = {"got": 0, "t0": time.monotonic(), "last": time.monotonic(), "done": False}
         log.info("Upload started from %s: %s", client, f"{total / mb:.1f} MB" if total else "size unknown")
@@ -81,6 +81,16 @@ class UploadProgressLogger:
         await self.app(scope, logged_receive, send)
 
 
+def _who(scope) -> str:
+    """The client address for the log; a phone request that arrives on 127.0.0.1 came over the USB cable (adb reverse,
+    scripts/usb_link.sh), so it is labelled as such. Local tools (curl, buildscan) also use 127.0.0.1 but are not okhttp."""
+    client = (scope.get("client") or ("?",))[0]
+    ua = dict(scope.get("headers") or []).get(b"user-agent", b"")
+    if client in ("127.0.0.1", "::1") and ua.startswith(b"okhttp"):
+        return f"{client} (USB cable)"
+    return client
+
+
 class ErrorLogger:
     """ASGI middleware: logs when a device first talks to the server (or comes back after 5 min of silence), and
     every request that fails (status >= 400 or a crash) with the client, the path and the reason the server sent
@@ -94,7 +104,7 @@ class ErrorLogger:
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
-        client = (scope.get("client") or ("?",))[0]
+        client = _who(scope)
         what = f"{scope['method']} {scope['path']} from {client}"
         state = {"status": 0, "body": b""}
         now = time.monotonic()

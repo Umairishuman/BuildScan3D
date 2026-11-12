@@ -1,0 +1,38 @@
+<!--
+   Copyright 2016 Google LLC
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<resources>
+
+  <!-- BuildScan 3D: light theme in the logo's blues (colors.xml). Every screen uses it; the capture screen draws the
+       camera full screen on top of it. -->
+  <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+    <item name="colorPrimary">@color/bs_primary</item>
+    <item name="colorPrimaryDark">@color/bs_card</item>
+    <item name="colorAccent">@color/bs_primary</item>
+    <item name="android:windowBackground">@color/bs_bg</item>
+    <item name="android:statusBarColor">@color/bs_card</item>
+    <item name="android:windowLightStatusBar">true</item>
+    <item name="android:navigationBarColor">@color/bs_card</item>
+    <item name="android:textColorPrimary">@color/bs_text</item>
+    <item name="android:textColorSecondary">@color/bs_text_secondary</item>
+  </style>
+
+  <!-- Capture screen: same theme, dark status bar over the camera image. -->
+  <style name="AppTheme.Capture">
+    <item name="android:statusBarColor">#000000</item>
+    <item name="android:windowLightStatusBar">false</item>
+  </style>
+
+</resources>

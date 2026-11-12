@@ -2,12 +2,33 @@
 
 **What is where, and what each file does.** Read this first in a new session (human or agent), then
 [CLAUDE.md](CLAUDE.md) (how we work) and [docs/progress/STATUS.md](docs/progress/STATUS.md) (where the project stands).
-Last checked against the code: 2026-11-06 (branch `docs/project-organisation`, off `feature/semantics-mesh`).
+Last checked against the code: 2026-11-12 (branch `feature/usb-upload`: app moved to `android/` §6, USB upload, light UI).
 When you add, move, retire or repurpose a file, update this map in the same commit.
 
 Markers: **[v9]** = part of the current best pipeline (v9 processing + v10 semantics) · [eval] = evaluation /
 diagnostics · [v3] = the older SfM pipeline the server still runs · [legacy] = the ARCore-pose pipeline from before
 2026-10-11, kept for the record · [exp] = experiment, not used by any pipeline · [dead] = backup copy, unused.
+
+## 0. Where is ...? (quick finder)
+
+| Looking for | Folder | Section |
+|---|---|---|
+| **Mobile app UI** (screens, buttons, menus, colours) | `android/app/src/main/` → screens in `java/com/buildscan3d/app/*Activity.java`, layouts in `res/layout/`, colours in `res/values/colors.xml`, logo `res/drawable-nodpi/logo.png` | 6 |
+| Mobile app logic (recording, IQA, coverage, upload, USB / Wi-Fi link, updates) | same `java/com/buildscan3d/app/` folder | 6 |
+| Reconstruction pipeline + "models" code (SfM, priors, 3DGS training, semantics, mesh) | `src/arcore3dgs/` | 2, 3 |
+| AI model weights (Metric3D, Grounding DINO, SAM, CLIP) | not in git: `~/.cache/torch/hub`, `~/.cache/huggingface` (downloaded on first use) | 9 |
+| Trained 3D models (results) | not in git: `saved_models/`, `dataset/<capture>/work_*` | 9 |
+| Phone-upload server | `server/` (start: `scripts/start_server.sh`) | 4, 5 |
+| Web dashboard + 3D viewer | `prototype/web-ui/` | 7 |
+| **One command for everything** (server, runs, viewers, status) | `scripts/buildscan` (`scripts/buildscan help`) | 5 |
+| **Which command, which arguments** (cheat sheet) | [docs/COMMANDS.md](docs/COMMANDS.md) | 8 |
+| **How to run the full pipeline** | [docs/RUN_PIPELINE.md](docs/RUN_PIPELINE.md) | 8 |
+| Launch / setup scripts | `scripts/` | 5 |
+| Python environments | `envs/linux/` (Linux), `requirements*.txt` (Windows) | 1 |
+| Tests | `tests/` | 11 |
+| CI/CD (GitHub Actions) and APK checks | `.github/` | 11 |
+| Project records (status, decisions, log, runs) | `docs/progress/` | 8 |
+| Reports for evaluations | `report/` | 1 |
 
 ## 1. Top level
 
@@ -21,7 +42,8 @@ diagnostics · [v3] = the older SfM pipeline the server still runs · [legacy] =
 | `src/Metric3D_v2/`, `src/process_dataset.py`, `src/visualize_trajectory.py` | First prototype (Sept 2026): Metric3D depth + ARCore poses → dense cloud. Superseded; `process_dataset.py` still has a test |
 | `server/` | Phone-upload processing server (FastAPI) + RunPod / remote-GPU runners (section 4) |
 | `scripts/` | Windows `.bat` launchers + the job-manager CLI (section 5) |
-| `googleARCore/` | Google's ARCore SDK samples, vendored. **Only `samples/hello_ar_java/` is ours** (the capture app, section 6) |
+| `android/` | **The capture app** (Android, our code; moved here from `googleARCore/samples/hello_ar_java/` on 2026-11-12, D-063), section 6 |
+| `googleARCore/` | Google's ARCore SDK and samples, vendored and unused (`samples/hello_ar_java/MOVED.md` points to `android/`) |
 | `prototype/web-ui/` | Next.js dashboard + 3D scan viewer (section 7) |
 | `prototype/requirements.md`, `prototype/POC_requirements.md` | Early product / POC requirements |
 | `tests/` | pytest suite (CPU-only logic, runs in CI) |
@@ -46,7 +68,7 @@ diagnostics · [v3] = the older SfM pipeline the server still runs · [legacy] =
 Commands with all flags: STATUS §5. Python environment in brackets.
 
 ```
-phone app (hello_ar_java) ── dataset/<capture>/  (dataset.mp4, poses.csv, ...)
+phone app (android/) ──── dataset/<capture>/  (dataset.mp4, poses.csv, ...)
    │  check_capture.py                                  [system]  sanity check before processing
    ▼
 run_v8.py  [system Python; calls nerfstudio-env for export/train]
@@ -169,6 +191,8 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does |
 |---|---|
+| `buildscan` | **Linux: one command for everything**: `status`, `server start/stop/log`, `datasets`, `check`, `run` (calls `run_full.sh` in screen `run-<tag>`), `watch`, `results`, `view` (port 7010), `web` (port 3000), `attach`, `stop`, `ip`, `gpu`. `latest` = newest recording |
+| `run_full.sh` | **Linux: the whole pipeline in one command**, recording → 3DGS → layout → semantics → mesh → web bundle, each stage in its env; `--from <stage>` restarts; prints GPU use / temperature / training progress every 30 s (`gpu.csv`). Guide: [docs/RUN_PIPELINE.md](docs/RUN_PIPELINE.md) |
 | `setup_linux.sh` | **Linux setup** (no sudo): micromamba, envs `bs-colmap` / `bs-ns` / `bs-system`, `semantic-env`, vocabulary tree, web-ui packages, then checks (GPU, COLMAP, gsplat, Open3D). `--check` = checks only. Same script for the Docker image (D-048) |
 | `run_arcore3dgs.bat` | [v3] pipeline: fallback → prepare → sfm_colmap → export_nerfstudio → ns-train → ns-export |
 | `run_arcore3dgs_legacy.bat` | [legacy] ARCore-pose pipeline: fallback → prepare → ba → relocalize_pnp → ba → mvs → pocket_prior → train.py |
@@ -179,25 +203,49 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `release.bat` | Bumps the app version and tags a release |
 | `run_train.bat`, `run_train_fast.bat`, `run_post.bat`, `run_post_fast.bat`, `run_viewer.bat` | [dead] first splatfacto runs on roomAttemptSadness (Sept/Oct 2026): ns-train / ns-eval / ns-export / ns-viewer with MSVC set up |
 
-## 6. Android capture app: `googleARCore/samples/hello_ar_java/`
+## 6. Android capture app: `android/`
 
-Built on Google's `hello_ar_java` sample. Package name (`applicationId`) `com.buildscan3d.app` since 2026-11-06 (D-058); the Java
-package is still Google's. **App UI:** the screens are the `*Activity.java` files below, their layouts in
-`app/src/main/res/layout/`, the menu in `res/menu/settings_menu.xml`, texts in `res/values/strings.xml`.
-Our code is in `app/src/main/java/com/google/ar/core/examples/java/helloar/`:
+Our app, built on Google's `hello_ar_java` sample; moved out of `googleARCore/` on 2026-11-12 with its own Java package
+`com.buildscan3d.app` (D-063; `applicationId` unchanged since D-058, so installed apps update in place). Light theme
+from the logo with bottom navigation Capture / Scans / Server (D-064). Code in
+`app/src/main/java/com/buildscan3d/app/`:
 
 | File | Does |
 |---|---|
-| `HelloArActivity.java` | Main AR screen (Google's sample, heavily modified): ARCore session, recording, rendering, menus, server list (UDP search + saved servers + /24 sweep) |
+| `CaptureActivity.java` | Capture tab (was `HelloArActivity`, Google's sample heavily modified): ARCore session, recording, rendering, ⋮ menu |
+| `GalleryActivity.java` | Scans tab: recordings, connection bar, upload with checks first (files, then USB / Wi-Fi), progress with MB/s and time left, Stop, automatic restart after a lost link |
+| `ServerActivity.java` | Server tab: live connection, USB steps, Wi-Fi address (save and test, network search), app updates |
+| `ProcessingActivity.java` | Upload & process screen after a recording: same checks, progress, Stop; then job status polling |
+| `ScanDetailActivity.java` | One recording: video preview, trim |
+| `ServerLink.java` | Which route reaches the server now: USB cable (`127.0.0.1:8000` via `adb reverse`) first, then saved / recent Wi-Fi servers; plain reason when none answers (D-062) |
+| `ServerDiscovery.java` | Server search (USB, UDP broadcast, saved and recent servers, /24 sweep) and the recent-servers list |
+| `BottomNav.java` | The bottom navigation bar (`res/layout/view_bottom_nav.xml`) |
 | `CaptureLogger.java` | Writes poses, tracking, points, depth, `camera.csv`, `anchors.csv`, lens metadata on a background thread |
 | `QualityMonitor.java` | Live IQA: predicted blur, dark / overexposed, low texture, tracking; `quality.csv` |
 | `CoverageMap.java`, `CoverageOverlayView.java` | Live coverage map (red / yellow / green dots) |
-| `ProcessingActivity.java` | Upload & process screen: multipart upload, status polling |
-| `GalleryActivity.java`, `ScanDetailActivity.java` | List of recordings and their details |
-| `UpdateChecker.java` | Update check against GitHub Releases at start and from the menu ("Check for updates"); downloads the APK in the app and opens Android's installer (FileProvider `res/xml/update_paths.xml`) |
+| `UpdateChecker.java` | Update check against GitHub Releases at start and from the Server tab / menu; downloads the APK and opens Android's installer (FileProvider `res/xml/update_paths.xml`) |
+| `common/` | Google's helpers (rendering, camera permission, display rotation, ...), sample code, only the package renamed |
 
-The other `googleARCore/samples/*` folders, `libraries/`, `assets/`, `media/` are Google's and unused. Build: Android
-Studio or `./gradlew assembleDebug` with JDK 21 (STATUS §7.7).
+**App UI files** (`app/src/main/`):
+
+| File | Screen / use |
+|---|---|
+| `res/values/colors.xml`, `res/values/styles.xml` | Light palette from the logo (`bs_*` colours) and `AppTheme` / `AppTheme.Capture` |
+| `res/drawable-nodpi/logo.png` | The logo (cropped from `prototype/web-ui/public/images/logo-new-removebg-preview.png`); launcher icons in `res/mipmap-*` |
+| `res/drawable/bg_card.xml`, `bg_button*.xml`, `bg_pill.xml`, `bg_bottom_nav.xml`, `ic_nav_*.xml` | Cards, buttons, badges, bottom bar and its icons |
+| `res/layout/activity_main.xml` | Capture tab (`CaptureActivity`): camera view, logo badge, record button, IQA / coverage text, ⋮ menu, bottom bar |
+| `res/layout/activity_gallery.xml`, `res/layout/item_scan.xml` | Scans tab (`GalleryActivity`) and one recording card |
+| `res/layout/activity_server.xml` | Server tab (`ServerActivity`) |
+| `res/layout/view_bottom_nav.xml` | Bottom navigation, included in the three tabs |
+| `res/layout/activity_scan_detail.xml` | One recording's details (`ScanDetailActivity`) |
+| `res/layout/activity_processing.xml` | Upload & processing status (`ProcessingActivity`) |
+| `res/menu/settings_menu.xml` | ⋮ menu on the Capture tab: camera, depth, Server (opens the Server tab), Check for updates |
+| `res/xml/update_paths.xml` | Folder shared with the installer for in-app updates |
+| `assets/models/`, `assets/shaders/` | Google's sample 3D models and shaders for the AR rendering |
+| `AndroidManifest.xml` | Screens, permissions, update file provider |
+
+Uploads send every recorded file since v0.3.5 (PR #4). Build: Android Studio (open `android/`) or
+`./gradlew assembleDebug` in `android/` with JDK 21; CI builds it on every push (docs/CI_CD.md).
 
 A recording (`dataset/<capture>/`): `dataset.mp4` (video + IMU tracks), `poses.csv`, `tracking.csv`, `points.csv`,
 `quality.csv`, `camera.csv`, `anchors.csv`, `depth/` (5 Hz), `meta.json`, `lens_metadata.json`, `camera_characteristics.json`.
@@ -215,6 +263,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `src/components/...` | Dashboard, projects, floor plan, notifications, modals (mostly mock data) |
 | `src/lib/mockData.ts` | All mock projects / scans (the real scan is `newroom-scan`) |
 | `public/scans/newroom/` | The real labelled scan bundle (from `export_web.py`) |
+| `public/scans/scan_<id>_<tag>/` | Per-run bundles written by every `run_full.sh` run; gitignored (D-061), live only on the machine that ran it |
 | `public/splats/` | Empty. The old v6 splat (`newroom_v6.spz`, 12.5 MB, unused since the labelled bundle) was taken out of git on 2026-11-06 (D-055); local copy in `saved_models/web/` on the Ubuntu PC |
 
 ## 8. `docs/`
@@ -222,10 +271,13 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | Path | What |
 |---|---|
 | `progress/STATUS.md`, `DECISIONS.md`, `LOG.md`, `TRAINING.md` | The four live project records (CLAUDE.md §1) |
+| `progress/COMPLETION_PLAN.md` | **current** · Plan to finish by 2026-12-04: every open task by pipeline step, with done-when, dependencies, priority, week; snapshot of the shared doc (link inside) |
 | `progress/Problems_and_Solutions.md` | Technical evidence for every problem and fix (P&S §x) |
 | `progress/Research_Notes_2026-10-24.md` | Literature behind v8/v9 |
 | `progress/archive/` | Retired files (old TODO, Training_Analysis, early notes) |
 | `Flow.md` | System flow app → server → GPU → model |
+| `COMMANDS.md` | **Cheat sheet**: every `scripts/buildscan` command, what to type for each argument, examples |
+| `RUN_PIPELINE.md` | **How to run the full pipeline on Linux** (`scripts/run_full.sh`): setup, upload, check, run, watch, restart, results, known problems |
 | `PROCESSING_GUIDE.md` | Using the phone-upload server and job manager |
 | `CI_CD.md` | What CI/CD checks and how to run it locally |
 | `proposal/` | Proposal v1–v4 (+ unversioned copy), defence slides, guidelines, POC plans, workflow docs |
@@ -244,6 +296,26 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `saved_models/YYYY-MM-DD_<tag>/` | Kept models with a `README.txt` (best: `2026-10-27_v9_semantic_pgsr/`) |
 | `tools/colmap_dl/`, `tools/cudnn9/` | COLMAP 4.2 CUDA for Windows + vocabulary trees; cuDNN 9 DLLs |
 | `nerfstudio-env/`, `semantic-env/` | Python venvs (Windows) |
+
+## 10a. Tests, CI and other folders
+
+| Path | What |
+|---|---|
+| `tests/conftest.py` | Shared fixtures (synthetic captures) |
+| `tests/test_common_*.py`, `test_imu.py`, `test_fallback.py`, `test_relocalize_and_sfm.py` | Pipeline maths: capture loading, poses, IMU, fallback, SfM helpers |
+| `tests/test_process_dataset.py` | First-prototype script |
+| `tests/test_server_api.py`, `test_server_pipeline.py`, `test_runpod_client.py` | Upload server, local runner, RunPod client |
+| `tests/test_apk_checks.py` | APK / manifest checker and signing keys |
+| `tests/test_sources_compile.py` | Every Python file compiles |
+| `tests/requirements.txt` | Light test dependencies (no GPU) |
+| `.github/workflows/ci.yml` | CI: lint, tests (Python 3.10–3.12), web build, Android debug + release build, repo hygiene |
+| `.github/workflows/cd.yml` | CD on `master`: version bump, release APK signed with the private key (D-059), GitHub Release |
+| `.github/workflows/docker-gpu.yml` | Builds / pushes the RunPod GPU image |
+| `.github/android/` | `check_apk.py` + `apk_expectations.json` (what a correct APK looks like), `debug.keystore` (CI builds only) |
+| `envs/linux/` | Linux env files (section 1) |
+| `docker/` | `Dockerfile.gpu` (out of date, STATUS §6) |
+| `report/mid-eval/` | FYP-1 mid evaluation: LaTeX report, fix notes (frozen) |
+| `UI designs/`, `.vscode/`, `scratch/` | Design images, editor settings, old one-off scripts (section 1) |
 
 ## 10. Reorganisation plan (agreed 2026-11-06, DECISIONS D-049)
 
@@ -270,5 +342,4 @@ tell what is current. **Nothing is ever deleted: retired files are archived** (`
 
    This touches `run_v8.py` (script paths), the 7 `from common import` lines, `server/pipeline.py`, the `.bat`
    launchers, `tests/` and every command in STATUS / README, so it should be one dedicated branch and PR.
-   Moving the capture app out of the vendored `googleARCore/` (e.g. to `app/android/`) is a similar, separate step
-   (CI paths point at `googleARCore/samples/hello_ar_java`).
+   Moving the capture app out of the vendored `googleARCore/` was done on 2026-11-12: it is in `android/` (D-063).

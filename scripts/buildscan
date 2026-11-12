@@ -1,0 +1,201 @@
+#!/usr/bin/env bash
+# BuildScan3D: one command for everything on the Linux PC. Every long-running thing runs in a named `screen`
+# session, so it survives closing the terminal / SSH, and `buildscan status` always shows what is running.
+#
+#   scripts/buildscan status                     what is running (server, runs, viewers), GPU, newest recordings
+#   scripts/buildscan ip                         this PC's addresses (URL for the phone)
+#
+#   scripts/buildscan server start|stop|log      phone-upload server (port 8000, dry_run)       session: bs-server
+#
+#   scripts/buildscan datasets                   recordings, newest first, with their finished runs
+#   scripts/buildscan check  <scan>              capture check (check_capture.py)
+#   scripts/buildscan run    <scan> [tag] [--from STAGE] [-- run_v8 args]
+#                                                full pipeline, best recipe by default             session: run-<tag>
+#   scripts/buildscan watch  <scan> [tag]        follow that run's logs (Ctrl+C stops watching only)
+#   scripts/buildscan results <scan> [tag]       where the outputs are + stage times
+#
+#   scripts/buildscan view   <scan> [tag]        3D splat viewer, http://localhost:7010            session: viewer
+#   scripts/buildscan web                        web dashboard, http://localhost:3000              session: web
+#
+#   scripts/buildscan attach <session>           open a session (leave with Ctrl+A then D; Ctrl+C would stop it)
+#   scripts/buildscan stop   <session>           stop a session (bs-server, run-<tag>, viewer, web)
+#   scripts/buildscan gpu                        live GPU use / memory / temperature
+#
+# <scan>: a folder in dataset/ (scan_056fe94d3399, dataset/scan_056fe94d3399) or `latest` (newest recording).
+# [tag]: names the run's output folders (work_<tag>_sfm/gs_<tag>/). A new tag never mixes with older runs.
+# Leave an argument out and buildscan asks: a numbered list of recordings / runs / sessions to pick from.
+# Cheat sheet with every argument explained: docs/COMMANDS.md
+# Default run recipe (best model, R-023): --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr
+# Guide: docs/RUN_PIPELINE.md
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+export MAMBA_ROOT_PREFIX="${MAMBA_ROOT_PREFIX:-$HOME/micromamba}"
+MM="${BUILDSCAN_MAMBA:-$HOME/.local/bin/micromamba}"
+RECIPE=(--sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr)
+
+say()  { printf '%s\n' "$*"; }
+die()  { printf 'buildscan: %s\n' "$*" >&2; exit 1; }
+usage() { sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+
+running() { screen -ls 2>/dev/null | grep -qE "[0-9]+\.$1[[:space:]]"; }
+sessions() { screen -ls 2>/dev/null | grep -oE '[0-9]+\.[^[:space:]]+' | cut -d. -f2- || true; }
+start_session() {   # start_session <name> <command string>
+  running "$1" && die "'$1' is already running (scripts/buildscan attach $1, or stop $1)"
+  if [[ -n "${BUILDSCAN_DRY:-}" ]]; then say "[dry] screen -dmS $1 bash -c \"$2\""; return; fi
+  screen -dmS "$1" bash -c "$2; echo; echo '[finished: press Enter to close]'; read"
+  sleep 1
+  running "$1" && say "started '$1'  (watch: scripts/buildscan attach $1   stop: scripts/buildscan stop $1)"
+}
+
+pick() {   # pick <question> <options...>: numbered menu on the terminal, prints the choice
+  local q=$1; shift
+  [[ $# -gt 0 ]] || return 1
+  [[ -t 0 ]] || die "$q (no terminal to ask in: give it as an argument)"
+  if [[ $# -eq 1 ]]; then echo "$q $1" >&2; echo "$1"; return; fi
+  echo "$q" >&2
+  local PS3="number: " c
+  select c in "$@"; do [[ -n "$c" ]] && { echo "$c"; return; }; done
+}
+
+scan_dir() {   # scan name / path / latest / nothing (asks) -> dataset/<name>
+  local s=${1:-}
+  if [[ -z "$s" ]]; then
+    local all=(); for x in $(ls -td dataset/*/ 2>/dev/null); do x=${x%/}; all+=("${x#dataset/}"); done
+    [[ ${#all[@]} -gt 0 ]] || die "no recordings in dataset/ (upload one from the app first)"
+    s=$(pick "Which recording? (newest first)" "${all[@]}")
+  fi
+  if [[ "$s" == latest ]]; then
+    s=$(ls -td dataset/*/ 2>/dev/null | head -1) || true
+    [[ -n "$s" ]] || die "no recordings in dataset/"
+  fi
+  s=${s%/}; s=${s#dataset/}
+  [[ -d "dataset/$s" ]] || die "no recording dataset/$s (scripts/buildscan datasets lists them)"
+  echo "dataset/$s"
+}
+out_dir() { echo "$1/work_${2}_sfm/gs_${2}"; }
+run_tag() {   # run_tag <dataset dir> [tag]: the given tag, or ask among that recording's runs
+  [[ -n "${2:-}" ]] && { echo "$2"; return; }
+  local tags=(); for x in "$1"/work_*_sfm/gs_*; do [[ -d "$x" ]] && tags+=("${x##*/gs_}"); done
+  [[ ${#tags[@]} -gt 0 ]] || die "$1 has no runs yet (scripts/buildscan run $(basename "$1"))"
+  pick "Which run of $(basename "$1")?" "${tags[@]}"
+}
+
+my_ips() { ip -4 -br addr | awk '$1 != "lo" && $1 != "tailscale0" && $2 == "UP" {split($3, a, "/"); print $1, a[1]}'; }
+
+cmd=${1:-help}; shift || true
+case "$cmd" in
+  help|-h|--help) usage ;;
+
+  status)
+    say "== sessions"
+    s=$(sessions); [[ -n "$s" ]] && echo "$s" | sed 's/^/   /' || say "   (nothing running)"
+    say "== upload server"
+    if curl -s -m 2 localhost:8000/health >/dev/null; then
+      say "   up: $(curl -s -m 2 localhost:8000/health)"; my_ips | while read -r c a; do say "   phone URL ($c): http://$a:8000"; done
+    else say "   not running (scripts/buildscan server start)"; fi
+    ADB="$(command -v adb || ls "$HOME/.local/bin/adb" 2>/dev/null || true)"
+    if [[ -z "$ADB" ]]; then say "   USB cable: adb not installed (docs/PROCESSING_GUIDE.md, Upload over a USB cable)"
+    else
+      phones="$("$ADB" devices 2>/dev/null | awk 'NR>1 && NF {print $1" ("$2")"}' | paste -sd, -)"
+      say "   USB cable: ${phones:-no phone plugged in}$( "$ADB" reverse --list 2>/dev/null | grep -q 'tcp:8000' && echo ', linked to the server')"
+    fi
+    say "== GPU"
+    nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw \
+      --format=csv,noheader 2>/dev/null | sed 's/^/   use, memory used, total, temp, power: /' || say "   nvidia-smi not available"
+    say "== newest recordings"
+    ls -td dataset/*/ 2>/dev/null | head -3 | sed 's|^|   |' || say "   (none)"
+    ;;
+
+  ip)
+    my_ips | while read -r c a; do say "$c  $a   phone URL: http://$a:8000"; done
+    tailscale ip -4 2>/dev/null | sed 's/^/tailscale  /' || true
+    ;;
+
+  server)
+    case "${1:-}" in
+      start) start_session bs-server "scripts/start_server.sh" ;;
+      stop)
+        if running bs-server; then screen -S bs-server -X quit; say "server stopped"
+        else   # started by hand in a terminal: stop whatever of ours listens on port 8000
+          pid=$(ss -ltnpH 'sport = :8000' 2>/dev/null | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2)
+          if [[ -n "$pid" ]]; then kill "$pid" && say "server stopped (pid $pid, was started outside buildscan)"
+          else say "server was not running"; fi
+        fi ;;
+      log)   running bs-server || die "server not running"; screen -r bs-server ;;
+      *) die "server start | stop | log" ;;
+    esac ;;
+
+  datasets)
+    for d in $(ls -td dataset/*/ 2>/dev/null); do
+      d=${d%/}
+      runs=$(ls -d "$d"/work_*_sfm/gs_* 2>/dev/null | sed 's|.*/gs_||' | tr '\n' ' ' || true)
+      printf '%-32s %6s  %s  runs: %s\n' "$(basename "$d")" "$(du -sh "$d" 2>/dev/null | cut -f1)" \
+        "$(date -r "$d" '+%F %H:%M')" "${runs:-none}"
+    done ;;
+
+  check)
+    d=$(scan_dir "${1:-}")
+    "$MM" run -n bs-system python src/arcore3dgs/check_capture.py "$d" ;;
+
+  run)
+    d=$(scan_dir "${1:-}"); shift || true
+    tag=""; [[ $# -gt 0 && "$1" != --* ]] && { tag=$1; shift; }
+    if [[ -z "$tag" ]]; then
+      [[ -t 0 ]] || die "give a name (tag) for the run"
+      def="r$(date +%m%d)"; [[ -d "$(out_dir "$d" "$def")" ]] && def="r$(date +%m%d-%H%M)"
+      read -r -p "Name for this run (letters/digits, names its output folders) [$def]: " tag; tag=${tag:-$def}
+    fi
+    from=(); [[ "${1:-}" == "--from" ]] && { from=(--from "$2"); shift 2; }
+    [[ "${1:-}" == "--" ]] && shift
+    args=("$@"); [[ ${#args[@]} -eq 0 ]] && args=("${RECIPE[@]}")
+    other=$(sessions | grep '^run-' || true)
+    [[ -n "$other" ]] && die "another run is using the GPU: $other (one run at a time; stop it or wait)"
+    if [[ -d "$(out_dir "$d" "$tag")" && ${#from[@]} -eq 0 ]]; then
+      die "$(out_dir "$d" "$tag") exists: use a new tag, or --from <stage> to continue that run"
+    fi
+    q=""; for a in "${args[@]}"; do q+=" $(printf '%q' "$a")"; done
+    start_session "run-$tag" "scripts/run_full.sh $d $tag ${from[*]} --$q"
+    say "logs:  scripts/buildscan watch $(basename "$d") $tag"
+    say "Record the run in docs/progress/TRAINING.md (CLAUDE.md §2)." ;;
+
+  watch)
+    d=$(scan_dir "${1:-}"); m=$(out_dir "$d" "$(run_tag "$d" "${2:-}")")
+    [[ -d "$m" ]] || die "no such run for $d (scripts/buildscan datasets)"
+    say "following $m/{run_full.log,train.log}  (Ctrl+C stops watching, not the run)"
+    tail -n 30 -F "$m/run_full.log" "$m/train.log" 2>/dev/null ;;
+
+  results)
+    d=$(scan_dir "${1:-}"); tag=$(run_tag "$d" "${2:-}"); m=$(out_dir "$d" "$tag")
+    [[ -d "$m" ]] || die "no run '$tag' for $d"
+    say "model:     $m/splat.ply"
+    say "layout:    $m/layout/  (plan.png)"
+    say "labels:    $m/semantic_v10/  (views_semantic.jpg, plan_semantic.png, verify.jpg)"
+    say "mesh:      $m/mesh/  (mesh_views.jpg, mesh_web.glb, mesh_web_semantic.glb)"
+    say "web:       prototype/web-ui/public/scans/$(basename "$d")_$tag/"
+    say "== stage times"; cat "$m/stages.tsv" 2>/dev/null || say "(none yet)" ;;
+
+  view)
+    d=$(scan_dir "${1:-}"); m=$(out_dir "$d" "$(run_tag "$d" "${2:-}")")
+    [[ -f "$m/splat.ply" ]] || die "no $m/splat.ply yet"
+    start_session viewer "$MM run -n bs-ns python -W ignore src/arcore3dgs/view.py --ply $m/splat.ply"
+    say "open http://localhost:7010  (from the laptop: forward port 7010 in VS Code Remote-SSH)" ;;
+
+  web)
+    start_session web "cd prototype/web-ui && $MM run -n bs-ns npm run dev"
+    say "open http://localhost:3000  (a scan shows up only with a project entry in src/lib/mockData.ts)" ;;
+
+  attach)
+    n=${1:-}; [[ -n "$n" ]] || { mapfile -t ss < <(sessions); [[ ${#ss[@]} -gt 0 ]] || die "nothing is running"; n=$(pick "Open which session?" "${ss[@]}"); }
+    screen -r "$n" ;;
+
+  stop)
+    n=${1:-}; [[ -n "$n" ]] || { mapfile -t ss < <(sessions); [[ ${#ss[@]} -gt 0 ]] || die "nothing is running"; n=$(pick "Stop which session?" "${ss[@]}"); }
+    running "$n" || die "'$n' is not running"
+    screen -S "$n" -X quit && say "stopped $n" ;;
+
+  gpu) watch -n 2 nvidia-smi ;;
+
+  *) say "unknown command: $cmd"; usage 1 ;;
+esac

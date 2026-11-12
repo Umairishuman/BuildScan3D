@@ -88,7 +88,7 @@ npx tsc --noEmit
 npm run build
 ```
 
-Android: open `googleARCore/samples/hello_ar_java` in Android Studio, or run `./gradlew assembleDebug` there with JDK 17.
+Android: open `android` in Android Studio, or run `./gradlew assembleDebug` there with JDK 17.
 
 ## 5. Branching and review
 
@@ -124,7 +124,7 @@ Open the repository on GitHub, then **Actions**. Each row is one run, with a gre
 
 There are two ways. Either is fine; the second needs no PC.
 
-**A. From Android Studio (developer route).** Open `googleARCore/samples/hello_ar_java` in Android Studio. On the phone, turn on *Developer options*, then *Wireless debugging* and pair it with Android Studio. The phone then appears in the device list at the top, and *Run* installs and starts the app.
+**A. From Android Studio (developer route).** Open `android` in Android Studio. On the phone, turn on *Developer options*, then *Wireless debugging* and pair it with Android Studio. The phone then appears in the device list at the top, and *Run* installs and starts the app.
 
 **B. From GitHub (what CD produces).** On every push to `master`, the `publish-latest` job attaches the newest debug APK to a pre-release called **Latest build (master)**. Open the repository's *Releases* page in the phone's browser (the repository is public, so no GitHub login is needed), download `buildscan3d-latest.apk`, allow *Install unknown apps* for that browser once, and install. Every CI/CD APK is also available under *Artifacts* of its run.
 

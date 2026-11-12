@@ -447,6 +447,52 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **Rejected:** also building locally first (would need JDK + Android SDK on this PC); PR only with Umair merging.
   **By:** Umair.
 
+## D-061 · 2026-11-12 · Per-run web bundles stay out of git
+- **Decision:** `prototype/web-ui/.gitignore` ignores `public/scans/scan_*/`, the bundle the `web` stage of
+  `scripts/run_full.sh` writes for every run (`<scan>_<tag>/`, ~20 MB each). Only demo bundles that are picked on purpose,
+  such as `public/scans/newroom/`, are tracked; a scan is shown in the dashboard by adding it to `mockData.ts`.
+- **Why:** each run added an untracked ~20 MB folder (R-029 `scan_056fe94d3399_umair/`, the unrecorded `r1106` run
+  `scan_646070948603_r1106/`); no single file passes CI's 10 MB limit, so one could be committed by mistake.
+- **Rejected:** `export_web.py` writing to `saved_models/web/` instead and copying demos by hand; committing every bundle
+  (~20 MB of repo growth per scan). **By:** Umair.
+
+## D-062 · 2026-11-12 · Uploads over a USB cable, preferred over Wi-Fi
+- **Decision:** the app uploads over a USB cable when one is connected: `scripts/usb_link.sh` (started by
+  `scripts/start_server.sh`) keeps `adb reverse tcp:8000 tcp:8000` set while a phone is plugged in, and the app's
+  `ServerLink` tries `http://127.0.0.1:8000` before the saved and recent Wi-Fi servers. The Scans screen shows the route
+  (USB / Wi-Fi / not connected, with the reason), uploads show MB/s and time left, fail within 30 s when the link drops,
+  and restart by themselves up to 3 times.
+- **Why:** on 2026-11-12 uploads ran at ~1.4 MB/s on the lab Wi-Fi (772.5 MB recording, ~9 min) and ~1 MB/s on the
+  phone hotspot (PC Wi-Fi signal −76 dBm); the PC's address changed four times that day, so the app kept losing the
+  server; the app's write timeout of 10 min hid dropped connections.
+- **Rejected:** resumable (chunked) uploads (server change, later if needed); a fixed IP from lab IT (not in our
+  control); asking the user to pick USB by hand. **By:** Umair.
+
+## D-063 · 2026-11-12 · The capture app lives in `android/` with its own Java package
+- **Decision:** the app moved from `googleARCore/samples/hello_ar_java/` to `android/` (`git mv`, history kept), Java
+  package `com.buildscan3d.app` (was Google's `com.google.ar.core.examples.java.helloar`), `HelloArActivity` renamed
+  `CaptureActivity`, Google's helpers under `com.buildscan3d.app.common`. CI, CD, `scripts/release.bat`, the APK
+  expectations and the manifest test follow the new path; `googleARCore/samples/hello_ar_java/MOVED.md` points to it.
+  `applicationId` stays `com.buildscan3d.app` (D-058), so installed apps update in place.
+- **Why:** asked by Umair on 2026-11-06 ("the app UI is hard to find", STATUS 7.7) and again on 2026-11-12 ("give
+  the folder proper structure"); MAP §10 had planned it. **Evidence:** CI green after the move (Android build + APK
+  checks + Python tests, run 43189543479).
+- **Rejected:** `app/android/` (MAP §10's example; one level deeper for no gain); sub-packages per feature (several
+  classes share package-private constants, so a split needs more refactoring than it is worth now). **By:** Umair.
+
+## D-064 · 2026-11-12 · App UI: light theme from the logo, bottom navigation, checked and stoppable uploads
+- **Decision:** the app uses a light theme taken from the logo and the web UI (AGENTS.md §2): background `#F8FAFC`, white
+  cards, primary `#2563EB`, navy `#1B4B8A`, text `#0F172A` (`res/values/colors.xml`); the logo is in the screen headers
+  and on the capture screen. Bottom navigation Capture / Scans / Server (hidden while recording); a new Server tab
+  (connection, USB steps, Wi-Fi address with save-and-test and search, updates) replaces the server dialog. Before an
+  upload the app checks the recording's files, then the connection: no server -> it asks to connect the USB cable or
+  the Wi-Fi; Wi-Fi only -> it offers the cable first; then the progress bar starts. Uploads can be stopped (Scans tab
+  and processing screen).
+- **Why:** asked by Umair on 2026-11-12; the dark sample UI did not match the brand, and the slow, dropping Wi-Fi
+  uploads of that day (D-062) needed the user to be told what to connect before an upload starts.
+- **Rejected:** Material `BottomNavigationView` (would need a newer Material library than the app's 1.1.0); keeping the
+  server dialog on the capture screen. Not tested on a device yet. **By:** Umair.
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |

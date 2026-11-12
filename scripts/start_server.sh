@@ -10,6 +10,7 @@
 #   micromamba run -n bs-server pip install -r server/requirements.txt
 # Loads .env if present (PROCESSING_MODE, RUNPOD_API_KEY, ...). Mode defaults to dry_run: uploads are saved to
 # dataset/scan_<id>/ and nothing is processed.
+# Also starts scripts/usb_link.sh, so a phone on a USB cable (USB debugging on) uploads over the cable.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -28,8 +29,14 @@ echo " Mode:  $PROCESSING_MODE"
 echo " Local: http://localhost:$PORT   (docs: /docs)"
 for ip in $(hostname -I); do
   [[ "$ip" == *:* ]] && continue
-  echo " Phone: http://$ip:$PORT"
+  echo " Phone: http://$ip:$PORT   (network)"
 done
+echo " Phone: http://127.0.0.1:$PORT   (USB cable, automatic when plugged in)"
 echo
 
-exec "$MM" run -n bs-server python -m uvicorn server.main:app --host 0.0.0.0 --port "$PORT"
+# USB link: keeps `adb reverse` set while a phone is plugged in (scripts/usb_link.sh); stopped with the server.
+"$ROOT/scripts/usb_link.sh" "$PORT" &
+USB_PID=$!
+trap 'kill "$USB_PID" 2>/dev/null' EXIT
+
+"$MM" run -n bs-server python -m uvicorn server.main:app --host 0.0.0.0 --port "$PORT"
