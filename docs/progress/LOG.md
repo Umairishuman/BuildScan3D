@@ -200,3 +200,26 @@ Template:
   stalled (as in R-027) → key made with `openssl`; `ufw` is active (phone access untested).
 - Next: CI on the PR, merge, CD release v0.3.4; Umair uploads today's recording, then installs v0.3.4 (next to the old app,
   a separate package); ufw rules; then `check_capture.py` and the R-028 run options.
+
+## 2026-11-12 · Tayyab (agent) · `exp/fast-pipeline`
+- Did: profiled training (torch.profiler) and sped up the pipeline. `geo_splatfacto.py`: exact replacement of splatfacto's
+  bilateral-grid total-variation loss (was ~30 ms of every step) and colour affine; with the blur model, the colour grid
+  is applied once to the averaged render. `mono_prior.py`: image reading and saving in threads (identical output).
+  `fast_mvs.py`: `--photometric`, `--iters`, `--suffix`. `sfm_colmap.py`: `--skip_retriangulation`. `run_v8.py`:
+  `--init_args`. `semantic2d.py`: tile pass batched (not yet run). `select_sharp.py`: extracts `imu.npz` itself.
+- Runs: R-032 (training 42.5 → 28.2 min, equal quality), R-033 (dense init 20.1 → 7.5 min, equal quality), R-034 (mapper
+  settings; the default mapper is not deterministic), R-035 (everything incl. the SfM shortcut: 61.6 min but worse,
+  rejected), R-036 (new room `scan_3028a4de8fa0`, a tiered lecture hall: 48.8 min end to end with normal SfM).
+- Tried and dropped: parallel `plane_seg.py` (no gain on Windows: allocation-heavy numpy serialises across processes).
+- Problems: two background runs stopped with exit code 4 (agent shell ended); `--init_args "--photometric"` parsed as an
+  option; missing `imu.npz` on a fresh capture; port 8000 of the upload server reachable from the internet (STATUS 7.1).
+- Shared the raw newRoomAttemptSadness capture with a friend as a zip (first version without `imu.npz`: run
+  `python src/arcore3dgs/imu.py dataset/newRoomAttemptSadness` once, or use this branch's `select_sharp.py`).
+- Later the same day: Tayyab saw a "mini room inside the room" in the lecture-hall model (R-036). Diagnosis: GLOMAP placed
+  ~175 frames (after ARCore lost tracking) at ~0.38× scale; ARCore-guided matching had linked them weakly. Found with a
+  per-frame SfM-vs-Metric3D depth ratio (`src/arcore3dgs/sfm_scale_check.py`; newRoom control: 0 bad frames). Tayyab measured a
+  table in the outer room: real length, so the main scale is right. R-037: incremental mapper, 581/842 frames, correct
+  scale, front/right-side walk split off. R-038 (Tayyab chose: train on the main part): 35.8 min, no mini room
+  (`gs_v10inc/topdown_vs_R-036.jpg`). New open decision OD-11 (scale check + mapper fallback).
+- Next: Tayyab decides on the fast recipe (DECISIONS OD-10) and the SfM fallback (OD-11); semantics speed (batched tiles) check; tape-measure the
+  lecture hall; a second normal-SfM run of newRoom would show how much SfM randomness alone moves quality.

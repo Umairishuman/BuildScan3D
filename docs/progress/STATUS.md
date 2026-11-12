@@ -279,6 +279,13 @@ script, step 3 RunPod and the friend's PC.**
 
 **Other organisation items**
 
+- [ ] **[new] Upload server exposed to the internet on the RTX 3070 PC's network (found 2026-11-12, Tayyab's session).**
+      With the server on port 8000 (dry-run mode, 17:45 – 18:25), ~30 public IP addresses (internet scanners, e.g.
+      Infrawatch, a WinRM probe on `/wsman`) reached it within minutes, so the router forwards port 8000 to this PC (port
+      forwarding / DMZ / UPnP). All of their requests got 404; the phone upload (`scan_3028a4de8fa0`) was the only
+      successful POST. The server has no authentication (`/upload`, `/config`). Before running it on that network again:
+      remove the router forwarding (or run on the PC's own hotspot, 192.168.137.1), and/or add a token to the server.
+
 - [x] **[new] Revoke the leaked RunPod API key** — done 2026-11-06 by Umair (the old key no longer works; the new one is
       only in the local `.env`). History:  commit `00bc021` (2026-10-18) committed `.env` with a
       real `RUNPOD_API_KEY`; untracking it on 2026-10-22 did not remove it from history, and the repository is
@@ -314,6 +321,16 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 < 35 min on a 4090 (projection).
 
 - [ ] **[new] Optimise the processing pipeline** end to end; measure each change with `run_v8.py`'s stage times and log it.
+  - **2026-11-12 (Tayyab's session, branch `exp/fast-pipeline`):** training 42.5 → 28.2 min and dense init 20.1 → 7.5 min
+    at equal quality on newRoom (TRAINING R-032, R-033); Metric3D 8.1 → 6.8 min (identical output). Normal SfM + these:
+    ~67 min end to end on newRoom (estimate from the measured stages), 48.8 min on the new lecture hall (R-036). The SfM
+    shortcut `--skip_retriangulation` lost quality (R-035, rejected). Adoption: DECISIONS OD-10.
+  - **[new 2026-11-12] SfM can shrink part of a room (GLOMAP).** R-036's lecture-hall model had a "mini room": ~175
+    frames (ARCore lost after frame ~2200, so `--pairs arcore` matched the wrong neighbours) were placed by GLOMAP at
+    ~0.38× scale. The incremental mapper (`--mapper mapper`, R-037) keeps the main part correct (581/842 frames) and
+    splits off the rest; R-038 trained on it (no mini room, right-side walk missing). To do: a per-frame scale check
+    after SfM (SfM depth / Metric3D depth, a block of frames < 0.5× = shrunken part) that warns or falls back to the
+    incremental mapper; and do not trust ARCore neighbours after tracking loss. Adoption: DECISIONS OD-11.
 - [ ] Training 42 min (blur ×1.4) and SfM 22 min dominate; fast_mvs 20 min. Ideas: blur only in the last third,
       photometric-only PatchMatch, ViT-S prior. *(from TODO 2026-10-26)*
 - [ ] Faster `fast_mvs` (photometric only or every 10th frame) and `plane_seg` (~11 min CPU). *(from TODO 2026-10-26)*
