@@ -2,7 +2,7 @@
 
 **What is where, and what each file does.** Read this first in a new session (human or agent), then
 [CLAUDE.md](CLAUDE.md) (how we work) and [docs/progress/STATUS.md](docs/progress/STATUS.md) (where the project stands).
-Last checked against the code: 2026-11-06 (branch `exp/first-linux-run`; quick finder §0 and app UI files §6 added).
+Last checked against the code: 2026-11-12 (branch `feature/usb-upload`: app moved to `android/` §6, USB upload, light UI).
 When you add, move, retire or repurpose a file, update this map in the same commit.
 
 Markers: **[v9]** = part of the current best pipeline (v9 processing + v10 semantics) · [eval] = evaluation /
@@ -13,8 +13,8 @@ diagnostics · [v3] = the older SfM pipeline the server still runs · [legacy] =
 
 | Looking for | Folder | Section |
 |---|---|---|
-| **Mobile app UI** (screens, buttons, menus, texts) | `googleARCore/samples/hello_ar_java/app/src/main/` → screens in `java/.../helloar/*Activity.java`, layouts in `res/layout/`, menu in `res/menu/`, texts in `res/values/strings.xml` | 6 |
-| Mobile app logic (recording, IQA, coverage, upload, updates) | same `java/.../helloar/` folder | 6 |
+| **Mobile app UI** (screens, buttons, menus, colours) | `android/app/src/main/` → screens in `java/com/buildscan3d/app/*Activity.java`, layouts in `res/layout/`, colours in `res/values/colors.xml`, logo `res/drawable-nodpi/logo.png` | 6 |
+| Mobile app logic (recording, IQA, coverage, upload, USB / Wi-Fi link, updates) | same `java/com/buildscan3d/app/` folder | 6 |
 | Reconstruction pipeline + "models" code (SfM, priors, 3DGS training, semantics, mesh) | `src/arcore3dgs/` | 2, 3 |
 | AI model weights (Metric3D, Grounding DINO, SAM, CLIP) | not in git: `~/.cache/torch/hub`, `~/.cache/huggingface` (downloaded on first use) | 9 |
 | Trained 3D models (results) | not in git: `saved_models/`, `dataset/<capture>/work_*` | 9 |
@@ -42,7 +42,8 @@ diagnostics · [v3] = the older SfM pipeline the server still runs · [legacy] =
 | `src/Metric3D_v2/`, `src/process_dataset.py`, `src/visualize_trajectory.py` | First prototype (Sept 2026): Metric3D depth + ARCore poses → dense cloud. Superseded; `process_dataset.py` still has a test |
 | `server/` | Phone-upload processing server (FastAPI) + RunPod / remote-GPU runners (section 4) |
 | `scripts/` | Windows `.bat` launchers + the job-manager CLI (section 5) |
-| `googleARCore/` | Google's ARCore SDK samples, vendored. **Only `samples/hello_ar_java/` is ours** (the capture app, section 6) |
+| `android/` | **The capture app** (Android, our code; moved here from `googleARCore/samples/hello_ar_java/` on 2026-11-12, D-063), section 6 |
+| `googleARCore/` | Google's ARCore SDK and samples, vendored and unused (`samples/hello_ar_java/MOVED.md` points to `android/`) |
 | `prototype/web-ui/` | Next.js dashboard + 3D scan viewer (section 7) |
 | `prototype/requirements.md`, `prototype/POC_requirements.md` | Early product / POC requirements |
 | `tests/` | pytest suite (CPU-only logic, runs in CI) |
@@ -67,7 +68,7 @@ diagnostics · [v3] = the older SfM pipeline the server still runs · [legacy] =
 Commands with all flags: STATUS §5. Python environment in brackets.
 
 ```
-phone app (hello_ar_java) ── dataset/<capture>/  (dataset.mp4, poses.csv, ...)
+phone app (android/) ──── dataset/<capture>/  (dataset.mp4, poses.csv, ...)
    │  check_capture.py                                  [system]  sanity check before processing
    ▼
 run_v8.py  [system Python; calls nerfstudio-env for export/train]
@@ -202,44 +203,49 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `release.bat` | Bumps the app version and tags a release |
 | `run_train.bat`, `run_train_fast.bat`, `run_post.bat`, `run_post_fast.bat`, `run_viewer.bat` | [dead] first splatfacto runs on roomAttemptSadness (Sept/Oct 2026): ns-train / ns-eval / ns-export / ns-viewer with MSVC set up |
 
-## 6. Android capture app: `googleARCore/samples/hello_ar_java/`
+## 6. Android capture app: `android/`
 
-Built on Google's `hello_ar_java` sample. Package name (`applicationId`) `com.buildscan3d.app` since 2026-11-06 (D-058); the Java
-package is still Google's. **App UI:** the screens are the `*Activity.java` files below, their layouts in
-`app/src/main/res/layout/`, the menu in `res/menu/settings_menu.xml`, texts in `res/values/strings.xml`.
-Our code is in `app/src/main/java/com/google/ar/core/examples/java/helloar/`:
+Our app, built on Google's `hello_ar_java` sample; moved out of `googleARCore/` on 2026-11-12 with its own Java package
+`com.buildscan3d.app` (D-063; `applicationId` unchanged since D-058, so installed apps update in place). Light theme
+from the logo with bottom navigation Capture / Scans / Server (D-064). Code in
+`app/src/main/java/com/buildscan3d/app/`:
 
 | File | Does |
 |---|---|
-| `HelloArActivity.java` | Main AR screen (Google's sample, heavily modified): ARCore session, recording, rendering, menus, server list (UDP search + saved servers + /24 sweep) |
+| `CaptureActivity.java` | Capture tab (was `HelloArActivity`, Google's sample heavily modified): ARCore session, recording, rendering, ⋮ menu |
+| `GalleryActivity.java` | Scans tab: recordings, connection bar, upload with checks first (files, then USB / Wi-Fi), progress with MB/s and time left, Stop, automatic restart after a lost link |
+| `ServerActivity.java` | Server tab: live connection, USB steps, Wi-Fi address (save and test, network search), app updates |
+| `ProcessingActivity.java` | Upload & process screen after a recording: same checks, progress, Stop; then job status polling |
+| `ScanDetailActivity.java` | One recording: video preview, trim |
+| `ServerLink.java` | Which route reaches the server now: USB cable (`127.0.0.1:8000` via `adb reverse`) first, then saved / recent Wi-Fi servers; plain reason when none answers (D-062) |
+| `ServerDiscovery.java` | Server search (USB, UDP broadcast, saved and recent servers, /24 sweep) and the recent-servers list |
+| `BottomNav.java` | The bottom navigation bar (`res/layout/view_bottom_nav.xml`) |
 | `CaptureLogger.java` | Writes poses, tracking, points, depth, `camera.csv`, `anchors.csv`, lens metadata on a background thread |
 | `QualityMonitor.java` | Live IQA: predicted blur, dark / overexposed, low texture, tracking; `quality.csv` |
 | `CoverageMap.java`, `CoverageOverlayView.java` | Live coverage map (red / yellow / green dots) |
-| `ProcessingActivity.java` | Upload & process screen: multipart upload, status polling |
-| `GalleryActivity.java`, `ScanDetailActivity.java` | List of recordings and their details |
-| `UpdateChecker.java` | Update check against GitHub Releases at start and from the menu ("Check for updates"); downloads the APK in the app and opens Android's installer (FileProvider `res/xml/update_paths.xml`) |
+| `UpdateChecker.java` | Update check against GitHub Releases at start and from the Server tab / menu; downloads the APK and opens Android's installer (FileProvider `res/xml/update_paths.xml`) |
+| `common/` | Google's helpers (rendering, camera permission, display rotation, ...), sample code, only the package renamed |
 
 **App UI files** (`app/src/main/`):
 
 | File | Screen / use |
 |---|---|
-| `res/layout/activity_main.xml` | Main AR screen (`HelloArActivity`): camera view, record button, IQA / coverage text, gallery and menu buttons |
-| `res/layout/activity_gallery.xml`, `res/layout/item_scan.xml` | Recordings list (`GalleryActivity`) and one row of it |
+| `res/values/colors.xml`, `res/values/styles.xml` | Light palette from the logo (`bs_*` colours) and `AppTheme` / `AppTheme.Capture` |
+| `res/drawable-nodpi/logo.png` | The logo (cropped from `prototype/web-ui/public/images/logo-new-removebg-preview.png`); launcher icons in `res/mipmap-*` |
+| `res/drawable/bg_card.xml`, `bg_button*.xml`, `bg_pill.xml`, `bg_bottom_nav.xml`, `ic_nav_*.xml` | Cards, buttons, badges, bottom bar and its icons |
+| `res/layout/activity_main.xml` | Capture tab (`CaptureActivity`): camera view, logo badge, record button, IQA / coverage text, ⋮ menu, bottom bar |
+| `res/layout/activity_gallery.xml`, `res/layout/item_scan.xml` | Scans tab (`GalleryActivity`) and one recording card |
+| `res/layout/activity_server.xml` | Server tab (`ServerActivity`) |
+| `res/layout/view_bottom_nav.xml` | Bottom navigation, included in the three tabs |
 | `res/layout/activity_scan_detail.xml` | One recording's details (`ScanDetailActivity`) |
 | `res/layout/activity_processing.xml` | Upload & processing status (`ProcessingActivity`) |
-| `res/menu/settings_menu.xml` | ⋮ menu: camera, depth, Server URL, Check for updates |
-| `res/values/strings.xml`, `styles.xml` | Texts and theme; `res/drawable/bg_record_*.xml` record-button looks |
+| `res/menu/settings_menu.xml` | ⋮ menu on the Capture tab: camera, depth, Server (opens the Server tab), Check for updates |
 | `res/xml/update_paths.xml` | Folder shared with the installer for in-app updates |
-| `java/com/google/ar/core/examples/java/common/` | Google's helpers (rendering, camera permission, display rotation, ...), unchanged sample code |
 | `assets/models/`, `assets/shaders/` | Google's sample 3D models and shaders for the AR rendering |
 | `AndroidManifest.xml` | Screens, permissions, update file provider |
 
-**Known gap (2026-11-06):** the app records `camera.csv`, `anchors.csv`, `lens_metadata.json` and
-`camera_characteristics.json`, but the upload (`GalleryActivity` / `ProcessingActivity`) does not send them, so
-server uploads lack them (STATUS §7.7).
-
-The other `googleARCore/samples/*` folders, `libraries/`, `assets/`, `media/` are Google's and unused. Build: Android
-Studio or `./gradlew assembleDebug` with JDK 21 (STATUS §7.7).
+Uploads send every recorded file since v0.3.5 (PR #4). Build: Android Studio (open `android/`) or
+`./gradlew assembleDebug` in `android/` with JDK 21; CI builds it on every push (docs/CI_CD.md).
 
 A recording (`dataset/<capture>/`): `dataset.mp4` (video + IMU tracks), `poses.csv`, `tracking.csv`, `points.csv`,
 `quality.csv`, `camera.csv`, `anchors.csv`, `depth/` (5 Hz), `meta.json`, `lens_metadata.json`, `camera_characteristics.json`.
@@ -336,5 +342,4 @@ tell what is current. **Nothing is ever deleted: retired files are archived** (`
 
    This touches `run_v8.py` (script paths), the 7 `from common import` lines, `server/pipeline.py`, the `.bat`
    launchers, `tests/` and every command in STATUS / README, so it should be one dedicated branch and PR.
-   Moving the capture app out of the vendored `googleARCore/` (e.g. to `app/android/`) is a similar, separate step
-   (CI paths point at `googleARCore/samples/hello_ar_java`).
+   Moving the capture app out of the vendored `googleARCore/` was done on 2026-11-12: it is in `android/` (D-063).

@@ -267,4 +267,12 @@ Template:
   kept on during uploads, USB entry in the server dialog. Guide: docs/PROCESSING_GUIDE.md "Upload over a USB cable".
 - Problems: installing `adb` from this session was blocked by the permission check, so Umair installs it (commands
   in the guide). No Android SDK / JDK on this PC, so the app was not compiled locally; CI builds it.
-- Next: CI on the PR; install `adb`; test on the phone; release.
+- Then (same day): moved the app to `android/` with package `com.buildscan3d.app`, `CaptureActivity` (D-063); light
+  theme from the logo, logo in headers and on the capture screen, bottom navigation Capture / Scans / Server, new
+  Server tab (`ServerActivity`, search moved to `ServerDiscovery`), upload checks before the progress bar (files, then
+  USB / Wi-Fi, with dialogs asking to connect), Stop on the Scans tab and the processing screen, progress with MB/s on
+  the processing screen too (D-064). Merged `exp/first-linux-run` into this branch; `buildscan status` shows the USB
+  link. CI: first UI build failed (`R.id.btn_gallery` left in `CaptureActivity`), fixed; lint's one error was a
+  missing `ACCESS_NETWORK_STATE` permission (fixed); remaining lint items are old warnings (hard-coded strings etc.).
+- Problems: no Android SDK here, so every compile check ran in CI; the UI was not seen on a device or emulator.
+- Next: PR to `master`, CD release; install `adb`; test the new UI and the USB upload on the phone.

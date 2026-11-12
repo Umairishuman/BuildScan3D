@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-12 by Umair (v0.3.5 released, R-030 logged, D-061, completion plan). `master` holds v9/v10, the project records, the Linux port (PR #1, D-051) and the app fixes (PR #3, PR #4).
+Last updated: 2026-11-12 by Umair (USB upload D-062, app moved to `android/` D-063, light UI with bottom navigation D-064, all branches merged to `master`).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -405,9 +405,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 - [ ] **[new 2026-11-12] Ask Tayyab whether he has unpushed app changes.** GitHub shows none after `6d0cab5`
       (2026-10-26); work only on his PC cannot be seen.
-- [ ] **[new 2026-11-12] USB upload (D-062)** on `feature/usb-upload`: install `adb` on this PC (docs/PROCESSING_GUIDE.md),
-      USB debugging on the phone, then test an upload over the cable and the connection bar / automatic restart.
-      Not built locally (CI builds the APK) and not tested on a device.
+- [ ] **[new 2026-11-12] Test the new app on the phone** (USB upload D-062, light UI + bottom navigation + Server tab +
+      upload checks and Stop D-064): install `adb` on this PC (docs/PROCESSING_GUIDE.md), USB debugging on the phone,
+      then an upload over the cable and over Wi-Fi, pulling the cable mid-upload (WAITING → restart), Stop, the
+      "not connected" and "upload over Wi-Fi?" dialogs, and every tab. Built by CI only; not seen on a device.
 
 - [x] **[new] Upload sends every recorded file** — fixed 2026-11-06 (branch `fix/upload-all-files`): the app recorded
       `camera.csv`, `anchors.csv`, `lens_metadata.json`, `camera_characteristics.json` but never uploaded them (found in
@@ -415,9 +416,8 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 - [ ] **[new] Test the 2026-11-06 app fixes on the phone** (now **v0.3.5**, released 2026-11-12 with PR #4; D-058 – D-060; also check that an upload now brings `camera.csv`, `anchors.csv` and the lens files): install from GitHub Releases (it installs
       next to the old app; uninstall the old one only after its recordings are uploaded), check whether Play Protect still warns, the server list
       finds this PC, and "Check for updates" installs the next build. Not tested on a device.
-- [ ] **[new] Move the app code** out of `googleARCore/samples/hello_ar_java/` and Google's Java package into its own
-      folder / package (D-049 step 2, MAP §10); asked by Umair 2026-11-06 because the app UI is hard to find.
-
+- [x] **[new] Move the app code** out of `googleARCore/samples/hello_ar_java/` and Google's Java package — done
+      2026-11-12: `android/`, package `com.buildscan3d.app`, `CaptureActivity` (D-063).
 - [ ] App bug: ARCore depth was stale in newRoomAttemptSadness (every map identical, confidence ≈ 0). Investigate. *(from TODO 2026-10-10)*
 - [ ] Tune the IQA thresholds on the phone (predicted-blur warn > 5 px / bad > 10 px is new and untested on device). *(from TODO)*
 - [ ] Coverage overlay and tier-2 guidance: show what is left to scan (few viewpoints, ceiling / floor missing, depth
@@ -509,6 +509,10 @@ Dated milestones; details in [LOG.md](LOG.md), reasons in [DECISIONS.md](DECISIO
 
 - **2026-11-12: app v0.3.5** (Umair, PR #4): uploads `camera.csv`, `anchors.csv` and the lens files; server accepts
   them as optional. Per-run web bundles gitignored (D-061). R-030 (lab room, 50.2 min on Linux) logged.
+
+- **2026-11-12: app restructured and restyled** (Umair): moved to `android/` with its own package (D-063); USB upload
+  route with connection bar, speed, automatic restart (D-062); light theme from the logo, bottom navigation, Server
+  tab, upload checks and Stop (D-064). `exp/first-linux-run` and `feature/usb-upload` merged to `master`.
 
 ## 9. Known limits
 

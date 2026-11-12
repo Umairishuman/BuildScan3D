@@ -41,7 +41,7 @@ evaluation needs new rooms recorded with tape measurements.
 | 1.11 | Decide on and redo any of the features reverted on 2026-10-23: surface + edge map, live layout overlay, autofocus toggle, feature-starvation warning, vertical planes (OD-5) | Team decision recorded; chosen ones built | OD-5 | Could | W3 |  |  |
 | 1.12 | Turn ARCore depth off if dropped frames persist (160×90, ~25% valid, only feeds the coverage overlay) | Decision from the 1.6 numbers | 1.6 | Could | W3 |  |  |
 | 1.13 | Lock exposure and white balance (needs the Shared Camera API refactor) | Works on the phone, or recorded as not done | — | Could | W3 |  |  |
-| 1.14 | Move the app code out of `hello_ar_java` into its own folder and package; note the JDK 21 build requirement | App builds in CI from the new path, MAP updated | — | Could | W3 |  |  |
+| 1.14 | Move the app code out of `hello_ar_java` into its own folder and package; note the JDK 21 build requirement | App builds in CI from the new path, MAP updated | — | Could | W3 | Umair | Done 2026-11-12 (D-063) |
 
 ## Step 2 · Upload, server and cloud processing
 

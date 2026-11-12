@@ -111,9 +111,13 @@ and changes need agreement.
 
 ### Muhammad Umair (23i-0662) · GitHub `UmairisHuman`
 - **Proposal ownership:** mobile edge capture and validation (Workflow A). **Work so far:** web prototype, processing
-  server, RunPod integration, CD / APK releases, GPU Docker image workflow, mid report, project organisation.
-- **Current focus:** setting up this Ubuntu PC, then rebuilding the Docker image from the same setup script (STATUS §7.1),
-  then semantic labelling; processing-time optimisation is a priority to-do.
+  server, RunPod integration, CD / APK releases, GPU Docker image workflow, mid report, project organisation, the
+  Linux setup of this PC (first full pipeline runs R-029 / R-030), `scripts/buildscan`, the completion plan
+  (docs/progress/COMPLETION_PLAN.md), and on 2026-11-12 the app work: USB upload (D-062), the app moved to `android/`
+  (D-063), light UI with bottom navigation and checked, stoppable uploads (D-064).
+- **Current focus (2026-11-12):** finishing the project by 2026-12-04 along COMPLETION_PLAN.md: test the new app on the
+  phone (USB upload, new UI), record new rooms, server running the v9/v10 pipeline; then semantic labelling and
+  processing-time optimisation.
 - **Files:** never delete anything, archive it ("deleting never ends well").
 - **Commits:** likes to commit often, in small logical steps, so he can revert to any point. Agents working for Umair
   commit automatically after each logical step **on a feature branch**, without asking each time; they never push,
@@ -122,7 +126,9 @@ and changes need agreement.
   merged.
 - **Decisions:** do not decide for him. Bring every choice to him with options and a recommendation; record his answer in DECISIONS.md.
 - **His machine:** this Ubuntu PC (`gpu-lab-Precision-3680`, RTX 4000 Ada). Git identity configured (2026-11-06); GitHub
-  over SSH. Do not install Docker on this PC for now (2026-11-06).
+  over SSH. Do not install Docker on this PC for now (2026-11-06). The capture app is in `android/` (MAP.md §6); this
+  PC has no Android SDK, so app changes are compiled by CI on push. `adb` (for USB uploads) is installed by Umair
+  himself (docs/PROCESSING_GUIDE.md).
 
 ### Muhammad Tayyab (23i-0636) · GitHub `BlazingBeam`
 - **Proposal ownership:** cloud orchestration and 3DGS reconstruction engine (Workflow B). **Work so far:** capture app
