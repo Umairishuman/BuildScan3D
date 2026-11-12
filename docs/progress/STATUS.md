@@ -115,7 +115,7 @@ The proposal is `docs/proposal/BuildScan3D_FYP_Proposal_v4.docx`. Several parts 
 | FR9 web rendering | `.ksplat` in Three.js, first-person navigation | Done with `.spz` + Spark (Three.js). No adaptive splat budget |
 | FR10 dimensions | Area / length of a labelled element | Wall gross / opening / net areas and point-to-point measure. Per-element area for fixtures not done |
 | FR11 X-ray overlay | Planned FYP-2 | Dropped by the team (D-033) |
-| NFR1 capture 30 FPS | ≥ 30 FPS | **Not met.** Re-measured 2026-11-12 on scan #3 (Infinix, v0.3.5, 185 s): 28.9 fps average, 3.3% dropped-frame gaps, longest 99 ms (R-031). Before the 2026-10-23 fixes: 0.7–3.6% |
+| NFR1 capture 30 FPS | ≥ 30 FPS | **Not met.** Re-measured 2026-11-12 on scan #3 (Infinix, v0.3.6, 185 s): 28.9 fps average, 3.3% dropped-frame gaps, longest 99 ms (R-031). Before the 2026-10-23 fixes: 0.7–3.6% |
 | NFR2 IQA latency | < 16 ms per frame | Not measured. The app now logs it per frame (`quality.csv` `iqa_ms`, `feature/iqa-timing`, not yet on a phone); `check_capture.py` reports it |
 | NFR3 pipeline time | 60 s video in 15 min on a 4090 | Not met: 96 min on a 3070 (240 s video). FYP-2 target < 35 min on a 4090 (projection) |
 | NFR4 compression | ≥ 60% | Met (`.spz` ~92%, `.ksplat` 73–88%) |
@@ -409,6 +409,9 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       upload checks and Stop D-064): install `adb` on this PC (docs/PROCESSING_GUIDE.md), USB debugging on the phone,
       then an upload over the cable and over Wi-Fi, pulling the cable mid-upload (WAITING → restart), Stop, the
       "not connected" and "upload over Wi-Fi?" dialogs, and every tab. Built by CI only; not seen on a device.
+      **Partly done 2026-11-12:** `adb` installed (`~/.local/bin/adb`); scan #3 recorded with v0.3.6 and uploaded over
+      the cable: 815 MB in 22 s at 37 MB/s (Wi-Fi ~1.4 MB/s), all files arrived (server log). Still to test: Wi-Fi
+      upload, pulling the cable mid-upload, Stop, the dialogs, every tab.
 
 - [x] **[new] Upload sends every recorded file** — fixed 2026-11-06 (branch `fix/upload-all-files`): the app recorded
       `camera.csv`, `anchors.csv`, `lens_metadata.json`, `camera_characteristics.json` but never uploaded them (found in

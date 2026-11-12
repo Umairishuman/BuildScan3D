@@ -305,3 +305,6 @@ Template:
 - Next: push `feature/iqa-timing` + PR when Umair agrees (CI builds the APK); install, record 1–2 min, upload,
   `scripts/buildscan check` → NFR2 numbers into STATUS §4; finish R-031 (result, verdict, ceiling height vs tape);
   save the tape sheets next to the datasets; then 1.8 (scan #3: blur > 5 px on 75% of frames at 30 ms exposure) and 1.9.
+- Correction (same evening, Umair): scan #3 is from **v0.3.6**, not v0.3.5: the server log shows it came over the USB
+  cable (14:53:06, 815 MB in 22 s at 37 MB/s), which only v0.3.6 can do. So the USB upload (D-062) works on the phone,
+  and `adb` is installed (`~/.local/bin/adb`). Records updated (R-031, D-067, STATUS §4 / §7.7, plan 1.3).
