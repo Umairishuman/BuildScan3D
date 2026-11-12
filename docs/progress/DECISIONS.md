@@ -572,6 +572,44 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   newRoomAttemptSadness (different room). If a later run's selection drops a listed frame, it is just not held out.
 - **By:** Umair (agent's recommendation) · **Source:** session 2026-11-12 · **Status:** Active
 
+## D-071 · 2026-11-12 · Models are levelled with ARCore gravity: in the SfM export, and once for scans #2 / #3
+- **Decision:** (1) `sfm_colmap.py` (export) takes gravity from ARCore's camera orientations: the up direction in
+  the COLMAP world is the mean over the registered frames of each frame's ARCore up vector; the world is rotated so
+  that it is +Y, and only then are scale, yaw and translation fitted to the ARCore camera centres (RANSAC as before,
+  rotation about Y only). (2) The two existing models (scan #2 R-030, scan #3 R-031) are not retrained: a new
+  `src/arcore3dgs/level_model.py` rotates the trained `splat.ply` (positions, orientations and the degree-3 colour
+  coefficients) and `frames.json` with the same gravity and writes them under a new tag; then `run_full.sh --from
+  layout` re-runs layout → web on the levelled copy. The originals stay as they are.
+- **Why:** the Sim3 rotation came from camera centres only, which cannot fix the tilt when the walk is short (scan #2:
+  0.8 × 0.7 m) or the inlier set is close to a line (scan #3: 268 / 885 frames). Every later stage assumes +Y is up.
+- **Evidence:** R-032: ARCore gravity is 9.11° (scan #2) and 12.10° (scan #3) from the model's +Y, the same in every
+  frame (spread < 1°); floor, desk and ceiling planes are tilted the same way. Levelled in a prototype, scan #3's
+  layout goes from 2 walls / 0 corners to 4 walls / 3 corners at 89.5°, 89.8°, 88.9° with one clean ceiling peak.
+- **Rejected:** retraining scans #2 / #3 from the export stage (~45 / ~65 min GPU each; the rotation is rigid, so
+  the trained model can be rotated instead); levelling only inside `layout.py` (semantics, mesh labels and the web
+  export would each need the same rotation, and the model would stay tilted in the viewer); waiting for Tayyab's Step 3
+  work (the new rooms recorded on 2026-11-13 would come out tilted).
+- **Limits:** relies on ARCore's gravity, which is accurate on the phones used so far (per-frame spread < 1°); if
+  ARCore orientations are missing the export falls back to the old centre-only rotation and says so. Touches the export
+  part of `sfm_colmap.py`, which Tayyab is also changing (mapper settings) for Step 3: told in LOG for the merge.
+- **By:** Umair (agent's recommendation) · **Source:** session 2026-11-12 (Step 4), R-032 · **Status:** Active
+
+## D-072 · 2026-11-12 · The layout ceiling may not lie below the top of the walls
+- **Decision:** `layout.py` ignores horizontal ceiling candidates below the top of the highest wall (98th percentile
+  height of its points); among the rest the strongest cluster is the ceiling, as before. If none is left, the wall
+  top is used. `layout.json` records where the height came from (`ceiling_source`) and warnings when the height is
+  < 2.2 m or the ceiling is < 0.3 m above the highest camera.
+- **Why:** a white, textureless ceiling can be reconstructed too close to the cameras, and glass reflects it (scan #2):
+  the strongest horizontal plane above the cameras was then 1.50 m above the floor, though the walls reach higher.
+- **Evidence:** R-032: scan #2 levelled: strongest ceiling plane 1.79 m (0.4 m above the cameras), walls reach 2.28 m;
+  with this rule 2.41 m. Scan #3 levelled: no change (one ceiling peak at 2.52 m above wall tops of 2.36–2.44 m).
+- **Rejected:** highest strong peak (≥ 10% of the strongest): 1.72 m on scan #2; splat top percentile (depends on
+  floaters and on what is seen through doors); only a warning (leaves a wrong number in the plan and the semantics).
+- **Limits:** the wall top is a lower bound: walls seen only at grazing angles near the ceiling end lower than the
+  real wall. Scan #2's ceiling model stays wrong; the right fix there is a better capture (look up, walk around).
+  No tape check yet.
+- **By:** Umair (agent's recommendation) · **Source:** session 2026-11-12 (Step 4), R-032 · **Status:** Active
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |
