@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
+Last updated: 2026-11-12 by Umair (R-031 finished: scan #3 classroom, 2.74 m, kept as the Step 3 baseline; D-069 / D-070 held-out split for speed runs on scan #3; earlier the same day: recordings table, NFR1 / NFR2, D-062 – D-068).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -83,7 +83,7 @@ Older recordings (before numbering) are on the RTX 3070 PC and keep their names.
 |---|---|---|---|---|---|---|
 | **scan #1** | `dataset/scan_001_056fe94d3399` | 2026-11-06 | Umair, Infinix X6833B, app ≤ v0.3.4 | Umair's first Linux test (LOG 2026-11-06: "Umair's room"; the layout found only 1 wall, like a corridor end, plan 4.10); room to fill in | 46 s | R-028 (stopped), R-029 |
 | **scan #2** | `dataset/scan_002_646070948603` | 2026-11-06 | Umair, Infinix X6833B, app ≤ v0.3.4 | Computer lab: desks, red chairs, glass partition; room number to fill in | 97 s | R-030 (ceiling 1.50 m, wrong) |
-| **scan #3** | `dataset/scan_003_6de634cbb8b2` | 2026-11-12 (uploaded 14:53 over USB) | Umair, Infinix X6833B, **v0.3.6** | Classroom: rows of wooden desks with red seats, projector screen, wooden door, blue curtains, ceiling AC units; room number to fill in | 185 s | R-031 (running) |
+| **scan #3** | `dataset/scan_003_6de634cbb8b2` | 2026-11-12 (uploaded 14:53 over USB) | Umair, Infinix X6833B, **v0.3.6** | Classroom: rows of wooden desks with red seats, projector screen, wooden door, blue curtains, ceiling AC units; room number to fill in | 185 s | R-031 (2.74 m, kept; `saved_models/2026-11-12_r1112_scan003/`) |
 | newRoomAttemptSadness | 3070 PC: `dataset/newRoomAttemptSadness` | by 2026-10-10 (first run R-007) | realme RMX5111; who recorded it not written down | Room of the best model (R-023) and semantics v10 | 240 s | R-007 … R-025 |
 | roomAttemptSadness2 | 3070 PC | by 2026-10-09 (first run R-002) | realme RMX5111; who recorded it not written down | Second room of the mid report | not recorded here | R-002, R-004, R-010 |
 
@@ -345,6 +345,9 @@ Now: 96 min on the RTX 3070 (select 1.9, SfM 22.4, priors 8.1, fast init 20.4, t
 of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3: 15 min on a 4090; FYP-2 target
 < 35 min on a 4090 (projection).
 
+- [ ] **[new 2026-11-12] Speed baseline on this PC (R-031, scan #3, 885 frames):** run_v8 64.7 min (SfM 12.1, prior 3.6,
+      init 14.8, train 33.6) + sem2d 13.7 min; 81.0 min in total. Tayyab is working on reducing the computation time
+      (which stage not known on 2026-11-12): ask him, so the speed ideas below are not done twice.
 - [ ] **[new] Optimise the processing pipeline** end to end; measure each change with `run_v8.py`'s stage times and log it.
 - [ ] Training 42 min (blur ×1.4) and SfM 22 min dominate; fast_mvs 20 min. Ideas: blur only in the last third,
       photometric-only PatchMatch, ViT-S prior. *(from TODO 2026-10-26)*
@@ -357,6 +360,9 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.3 Reconstruction quality
 
+- [ ] **[new 2026-11-12] R-031 (scan #3, classroom): layout height 2.74 m** (plausible), but only 2 walls and 0
+      corners; semantics rejected the ceiling plane fit (tilt 8.06°); `window_1` placed at the ceiling (2.72 m). Check
+      against tape (not measured yet) and by viewing the model; Umair checks the 21 fixtures (COMPLETION_PLAN 4.2).
 - [ ] **[new 2026-11-12] R-030 (`scan_646070948603`, lab room): room height 1.50 m cannot be right.** View the model,
       check which plane the layout took as the ceiling and whether the scale is off; measure one length with a tape.
 
@@ -368,6 +374,8 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       Check whether "Gaussian Splatting on the Move" code ports to nerfstudio 1.1.5 / gsplat 1.4. *(from TODO step 3, 2026-10-12)*
 - [ ] Planar + blur together on v6's SfM (only tested together inside the e2e run). *(from TODO 2026-10-26)*
 - [ ] Repeat runs to measure run-to-run noise on the hardest off-path frame (one run per setting so far). *(from TODO 2026-10-26)*
+      [2026-11-12] For new rooms: 3 repeats of the default recipe on scan #3 with the held-out split (D-069, D-070);
+      `dataset/scan_003_6de634cbb8b2/offpath_test.txt` (87 / 875 frames) is ready, runs not started.
 - [ ] Anti-aliasing (Mip-Splatting idea / gsplat `antialiased`) for zooming in the viewer; needs an antialiased-aware viewer. *(from TODO step 5)*
 - [ ] Reflective surfaces (glossy floor, glass): mask them out of SfM / depth / evaluation, e.g. points below the floor plane. *(from TODO 2026-10-11)*
 - [ ] Ceiling and upper walls are the weakest surfaces: capture guidance to look up, or stronger planar priors. *(from TODO 2026-10-10 / 2026-10-27)*
@@ -546,6 +554,10 @@ Dated milestones; details in [LOG.md](LOG.md), reasons in [DECISIONS.md](DECISIO
 - **2026-11-12: app v0.3.7** (Umair, PR #6): update prompt at start and on return with the release notes, "What's new"
   after an update, changelog per release (D-068), numbered scans (D-065), `iqa_ms` (NFR2), single quality banner.
   Released by CD with the changelog as notes; not tested on a device.
+
+- **2026-11-12: scan #3 processed** (Umair, R-031): first v0.3.6 room, full pipeline in 81.0 min on this PC, 875 / 885
+  frames, layout height 2.74 m, 21 fixtures; model in `saved_models/2026-11-12_r1112_scan003/`. Held-out split tool
+  `make_split.py` for scoring speed runs (D-070).
 
 ## 9. Known limits
 

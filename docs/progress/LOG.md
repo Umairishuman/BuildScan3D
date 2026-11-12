@@ -362,3 +362,65 @@ Hand-over prompt (2026-11-12, for the next session):
     (recipe changes, what to keep) are Umair's: bring options with a recommendation and record his answer in
     DECISIONS.md; one run on the GPU at a time (check `scripts/buildscan status` first); update STATUS, LOG and the
     COMPLETION_PLAN rows at the end of the session; no AI attribution in commits.
+
+## 2026-11-12 (Step 3 session) · Umair · `exp/step3-speed`
+- Did: branch `exp/step3-speed` (from `docs/handover-step3`, which holds v0.3.7; local `master` was behind). R-031
+  (scan #3, classroom) finished 16:25 without errors: 81.0 min (run_v8 64.7: SfM 12.1, prior 3.6, init 14.8, train
+  33.6; sem2d 13.7); layout height 2.74 m, 2 walls / 0 corners, 21 fixtures; height checked against the model's splat
+  heights and camera heights (plausible, maybe slightly low; not against tape). Model saved to
+  `saved_models/2026-11-12_r1112_scan003/` with README.txt. New `src/arcore3dgs/make_split.py` (6 × 3 s held-out
+  stretches) → `dataset/scan_003_6de634cbb8b2/offpath_test.txt`, 87 / 875 frames, for scoring speed runs.
+- Runs: R-031 (finished, kept).
+- Decisions: D-069 (speed and noise runs on scan #3, not scan #2; Umair), D-070 (fixed held-out split, scored with
+  `eval_offpath.py`; Umair on the agent's recommendation).
+- Correction (Umair): the classroom has **not** been tape-measured yet (a class was about to start); the earlier
+  block's "1.5 tape measured" is wrong. Expected within a few days. Plan row 1.5 corrected.
+- Team: Umair asked Tayyab for newRoomAttemptSadness (3.1). Tayyab says he is reducing the computation time; which
+  stage is not known (nothing pushed: his last commits are the poster guide 2026-11-11 and semantics v10 2026-11-03).
+  So Step 3 speed (3.3 / 3.4) waits for his answer; the 3 noise repeats (3.6) are prepared but not started.
+- Problems: one commit was first written with an AI co-author trailer; amended before any push (CLAUDE.md forbids it).
+- Next: Step 4 (prompt below). New rooms will be recorded on 2026-11-13 → one logged run each (3.2), they take the
+  GPU first (G1 gate 2026-11-19). Ask Tayyab which stage he is optimising and split Step 3 ownership.
+
+Hand-over prompt (2026-11-12, for the Step 4 session):
+
+    Read MAP.md, CLAUDE.md (I am Umair) and docs/progress/STATUS.md (§2 "Which recording is which", §7.3, §7.5, §7.6),
+    then the 2026-11-12 LOG.md blocks (the last one first), docs/progress/COMPLETION_PLAN.md Step 4, TRAINING.md R-030
+    and R-031, DECISIONS.md D-069 / D-070, and P&S §4.17–4.18 (semantics v10). Deadline 2026-12-04; week-1 gate G1 on
+    2026-11-19 (new rooms processed).
+
+    State at the end of 2026-11-12:
+    - Branch `exp/step3-speed` (not pushed) holds D-069, D-070, `make_split.py` and R-031's result. Start the Step 4
+      work on a new branch from it (e.g. `feature/step4-layout`), commit after each logical step, never push or merge
+      without asking. Local `master` is behind `origin/master` (v0.3.7).
+    - scan #2 (`scan_002_646070948603`, computer lab, R-030): layout height 1.50 m, wrong; splats span ~3.1 m vertically.
+      Outputs in `dataset/scan_002_646070948603/work_r1106_sfm/gs_r1106/`.
+    - scan #3 (`scan_003_6de634cbb8b2`, classroom, R-031): layout height 2.74 m (plausible; densest top splats slightly
+      above the layout ceiling, so maybe a bit low), only 2 walls (6.39 m and 2.57 m, 9.03 m apart) and 0 corners;
+      semantics v10 rejected the ceiling plane fit (tilt 8.06°) and levelled it at the layout height; floor tilt 0.28°;
+      21 fixtures accepted (door, 2 windows, 2 switches, 4 sockets, 4 ceiling lights, tube light, 3 lamps, 4 ceiling
+      fans), `window_1` sits at 2.72 m (at the ceiling, probably wrong). Model: `saved_models/2026-11-12_r1112_scan003/`
+      (also in `dataset/scan_003_6de634cbb8b2/work_r1112_sfm/gs_r1112/`). View: `scripts/buildscan view 3 r1112`.
+    - No tape measurements yet (Umair measures the classroom in the next days). New rooms recorded on 2026-11-13: each
+      gets a logged full-pipeline run first (3.2), they take the GPU before anything else.
+    - Tayyab is reducing the computation time (stage unknown); Step 3 speed waits for him. Step 2 (upload / server) is
+      parked: do not work on it.
+
+    This session: COMPLETION_PLAN Step 4 (layout, semantics, mesh), Must items first.
+    1. 4.1 ceiling detection in `layout.py`: find out why R-030 took a plane at 1.50 m as the ceiling (look at its
+       candidate planes and the splat height histogram), fix it, re-run only the layout stage on scan #2 and scan #3
+       (`run_full.sh ... --from layout` or `layout.py` directly; seconds, no retraining) and compare heights before /
+       after. Also look at why scan #3 found only 2 walls and no corners. Each re-run gets an R-NNN entry.
+    2. 4.2 fixture check on scan #3 with Umair: give him a short checklist of the 21 fixtures (name, height above floor,
+       size, which wall) to tick real / wrong while viewing the model, and ask what was missed; record a per-room
+       found / missed / false table. Repeat for each new room after its run.
+    3. 4.3 (FR10) fixture sizes in the web viewer: clicking a fixture shows width, height, height above floor (the
+       values are already in `semantic_v10`); check one against tape when the tape numbers come.
+    4. Should items if time is left: 4.5 doorways from wall gaps, 4.7 CLIP margins on the new rooms, 4.9 right-angle
+       priors / floor-plan export.
+
+    Rules: every run (including layout-only and semantics-only re-runs) gets a TRAINING.md entry before it starts,
+    errors as they happen; never invent a number; rule / threshold changes that alter results are Umair's decision:
+    bring options with a recommendation and record his answer in DECISIONS.md; one run on the GPU at a time (check
+    `scripts/buildscan status` first); update STATUS, LOG and the COMPLETION_PLAN rows at the end of the session; no AI
+    attribution in commits.
