@@ -232,6 +232,10 @@ async def upload_dataset(
     quality: UploadFile = File(..., description="quality.csv"),
     meta: UploadFile = File(..., description="meta.json"),
     depth_zip: UploadFile = File(None, description="depth.zip — zipped depth/ folder"),
+    camera: UploadFile = File(None, description="camera.csv — per-frame exposure / rolling shutter (app >= 2026-10-12)"),
+    anchors: UploadFile = File(None, description="anchors.csv — anchor poses, shows ARCore re-anchors"),
+    lens_metadata: UploadFile = File(None, description="lens_metadata.json — ARCore lens calibration"),
+    camera_characteristics: UploadFile = File(None, description="camera_characteristics.json — Camera2 characteristics"),
     iterations: int = Form(30000),
 ):
     job_id = uuid.uuid4().hex[:12]
@@ -249,6 +253,21 @@ async def upload_dataset(
             ("quality.csv", quality),
             ("meta.json", meta),
         ]:
+            dst = dataset_dir / name
+            with open(dst, "wb") as f:
+                while chunk := await upload.read(8 * 1024 * 1024):
+                    f.write(chunk)
+            log.info("Saved %s (%d bytes)", dst.name, dst.stat().st_size)
+
+        for name, upload in [
+            ("camera.csv", camera),
+            ("anchors.csv", anchors),
+            ("lens_metadata.json", lens_metadata),
+            ("camera_characteristics.json", camera_characteristics),
+        ]:
+            if upload is None or not upload.filename:
+                log.warning("Optional %s not in this upload (older app?)", name)
+                continue
             dst = dataset_dir / name
             with open(dst, "wb") as f:
                 while chunk := await upload.read(8 * 1024 * 1024):

@@ -206,7 +206,7 @@ pipeline step, with done-when, dependencies, priority (Must / Should / Could), t
 
 ### 7.1 Organisation, environments and infrastructure
 
-- [ ] **[new 2026-11-12] Update the server checkout on this PC** to a branch that includes PR #4 (local `master` is
+- [x] **[new 2026-11-12] Update the server checkout on this PC** — done 2026-11-12: `origin/master` (PR #4) merged into `exp/first-linux-run`. Was: run the server from a branch that includes PR #4 (local `master` is
       behind `origin/master`; the server runs from `exp/first-linux-run`), so v0.3.5 uploads keep the new files.
 
 **Order agreed on 2026-11-06 (Umair, D-047 – D-049): step 1 this PC, step 2 the Docker image from the same setup
@@ -406,6 +406,9 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 - [ ] **[new 2026-11-12] Ask Tayyab whether he has unpushed app changes.** GitHub shows none after `6d0cab5`
       (2026-10-26); work only on his PC cannot be seen.
 
+- [x] **[new] Upload sends every recorded file** — fixed 2026-11-06 (branch `fix/upload-all-files`): the app recorded
+      `camera.csv`, `anchors.csv`, `lens_metadata.json`, `camera_characteristics.json` but never uploaded them (found in
+      R-028); the app now sends them and the server saves them (optional, so older apps still upload). Not tested on a device.
 - [ ] **[new] Test the 2026-11-06 app fixes on the phone** (now **v0.3.5**, released 2026-11-12 with PR #4; D-058 – D-060; also check that an upload now brings `camera.csv`, `anchors.csv` and the lens files): install from GitHub Releases (it installs
       next to the old app; uninstall the old one only after its recordings are uploaded), check whether Play Protect still warns, the server list
       finds this PC, and "Check for updates" installs the next build. Not tested on a device.
