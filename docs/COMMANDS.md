@@ -34,7 +34,7 @@ Pick a **new** tag for every new run (the old run stays untouched). Reuse a tag 
 | list my recordings and their runs | `scripts/buildscan datasets` | |
 | check a recording before processing | `scripts/buildscan check latest` | must end with `READY TO PROCESS` |
 | process a recording (everything, best recipe) | `scripts/buildscan run latest mytag` | or just `scripts/buildscan run` and answer the questions |
-| follow a run's progress | `scripts/buildscan watch latest mytag` | **Ctrl+C** stops watching only, not the run |
+| follow a run's progress | `scripts/buildscan watch latest` (or `watch 3 r1112`) | Live view: stage n of 15 and what it does, time in the stage vs R-030, training step and time left, GPU use (not run progress), last message. **Ctrl+C** stops watching only, not the run. `--raw` shows the raw logs |
 | see the full run screen | `scripts/buildscan attach run-mytag` | leave with **Ctrl+A then D** (Ctrl+C would stop the run) |
 | see where the results are + stage times | `scripts/buildscan results latest mytag` | |
 | look at the 3D model | `scripts/buildscan view latest mytag` | then open http://localhost:7010 |

@@ -16,7 +16,7 @@ scripts/buildscan server start              # phone-upload server (stop: server 
 scripts/buildscan datasets                  # recordings, newest first, with their runs
 scripts/buildscan check latest              # capture check of the newest recording
 scripts/buildscan run latest mytag          # full pipeline, best recipe, in screen session run-mytag
-scripts/buildscan watch latest mytag        # follow its logs (Ctrl+C stops watching only)
+scripts/buildscan watch latest mytag        # live view: stage n of 15, training step, GPU (--raw: raw logs; Ctrl+C stops watching only)
 scripts/buildscan results latest mytag      # where the outputs are + stage times
 scripts/buildscan view latest mytag         # 3D viewer, http://localhost:7010
 scripts/buildscan web                       # web dashboard, http://localhost:3000

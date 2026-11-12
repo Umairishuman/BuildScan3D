@@ -11,7 +11,8 @@
 #   scripts/buildscan check  <scan>              capture check (check_capture.py)
 #   scripts/buildscan run    <scan> [tag] [--from STAGE] [-- run_v8 args]
 #                                                full pipeline, best recipe by default             session: run-<tag>
-#   scripts/buildscan watch  <scan> [tag]        follow that run's logs (Ctrl+C stops watching only)
+#   scripts/buildscan watch  <scan> [tag] [--raw] live view of a run: stage n of 15, what it does, training step,
+#                                                GPU (--raw: the raw logs). Ctrl+C stops watching only
 #   scripts/buildscan results <scan> [tag]       where the outputs are + stage times
 #
 #   scripts/buildscan view   <scan> [tag]        3D splat viewer, http://localhost:7010            session: viewer
@@ -38,7 +39,7 @@ RECIPE=(--sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgs
 
 say()  { printf '%s\n' "$*"; }
 die()  { printf 'buildscan: %s\n' "$*" >&2; exit 1; }
-usage() { sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
 running() { screen -ls 2>/dev/null | grep -qE "[0-9]+\.$1[[:space:]]"; }
 sessions() { screen -ls 2>/dev/null | grep -oE '[0-9]+\.[^[:space:]]+' | cut -d. -f2- || true; }
@@ -78,6 +79,8 @@ run_tag() {   # run_tag <dataset dir> [tag]: the given tag, or ask among that re
   [[ -n "${2:-}" ]] && { echo "$2"; return; }
   local tags=(); for x in "$1"/work_*_sfm/gs_*; do [[ -d "$x" ]] && tags+=("${x##*/gs_}"); done
   [[ ${#tags[@]} -gt 0 ]] || die "$1 has no runs yet (scripts/buildscan run $(basename "$1"))"
+  [[ ${#tags[@]} -eq 1 ]] && { echo "${tags[0]}"; return; }   # only one run: no need to ask
+  local t; for t in "${tags[@]}"; do running "run-$t" && { echo "$t" ; return; }; done   # the one running now
   pick "Which run of $(basename "$1")?" "${tags[@]}"
 }
 
@@ -161,10 +164,16 @@ case "$cmd" in
     say "Record the run in docs/progress/TRAINING.md (CLAUDE.md §2)." ;;
 
   watch)
-    d=$(scan_dir "${1:-}"); m=$(out_dir "$d" "$(run_tag "$d" "${2:-}")")
+    raw=""; a=(); for x in "$@"; do [[ "$x" == "--raw" ]] && raw=1 || a+=("$x"); done
+    d=$(scan_dir "${a[0]:-}"); tag=$(run_tag "$d" "${a[1]:-}"); m=$(out_dir "$d" "$tag")
     [[ -d "$m" ]] || die "no such run for $d (scripts/buildscan datasets)"
-    say "following $m/{run_full.log,train.log}  (Ctrl+C stops watching, not the run)"
-    tail -n 30 -F "$m/run_full.log" "$m/train.log" 2>/dev/null ;;
+    if [[ -n "$raw" ]]; then
+      say "following $m/{run_full.log,train.log}  (Ctrl+C stops watching, not the run)"
+      tail -n 30 -F "$m/run_full.log" "$m/train.log" 2>/dev/null
+    else
+      n=$(scan_numbers | awk -F'\t' -v f="$(basename "$d")" '$2 == f {print $1}')
+      python3 scripts/watch_run.py "$m" --label "scan #${n:-?} ($(basename "$d"))" --session "run-$tag"
+    fi ;;
 
   results)
     d=$(scan_dir "${1:-}"); tag=$(run_tag "$d" "${2:-}"); m=$(out_dir "$d" "$tag")
