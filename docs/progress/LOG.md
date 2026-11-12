@@ -464,3 +464,54 @@ Hand-over prompt (2026-11-12, for the Step 4 session):
   6.70 m, fixtures vs the 15 of v10, the tilt the export reports); Umair fills in scan #3's fixture sheet → per-room
   found / missed / false table (4.2, E3); tape the classroom → check 2.52 m and 7.23 × 9.05 m; new rooms recorded
   2026-11-13 go first on the GPU (they now come out level); re-record the lab (scan #2) with the protocol.
+
+Hand-over prompt (2026-11-12, for the next session):
+
+    Read MAP.md, CLAUDE.md (I am Umair) and docs/progress/STATUS.md (§2 "Which recording is which", §7.3, §7.5, §7.6),
+    then the 2026-11-12 LOG.md blocks (the "Step 4 session" one first), docs/progress/COMPLETION_PLAN.md Steps 3 and 4,
+    TRAINING.md R-031 and R-032 … R-037, DECISIONS.md D-069 … D-072. Deadline 2026-12-04; week-1 gate G1 on 2026-11-19
+    (new rooms processed).
+
+    State at the end of 2026-11-12:
+    - Branch `feature/step4-layout` (from `exp/step3-speed`, not pushed) holds the Step 4 work. Keep working on it,
+      commit after each logical step, never push or merge without asking. `exp/step3-speed` is Tayyab's to merge.
+    - Models were tilted 9–12° against gravity (the Sim3 to ARCore used camera centres only), which caused R-030's
+      1.50 m ceiling and R-031's 2 walls (R-032). Fixed: `sfm_colmap.py` export levels with ARCore gravity (D-071,
+      `--gravity centres` = old; it prints the tilt and writes `gravity_*` into report.json); `level_model.py` levels an
+      already trained model into a new tag (R-034); `layout.py` ignores ceiling candidates below the wall tops and
+      writes `ceiling_source` / `warnings` (D-072). Tayyab edits the mapper part of `sfm_colmap.py` for Step 3: tell
+      him about the export change for his merge.
+    - scan #3 (classroom) levelled = tag `r1112lev` (R-035, kept): 4 walls, 3 corners 89–90°, 7.23 × 9.05 m, height
+      2.52 m, floor 32.27 m², 18 fixtures. Unexplained: the floor still fits 1.95° tilted (ceiling 0.05°); the 4th
+      corner is missing. View: `scripts/buildscan stop viewer; scripts/buildscan view 3 r1112lev`.
+    - scan #2 (lab) levelled = `r1106lev` (R-036, inconclusive): 2.41 m from the wall-top rule, 1 wall; the camera
+      stayed within 0.8 × 0.7 m, so it needs re-recording with the capture protocol.
+    - newRoomAttemptSadness was copied here (raw recording only). R-037 (R-023 recipe, all frames, tag `r1112nr`,
+      screen `run-r1112nr`) started 18:56:57 for COMPLETION_PLAN 3.1 and as the first end-to-end run with D-071 /
+      D-072. The R-014 held-out list is not here (ask Tayyab) so there is no PSNR comparison yet.
+      roomAttemptSadness2 is still on the 3070 PC: copy it and run it after the new rooms (3.2 / 4.2 / E3).
+    - Web viewer: fixture size card + clickable markers (FR10, 4.3); tsc / eslint / build pass; not checked in a
+      browser; `export_web.py` now writes bottom / top. New `fixture_checklist.py` writes a per-room check sheet.
+    - No tape measurements yet. New rooms are recorded 2026-11-13: each gets a logged full run first (they now come
+      out level). Step 2 (upload / server) stays parked.
+
+    This session:
+    1. Finish R-037: result, stage times vs R-020 (96 min on the 3070) and R-031, the gravity tilt the export
+       printed, layout vs R-023 (6.60 × 4.36 m, 2.72 m; tape 6.70 m), scale, fixtures vs the 15 of v10 (4.4: Umair
+       confirms door_1, door_6, tube_light_1 if he knows the room), verdict, index row; decide with Umair whether the
+       model goes to `saved_models/`.
+    2. New rooms (3.2): one logged full run each as Umair records them; then `fixture_checklist.py` for each, and
+       check that `report.json` shows a small `gravity` tilt and the layout has sensible walls / height.
+    3. 4.2: when Umair returns the filled scan #3 sheet (`gs_r1112lev/semantic_v10/fixture_check.md`), write the
+       per-room found / missed / false table (STATUS §7.5 and the plan; P&S if it shows a pattern). Same per new room.
+    4. Tape: when Umair's numbers come, compare scan #3's 2.52 m height and 7.23 × 9.05 m, and one fixture size from
+       the viewer card (4.3), against the tape; record the error in cm.
+    5. If time is left: the 1.95° floor tilt on scan #3 (residual map), the missing 4th corner and 4.5 doorways from
+       wall gaps, 4.7 CLIP margins on the new rooms, 4.9 right-angle priors / floor-plan export.
+
+    Rules: every run (including layout-only re-runs and level_model) gets a TRAINING.md entry before it starts, errors
+    as they happen, and only times that were actually recorded; never invent a number; rule / threshold changes that
+    alter results are Umair's decision: bring options with a recommendation and record his answer in DECISIONS.md;
+    owners in the plan are the team's to fill in; one run on the GPU at a time (`scripts/buildscan status` first);
+    Node for the web UI runs through `micromamba run -n bs-ns`; update STATUS, LOG and the COMPLETION_PLAN rows at the
+    end of the session; no AI attribution in commits.
