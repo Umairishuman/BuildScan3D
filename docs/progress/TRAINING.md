@@ -60,6 +60,10 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-025 | 2026-11-03 | Semantics v10 | 3070 | 38 min 2D | 15/15 correct, 15/17 found | Kept (D-027) |
 | R-026 | 2026-11-03 | `.ksplat` compression v1 / v2 (Zaid) | not recorded (software rendering) | — | v1 18.4 MB (−88%), v2-A 40.2 MB (−73%) | Branch only (OD-1) |
 | R-027 | 2026-11-06 | Environment setup of this PC (STATUS §7.1 step 1) | this PC (Ubuntu, RTX 4000 Ada) | ~2.5 h | all checks pass; `scripts/setup_linux.sh` | Envs ready; first data run pending |
+| R-028 | 2026-11-06 | First Linux run: Umair's room, full v9 + PGSR → semantics → mesh → web | this PC (Ubuntu, RTX 4000 Ada) | stopped after ~5 min | select / SfM / prior OK on Linux | Abandoned (stopped by Umair) |
+| R-029 | 2026-11-06 | Umair's own run of the same recording, full pipeline (`--tag umair`) | this PC (Ubuntu, RTX 4000 Ada) | 34.7 min | **first complete run on Linux**; corridor end, 0 fixtures, 1 wall | Kept as pipeline test (scene not a room) |
+| R-030 | 2026-11-06 | `scan_646070948603` (lab room, 97 s), full pipeline through `scripts/buildscan` (`--tag r1106`) | this PC (Ubuntu, RTX 4000 Ada) | 50.2 min | ran clean; 2 walls, 8 fixtures; **room height 1.50 m looks wrong** | Inconclusive (scale / ceiling not checked) |
+| R-031 | 2026-11-12 | scan #3 `scan_003_6de634cbb8b2` (classroom, first v0.3.6 recording, 185 s), full pipeline (`--tag r1112`) | this PC (Ubuntu, RTX 4000 Ada) | running | — | — |
 | R-032 | 2026-11-12 | Training speed-up: exact TV-loss / colour-affine fixes, blur colour grid once (`fast_t1`) | 3070 | 28.2 min train (was 42.5) | 25.14 / 0.8251, sharp 0.80, flat 0.81 | Kept (proposed) |
 | R-033 | 2026-11-12 | Photometric-only fast-MVS init (`fast_t2_photo`) | 3070 | init 7.5 min (was 20.1) | 25.16 / 0.8240, flat 0.78 | Kept (proposed) |
 | R-034 | 2026-11-12 | Global mapper settings (`ba1`, `noretri`, default rerun) | 3070 | mapper 9.4 – 14.5 min | default runs differ by ~16 cameras | Inputs to R-035 |
@@ -69,6 +73,9 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-038 | 2026-11-12 | `scan_3028a4de8fa0`: fast recipe on R-037's 581-frame SfM (`v10inc`) | 3070 | 35.8 min (+ map 25.4, R-037) | no mini room; right-side walk missing | Kept |
 
 ## Runs
+
+> **Renamed 2026-11-12 (D-066):** `scan_056fe94d3399` is now `dataset/scan_001_056fe94d3399`, `scan_646070948603` is
+> `dataset/scan_002_646070948603`. The entries below keep the names they had when they were run.
 
 ### R-001 · 2026-10-06 · roomAttemptSadness, own gsplat trainer v1–v3
 - **Pipeline:** `prepare.py → ba.py → mvs.py → align_fuse.py --depth_dir depth_mvs → train.py` (7k steps).
@@ -330,7 +337,130 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **State after 2026-11-06 15:00:** environments ready. Still open in step 1: `server/pipeline.py` and `.sh` versions of the
   `.bat` launchers (1f), and the first real run (1h, needs Tayyab's dataset).
 
+### R-028 · 2026-11-06 · First Linux run: Umair's own recording, full pipeline to the web bundle
+- **Who / machine:** Umair (agent runs it) · this PC (Ubuntu 26.04, RTX 4000 Ada 20 GB, 30 GB RAM)
+- **Branch / commit:** `exp/first-linux-run` @ `76a68cc` (uncommitted changes: no)
+- **Dataset:** `dataset/scan_056fe94d3399` — recorded 2026-11-06 by Umair on an **Infinix X6833B** (first capture from this
+  phone; all earlier runs used the realme RMX5111), uploaded through the server (`dry_run`). 1293 video frames, 46 s,
+  1920×1080 @ 28 fps, 1203 poses, 131 ARCore depth maps, 204 MB.
+- **Capture check** (`check_capture.py`): READY TO PROCESS; warnings: duration < 1 min, live IQA good 43% / ok 26% /
+  bad 31%, 47 dropped-frame gaps (3.6%, longest 124 ms), **`camera.csv` and `anchors.csv` missing** (the app records
+  them but its upload does not send them, STATUS §7.7) → frame selection runs without exposure data, re-anchors are
+  not detected. Tracking lost 3.0%; video↔pose sync +0.05 s, correlation 0.95.
+- **Command(s):** `screen -dmS r028 bash -c 'scripts/run_full.sh dataset/scan_056fe94d3399 v9 -- --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr'`
+  (recipe chosen by Umair: v9 + PGSR in one training as in R-023; `--blur 0.0222` = 1/45 s, the exposure select_sharp.py
+  assumes (ARCore does not record it; `camera.csv` would have it, but the upload dropped it); stages to the web bundle).
+- **Goal:** STATUS §7.1 step 1h: the whole pipeline runs on Linux (first run on this PC), and the first result on a
+  second room and a second phone. Not comparable with R-020 / R-023 (other room); the machine-agreement check on
+  newRoomAttemptSadness stays open.
+- **Errors during the run:**
+  1. 17:53 check_capture — `FileNotFoundError: 'ffprobe'` when run with the env's python directly: ffmpeg is in the
+     env but only on `PATH` when the env is activated → run through `micromamba run -n bs-system` (resolved: yes;
+     `run_full.sh` always uses `micromamba run`).
+  2. 17:53 select — `FileNotFoundError: .../scan_056fe94d3399/imu.npz`: `select_sharp.py` loads the IMU cache but nothing
+     in `run_v8.py` creates it (on Windows an earlier script had made it for every capture) → `select_sharp.py` now
+     calls `imu.extract_imu()` when the cache is missing; restarted from `select` at 17:54 (resolved: yes, select wrote 207 frames).
+- **Start → end:** 17:54 → 18:00, **stopped by Umair** during the dense init (fast_mvs / PatchMatch): he wants to run
+  this dataset himself. Stage times until then (`timing.json`): select 0.1, sfm 1.46, export 0.01, prior 0.75 min;
+  166 of 207 frames went into the priors (aligned median depth error 2.1%).
+- **Result:** none (stopped). Partial outputs left in `dataset/scan_056fe94d3399/work_v9/` and `work_v9_sfm/`.
+- **Verdict:** abandoned (stopped by Umair). His own run gets the next run ID.
+
+### R-029 · 2026-11-06 · Umair's run of scan_056fe94d3399, full pipeline to the web bundle
+- **Who / machine:** Umair (started it himself in a terminal on the PC) · this PC (Ubuntu 26.04, RTX 4000 Ada 20 GB)
+- **Branch / commit:** `exp/first-linux-run` @ `84a267f` (uncommitted changes: no)
+- **Dataset:** `dataset/scan_056fe94d3399` (Infinix X6833B, 46 s, 1293 frames; capture check and missing `camera.csv` /
+  `anchors.csv`: see R-028).
+- **Command(s):** `scripts/run_full.sh dataset/scan_056fe94d3399 umair -- --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
+  (same recipe as R-028; new tag so the outputs do not mix with R-028's partial ones).
+- **Goal:** as R-028: first complete run on Linux, second room, second phone.
+- **Start → end:** 18:01 → 18:35:54 (34.7 min). Stage times so far (`timing.json`, min): select 0.09 (207 frames), sfm 1.49
+  (174 / 207 cameras registered; Sim3 to ARCore from 174 cameras, scale 0.24571), export 0.01, prior 0.75, init 2.05
+  (PatchMatch 2.0 min, 13,622 fused + 4,905 SfM points → 17,592 at 1 cm); train from 18:05, 15,000 steps, at 18:29
+  step 13,980 (93%), GPU 97%, 4.6 / 20 GB, 76 °C, 101 W.
+- **Errors during the run:**
+  1. 18:05–18:22 train — looked stuck to Umair: the terminal showed nothing after `== train:`. Cause: `run_v8.py`
+     writes the training output only to `train.log`; training was running (step 11,900 at 18:22). → `run_full.sh` now
+     prints a GPU / training status line every 30 s (`b8aef7a`, used from the next run) (resolved: yes).
+- **Progress (18:34):** train 26.45 min, ply 0.25 min, run_v8 total 31.1 min → `gs_umair/splat.ply` (121 MB). Layout
+  (2 s): 68 flat of 119 planar regions from 29 frames, rendered-plane rms median 4.5 cm; floor y −2.988, ceiling y
+  1.204 → **room height 4.193 m**; 11 vertical plane clusters → **only 1 wall, 0.873 m long, 0 corners**. Looks wrong
+  (to compare with the real room; likely the 46 s capture saw too little wall). sem2d running on 87 frames.
+  **Scene (Umair, 18:40):** the end of a corridor, poor lighting, recorded only to test the pipeline, so one short wall
+  and a tall space are plausible; the room-oriented layout / semantics rules do not fit a corridor end.
+- **Stage times after the 3DGS** (`stages.tsv`, min): layout 0.0 (2 s), sem2d 2.8 (87 frames), sem3d 0.1, verify 0.1,
+  sem3d2 0.1, mesh 0.1, meshlabels 0.4, web 0.1. No errors in these stages.
+- **Result:** `dataset/scan_056fe94d3399/work_umair_sfm/gs_umair/` (`splat.ply` 121 MB, `layout/`, `semantic_v10/`,
+  `mesh/`), web bundle `prototype/web-ui/public/scans/scan_056fe94d3399_umair/` (18.0 MB).
+  Semantics: floor plane tilt 0.28°, residual 6.9 cm; ceiling fit rejected, set at the layout height 4.177 m;
+  **0 fixtures accepted, 61 rejected**; CLIP check: 1 of 4 rejected candidates kept (light switch, p 0.52 "an
+  electrical outlet"), 3 dropped (sticker / paper label, picture frame); Gaussians per class: other 449,883, floor
+  8,639, ceiling 28,082, wall_0 584. Mesh: 1,568,501 triangles → 1,430,921 after removing small pieces; areas (m²):
+  other 95.19, floor 12.79, ceiling 3.02, wall 0.09; `mesh_web.glb` 400k triangles 8.5 MB. Model quality not
+  measured (no held-out split, no tape measurements).
+- **Verdict:** kept as a **pipeline test**: the whole v9 / v10 pipeline ran end to end on Linux for the first time
+  (34.7 min on the RTX 4000 Ada; 207 selected frames, so not comparable with the 96 + 40 min of R-020 / R-025 on
+  1165 frames). Scene results are not meaningful (corridor end, poor light, 46 s). STATUS §7.1 1h: Linux run done; the
+  machine-agreement check on newRoomAttemptSadness stays open.
+
+### R-030 · 2026-11-06 · scan_646070948603 full pipeline (tag `r1106`), first run through `scripts/buildscan`
+*Not logged at the time; written on 2026-11-12 from `run_full.log`, `stages.tsv`, `timing.json` and the output files.*
+- **Who / machine:** started on Umair's PC; the person who started it was not recorded · this PC (Ubuntu, RTX 4000 Ada)
+- **Branch / commit:** `exp/first-linux-run` @ `718f884` (from the `run_full.log` header; uncommitted changes: not recorded)
+- **Dataset:** `scan_646070948603`: a computer lab (desks, red chairs, glass partition), Infinix X6833B, 97.3 s,
+  2,899 ARCore poses; 482 frames selected. Uploaded with app ≤ v0.3.4, so no `camera.csv` / `anchors.csv` (fixed in
+  v0.3.5, PR #4).
+- **Command(s):** `scripts/buildscan run latest r1106` → `scripts/run_full.sh` with the default recipe
+  `--sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr` (15,000 steps).
+- **Goal:** first real room on Linux with the best-model recipe (R-023); first run started through `scripts/buildscan`.
+- **Start → end:** 18:58:05 → 19:48:15 (50.2 min). run_v8 41.7 min: select 0.2, SfM 4.93, prior 1.92, init 6.57,
+  train 27.76, ply 0.29. Then layout 0.1, sem2d 7.7, sem3d 0.1, verify 0.1, sem3d2 0.1, mesh 0.1, meshlabels 0.2,
+  web 0.1. GPU during training: 92–100%, up to 5.9 of 20.5 GB, 59–76 °C.
+- **Errors during the run:** none in `run_full.log` (only timm `FutureWarning`s).
+- **Result:** `dataset/scan_646070948603/work_r1106_sfm/gs_r1106/` (`splat.ply` 162 MB); web bundle
+  `prototype/web-ui/public/scans/scan_646070948603_r1106/` (20.4 MB, gitignored by D-061).
+  SfM: 482 / 482 frames registered; Sim3 to ARCore scale 0.0937, 242 inliers, median 5.25 cm (`report.json`).
+  Metric3D prior aligned median error 3.6%. Layout: 2 walls (3.86 m, 4.45 m), 0 corners, floor y −1.205, ceiling y
+  0.291 → **height 1.50 m**. Semantics v10: floor tilt 2.13°, ceiling height 1.528 m; 8 fixtures accepted (window,
+  2 light switches, 2 power sockets, ceiling light, lamp, air conditioner), 44 rejected. Mesh: 663,551 → 576,792
+  triangles; area 46.63 m² (other 32.1, wall_0 7.65, floor 3.99, ceiling 2.49). Model quality not measured (no
+  held-out split, no tape measurements); fixtures not checked by a person.
+- **Verdict:** **inconclusive.** The pipeline ran end to end without errors, but a 1.50 m room height cannot be right
+  for this lab (the ceiling plane is probably not the real ceiling, or the scale is off); not checked against the
+  room or a tape. To do: view the model (`scripts/buildscan view scan_646070948603 r1106`), check the ceiling plane
+  and one tape length.
+- **Follow-up 2026-11-12:** Zaid's `analyze.py` (`feat/splat-compress`) on this `splat.ply`: 652,392 splats, extent
+  p1–p99 8.46 × 3.08 × 4.78 m. The model itself is ~3.1 m tall, so the 1.50 m height is the layout taking a wrong
+  plane as the ceiling, not a scale error (not yet confirmed by viewing the model or a tape).
+
+### R-031 · 2026-11-12 · scan #3 (classroom, `scan_003_6de634cbb8b2`) full pipeline (tag `r1112`)
+*Header written by the agent while the run was going, from `run_full.log` and the dataset files.*
+- **Who / machine:** Umair · this PC (Ubuntu, RTX 4000 Ada), in `screen` session `run-r1112`
+- **Branch / commit:** `feature/numbered-scans` @ `e4c3ee6` (from the `run_full.log` header; uncommitted changes: no)
+- **Dataset:** scan #3, `scan_003_6de634cbb8b2`: a classroom (rows of wooden desks with red seats, projector screen; room number not recorded, STATUS §2 "Which recording is which"), Infinix X6833B, app v0.3.6 (server log: USB upload 14:53:06, 815 MB in 22 s at 37 MB/s; only v0.3.6 uploads over USB), uploaded 2026-11-12 14:53 with `camera.csv`,
+  `anchors.csv`, `lens_metadata.json`, `camera_characteristics.json` (first recording with all of them). 184.7 s,
+  5,335 ARCore poses; 885 of 5,346 frames selected (predicted blur median 6.6 px over all frames, 5.3 px selected;
+  recorded exposure median 30.0 ms, used instead of the fixed 1/45 s).
+- **Command(s):** `scripts/run_full.sh dataset/scan_003_6de634cbb8b2 r1112 -- --sfm_args "--retrieval 20" --init fmvs
+  --planar 0.2 --blur 0.0222 --pgsr`
+- **Goal:** first room recorded with v0.3.5 (COMPLETION_PLAN 1.4 / 3.2); check the layout height against tape (4.1).
+- **Start → end:** 15:04:02 → (running)
+- **Errors during the run:** none so far.
+- **Capture facts measured on 2026-11-12 (agent, from the dataset files, for COMPLETION_PLAN 1.6 / 1.7):**
+  `check_capture.py`: READY TO PROCESS; **video 28.9 fps average, 176 dropped-frame gaps in 5,346 frames (3.3%),
+  longest 99 ms** (NFR1 not met); poses 28.9 Hz, tracking lost 0.0%; predicted blur median 6.7 px (> 5 px on 75% of
+  frames, > 10 px on 21%); exposure median 30.0 ms (range 10–30 ms), ISO median 842; rolling-shutter readout 28.2 ms;
+  ARCore world corrections at 22.3 s (123 cm, 6.0°), 31.5 s (26 cm) and six smaller ones; video ↔ pose sync +0.05 s,
+  r = 0.89. (A first count from `poses.csv` gaps gave 0.24% dropped; that count used a 1.5 × median threshold on pose
+  timestamps and missed most gaps, so the video count is the one to use.) ARCore depth: 782 maps
+  (160 × 90), all 782 different, median valid fraction 0.86, median depth 0–5.5 m across maps, mean confidence
+  0–81: **not stale** in this recording. IQA levels in `quality.csv`: GOOD 1,279, WARN 2,894, BAD 1,164.
+- **Result:** (to fill in at the end)
+- **Verdict:** (to fill in at the end)
+
 ### R-032 · 2026-11-12 · Training speed-up, phase 1: profiling + exact fixes + blur colour grid once (`fast_t1`)
+*Runs R-032 – R-038 were numbered R-029 – R-035 on the unmerged branch (the chat of 2026-11-12 uses those numbers);
+renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031) was merged into `exp/fast-pipeline`.*
 - **Who / machine:** Tayyab (agent) · RTX 3070 PC
 - **Branch / commit:** `exp/fast-pipeline` @ f33aeaf (uncommitted changes: yes, `geo_splatfacto.py`)
 - **Dataset:** newRoomAttemptSadness, the v9e2e work folder (`work_v9e2e_sfm`: same SfM, Metric3D prior, fast-MVS init,

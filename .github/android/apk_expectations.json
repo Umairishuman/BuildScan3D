@@ -1,15 +1,15 @@
 {
   "package": "com.buildscan3d.app",
-  "namespace": "com.google.ar.core.examples.java.helloar",
+  "namespace": "com.buildscan3d.app",
   "min_sdk_at_least": 24,
-  "launchable_activity": "com.google.ar.core.examples.java.helloar.HelloArActivity",
+  "launchable_activity": "com.buildscan3d.app.CaptureActivity",
   "required_permissions": [
     "android.permission.CAMERA",
     "android.permission.INTERNET"
   ],
   "required_activities": [
-    "com.google.ar.core.examples.java.helloar.HelloArActivity",
-    "com.google.ar.core.examples.java.helloar.ProcessingActivity"
+    "com.buildscan3d.app.CaptureActivity",
+    "com.buildscan3d.app.ProcessingActivity"
   ],
   "required_features": [
     "android.hardware.camera",

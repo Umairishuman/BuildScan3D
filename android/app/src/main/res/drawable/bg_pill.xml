@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rounded badge; the code sets its colour with setBackgroundTintList. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/bs_neutral" />
+    <corners android:radius="10dp" />
+</shape>

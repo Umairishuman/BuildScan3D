@@ -37,6 +37,7 @@ Details of the design:
 - **Old runs are cancelled.** If I push again to the same branch while a run is in progress, the older run is cancelled (`concurrency`).
 - **Caching.** pip, npm, Gradle and the Next.js build cache are cached between runs, so most runs are much faster than the first.
 - **One status to watch.** `CI passed` is green only if no job failed. Skipped jobs (nothing changed there) count as fine. It is the check to mark as *required* in branch protection.
+- **Release notes from the changelog (D-068).** Every PR that changes the app adds lines under "Unreleased" in [android/CHANGELOG.md](../android/CHANGELOG.md). At the auto-bump, `build-android` runs `.github/android/changelog.py release`, which turns "Unreleased" into `## v<new version> · <date>` (committed with the version bump), and the release job uses that text as the release body (GitHub's generated PR list follows it). The app shows this text in its update dialog and once after an update. A tag push uses the notes already in the file for that version.
 - **Least privilege.** Workflows start with read-only access to the repository. Only the release job gets write access, and only on tags.
 - **Reports are kept.** Python test reports (14 days), the Android APK (14 days in CI, 30 days in CD) and the web bundle (30 days) are downloadable from the run page under *Artifacts*.
 
@@ -88,7 +89,7 @@ npx tsc --noEmit
 npm run build
 ```
 
-Android: open `googleARCore/samples/hello_ar_java` in Android Studio, or run `./gradlew assembleDebug` there with JDK 17.
+Android: open `android` in Android Studio, or run `./gradlew assembleDebug` there with JDK 17.
 
 ## 5. Branching and review
 
@@ -124,7 +125,7 @@ Open the repository on GitHub, then **Actions**. Each row is one run, with a gre
 
 There are two ways. Either is fine; the second needs no PC.
 
-**A. From Android Studio (developer route).** Open `googleARCore/samples/hello_ar_java` in Android Studio. On the phone, turn on *Developer options*, then *Wireless debugging* and pair it with Android Studio. The phone then appears in the device list at the top, and *Run* installs and starts the app.
+**A. From Android Studio (developer route).** Open `android` in Android Studio. On the phone, turn on *Developer options*, then *Wireless debugging* and pair it with Android Studio. The phone then appears in the device list at the top, and *Run* installs and starts the app.
 
 **B. From GitHub (what CD produces).** On every push to `master`, the `publish-latest` job attaches the newest debug APK to a pre-release called **Latest build (master)**. Open the repository's *Releases* page in the phone's browser (the repository is public, so no GitHub login is needed), download `buildscan3d-latest.apk`, allow *Install unknown apps* for that browser once, and install. Every CI/CD APK is also available under *Artifacts* of its run.
 

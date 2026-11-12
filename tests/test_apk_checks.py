@@ -13,7 +13,7 @@ import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANDROID_DIR = os.path.join(ROOT, ".github", "android")
-MANIFEST = os.path.join(ROOT, "googleARCore", "samples", "hello_ar_java", "app", "src", "main", "AndroidManifest.xml")
+MANIFEST = os.path.join(ROOT, "android", "app", "src", "main", "AndroidManifest.xml")
 NS = "http://schemas.android.com/apk/res/android"
 
 spec = importlib.util.spec_from_file_location("check_apk", os.path.join(ANDROID_DIR, "check_apk.py"))
@@ -85,7 +85,7 @@ def test_missing_ar_feature_is_reported():
 
 
 def test_missing_processing_screen_is_reported():
-    bad = apk_manifest().replace("helloar.ProcessingActivity", "helloar.RenamedActivity")
+    bad = apk_manifest().replace("app.ProcessingActivity", "app.RenamedActivity")
     assert any("ProcessingActivity" in p for p in problems(manifest=bad))
 
 
@@ -132,7 +132,7 @@ def test_the_real_manifest_passes_the_checks():
 
 @pytest.mark.parametrize("old,new,needle", [
     ("android.permission.INTERNET", "android.permission.NOTHING", "android.permission.INTERNET"),
-    ("helloar.ProcessingActivity", "helloar.RenamedActivity", "ProcessingActivity"),
+    ("app.ProcessingActivity", "app.RenamedActivity", "ProcessingActivity"),
     ('com.google.ar.core" android:value', 'com.example.other" android:value', "meta-data"),
     ("android.hardware.camera.ar", "android.hardware.camera.nothing", "camera.ar"),
 ])

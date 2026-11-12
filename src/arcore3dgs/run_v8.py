@@ -29,6 +29,8 @@ ap.add_argument("--init", default="fmvs", choices=["mono", "fmvs", "fmvs_mono"],
 ap.add_argument("--planar", type=float, default=0.0, help="> 0: planar prior weight (plane_seg.py runs on the CPU during init)")
 ap.add_argument("--blur", type=float, default=0.0, help="> 0: motion-blur model with this exposure (s)")
 ap.add_argument("--init_args", default="", help='extra fast_mvs.py args, e.g. "--photometric" (7.5 vs 20 min, TRAINING R-033)')
+ap.add_argument("--pgsr", action="store_true", help="PGSR-lite in the same training (the best model's recipe, R-023)")
+ap.add_argument("--save_every", type=int, default=2500, help="checkpoint interval for --resume after a crash")
 args = ap.parse_args()
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -106,7 +108,8 @@ half = str(args.iters // 2)
 run("train", nspy + ["-W", "ignore", os.path.join(HERE, "geo_splatfacto.py"), "--data", os.path.join(S, init_json),
               "--name", NAME, "--iters", str(args.iters), "--dash_res_steps", half, "--stop_split_at", half, "--no_eval",
               "--prior", os.path.join(S, "mono_prior", f"train_{args.tag}.npz"),
-              "--planar_lambda", str(args.planar), "--blur_exposure", str(args.blur)], log=os.path.join(OUT, "train.log"))
+              "--planar_lambda", str(args.planar), "--blur_exposure", str(args.blur),
+              "--save_every", str(args.save_every)] + (["--pgsr"] if args.pgsr else []), log=os.path.join(OUT, "train.log"))
 cfg = os.path.join(ROOT, "outputs", "v8", "splatfacto", NAME, "config.yml")
 run("ply", toolpaths.ns_cmd("ns-export") + ["gaussian-splat", "--load-config", cfg, "--output-dir", OUT],
     log=os.path.join(OUT, "export.log"), extra_env={"PYTHONPATH": HERE})

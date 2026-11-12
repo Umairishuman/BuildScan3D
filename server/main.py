@@ -25,6 +25,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from .pipeline import Job, JobStatus, start_pipeline_thread
+from . import scan_numbers
 from .runpod_client import start_runpod_pipeline_thread, start_existing_pod_pipeline_thread
 from .remote_gpu import start_remote_pipeline_thread
 
@@ -52,7 +53,7 @@ class UploadProgressLogger:
 
         headers = dict(scope.get("headers") or [])
         total = int(headers.get(b"content-length", b"0") or 0)
-        client = (scope.get("client") or ("?",))[0]
+        client = _who(scope)
         mb = 1024 * 1024
         state = {"got": 0, "t0": time.monotonic(), "last": time.monotonic(), "done": False}
         log.info("Upload started from %s: %s", client, f"{total / mb:.1f} MB" if total else "size unknown")
@@ -81,6 +82,16 @@ class UploadProgressLogger:
         await self.app(scope, logged_receive, send)
 
 
+def _who(scope) -> str:
+    """The client address for the log; a phone request that arrives on 127.0.0.1 came over the USB cable (adb reverse,
+    scripts/usb_link.sh), so it is labelled as such. Local tools (curl, buildscan) also use 127.0.0.1 but are not okhttp."""
+    client = (scope.get("client") or ("?",))[0]
+    ua = dict(scope.get("headers") or []).get(b"user-agent", b"")
+    if client in ("127.0.0.1", "::1") and ua.startswith(b"okhttp"):
+        return f"{client} (USB cable)"
+    return client
+
+
 class ErrorLogger:
     """ASGI middleware: logs when a device first talks to the server (or comes back after 5 min of silence), and
     every request that fails (status >= 400 or a crash) with the client, the path and the reason the server sent
@@ -94,7 +105,7 @@ class ErrorLogger:
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
-        client = (scope.get("client") or ("?",))[0]
+        client = _who(scope)
         what = f"{scope['method']} {scope['path']} from {client}"
         state = {"status": 0, "body": b""}
         now = time.monotonic()
@@ -232,11 +243,15 @@ async def upload_dataset(
     quality: UploadFile = File(..., description="quality.csv"),
     meta: UploadFile = File(..., description="meta.json"),
     depth_zip: UploadFile = File(None, description="depth.zip — zipped depth/ folder"),
+    camera: UploadFile = File(None, description="camera.csv — per-frame exposure / rolling shutter (app >= 2026-10-12)"),
+    anchors: UploadFile = File(None, description="anchors.csv — anchor poses, shows ARCore re-anchors"),
+    lens_metadata: UploadFile = File(None, description="lens_metadata.json — ARCore lens calibration"),
+    camera_characteristics: UploadFile = File(None, description="camera_characteristics.json — Camera2 characteristics"),
     iterations: int = Form(30000),
 ):
-    job_id = uuid.uuid4().hex[:12]
-    dataset_dir = DATASET_ROOT / f"scan_{job_id}"
-    dataset_dir.mkdir(parents=True, exist_ok=True)
+    # scan_<NNN>_<id>: the next number in dataset/.scan_numbers.tsv, so recordings read 1, 2, 3, ... (D-065)
+    dataset_dir, scan_number, job_id = scan_numbers.new_scan_dir(DATASET_ROOT)
+    log.info("Saving as scan #%d: %s", scan_number, dataset_dir.name)
     depth_dir = dataset_dir / "depth"
     depth_dir.mkdir(exist_ok=True)
 
@@ -249,6 +264,21 @@ async def upload_dataset(
             ("quality.csv", quality),
             ("meta.json", meta),
         ]:
+            dst = dataset_dir / name
+            with open(dst, "wb") as f:
+                while chunk := await upload.read(8 * 1024 * 1024):
+                    f.write(chunk)
+            log.info("Saved %s (%d bytes)", dst.name, dst.stat().st_size)
+
+        for name, upload in [
+            ("camera.csv", camera),
+            ("anchors.csv", anchors),
+            ("lens_metadata.json", lens_metadata),
+            ("camera_characteristics.json", camera_characteristics),
+        ]:
+            if upload is None or not upload.filename:
+                log.warning("Optional %s not in this upload (older app?)", name)
+                continue
             dst = dataset_dir / name
             with open(dst, "wb") as f:
                 while chunk := await upload.read(8 * 1024 * 1024):
@@ -271,6 +301,7 @@ async def upload_dataset(
     except Exception as e:
         log.error("Upload failed, %s removed: %s", dataset_dir.name, e)
         shutil.rmtree(dataset_dir, ignore_errors=True)
+        scan_numbers.release(DATASET_ROOT, dataset_dir.name)
         raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
 
     job = Job(job_id=job_id, dataset_dir=str(dataset_dir))
@@ -306,6 +337,8 @@ async def upload_dataset(
 
     return {
         "job_id": job_id,
+        "scan_number": scan_number,
+        "dataset": dataset_dir.name,
         "status": "queued" if mode == "dry_run" else "processing",
         "mode": mode,
         "poll": f"/status/{job_id}",
@@ -415,7 +448,9 @@ async def list_datasets():
     """List all scan datasets on disk (uploaded or not)."""
     datasets = []
     if DATASET_ROOT.exists():
-        for d in sorted(DATASET_ROOT.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+        # newest first by scan number (a processing run changes a folder's date, so dates are not reliable)
+        for number, name in reversed(scan_numbers.numbers(DATASET_ROOT)):
+            d = DATASET_ROOT / name
             if d.is_dir() and d.name.startswith("scan_"):
                 video = d / "dataset.mp4"
                 poses = d / "poses.csv"
@@ -428,6 +463,7 @@ async def list_datasets():
                         job_id = j.job_id
                         break
                 datasets.append({
+                    "number": number,
                     "name": d.name,
                     "path": str(d),
                     "size_mb": round(video.stat().st_size / (1024 * 1024), 1) if video.exists() else 0,
@@ -466,7 +502,7 @@ async def run_on_existing_pod(dataset_name: str = Form(...), pod_id: str = Form(
     if not (dataset_dir / "dataset.mp4").exists():
         raise HTTPException(status_code=400, detail="Dataset has no video file")
 
-    job_id = dataset_name.replace("scan_", "")[:12]
+    job_id = scan_numbers.job_id_of(dataset_name)
     if job_id in jobs:
         job = jobs[job_id]
         if job.status.value in ("processing", "uploading"):
@@ -499,7 +535,7 @@ async def reprocess_dataset(dataset_name: str = Form(...), iterations: int = For
     if not (dataset_dir / "dataset.mp4").exists():
         raise HTTPException(status_code=400, detail="Dataset has no video file")
 
-    job_id = dataset_name.replace("scan_", "")[:12]
+    job_id = scan_numbers.job_id_of(dataset_name)
     # If a job already exists for this dataset, reset it
     if job_id in jobs:
         job = jobs[job_id]

@@ -28,10 +28,11 @@ d:/FYP/
 │   ├── Workflow of BuildScan.docx           # End-to-end data pipeline specifications
 │   └── Guidelines.docx                      # Project guidelines & standards
 │
+├── android/                                 # The BuildScan 3D capture app (Android Studio project; see MAP.md section 6)
 ├── googleARCore/                            # Google ARCore SDK, libraries, and native samples
 │   ├── libraries/                           # Native C/C++ ARCore header files
 │   ├── samples/                             # ARCore tracking, raw depth, & recording samples
-│   │   ├── hello_ar_java/                   # Standard VIO tracking reference
+│   │   ├── hello_ar_java/                   # MOVED.md only: our app moved to android/ (2026-11-12)
 │   │   ├── raw_depth_java/                  # Time-of-Flight / hardware depth integration
 │   │   ├── recording_playback_java/         # ARCore session recording and playback pipeline
 │   │   └── semantics_java/                  # On-device semantic segmentation sample

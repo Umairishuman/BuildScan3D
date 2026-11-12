@@ -201,6 +201,128 @@ Template:
 - Next: CI on the PR, merge, CD release v0.3.4; Umair uploads today's recording, then installs v0.3.4 (next to the old app,
   a separate package); ufw rules; then `check_capture.py` and the R-028 run options.
 
+## 2026-11-06 (seventh session) · Umair · `fix/upload-all-files`
+- Did: the app's upload left out `camera.csv`, `anchors.csv`, `lens_metadata.json`, `camera_characteristics.json` (found
+  on `scan_056fe94d3399`, R-028). Both upload screens now send them; the server saves them as optional files and warns
+  when an older app does not send them. Tests: 214 passed (2 new).
+- Next: PR → CI → merge → CD release; record a new room with the new app to get `camera.csv` (exposure) for `--blur`.
+
+## 2026-11-06 (eighth session) · Umair · `exp/first-linux-run`
+- Did: `scan_056fe94d3399` (Umair's room, Infinix X6833B, 46 s) checked: READY with warnings; the upload had dropped
+  `camera.csv`, `anchors.csv` and the lens files (fixed on `fix/upload-all-files`, not pushed). `scripts/run_full.sh`
+  (whole pipeline, one command) + `run_v8.py --pgsr --save_every`; `select_sharp.py` now extracts `imu.npz`. R-028
+  (agent) stopped by Umair after ~5 min; R-029 is his own run (tag `umair`). `run_full.sh` prints GPU use /
+  temperature / training progress every 30 s; guide `docs/RUN_PIPELINE.md`; MAP quick finder + app UI files.
+  Tailscale: offline on the lab Wi-Fi (cannot reach the coordination server), works on the cable; Umair's laptop
+  connects (direct). VS Code Remote-SSH steps given.
+- Runs: R-028 (abandoned), R-029 (running).
+- Problems: `ffprobe` not on PATH without env activation; `imu.npz` missing on fresh recordings; terminal silent
+  during training; placeholder `<new id>` typed literally; Tailscale blocked on the lab Wi-Fi.
+- Next: finish R-029 (results, verdict); push + release `fix/upload-all-files` (v0.3.5) when Umair agrees; firewall
+  rules for the wired card `enp0s31f6`; disable Tailscale key expiry; record a room with v0.3.5 (`camera.csv`).
+
+## 2026-11-06 (ninth session, backfilled 2026-11-12) · Umair · `exp/first-linux-run`
+- Did: `scripts/buildscan` (one command for server, runs, viewers, status; asks for missing arguments) and
+  `docs/COMMANDS.md` cheat sheet (`908ef6f`, `60c6611`, `718f884`). Recorded `scan_646070948603` (lab room, 97 s) and
+  processed it with `scripts/buildscan run` (tag `r1106`).
+- Runs: R-030 (50.2 min, no errors; room height 1.50 m looks wrong). Not logged at the time.
+
+## 2026-11-12 · Umair · `exp/first-linux-run`, `fix/upload-all-files`
+- Did: reviewed the records and listed everything still open in STATUS §7 for the end-of-month deadline
+  (2026-11-30). Found why `prototype/web-ui/public/scans/` held two untracked folders: the `web` stage of every run
+  writes `<scan>_<tag>/` there (R-029, R-030) → gitignored (D-061, `56d7517`), MAP.md row added. Wrote the missing
+  R-030 entry. Checked whether Tayyab changed the app: his last app commit is `6d0cab5` (2026-10-26, shipped in
+  v0.3.3: demo pawn / Instant Placement removed, motion-blur IQA messages); his only push since is the poster guide
+  (`f33aeaf`, 2026-11-11). Unpushed work on his PC cannot be seen. v0.3.3 → v0.3.4 changed only server search,
+  updates, package name and key (no ARCore / recording code). Confirmed the ARCore point-cloud dots are drawn on
+  screen only and never while recording; the MP4 is ARCore's raw camera stream (a frame of R-030 checked, clean).
+  ARCore is still used for metric scale / gravity (R-030: Sim3 with 242 inliers, median 5.25 cm), poses come from
+  COLMAP (D-014). Pushed `fix/upload-all-files`, PR #4 (CI green: app build, Python 3.10–3.12), merged; CD published
+  **v0.3.5** (`BuildScan3D-v0.3.5.apk`, 5.7 MB, 2026-11-12 08:16 UTC).
+- Runs: R-030 entry backfilled.
+- Decisions: D-061 (per-run web bundles out of git).
+- Problems: no local env has pytest + FastAPI, so the server tests ran only in CI. Local `master` is 12+ commits
+  behind `origin/master`; the upload server on this PC runs from `exp/first-linux-run`, which lacks the PR #4 server
+  change.
+- Next: install v0.3.5 on the phone (not tested on a device) and record a room with it (`camera.csv` must arrive);
+  update the server checkout to include PR #4; check R-030's room height; ask Tayyab about unpushed app work.
+- Later the same day: checked Zaid's `feat/splat-compress` (2026-11-03): `analyze.py` + `compress.py` (opacity pruning,
+  normals dropped, SH 3 → 1) run on R-030's `splat.ply` in the `bs-ns` env: 162 MB → 54 MB (66% smaller, 90.4% of
+  652,392 splats kept) in 0.3 s; its analysis showed the R-030 model is 3.08 m tall (TRAINING R-030 follow-up). The
+  `.ksplat` converter it relies on is not in the repo; quality only compared on software renders. OD-1 / OD-4 stay open.
+  Made the completion plan for 2026-12-04 with Umair: 94 tasks by step (14 capture, 12 server, 17 reconstruction,
+  12 layout / semantics, 10 compression / web, 10 evaluation, 12 infrastructure, 7 report / UAT / demo), three weekly
+  gates, nine decisions to take first; nothing cut (Umair). Shared doc
+  [BuildScan 3D Completion Plan](https://claude.ai/artifact/1V2YG8GSfBEpLXmnTJdctC) (private until shared), repo copy
+  `docs/progress/COMPLETION_PLAN.md`; MAP and STATUS §7 point to it.
+- Next (plan): the team assigns owners in the shared doc and takes the first decisions (owners, OD-7, OD-1, OD-4,
+  OD-6); keep the repo copy in step with the doc.
+
+## 2026-11-12 · Umair · `feature/usb-upload`
+- Did: uploads were slow (~1.4 MB/s lab Wi-Fi, ~1 MB/s hotspot; PC Wi-Fi signal −76 dBm on the hotspot, link
+  26 Mbit/s PC → phone) and the PC's address kept changing. Added a USB upload route (D-062):
+  `scripts/usb_link.sh` + `start_server.sh` (adb reverse while the server runs), server log labels USB requests;
+  app `ServerLink.java` (USB first, then saved / recent Wi-Fi, plain reason when none answers), connection bar on the
+  Scans screen, upload speed and time left, 30 s write timeout (was 10 min), automatic restart up to 3 times, screen
+  kept on during uploads, USB entry in the server dialog. Guide: docs/PROCESSING_GUIDE.md "Upload over a USB cable".
+- Problems: installing `adb` from this session was blocked by the permission check, so Umair installs it (commands
+  in the guide). No Android SDK / JDK on this PC, so the app was not compiled locally; CI builds it.
+- Then (same day): moved the app to `android/` with package `com.buildscan3d.app`, `CaptureActivity` (D-063); light
+  theme from the logo, logo in headers and on the capture screen, bottom navigation Capture / Scans / Server, new
+  Server tab (`ServerActivity`, search moved to `ServerDiscovery`), upload checks before the progress bar (files, then
+  USB / Wi-Fi, with dialogs asking to connect), Stop on the Scans tab and the processing screen, progress with MB/s on
+  the processing screen too (D-064). Merged `exp/first-linux-run` into this branch; `buildscan status` shows the USB
+  link. CI: first UI build failed (`R.id.btn_gallery` left in `CaptureActivity`), fixed; lint's one error was a
+  missing `ACCESS_NETWORK_STATE` permission (fixed); remaining lint items are old warnings (hard-coded strings etc.).
+- Problems: no Android SDK here, so every compile check ran in CI; the UI was not seen on a device or emulator.
+- Next: PR to `master`, CD release; install `adb`; test the new UI and the USB upload on the phone.
+
+## 2026-11-12 (later) · Umair · `feature/numbered-scans`
+- Did: recordings numbered 1, 2, 3 in arrival order (D-065): `server/scan_numbers.py` (register
+  `dataset/.scan_numbers.tsv`), uploads saved as `scan_<NNN>_<id>` with the number in the server's answer, `/datasets`
+  sorted by number, `scripts/buildscan` datasets / status / picker / `<scan>` arguments use the numbers, the app shows
+  "Saved on the PC as scan #N" and "UPLOADED #N". Current recordings: #1 `scan_056fe94d3399`, #2 `scan_646070948603`,
+  #3 `scan_6de634cbb8b2` (uploaded 2026-11-12 14:53 with `camera.csv` / `anchors.csv`, so the v0.3.5 upload fix works).
+  Found on the way: `buildscan latest` used folder dates, which processing runs change.
+- Tests: `tests/test_scan_numbers.py` (6) + `tests/test_server_api.py` (21) pass locally (pytest in a temporary path).
+- Then renamed the three earlier recordings with their numbers (D-066): `scan_001_056fe94d3399`,
+  `scan_002_646070948603`, `scan_003_6de634cbb8b2`; stored paths in `frames.json` / `project.ini` / `semantic.json` /
+  `mesh_*.json` updated, logs left as written, web bundles renamed, examples in COMMANDS.md / RUN_PIPELINE.md /
+  buildscan updated. Wrote the hand-over prompt for the next session (end of this block).
+- Next: PR, CI, merge and release (app shows the number from the next version on).
+
+## 2026-11-12 (evening) · Umair · `feature/numbered-scans`, `feature/iqa-timing`
+- Did: COMPLETION_PLAN Step 1 review with Umair: 1.1 (asked Tayyab), 1.2 and 1.3 done; 1.4 in progress (scan #3 (classroom, 2026-11-12)
+  processing as R-031, started by Umair 15:04, tag `r1112`); 1.5 tape measured (sheet not yet saved next to a
+  dataset). Checked scan #3 (classroom, 2026-11-12) for 1.6 / 1.7: `check_capture.py` READY; NFR1 **not met** (28.9 fps, 3.3% dropped-frame
+  gaps, longest 99 ms); ARCore depth live (782 distinct maps) → 1.7 closed (D-067). NFR2 could not be measured (the
+  app never timed the quality check): `feature/iqa-timing` times `QualityMonitor.update()` per frame and writes it as
+  the last `quality.csv` column `iqa_ms`; `check_capture.py` prints NFR1 / NFR2 lines.
+- Runs: R-031 (header and capture facts written while it runs).
+- Decisions: D-067.
+- Problems: a first dropped-frame count from `poses.csv` gaps (0.24%) was wrong (threshold missed most gaps); the video
+  count (3.3%) replaced it in R-031 and the plan. No Android SDK here, so the app change is compiled by CI only.
+- Next: push `feature/iqa-timing` + PR when Umair agrees (CI builds the APK); install, record 1–2 min, upload,
+  `scripts/buildscan check` → NFR2 numbers into STATUS §4; finish R-031 (result, verdict, ceiling height vs tape);
+  save the tape sheets next to the datasets; then 1.8 (scan #3 (classroom, 2026-11-12): blur > 5 px on 75% of frames at 30 ms exposure) and 1.9.
+- Correction (same evening, Umair): scan #3 (classroom, 2026-11-12) is from **v0.3.6**, not v0.3.5: the server log shows it came over the USB
+  cable (14:53:06, 815 MB in 22 s at 37 MB/s), which only v0.3.6 can do. So the USB upload (D-062) works on the phone,
+  and `adb` is installed (`~/.local/bin/adb`). Records updated (R-031, D-067, STATUS §4 / §7.7, plan 1.3).
+- Then (same evening, `feature/iqa-timing`): update checks on start and on return to the app (at most every 6 h, not
+  while recording), release notes in the update dialog, "Updated to vX" once after an update, install continues after
+  the permission screen (`UpdateChecker.java`, `CaptureActivity`, `ServerActivity`). App changelog
+  `android/CHANGELOG.md` (v0.3.3 – v0.3.6 written from git history + "Unreleased"); `.github/android/changelog.py` +
+  `cd.yml` turn "Unreleased" into each release's entry and notes; `tests/test_changelog.py` (6, pass locally without
+  pytest). MAP, CI_CD.md updated. Decision D-068 (Umair). Java not compiled here (no JDK); CI compiles it. Pushed both
+  branches and opened one PR at Umair's request.
+- Then (same evening, Umair's requests): STATUS §2 "Which recording is which" (scans #1 – #3 with folder, date, phone,
+  app, place, runs; room numbers not recorded) and every "scan #3" in the records labelled (classroom, 2026-11-12).
+  `scripts/buildscan watch` rewritten as a live view (`scripts/watch_run.py`): run and scan, stage n of 15 with what it
+  does, time in the stage vs R-030, training step / time left, GPU use labelled as GPU use, last message without
+  paths, STOPPED / FINISHED; `--raw` keeps the old log tail; `watch latest` picks the only or the running run. App:
+  the bottom snackbar that repeated the tracking message and covered the bottom navigation removed (top banner only).
+  Merged PR #6 to `master` at Umair's request after CI.
+
 ## 2026-11-12 · Tayyab (agent) · `exp/fast-pipeline`
 - Did: profiled training (torch.profiler) and sped up the pipeline. `geo_splatfacto.py`: exact replacement of splatfacto's
   bilateral-grid total-variation loss (was ~30 ms of every step) and colour affine; with the blur model, the colour grid
@@ -223,3 +345,15 @@ Template:
   (`gs_v10inc/topdown_vs_R-036.jpg`). New open decision OD-11 (scale check + mapper fallback).
 - Next: Tayyab decides on the fast recipe (DECISIONS OD-10) and the SfM fallback (OD-11); semantics speed (batched tiles) check; tape-measure the
   lecture hall; a second normal-SfM run of newRoom would show how much SfM randomness alone moves quality.
+
+## 2026-11-13 · Tayyab (agent) · `exp/fast-pipeline`
+- Did: committed the speed-up work in parts (training, init, prior, SfM option, semantics batching, scale check, records)
+  and merged `origin/master` (48 commits: numbered scans D-065/D-066, USB upload, app v0.3.5–v0.3.7, R-028–R-031) into
+  `exp/fast-pipeline`. Conflicts: `select_sharp.py` (Umair had fixed the same missing-`imu.npz` bug: master's version
+  kept), `run_v8.py` (both sides added flags: `--init_args` and `--pgsr` / `--save_every` all kept), TRAINING.md and
+  LOG.md (both added entries: master's first). My runs renumbered R-029–R-035 → **R-032–R-038**. New tool
+  `src/arcore3dgs/sfm_scale_check.py` (MAP.md).
+- Runs: none. Decisions: none (OD-10, OD-11 open for Tayyab).
+- Problems: Tayyab is not sure the lecture-hall model (R-038) beats v9e2e; no baseline on that room.
+- Next: OD-10 / OD-11; test the speed-ups with `--pgsr` and on Linux; run the batched semantics once; compare R-038
+  with Umair's R-031 (probably the same hall); clean up experiment folders (ask first). Not pushed.

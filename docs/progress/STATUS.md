@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-06 by Umair (evening: upload server on Linux, app fixes, D-057 – D-060). `master` holds v9/v10, the project records and the Linux port (PR #1, D-051).
+Last updated: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-032 – R-038 (renumbered from R-029 – R-035 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -73,6 +73,20 @@ length; the small negative offset is most likely where the clicks land.
 0.8849, v5 26.51 / 0.8879, **v6 26.52 / 0.8886**. Second room (roomAttemptSadness2, v3): SSIM 0.91, 1% badly placed
 surfaces. Splatfacto vs our own trainer (roomAttemptSadness2): held-out 27.81 vs 24.70 dB.
 
+### Which recording is which
+
+Recordings on this PC are numbered in the order they arrived (D-065); "scan #3" in the records means the row below.
+Older recordings (before numbering) are on the RTX 3070 PC and keep their names. Room names and numbers that are
+"to fill in" were not recorded; whoever knows them, please add them.
+
+| Name in the records | Folder | Recorded | By, phone, app | Place | Length | Runs |
+|---|---|---|---|---|---|---|
+| **scan #1** | `dataset/scan_001_056fe94d3399` | 2026-11-06 | Umair, Infinix X6833B, app ≤ v0.3.4 | Umair's first Linux test (LOG 2026-11-06: "Umair's room"; the layout found only 1 wall, like a corridor end, plan 4.10); room to fill in | 46 s | R-028 (stopped), R-029 |
+| **scan #2** | `dataset/scan_002_646070948603` | 2026-11-06 | Umair, Infinix X6833B, app ≤ v0.3.4 | Computer lab: desks, red chairs, glass partition; room number to fill in | 97 s | R-030 (ceiling 1.50 m, wrong) |
+| **scan #3** | `dataset/scan_003_6de634cbb8b2` | 2026-11-12 (uploaded 14:53 over USB) | Umair, Infinix X6833B, **v0.3.6** | Classroom: rows of wooden desks with red seats, projector screen, wooden door, blue curtains, ceiling AC units; room number to fill in | 185 s | R-031 (running) |
+| newRoomAttemptSadness | 3070 PC: `dataset/newRoomAttemptSadness` | by 2026-10-10 (first run R-007) | realme RMX5111; who recorded it not written down | Room of the best model (R-023) and semantics v10 | 240 s | R-007 … R-025 |
+| roomAttemptSadness2 | 3070 PC | by 2026-10-09 (first run R-002) | realme RMX5111; who recorded it not written down | Second room of the mid report | not recorded here | R-002, R-004, R-010 |
+
 ## 3. Module status
 
 | Module | State | Where | Notes |
@@ -115,8 +129,8 @@ The proposal is `docs/proposal/BuildScan3D_FYP_Proposal_v4.docx`. Several parts 
 | FR9 web rendering | `.ksplat` in Three.js, first-person navigation | Done with `.spz` + Spark (Three.js). No adaptive splat budget |
 | FR10 dimensions | Area / length of a labelled element | Wall gross / opening / net areas and point-to-point measure. Per-element area for fixtures not done |
 | FR11 X-ray overlay | Planned FYP-2 | Dropped by the team (D-033) |
-| NFR1 capture 30 FPS | ≥ 30 FPS | 0.7–3.6% dropped frames measured before the 2026-10-23 fixes; not re-measured since |
-| NFR2 IQA latency | < 16 ms per frame | Not measured |
+| NFR1 capture 30 FPS | ≥ 30 FPS | **Not met.** Re-measured 2026-11-12 on scan #3 (classroom, `scan_003_6de634cbb8b2`, Infinix, v0.3.6, 185 s): 28.9 fps average, 3.3% dropped-frame gaps, longest 99 ms (R-031). Before the 2026-10-23 fixes: 0.7–3.6% |
+| NFR2 IQA latency | < 16 ms per frame | Not measured. The app now logs it per frame (`quality.csv` `iqa_ms`, `feature/iqa-timing`, not yet on a phone); `check_capture.py` reports it |
 | NFR3 pipeline time | 60 s video in 15 min on a 4090 | Not met: 96 min on a 3070 (240 s video). FYP-2 target < 35 min on a 4090 (projection) |
 | NFR4 compression | ≥ 60% | Met (`.spz` ~92%, `.ksplat` 73–88%) |
 | NFR5 viewer FPS | ≥ 30 FPS mid-range browser | Not measured |
@@ -200,7 +214,14 @@ Portability problems found while reading the code (not yet tested on Linux):
 
 Tags: **[new]** added 2026-11-06; *(from TODO, date)* carried over from the old TODO.md. Sources in brackets.
 
+**Plan to finish by 2026-12-04:** [COMPLETION_PLAN.md](COMPLETION_PLAN.md) puts every item below into one task table per
+pipeline step, with done-when, dependencies, priority (Must / Should / Could), target week and gates (2026-11-19,
+11-26, 12-04). Owners are still to be agreed by the team.
+
 ### 7.1 Organisation, environments and infrastructure
+
+- [x] **[new 2026-11-12] Update the server checkout on this PC** — done 2026-11-12: `origin/master` (PR #4) merged into `exp/first-linux-run`. Was: run the server from a branch that includes PR #4 (local `master` is
+      behind `origin/master`; the server runs from `exp/first-linux-run`), so v0.3.5 uploads keep the new files.
 
 **Order agreed on 2026-11-06 (Umair, D-047 – D-049): step 1 this PC, step 2 the Docker image from the same setup
 script, step 3 RunPod and the friend's PC.**
@@ -226,7 +247,9 @@ script, step 3 RunPod and the friend's PC.**
       `ns-export.exe`), `sfm_colmap.py` (`tools/colmap_dl/.../COLMAP.bat`, `tools/cudnn9` DLL path), `server/pipeline.py`;
       the `.bat` launchers need `.sh` equivalents.
 - [x] **[new] 1g. All of 1b–1f as one script** — done 2026-11-06: `scripts/setup_linux.sh` (+ `--check`); run here OK, fresh-machine run not yet tested. (`scripts/setup_linux.sh` + env files), so step 2 and the friend's PC reuse it (D-048).
-- [ ] **[new] 1h. First run here:** copy `newRoomAttemptSadness` from the RTX 3070 PC, run the v9 pipeline, log it in
+- [x] **[new] 1h(a). First complete run here** — done 2026-11-06 (R-029): Umair's corridor-end recording
+      `scan_056fe94d3399` through `scripts/run_full.sh`, all 15 stages, 34.7 min, no errors after the `imu.npz` fix (R-028).
+- [ ] **[new] 1h(b). Machine agreement:** copy `newRoomAttemptSadness` from the RTX 3070 PC, run the v9 pipeline, log it in
       TRAINING.md (every setup and run error), and compare with R-020 / R-023 to confirm the machines agree.
 
 **Remote access and moving between lab PCs** (D-053)
@@ -240,11 +263,20 @@ script, step 3 RunPod and the friend's PC.**
       starts at boot, MagicDNS on. Used **only** for Umair's laptop → this PC (the phone uploads over the Wi-Fi).
 - [ ] **[new] Tailscale: Umair's laptop** joins the tailnet and `ssh i230662@gpu-lab-precision-3680` is tested (the
       only other own device, `desktop-hnumpvk`, was last seen 2026-09-30); then VS Code Remote-SSH.
+- [ ] **[new] Tailscale offline on the lab Wi-Fi** (found 2026-11-06 18:02): `tailscale status` says this PC is
+      offline, "Unable to connect to the Tailscale coordination server". UDP / DERP work (netcheck: Singapore 131 ms) and
+      the TLS handshake with `controlplane.tailscale.com` succeeds (Let's Encrypt cert, so no TLS interception), but
+      the HTTPS requests time out / are closed (`tailscaled`: "read tcp 172.15.40.53 → 192.200.0.x:443: use of closed
+      network connection"). It worked earlier on the wired network (172.17.170.120). Likely the lab Wi-Fi cuts these
+      connections. Options: wired network, or ask lab IT whether Tailscale is blocked on the Wi-Fi.
 - [ ] **[new] Tailscale: disable key expiry** for this PC in the admin console (key expires 2027-05-05).
-- [ ] **[new] Firewall (`ufw` is active) for phone uploads** (Umair, sudo): allow TCP 8000 and UDP 8001 (server search)
-      from the Wi-Fi, e.g. `sudo ufw allow from 172.15.32.0/19 to any port 8000 proto tcp` and the same with
-      `port 8001 proto udp`. Not yet tested from the phone. The PC is on Wi-Fi now (`wlp0s20f3`, 172.15.40.53/19);
-      the wired card had no address on 2026-11-06.
+- [x] **[new] Firewall (`ufw` is active) for phone uploads** — done 2026-11-06 by Umair: TCP 8000 and UDP 8001 (server
+      search) allowed on the Wi-Fi card, so they work on the lab Wi-Fi and on the phone's hotspot:
+      `sudo ufw allow in on wlp0s20f3 to any port 8000 proto tcp` and the same with `port 8001 proto udp`.
+      Phone access not yet tested. The PC is on Wi-Fi (`wlp0s20f3`, 172.15.40.53/19 on the lab Wi-Fi); the wired card had no address.
+- [ ] **[new] SSH into this PC from the laptop: test.** No OpenSSH server is installed (no `sshd`, nothing on port 22);
+      remote login is **Tailscale SSH** only (`RunSSH` on, ssh capability granted, 2026-11-06). A test from this PC to its
+      own address is not possible (local traffic bypasses Tailscale); test from the laptop once it is in the tailnet.
 - [ ] **[new] Back up the release signing key** `~/.buildscan3d-keys/` (D-059) somewhere other than this PC.
 - [ ] **[new] Dockerise the upload server** so it runs the same on Windows and Linux (asked by Umair 2026-11-06;
       deferred with step 2, Docker not on this PC for now, D-045 / D-057).
@@ -331,6 +363,20 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
     splits off the rest; R-038 trained on it (no mini room, right-side walk missing). To do: a per-frame scale check
     after SfM (SfM depth / Metric3D depth, a block of frames < 0.5× = shrunken part) that warns or falls back to the
     incremental mapper; and do not trust ARCore neighbours after tracking loss. Adoption: DECISIONS OD-11.
+- [ ] **[new 2026-11-13] Speed-ups not tested with `--pgsr`** (the best model's recipe, R-023, now a `run_v8.py` flag
+      from master) **nor on Linux**: one run of each before adopting OD-10.
+- [ ] **[new 2026-11-13] Batched Grounding DINO tiles in `semantic2d.py`** are committed but have never run: compare the
+      2D labels with the unbatched output on newRoom and time it (the 38-min semantics stage is the next big cost).
+- [ ] **[new 2026-11-13] Fast recipe vs v9e2e on the lecture hall is not known** (R-036/R-038 have no baseline; Tayyab
+      is not sure R-038 is better than v9e2e). Umair's R-031 (scan #3, Ubuntu PC, old recipe + PGSR) looks like the
+      same hall with a steadier capture (6.7 px vs 25 px blur): compare the two models side by side once R-031 has a result
+      (not checked that it is the same room).
+- [ ] **[new 2026-11-13] Clean up the speed-up experiment folders on the 3070 PC** (`work_v9e2e_sfm/_mapper_exp`,
+      `undist_fast_it3`, `undist_fast_photo`, `gs_fast_t1`, `gs_fast_t2_photo`, `work_v10fast*` in newRoomAttemptSadness;
+      `work_v10_sfm` of `scan_3028a4de8fa0` holds the rejected mini-room model). Ask Tayyab first; disk 93% full (70 GB free).
+- [ ] **[new 2026-11-13] `scan_3028a4de8fa0` has no recording number** (D-065 numbers the recordings on the Ubuntu PC;
+      this one was uploaded to the 3070 PC on 2026-11-12 with an older app, no `camera.csv`). Decide whether recordings
+      on the 3070 PC get numbers too.
 - [ ] Training 42 min (blur ×1.4) and SfM 22 min dominate; fast_mvs 20 min. Ideas: blur only in the last third,
       photometric-only PatchMatch, ViT-S prior. *(from TODO 2026-10-26)*
 - [ ] Faster `fast_mvs` (photometric only or every 10th frame) and `plane_seg` (~11 min CPU). *(from TODO 2026-10-26)*
@@ -341,6 +387,9 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 - [ ] Legacy: `--near_cam` in the own trainer is slow (CPU KD-tree every 100 steps). *(from TODO 2026-10-11)*
 
 ### 7.3 Reconstruction quality
+
+- [ ] **[new 2026-11-12] R-030 (`scan_646070948603`, lab room): room height 1.50 m cannot be right.** View the model,
+      check which plane the layout took as the ceiling and whether the scale is off; measure one length with a tape.
 
 - [ ] **Second room** (roomAttemptSadness2): full v9 pipeline + semantics (~2 h GPU), then a room check by the user. The
       real test of v9/v10. *(from TODO 2026-10-24 / 2026-10-27)*
@@ -399,13 +448,36 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.7 Android app
 
-- [ ] **[new] Test the 2026-11-06 app fixes on the phone** (v0.3.4+, D-058 – D-060): install from GitHub Releases (it installs
+- [ ] **[new 2026-11-12] Ask Tayyab whether he has unpushed app changes.** GitHub shows none after `6d0cab5`
+      (2026-10-26); work only on his PC cannot be seen.
+- [ ] **[new 2026-11-12] Test the new app on the phone** (USB upload D-062, light UI + bottom navigation + Server tab +
+      upload checks and Stop D-064): install `adb` on this PC (docs/PROCESSING_GUIDE.md), USB debugging on the phone,
+      then an upload over the cable and over Wi-Fi, pulling the cable mid-upload (WAITING → restart), Stop, the
+      "not connected" and "upload over Wi-Fi?" dialogs, and every tab. Built by CI only; not seen on a device.
+      **Partly done 2026-11-12:** `adb` installed (`~/.local/bin/adb`); scan #3 (classroom, `scan_003_6de634cbb8b2`) recorded with v0.3.6 and uploaded over
+      the cable: 815 MB in 22 s at 37 MB/s (Wi-Fi ~1.4 MB/s), all files arrived (server log). Still to test: Wi-Fi
+      upload, pulling the cable mid-upload, Stop, the dialogs, every tab.
+
+- [x] **[new] Upload sends every recorded file** — fixed 2026-11-06 (branch `fix/upload-all-files`): the app recorded
+      `camera.csv`, `anchors.csv`, `lens_metadata.json`, `camera_characteristics.json` but never uploaded them (found in
+      R-028); the app now sends them and the server saves them (optional, so older apps still upload). Not tested on a device.
+- [ ] **[new] Test the 2026-11-06 app fixes on the phone** (now **v0.3.5**, released 2026-11-12 with PR #4; D-058 – D-060; also check that an upload now brings `camera.csv`, `anchors.csv` and the lens files): install from GitHub Releases (it installs
       next to the old app; uninstall the old one only after its recordings are uploaded), check whether Play Protect still warns, the server list
       finds this PC, and "Check for updates" installs the next build. Not tested on a device.
-- [ ] **[new] Move the app code** out of `googleARCore/samples/hello_ar_java/` and Google's Java package into its own
-      folder / package (D-049 step 2, MAP §10); asked by Umair 2026-11-06 because the app UI is hard to find.
-
-- [ ] App bug: ARCore depth was stale in newRoomAttemptSadness (every map identical, confidence ≈ 0). Investigate. *(from TODO 2026-10-10)*
+- [x] **[new] Move the app code** out of `googleARCore/samples/hello_ar_java/` and Google's Java package — done
+      2026-11-12: `android/`, package `com.buildscan3d.app`, `CaptureActivity` (D-063).
+- [x] ~~App bug: ARCore depth was stale in newRoomAttemptSadness (every map identical, confidence ≈ 0). Investigate.~~ *(from TODO 2026-10-10)* Closed 2026-11-12: not reproduced on scan #3 (classroom, 2026-11-12) (D-067).
+- [ ] **[new] NFR2 / NFR1 on the phone:** install the build with the `iqa_ms` column (`feature/iqa-timing`), record one
+      walk of 1–2 min, upload, run `scripts/buildscan check` and copy the NFR1 / NFR2 lines into §4 (COMPLETION_PLAN 1.6).
+- [ ] **[new] Test the update flow on the phone (D-068):** after merging, v0.3.6 offers the new build (old dialog);
+      on the build after that: prompt with "What's new" at start and after returning, the permission screen continuing
+      by itself, "Updated to vX" once after installing. Not tested on a device.
+- [ ] **[new] Fill in the room names / numbers** of scans #1 – #3 in §2 "Which recording is which" (not recorded).
+- [x] **[new] Quality message twice on the capture screen** (Umair, 2026-11-12): the ARCore sample's bottom snackbar
+      repeated the tracking message and covered the bottom navigation; removed, the top banner shows it ("Starting
+      tracking" added for the start-up case). Not seen on a device yet.
+- [ ] **[new] NFR1 not met** (3.3% dropped, 28.9 fps on scan #3 (classroom, 2026-11-12)): find what drops frames (render thread, depth, IQA
+      cost from the `iqa_ms` numbers); turning depth off (COMPLETION_PLAN 1.12) is one option.
 - [ ] Tune the IQA thresholds on the phone (predicted-blur warn > 5 px / bad > 10 px is new and untested on device). *(from TODO)*
 - [ ] Coverage overlay and tier-2 guidance: show what is left to scan (few viewpoints, ceiling / floor missing, depth
       holes), blur / dark / overexposed, degraded tracking, as an overlay or heatmap. Device test of the coverage overlay not recorded. *(from TODO)*
@@ -493,6 +565,15 @@ Dated milestones; details in [LOG.md](LOG.md), reasons in [DECISIONS.md](DECISIO
   server logs devices, upload progress, failures and answers a UDP server search (D-057). App: server search that
   works on the /19 lab Wi-Fi, in-app updates, own package name `com.buildscan3d.app`, release builds signed with a
   private key (D-058 – D-060). Branch `fix/android-app`.
+
+- **2026-11-12: app v0.3.5** (Umair, PR #4): uploads `camera.csv`, `anchors.csv` and the lens files; server accepts
+  them as optional. Per-run web bundles gitignored (D-061). R-030 (lab room, 50.2 min on Linux) logged.
+
+- **2026-11-12: app restructured and restyled** (Umair): moved to `android/` with its own package (D-063); USB upload
+  route with connection bar, speed, automatic restart (D-062); light theme from the logo, bottom navigation, Server
+  tab, upload checks and Stop (D-064). `exp/first-linux-run` and `feature/usb-upload` merged to `master`.
+- **2026-11-12: ARCore depth bug closed** (Umair, D-067): scan #3 (classroom, 2026-11-12) has 782 distinct depth maps, 87% valid; the stale
+  maps of newRoomAttemptSadness (realme, older app) did not come back.
 
 ## 9. Known limits
 

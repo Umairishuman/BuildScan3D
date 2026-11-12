@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# per-run web bundles written by export_web.py / run_full.sh (D-061); only demo bundles such as newroom/ are tracked
+/public/scans/scan_*/

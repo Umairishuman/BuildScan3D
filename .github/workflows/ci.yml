@@ -56,6 +56,7 @@ jobs:
               - 'prototype/web-ui/**'
               - '.github/workflows/ci.yml'
             android:
+              - 'android/**'
               - 'googleARCore/**'
               - '.github/android/**'
               - '.github/workflows/ci.yml'
@@ -167,7 +168,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: googleARCore/samples/hello_ar_java
+        working-directory: android
     steps:
       - uses: actions/checkout@v4
 
@@ -208,7 +209,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: googleARCore/samples/hello_ar_java/app/build/outputs/apk/debug/*.apk
+          path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -221,7 +222,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-lint-report
-          path: googleARCore/samples/hello_ar_java/app/build/reports/lint-results-debug.html
+          path: android/app/build/reports/lint-results-debug.html
           if-no-files-found: ignore
           retention-days: 14
 
