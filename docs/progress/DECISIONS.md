@@ -447,6 +447,18 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **Rejected:** also building locally first (would need JDK + Android SDK on this PC); PR only with Umair merging.
   **By:** Umair.
 
+## D-062 · 2026-11-12 · Uploads over a USB cable, preferred over Wi-Fi
+- **Decision:** the app uploads over a USB cable when one is connected: `scripts/usb_link.sh` (started by
+  `scripts/start_server.sh`) keeps `adb reverse tcp:8000 tcp:8000` set while a phone is plugged in, and the app's
+  `ServerLink` tries `http://127.0.0.1:8000` before the saved and recent Wi-Fi servers. The Scans screen shows the route
+  (USB / Wi-Fi / not connected, with the reason), uploads show MB/s and time left, fail within 30 s when the link drops,
+  and restart by themselves up to 3 times. (D-061 is used on `exp/first-linux-run`.)
+- **Why:** on 2026-11-12 uploads ran at ~1.4 MB/s on the lab Wi-Fi (772.5 MB recording, ~9 min) and ~1 MB/s on the
+  phone hotspot (PC Wi-Fi signal −76 dBm); the PC's address changed four times that day, so the app kept losing the
+  server; the app's write timeout of 10 min hid dropped connections.
+- **Rejected:** resumable (chunked) uploads (server change, later if needed); a fixed IP from lab IT (not in our
+  control); asking the user to pick USB by hand. **By:** Umair.
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |

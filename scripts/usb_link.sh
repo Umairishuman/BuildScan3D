@@ -22,7 +22,7 @@ done
 say() { echo "$(date +%H:%M:%S) USB  $*"; }
 
 if [[ -z "$ADB" ]]; then
-  say "adb not found, USB uploads are off (Wi-Fi still works). Install it once, see docs/COMMANDS.md (USB upload)."
+  say "adb not found, USB uploads are off (Wi-Fi still works). Install it once, see docs/PROCESSING_GUIDE.md (Upload over a USB cable)."
   exit 0
 fi
 
@@ -49,7 +49,7 @@ while true; do
       case "${now[$serial]}" in
         linked)         say "phone $serial connected: the app uploads over the cable (http://127.0.0.1:$PORT on the phone)" ;;
         unauthorized)   say "phone $serial: tap 'Allow' on the USB debugging prompt on the phone" ;;
-        no*permissions*|no) say "phone $serial: no permission to use it (udev rule missing), see docs/COMMANDS.md (USB upload)" ;;
+        no*permissions*|no) say "phone $serial: no permission to use it (udev rule missing), see docs/PROCESSING_GUIDE.md (Upload over a USB cable)" ;;
         reverse-failed) say "phone $serial: adb reverse failed, unplug and plug the cable in again" ;;
         offline)        say "phone $serial is offline: unplug and plug the cable in again" ;;
         *)              say "phone $serial: ${now[$serial]}" ;;

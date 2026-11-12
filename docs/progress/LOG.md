@@ -207,3 +207,13 @@ Template:
   when an older app does not send them. Tests: 214 passed (2 new).
 - Next: PR → CI → merge → CD release; record a new room with the new app to get `camera.csv` (exposure) for `--blur`.
 
+## 2026-11-12 · Umair · `feature/usb-upload`
+- Did: uploads were slow (~1.4 MB/s lab Wi-Fi, ~1 MB/s hotspot; PC Wi-Fi signal −76 dBm on the hotspot, link
+  26 Mbit/s PC → phone) and the PC's address kept changing. Added a USB upload route (D-062):
+  `scripts/usb_link.sh` + `start_server.sh` (adb reverse while the server runs), server log labels USB requests;
+  app `ServerLink.java` (USB first, then saved / recent Wi-Fi, plain reason when none answers), connection bar on the
+  Scans screen, upload speed and time left, 30 s write timeout (was 10 min), automatic restart up to 3 times, screen
+  kept on during uploads, USB entry in the server dialog. Guide: docs/PROCESSING_GUIDE.md "Upload over a USB cable".
+- Problems: installing `adb` from this session was blocked by the permission check, so Umair installs it (commands
+  in the guide). No Android SDK / JDK on this PC, so the app was not compiled locally; CI builds it.
+- Next: CI on the PR; install `adb`; test on the phone; release.

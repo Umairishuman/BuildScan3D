@@ -382,6 +382,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.7 Android app
 
+- [ ] **[new 2026-11-12] USB upload (D-062)** on `feature/usb-upload`: install `adb` on this PC (docs/PROCESSING_GUIDE.md),
+      USB debugging on the phone, then test an upload over the cable and the connection bar / automatic restart.
+      Not built locally (CI builds the APK) and not tested on a device.
+
 - [x] **[new] Upload sends every recorded file** — fixed 2026-11-06 (branch `fix/upload-all-files`): the app recorded
       `camera.csv`, `anchors.csv`, `lens_metadata.json`, `camera_characteristics.json` but never uploaded them (found in
       R-028); the app now sends them and the server saves them (optional, so older apps still upload). Not tested on a device.

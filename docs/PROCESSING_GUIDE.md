@@ -68,6 +68,44 @@ Pick option **7) Processing mode**, then choose:
 4. Tap **Record** — slowly walk around the subject (30-60 seconds is usually enough)
 5. Tap **Stop** — choose **Upload & Process** to send it to the server
 
+### Upload over a USB cable (fastest, no Wi-Fi needed)
+
+With the phone on a USB cable, the app uploads through the cable: no Wi-Fi, no IP address, no firewall rule.
+`scripts/start_server.sh` starts `scripts/usb_link.sh`, which runs `adb reverse tcp:8000 tcp:8000` whenever a phone
+is plugged in, so the phone's own `http://127.0.0.1:8000` reaches this PC's server. The app always tries the cable
+first and falls back to Wi-Fi.
+
+**Once, on the Linux PC** (no sudo; `adb` from Google's platform-tools in your home folder):
+
+```bash
+cd ~/Downloads && curl -LO https://dl.google.com/android/repository/platform-tools-latest-linux.zip
+mkdir -p ~/.local/share/android && unzip -o platform-tools-latest-linux.zip -d ~/.local/share/android
+mkdir -p ~/.local/bin && ln -sf ~/.local/share/android/platform-tools/adb ~/.local/bin/adb
+adb version
+```
+
+If `adb devices` later says `no permissions`, Linux needs the Android USB rules once (needs sudo):
+`sudo apt install android-sdk-platform-tools-common`, then unplug and plug the phone in again.
+
+**Once, on the phone:** Settings → About phone → tap *Build number* 7 times; then Settings → System →
+Developer options → **USB debugging** on. When you plug the cable in, tap **Allow** on the "Allow USB debugging?"
+prompt (tick *Always allow from this computer*).
+
+**Every time:** start the server, plug the phone in. The server window prints
+`USB  phone <serial> connected: the app uploads over the cable`, and the bar at the top of the app's **Scans**
+screen turns green: **Connected · USB cable**.
+
+| Bar in the app | Meaning |
+|---|---|
+| green, *Connected · USB cable* | uploads go over the cable |
+| blue, *Connected · Wi-Fi &lt;address&gt;* | uploads go over the network to that server |
+| red, *Not connected* | no server answers; the line under it says why (no network, mobile data, server not answering) |
+
+During an upload the scan shows the route, MB sent, MB/s and the time left, and the screen stays on. If the
+connection drops, the upload fails within 30 s, the scan shows **WAITING**, and the upload restarts by itself as soon
+as the server is reachable again (over the cable or Wi-Fi), up to 3 times. An upload always starts from the
+beginning: the server does not keep partial uploads.
+
 ### 4. Monitor processing
 
 In the Job Manager (`scripts\jobs.bat`):
