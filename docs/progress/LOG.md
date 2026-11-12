@@ -285,4 +285,8 @@ Template:
   #3 `scan_6de634cbb8b2` (uploaded 2026-11-12 14:53 with `camera.csv` / `anchors.csv`, so the v0.3.5 upload fix works).
   Found on the way: `buildscan latest` used folder dates, which processing runs change.
 - Tests: `tests/test_scan_numbers.py` (6) + `tests/test_server_api.py` (21) pass locally (pytest in a temporary path).
+- Then renamed the three earlier recordings with their numbers (D-066): `scan_001_056fe94d3399`,
+  `scan_002_646070948603`, `scan_003_6de634cbb8b2`; stored paths in `frames.json` / `project.ini` / `semantic.json` /
+  `mesh_*.json` updated, logs left as written, web bundles renamed, examples in COMMANDS.md / RUN_PIPELINE.md /
+  buildscan updated. Wrote the hand-over prompt for the next session (end of this block).
 - Next: PR, CI, merge and release (app shows the number from the next version on).

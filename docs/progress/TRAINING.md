@@ -66,6 +66,9 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 
 ## Runs
 
+> **Renamed 2026-11-12 (D-066):** `scan_056fe94d3399` is now `dataset/scan_001_056fe94d3399`, `scan_646070948603` is
+> `dataset/scan_002_646070948603`. The entries below keep the names they had when they were run.
+
 ### R-001 · 2026-10-06 · roomAttemptSadness, own gsplat trainer v1–v3
 - **Pipeline:** `prepare.py → ba.py → mvs.py → align_fuse.py --depth_dir depth_mvs → train.py` (7k steps).
 - **Command (v3):** `nerfstudio-env\Scripts\python.exe -W ignore -u src/arcore3dgs/train.py --work dataset/roomAttemptSadness/work --out dataset/roomAttemptSadness/work/gs_v3 --steps 7000`

@@ -5,8 +5,9 @@ a number never changes, even when a folder is modified later (a processing run c
 "newest by date" is not reliable). Folders not in the register yet (older recordings, folders copied in by hand) are
 added on first sight, oldest first by creation time.
 
-New uploads are saved as scan_<NNN>_<id> (e.g. scan_004_6de634cbb8b2) so the number is in the folder name too.
-Recordings from before 2026-11-12 keep their names (scan_056fe94d3399 is #1): the records refer to them.
+Uploads are saved as scan_<NNN>_<id> (e.g. scan_004_1a2b3c4d5e6f) so the number is in the folder name too. The
+three recordings from before this were renamed on 2026-11-12 (scan_056fe94d3399 -> scan_001_056fe94d3399, D-066).
+A folder copied in by hand keeps its name and gets the next number.
 
     python3 server/scan_numbers.py              # list: number, folder, newest last (registers unknown folders)
     python3 server/scan_numbers.py resolve 4    # -> dataset/scan_004_...   ("latest" = highest number)

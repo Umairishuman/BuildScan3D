@@ -505,6 +505,16 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   after being processed).
 - **Rejected:** renaming the three earlier folders (TRAINING.md R-028 to R-030 and the web bundles use those names);
   numbering by date at display time only (a copied-in or processed folder would shift the numbers). **By:** Umair.
+- **Status:** the "keep the old names" part superseded by D-066 the same day.
+
+## D-066 · 2026-11-12 · The three earlier recordings renamed with their numbers
+- **Decision:** `scan_056fe94d3399` → `scan_001_056fe94d3399`, `scan_646070948603` → `scan_002_646070948603`,
+  `scan_6de634cbb8b2` → `scan_003_6de634cbb8b2`, so every folder in `dataset/` starts with its number. The folder paths
+  stored in the working files (`frames.json`, COLMAP `project.ini`, `semantic.json`, `mesh_*.json`) were updated; the
+  run logs were left as written. Web bundles renamed to match (`scan_001_056fe94d3399_umair`,
+  `scan_002_646070948603_r1106`). TRAINING.md and LOG.md keep the old names (history) with a note.
+- **Why:** asked by Umair (2026-11-12) after D-065. **Checked:** `buildscan results 1 umair` finds the model; no old
+  path left in the working files. **By:** Umair.
 
 ## Open decisions (need the team; agents must not decide these)
 

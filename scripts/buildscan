@@ -22,7 +22,7 @@
 #   scripts/buildscan gpu                        live GPU use / memory / temperature
 #
 # <scan>: the recording's number (4 or #4: recordings are numbered 1, 2, 3 in the order they arrived, D-065),
-#         `latest` (highest number), or a folder in dataset/ (scan_004_6de634cbb8b2, dataset/scan_056fe94d3399).
+#         `latest` (highest number), or a folder in dataset/ (scan_004_6de634cbb8b2, dataset/scan_001_056fe94d3399).
 # [tag]: names the run's output folders (work_<tag>_sfm/gs_<tag>/). A new tag never mixes with older runs.
 # Leave an argument out and buildscan asks: a numbered list of recordings / runs / sessions to pick from.
 # Cheat sheet with every argument explained: docs/COMMANDS.md

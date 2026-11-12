@@ -69,4 +69,4 @@ exposure 1/45 s (0.0222), PGSR-lite.
 
 - One run at a time on the GPU (buildscan refuses a second one).
 - Every run gets an entry in [TRAINING.md](progress/TRAINING.md): before it starts, every error, and the result.
-- `<...>` in these docs means "put your value here": type `latest` or `scan_056fe94d3399`, never `<scan>`.
+- `<...>` in these docs means "put your value here": type `latest` or `scan_001_056fe94d3399`, never `<scan>`.
