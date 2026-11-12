@@ -290,3 +290,18 @@ Template:
   `mesh_*.json` updated, logs left as written, web bundles renamed, examples in COMMANDS.md / RUN_PIPELINE.md /
   buildscan updated. Wrote the hand-over prompt for the next session (end of this block).
 - Next: PR, CI, merge and release (app shows the number from the next version on).
+
+## 2026-11-12 (evening) · Umair · `feature/numbered-scans`, `feature/iqa-timing`
+- Did: COMPLETION_PLAN Step 1 review with Umair: 1.1 (asked Tayyab), 1.2 and 1.3 done; 1.4 in progress (scan #3
+  processing as R-031, started by Umair 15:04, tag `r1112`); 1.5 tape measured (sheet not yet saved next to a
+  dataset). Checked scan #3 for 1.6 / 1.7: `check_capture.py` READY; NFR1 **not met** (28.9 fps, 3.3% dropped-frame
+  gaps, longest 99 ms); ARCore depth live (782 distinct maps) → 1.7 closed (D-067). NFR2 could not be measured (the
+  app never timed the quality check): `feature/iqa-timing` times `QualityMonitor.update()` per frame and writes it as
+  the last `quality.csv` column `iqa_ms`; `check_capture.py` prints NFR1 / NFR2 lines.
+- Runs: R-031 (header and capture facts written while it runs).
+- Decisions: D-067.
+- Problems: a first dropped-frame count from `poses.csv` gaps (0.24%) was wrong (threshold missed most gaps); the video
+  count (3.3%) replaced it in R-031 and the plan. No Android SDK here, so the app change is compiled by CI only.
+- Next: push `feature/iqa-timing` + PR when Umair agrees (CI builds the APK); install, record 1–2 min, upload,
+  `scripts/buildscan check` → NFR2 numbers into STATUS §4; finish R-031 (result, verdict, ceiling height vs tape);
+  save the tape sheets next to the datasets; then 1.8 (scan #3: blur > 5 px on 75% of frames at 30 ms exposure) and 1.9.

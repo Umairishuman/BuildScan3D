@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-12 by Umair (USB upload D-062, app moved to `android/` D-063, light UI with bottom navigation D-064, all branches merged to `master`).
+Last updated: 2026-11-12 by Umair (NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067; earlier the same day: USB upload D-062, app in `android/` D-063, light UI D-064, numbered scans D-065 / D-066).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -115,8 +115,8 @@ The proposal is `docs/proposal/BuildScan3D_FYP_Proposal_v4.docx`. Several parts 
 | FR9 web rendering | `.ksplat` in Three.js, first-person navigation | Done with `.spz` + Spark (Three.js). No adaptive splat budget |
 | FR10 dimensions | Area / length of a labelled element | Wall gross / opening / net areas and point-to-point measure. Per-element area for fixtures not done |
 | FR11 X-ray overlay | Planned FYP-2 | Dropped by the team (D-033) |
-| NFR1 capture 30 FPS | ≥ 30 FPS | 0.7–3.6% dropped frames measured before the 2026-10-23 fixes; not re-measured since |
-| NFR2 IQA latency | < 16 ms per frame | Not measured |
+| NFR1 capture 30 FPS | ≥ 30 FPS | **Not met.** Re-measured 2026-11-12 on scan #3 (Infinix, v0.3.5, 185 s): 28.9 fps average, 3.3% dropped-frame gaps, longest 99 ms (R-031). Before the 2026-10-23 fixes: 0.7–3.6% |
+| NFR2 IQA latency | < 16 ms per frame | Not measured. The app now logs it per frame (`quality.csv` `iqa_ms`, `feature/iqa-timing`, not yet on a phone); `check_capture.py` reports it |
 | NFR3 pipeline time | 60 s video in 15 min on a 4090 | Not met: 96 min on a 3070 (240 s video). FYP-2 target < 35 min on a 4090 (projection) |
 | NFR4 compression | ≥ 60% | Met (`.spz` ~92%, `.ksplat` 73–88%) |
 | NFR5 viewer FPS | ≥ 30 FPS mid-range browser | Not measured |
@@ -418,7 +418,11 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       finds this PC, and "Check for updates" installs the next build. Not tested on a device.
 - [x] **[new] Move the app code** out of `googleARCore/samples/hello_ar_java/` and Google's Java package — done
       2026-11-12: `android/`, package `com.buildscan3d.app`, `CaptureActivity` (D-063).
-- [ ] App bug: ARCore depth was stale in newRoomAttemptSadness (every map identical, confidence ≈ 0). Investigate. *(from TODO 2026-10-10)*
+- [x] ~~App bug: ARCore depth was stale in newRoomAttemptSadness (every map identical, confidence ≈ 0). Investigate.~~ *(from TODO 2026-10-10)* Closed 2026-11-12: not reproduced on scan #3 (D-067).
+- [ ] **[new] NFR2 / NFR1 on the phone:** install the build with the `iqa_ms` column (`feature/iqa-timing`), record one
+      walk of 1–2 min, upload, run `scripts/buildscan check` and copy the NFR1 / NFR2 lines into §4 (COMPLETION_PLAN 1.6).
+- [ ] **[new] NFR1 not met** (3.3% dropped, 28.9 fps on scan #3): find what drops frames (render thread, depth, IQA
+      cost from the `iqa_ms` numbers); turning depth off (COMPLETION_PLAN 1.12) is one option.
 - [ ] Tune the IQA thresholds on the phone (predicted-blur warn > 5 px / bad > 10 px is new and untested on device). *(from TODO)*
 - [ ] Coverage overlay and tier-2 guidance: show what is left to scan (few viewpoints, ceiling / floor missing, depth
       holes), blur / dark / overexposed, degraded tracking, as an overlay or heatmap. Device test of the coverage overlay not recorded. *(from TODO)*
@@ -513,6 +517,8 @@ Dated milestones; details in [LOG.md](LOG.md), reasons in [DECISIONS.md](DECISIO
 - **2026-11-12: app restructured and restyled** (Umair): moved to `android/` with its own package (D-063); USB upload
   route with connection bar, speed, automatic restart (D-062); light theme from the logo, bottom navigation, Server
   tab, upload checks and Stop (D-064). `exp/first-linux-run` and `feature/usb-upload` merged to `master`.
+- **2026-11-12: ARCore depth bug closed** (Umair, D-067): scan #3 has 782 distinct depth maps, 87% valid; the stale
+  maps of newRoomAttemptSadness (realme, older app) did not come back.
 
 ## 9. Known limits
 
