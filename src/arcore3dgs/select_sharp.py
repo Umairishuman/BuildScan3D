@@ -14,6 +14,7 @@ import numpy as np, cv2
 
 sys.path.insert(0, os.path.dirname(__file__))
 from common import Capture
+from imu import extract_imu
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--dataset", required=True); ap.add_argument("--out", required=True)
@@ -25,10 +26,10 @@ args = ap.parse_args()
 cap_info = Capture(args.dataset)
 os.makedirs(os.path.join(args.out, "images"), exist_ok=True)
 
-imu = np.load(os.path.join(args.dataset, "imu.npz"))
+g_t, g_xyz = extract_imu(args.dataset)["gyro"]               # from dataset.mp4, cached as imu.npz
 with open(os.path.join(args.dataset, "poses.csv")) as f:
     r = csv.reader(f); next(r); t0 = float(next(r)[0])
-gt = (imu["gt"] - t0) / 1e9; w = np.linalg.norm(imu["g"], axis=1)
+gt = (g_t - t0) / 1e9; w = np.linalg.norm(g_xyz, axis=1)
 
 cap = cv2.VideoCapture(cap_info.video)
 N = min(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), len(cap_info.pts))
