@@ -606,7 +606,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 
 ### R-037 · 2026-11-12 · newRoomAttemptSadness on this PC, R-023 recipe, full pipeline (tag `r1112nr`)
 - **Who / machine:** Umair (agent; Umair chose the recipe) · this PC (Ubuntu, RTX 4000 Ada), `screen` session `run-r1112nr`
-- **Branch / commit:** `feature/step4-layout` @ (filled at start, see `run_full.log` header) (uncommitted changes: TRAINING.md only)
+- **Branch / commit:** `feature/step4-layout` @ `104a535` (uncommitted changes: TRAINING.md only)
 - **Dataset:** `dataset/newRoomAttemptSadness`, copied from the RTX 3070 PC on 2026-11-12 by Umair (raw recording only:
   `dataset.mp4`, `poses.csv` 7,047 rows, `points.csv`, `depth/` 1,677 files, `quality.csv`, `tracking.csv`,
   `meta.json`; realme RMX5111; no `camera.csv` / `anchors.csv`); the R-014 held-out list is not on this PC
