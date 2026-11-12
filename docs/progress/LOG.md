@@ -397,9 +397,12 @@ Hand-over prompt (2026-11-12, for the Step 4 session):
     2026-11-19 (new rooms processed).
 
     State at the end of 2026-11-12:
-    - Branch `exp/step3-speed` (not pushed) holds D-069, D-070, `make_split.py` and R-031's result. Start the Step 4
-      work on a new branch from it (e.g. `feature/step4-layout`), commit after each logical step, never push or merge
-      without asking. Local `master` is behind `origin/master` (v0.3.7).
+    - Branch `exp/step3-speed` (not pushed) holds D-069, D-070, `make_split.py` and R-031's result. Step 3 is now
+      Tayyab's: Umair told him what this branch contains and Tayyab will merge it later. Do not continue Step 3 work
+      and do not add Step 4 work to `exp/step3-speed`.
+    - Make a **new branch for Step 4** (e.g. `feature/step4-layout`) from `exp/step3-speed`, so the records above
+      are on it; commit after each logical step, never push or merge without asking. Local `master` is behind
+      `origin/master` (v0.3.7).
     - scan #2 (`scan_002_646070948603`, computer lab, R-030): layout height 1.50 m, wrong; splats span ~3.1 m vertically.
       Outputs in `dataset/scan_002_646070948603/work_r1106_sfm/gs_r1106/`.
     - scan #3 (`scan_003_6de634cbb8b2`, classroom, R-031): layout height 2.74 m (plausible; densest top splats slightly
