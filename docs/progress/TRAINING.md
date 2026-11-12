@@ -69,6 +69,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-034 | 2026-11-12 | `level_model.py`: levelled copies of scan #2 / #3 models (tags `r1106lev`, `r1112lev`) | this PC | seconds | rotated 9.09° / 12.10°; renders match the source at 85–98 dB (after an SH transpose bug, fixed) | Kept
 | R-035 | 2026-11-12 | scan #3 levelled (`r1112lev`), layout → web | this PC | 18.0 min | 4 walls, 3 corners ~90°, height 2.52 m, floor 32.27 m², 18 fixtures | Kept (Step 4 layout / semantics of scan #3); tape pending |
 | R-036 | 2026-11-12 | scan #2 levelled (`r1106lev`), layout → web | this PC | 8.5 min | height 1.50 → 2.41 m (wall-top rule), 1 wall, 10 fixtures | Inconclusive: weak capture (camera in 0.8 × 0.7 m); re-record |
+| R-037 | 2026-11-12 | newRoomAttemptSadness, R-023 recipe, full pipeline (`r1112nr`), first run with D-071 / D-072 | this PC (Ubuntu, RTX 4000 Ada) | 103.0 min (run_v8 81.4) | 1157/1166 frames; gravity 0.00°; 6.63 × 4.37 m (R-023 6.60 × 4.36); height 2.81 m (R-023 2.72, via D-072); 18 fixtures (15) | Kept (machine agreement on size); height and PSNR not settled |
 
 ## Runs
 
@@ -615,3 +616,32 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Goal:** COMPLETION_PLAN 3.1 machine agreement against R-023 (3070: 1165 frames, layout 6.60 × 4.36 m, ceiling
   2.72 m, tape 6.70 m, 15 v10 fixtures, 96 min for the R-020 run) and the first end-to-end run with D-071 (gravity
   in the export) and D-072 (ceiling rule) on a room whose layout was right. No PSNR comparison (no split here).
+- **Errors during the run:** none (only `timm` FutureWarnings in the log).
+- **Output:** `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/` (606,881 splats), web bundle
+  `prototype/web-ui/public/scans/newRoomAttemptSadness_r1112nr/` (19 MB, not committed, like the other local bundles).
+- **Stage times** (`stages.tsv`, `timing.json`), 18:56:57 → 20:39:57 = **103.0 min**: select 0.5, SfM 12.4, export 0.0,
+  prior 4.6 (1157 frames in 267 s), init (fast MVS) 18.4, train 45.2, ply 0.3 (run_v8 81.4) · layout 1.8 · sem2d 18.2 ·
+  sem3d / verify / sem3d2 0.5 · mesh 0.3 · mesh labels 0.7 · web 0.1. For comparison: R-020 (v9e2e, 3070) 96 min,
+  R-023 training 46 min on the 3070; R-031 (scan #3, 885 frames, this PC) 81.0 min. Not the same stage split, so the
+  per-machine comparison is only rough.
+- **SfM:** 1157 / 1166 frames registered (R-023: 1165 frames); Sim3 scale 0.6259, 898 / 1166 centre inliers, median
+  3.3 cm. R-023's scale is not on this PC, so scale agreement is **not measured**.
+- **Gravity (D-071):** ARCore gravity 0.00° from +Y after levelling (per-frame spread 0.31°, 1164 frames); a
+  full-rotation Sim3 on the same inliers would have been 0.57° off, so this room was nearly level with the old export
+  too (unlike scan #2 / #3).
+- **Layout:** 5 walls 6.63 / 4.37 / 5.78 / 4.57 / 0.78 m, 4 corners 72.0 / 88.1 / 89.2 / 89.2°, no warnings. Main
+  rectangle **6.63 × 4.37 m** vs R-023 6.60 × 4.36 m (+3 cm / +1 cm) and tape 6.70 m (−7 cm). The 0.78 m wall and the
+  72° corner are not explained yet (look at `layout/plan.png`).
+- **Height: 2.81 m** vs R-023 2.72 m (+9 cm). D-072 changed it: the strongest horizontal plane was at 2.69 m above
+  the floor (ceiling_first_y 1.205), below the wall tops (1.301), so the rule took the plane above the wall tops
+  (ceiling_y 1.320). Semantics rejected its own ceiling fit (tilt 0.49°, residual 4.7 cm) and used 2.822 m. Which of
+  2.69 / 2.72 / 2.81 m is right is **not measured** (no tape height for this room); the wall tops may be floaters
+  above the ceiling, in which case D-072 overshoots here.
+- **Semantics v10:** floor tilt 0.25° (residual 0.5 cm), floor area 29.41 m² (R-023 bundle 28.81 m²), **18 fixtures**
+  vs R-023's 15: door 7 (6), light switch 3 (2), power socket 2 (1), ceiling light 3 (3), window 1 (1), tube light 1
+  (1), lamp 1 (1); 49 rejected. Which of the 3 extra ones are real is not checked: check sheet
+  `gs_r1112nr/semantic_v10/fixture_check.md` for Umair.
+- **Mesh:** unbiased depth, 579 frames, 1,858,737 triangles.
+- **Verdict:** **kept** as the machine-agreement run for this PC: the pipeline runs end to end and the room size agrees
+  with the 3070 within 3 cm. Not settled: height (+9 cm, D-072), 3 extra fixtures, PSNR / SSIM (needs the R-014 split
+  from Tayyab). Whether the model goes to `saved_models/`: Umair to decide.
