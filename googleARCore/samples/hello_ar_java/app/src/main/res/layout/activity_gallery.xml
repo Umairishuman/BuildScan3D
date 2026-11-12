@@ -40,6 +40,36 @@
             android:textSize="14sp" />
     </LinearLayout>
 
+    <!-- Connection to the upload server (ServerLink): USB cable / Wi-Fi / not connected, refreshed every 3 s -->
+    <LinearLayout
+        android:id="@+id/link_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#1E1E2E"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:id="@+id/tv_link_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="●  Checking connection..."
+            android:textColor="#B0BEC5"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_link_detail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="#90A4AE"
+            android:textSize="12sp" />
+    </LinearLayout>
+
     <!-- Scan list -->
     <ListView
         android:id="@+id/lv_scans"

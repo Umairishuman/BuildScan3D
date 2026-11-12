@@ -303,7 +303,7 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
         listContainer.removeAllViews();
         for (String url : found) {
           android.widget.Button btn = new android.widget.Button(this);
-          btn.setText(url);
+          btn.setText(ServerLink.USB_URL.equals(url) ? "USB cable (" + url + ")" : url);
           btn.setTextSize(13);
           btn.setAllCaps(false);
           btn.setBackgroundColor(0xFF1E1E2E);
@@ -363,6 +363,8 @@ public class HelloArActivity extends AppCompatActivity implements SampleRender.R
    */
   private List<String> scanForServers() {
     java.util.Set<String> found = java.util.Collections.synchronizedSet(new java.util.LinkedHashSet<>());
+    // (0) USB cable: the PC forwards the phone's 127.0.0.1:8000 to its server (adb reverse, scripts/usb_link.sh)
+    if (ServerLink.healthy(ServerLink.USB_URL)) found.add(ServerLink.USB_URL);
     try {
       // (1) UDP broadcast
       java.util.Set<java.net.InetAddress> targets = new java.util.LinkedHashSet<>();

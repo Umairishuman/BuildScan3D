@@ -48,8 +48,8 @@ public class ProcessingActivity extends AppCompatActivity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final OkHttpClient client = new OkHttpClient.Builder()
             .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .writeTimeout(600, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)   // a dropped link fails in 30 s
+            .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)  // the server saves the files before answering
             .build();
     private boolean polling = false;
 
@@ -98,6 +98,14 @@ public class ProcessingActivity extends AppCompatActivity {
 
         new Thread(() -> {
             try {
+                runOnUiThread(() -> tvStep.setText("Connecting to the server..."));
+                ServerLink.State st = ServerLink.resolve(this);
+                if (st.route == ServerLink.Route.NONE) {
+                    throw new IOException(st.detail);
+                }
+                serverUrl = st.url;
+                final String via = st.routeName();
+
                 File dir = new File(datasetPath);
 
                 File depthDir = new File(dir, "depth");
@@ -108,7 +116,7 @@ public class ProcessingActivity extends AppCompatActivity {
                     zipDirectory(depthDir, depthZip);
                 }
 
-                runOnUiThread(() -> tvStep.setText("Uploading to server..."));
+                runOnUiThread(() -> tvStep.setText("Uploading via " + via + "..."));
 
                 MultipartBody.Builder builder = new MultipartBody.Builder()
                         .setType(MultipartBody.FORM)

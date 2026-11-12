@@ -5,10 +5,12 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.ImageButton;
@@ -57,12 +59,37 @@ public class GalleryActivity extends AppCompatActivity {
   // Track upload state per scan
   private final java.util.Map<String, Integer> uploadProgress = new java.util.concurrent.ConcurrentHashMap<>();
   private final java.util.Map<String, String> uploadStatus = new java.util.concurrent.ConcurrentHashMap<>();
+  // Why the last upload of a scan failed, shown under it
+  private final java.util.Map<String, String> uploadError = new java.util.concurrent.ConcurrentHashMap<>();
+  // Automatic restarts after a lost connection: count per scan, and the scans waiting for the server to come back
+  private static final int MAX_AUTO_RETRIES = 3;
+  private final java.util.Map<String, Integer> autoRetries = new java.util.concurrent.ConcurrentHashMap<>();
+  private final Set<String> waitingForLink = java.util.concurrent.ConcurrentHashMap.newKeySet();
+  private final java.util.concurrent.atomic.AtomicInteger activeUploads = new java.util.concurrent.atomic.AtomicInteger();
 
+  // Connection to the server (ServerLink), refreshed every 3 s while this screen is open
+  private TextView tvLinkStatus;
+  private TextView tvLinkDetail;
+  private volatile boolean watchingLink = false;
+  private volatile int watchGeneration = 0;  // a newer watcher makes an older one stop
+
+  // A dropped connection fails within 30 s instead of hanging for 10 min; the server may take a while to answer
+  // after the last byte (it saves the files), hence the longer read timeout.
   private final OkHttpClient client = new OkHttpClient.Builder()
-      .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-      .writeTimeout(600, java.util.concurrent.TimeUnit.SECONDS)
-      .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+      .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+      .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+      .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
       .build();
+
+  /** The server answered the upload with an error: retrying will not help, so no automatic restart. */
+  static class ServerRefusedException extends IOException {
+    ServerRefusedException(String msg) { super(msg); }
+  }
+
+  /** No route to the server when the upload was about to start. */
+  static class NoLinkException extends IOException {
+    NoLinkException(String msg) { super(msg); }
+  }
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +105,8 @@ public class GalleryActivity extends AppCompatActivity {
     listView = findViewById(R.id.lv_scans);
     tvEmpty = findViewById(R.id.tv_empty);
     tvScanCount = findViewById(R.id.tv_scan_count);
+    tvLinkStatus = findViewById(R.id.tv_link_status);
+    tvLinkDetail = findViewById(R.id.tv_link_detail);
 
     adapter = new ScanAdapter();
     listView.setAdapter(adapter);
@@ -89,6 +118,58 @@ public class GalleryActivity extends AppCompatActivity {
   protected void onResume() {
     super.onResume();
     loadScans();
+    startLinkWatch();
+  }
+
+  @Override
+  protected void onPause() {
+    super.onPause();
+    watchingLink = false;
+  }
+
+  /** Checks the connection every 3 s, shows it in the bar, and restarts uploads that lost their connection. */
+  private void startLinkWatch() {
+    watchingLink = true;
+    final int gen = ++watchGeneration;
+    new Thread(() -> {
+      while (watchingLink && gen == watchGeneration) {
+        ServerLink.State st = ServerLink.resolve(this);
+        handler.post(() -> showLink(st));
+        if (st.route != ServerLink.Route.NONE && !waitingForLink.isEmpty()) {
+          for (String key : new ArrayList<>(waitingForLink)) {
+            waitingForLink.remove(key);
+            File dir = new File(getExternalFilesDir(null), key);
+            if (!dir.isDirectory()) continue;
+            handler.post(() -> {
+              Toast.makeText(this, "Server reachable again (" + st.routeName() + "): restarting the upload",
+                  Toast.LENGTH_SHORT).show();
+              startUpload(dir, true);
+            });
+          }
+        }
+        SystemClock.sleep(3000);
+      }
+    }, "link-watch").start();
+  }
+
+  private void showLink(ServerLink.State st) {
+    tvLinkStatus.setText("\u25CF  " + st.label());
+    tvLinkStatus.setTextColor(st.color());
+    tvLinkDetail.setText(st.detail);
+  }
+
+  /** Keeps the screen on while an upload runs, so the phone does not sleep and drop Wi-Fi mid-upload. */
+  private void keepScreenOn() {
+    if (activeUploads.get() > 0) {
+      getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    } else {
+      getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    }
+  }
+
+  private static String formatDuration(double seconds) {
+    long s = Math.max(0, Math.round(seconds));
+    return s < 60 ? s + " s" : String.format(Locale.US, "%d min %02d s", s / 60, s % 60);
   }
 
   private void loadScans() {
@@ -180,21 +261,39 @@ public class GalleryActivity extends AppCompatActivity {
   }
 
   private void startUpload(File dir) {
+    startUpload(dir, false);
+  }
+
+  /** auto = restarted by the link watcher after a lost connection (keeps the restart count). */
+  private void startUpload(File dir, boolean auto) {
     String key = dir.getName();
-    if ("uploading".equals(uploadStatus.get(key))) {
+    String current = uploadStatus.get(key);
+    if (current != null && (current.equals("uploading") || current.startsWith("Uploading")
+        || current.startsWith("Zipping") || current.startsWith("Connecting"))) {
       Toast.makeText(this, "Already uploading", Toast.LENGTH_SHORT).show();
       return;
     }
-
-    String serverUrl = prefs.getString(ProcessingActivity.PREF_SERVER_URL,
-        ProcessingActivity.DEFAULT_SERVER_URL);
+    if (!auto) autoRetries.remove(key);
+    waitingForLink.remove(key);
+    uploadError.remove(key);
 
     uploadStatus.put(key, "uploading");
     uploadProgress.put(key, 0);
     adapter.notifyDataSetChanged();
+    activeUploads.incrementAndGet();
+    keepScreenOn();
 
     new Thread(() -> {
       try {
+        updateUploadUI(key, 0, "Connecting to the server...");
+        ServerLink.State st = ServerLink.resolve(this);
+        handler.post(() -> showLink(st));
+        if (st.route == ServerLink.Route.NONE) {
+          throw new NoLinkException(st.detail);
+        }
+        String serverUrl = st.url;
+        String via = st.routeName();
+
         File depthDir = new File(dir, "depth");
         File depthZip = null;
         if (depthDir.exists() && depthDir.isDirectory()) {
@@ -203,7 +302,7 @@ public class GalleryActivity extends AppCompatActivity {
           zipDirectory(depthDir, depthZip);
         }
 
-        updateUploadUI(key, 10, "Uploading...");
+        updateUploadUI(key, 10, "Uploading via " + via + "...");
 
         MultipartBody.Builder builder = new MultipartBody.Builder()
             .setType(MultipartBody.FORM)
@@ -229,12 +328,19 @@ public class GalleryActivity extends AppCompatActivity {
         long totalBytes = requestBody.contentLength();
 
         // Wrap in a progress-tracking body
+        final long t0 = SystemClock.elapsedRealtime();
         RequestBody trackedBody = new ProgressRequestBody(requestBody, (bytesWritten, contentLength) -> {
           int pct = (int) (10 + (bytesWritten * 85.0 / contentLength));
-          updateUploadUI(key, pct, String.format(Locale.US,
-              "Uploading... %.1f / %.1f MB",
-              bytesWritten / (1024.0 * 1024.0),
-              contentLength / (1024.0 * 1024.0)));
+          double el = Math.max((SystemClock.elapsedRealtime() - t0) / 1000.0, 0.001);
+          double mbps = bytesWritten / (1024.0 * 1024.0) / el;
+          double left = mbps > 0 ? (contentLength - bytesWritten) / (1024.0 * 1024.0) / mbps : 0;
+          String text = bytesWritten >= contentLength
+              ? String.format(Locale.US, "Uploading via %s \u00b7 all %.1f MB sent, the server is saving the files...",
+                  via, contentLength / (1024.0 * 1024.0))
+              : String.format(Locale.US, "Uploading via %s \u00b7 %.1f / %.1f MB \u00b7 %.1f MB/s \u00b7 %s left",
+                  via, bytesWritten / (1024.0 * 1024.0), contentLength / (1024.0 * 1024.0), mbps,
+                  formatDuration(left));
+          updateUploadUI(key, pct, text);
         });
 
         Request request = new Request.Builder()
@@ -245,7 +351,7 @@ public class GalleryActivity extends AppCompatActivity {
         try (Response response = client.newCall(request).execute()) {
           if (!response.isSuccessful()) {
             String body = response.body() != null ? response.body().string() : "Unknown error";
-            throw new IOException("Server error: " + response.code() + " " + body);
+            throw new ServerRefusedException("Server error: " + response.code() + " " + body);
           }
         }
 
@@ -253,21 +359,44 @@ public class GalleryActivity extends AppCompatActivity {
           depthZip.delete();
         }
 
+        double secs = (SystemClock.elapsedRealtime() - t0) / 1000.0;
+        double mb = totalBytes / (1024.0 * 1024.0);
+        String done = String.format(Locale.US, "Upload complete via %s: %.1f MB in %s (%.1f MB/s)",
+            via, mb, formatDuration(secs), mb / Math.max(secs, 0.001));
+        autoRetries.remove(key);
         uploadStatus.put(key, "done");
         uploadProgress.put(key, 100);
         handler.post(() -> {
           markUploaded(dir);
           adapter.notifyDataSetChanged();
-          Toast.makeText(this, "Upload complete!", Toast.LENGTH_SHORT).show();
+          Toast.makeText(this, done, Toast.LENGTH_LONG).show();
         });
 
       } catch (Exception e) {
         Log.e(TAG, "Upload failed", e);
+        Integer pctNow = uploadProgress.get(key);
+        String msg;
+        if (e instanceof ServerRefusedException) {
+          msg = "The server refused the upload: " + e.getMessage();
+        } else {
+          String what = e instanceof NoLinkException ? e.getMessage()
+              : String.format(Locale.US, "Connection lost at %d%%.", pctNow != null ? pctNow : 0);
+          int n = autoRetries.containsKey(key) ? autoRetries.get(key) : 0;
+          if (n < MAX_AUTO_RETRIES) {
+            autoRetries.put(key, n + 1);
+            waitingForLink.add(key);
+            msg = what + " The upload restarts by itself as soon as the server is reachable (restart " + (n + 1)
+                + " of " + MAX_AUTO_RETRIES + "). A USB cable is the steadiest link.";
+          } else {
+            msg = what + " Stopped after " + MAX_AUTO_RETRIES + " automatic restarts: tap Retry.";
+          }
+        }
+        uploadError.put(key, msg);
         uploadStatus.put(key, "failed");
-        handler.post(() -> {
-          adapter.notifyDataSetChanged();
-          Toast.makeText(this, "Upload failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        });
+        handler.post(() -> adapter.notifyDataSetChanged());
+      } finally {
+        activeUploads.decrementAndGet();
+        handler.post(this::keepScreenOn);
       }
     }).start();
   }
@@ -343,23 +472,29 @@ public class GalleryActivity extends AppCompatActivity {
       // Status badge
       boolean uploaded = isUploaded(dir);
       String status = uploadStatus.get(key);
-      if ("uploading".equals(status) || (status != null && status.startsWith("Uploading") || (status != null && status.startsWith("Zipping")))) {
+      if ("uploading".equals(status) || (status != null && (status.startsWith("Uploading")
+          || status.startsWith("Zipping") || status.startsWith("Connecting")))) {
         tvBadge.setText("UPLOADING");
         tvBadge.setBackgroundColor(0xFF2196F3);
         pbUpload.setVisibility(View.VISIBLE);
         tvUploadProg.setVisibility(View.VISIBLE);
         Integer pct = uploadProgress.get(key);
         pbUpload.setProgress(pct != null ? pct : 0);
+        tvUploadProg.setTextColor(0xFF4FC3F7);
         tvUploadProg.setText(status);
         btnUpload.setEnabled(false);
         btnUpload.setText("...");
       } else if ("failed".equals(status)) {
-        tvBadge.setText("FAILED");
-        tvBadge.setBackgroundColor(0xFFFF3B30);
+        boolean waiting = waitingForLink.contains(key);
+        tvBadge.setText(waiting ? "WAITING" : "FAILED");
+        tvBadge.setBackgroundColor(waiting ? 0xFFFF9800 : 0xFFFF3B30);
         pbUpload.setVisibility(View.GONE);
-        tvUploadProg.setVisibility(View.GONE);
+        String err = uploadError.get(key);
+        tvUploadProg.setVisibility(err != null ? View.VISIBLE : View.GONE);
+        tvUploadProg.setTextColor(waiting ? 0xFFFFCC80 : 0xFFFF8A80);
+        tvUploadProg.setText(err != null ? err : "");
         btnUpload.setEnabled(true);
-        btnUpload.setText("Retry");
+        btnUpload.setText(waiting ? "Retry now" : "Retry");
       } else if (uploaded) {
         tvBadge.setText("UPLOADED");
         tvBadge.setBackgroundColor(0xFF00C853);
@@ -419,14 +554,15 @@ public class GalleryActivity extends AppCompatActivity {
       long total = contentLength();
       okio.ForwardingSink countingSink = new okio.ForwardingSink(sink) {
         long written = 0;
-        long lastNotify = 0;
+        long lastNotifyMs = 0;
         @Override
         public void write(okio.Buffer source, long byteCount) throws IOException {
           super.write(source, byteCount);
           written += byteCount;
-          if (written - lastNotify > 65536) {
+          long now = SystemClock.elapsedRealtime();
+          if (now - lastNotifyMs >= 250 || written >= total) {
             listener.onProgress(written, total);
-            lastNotify = written;
+            lastNotifyMs = now;
           }
         }
       };
