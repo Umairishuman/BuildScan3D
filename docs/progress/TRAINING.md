@@ -418,3 +418,6 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   for this lab (the ceiling plane is probably not the real ceiling, or the scale is off); not checked against the
   room or a tape. To do: view the model (`scripts/buildscan view scan_646070948603 r1106`), check the ceiling plane
   and one tape length.
+- **Follow-up 2026-11-12:** Zaid's `analyze.py` (`feat/splat-compress`) on this `splat.ply`: 652,392 splats, extent
+  p1–p99 8.46 × 3.08 × 4.78 m. The model itself is ~3.1 m tall, so the 1.50 m height is the layout taking a wrong
+  plane as the ceiling, not a scale error (not yet confirmed by viewing the model or a tape).
