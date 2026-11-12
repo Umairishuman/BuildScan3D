@@ -379,6 +379,13 @@ Hand-over prompt (2026-11-12, for the next session):
   stage is not known (nothing pushed: his last commits are the poster guide 2026-11-11 and semantics v10 2026-11-03).
   So Step 3 speed (3.3 / 3.4) waits for his answer; the 3 noise repeats (3.6) are prepared but not started.
 - Problems: one commit was first written with an AI co-author trailer; amended before any push (CLAUDE.md forbids it).
+- Later (Umair forwarded Tayyab's message): Tayyab is doing the Step 3 speed work on the RTX 3070 PC with
+  newRoomAttemptSadness and the R-014 split (79 held-out frames), a full end-to-end run started 17:28. His changes
+  and **expected** (not yet measured) times against R-020's v9e2e: SfM mapper skips retriangulation (22.4 → ~17 min),
+  threaded I/O in the Metric3D priors (8.1 → ~7), photometric PatchMatch in the dense init (20.4 → ~8), exact loss
+  and colour-grid fixes in training (42.5 → ~28); ~65 min in total with evaluation. His quality numbers were not in
+  the forwarded part. So 3.3 / 3.4 are Tayyab's; on this PC the job becomes checking his recipe on scan #3 against
+  R-031 once he pushes it (3.1 / 3.2). Not yet recorded as a decision (ownership split is a team decision).
 - Next: Step 4 (prompt below). New rooms will be recorded on 2026-11-13 → one logged run each (3.2), they take the
   GPU first (G1 gate 2026-11-19). Ask Tayyab which stage he is optimising and split Step 3 ownership.
 
@@ -403,7 +410,9 @@ Hand-over prompt (2026-11-12, for the Step 4 session):
       (also in `dataset/scan_003_6de634cbb8b2/work_r1112_sfm/gs_r1112/`). View: `scripts/buildscan view 3 r1112`.
     - No tape measurements yet (Umair measures the classroom in the next days). New rooms recorded on 2026-11-13: each
       gets a logged full-pipeline run first (3.2), they take the GPU before anything else.
-    - Tayyab is reducing the computation time (stage unknown); Step 3 speed waits for him. Step 2 (upload / server) is
+    - Tayyab does the Step 3 speed work on his PC (SfM without retriangulation, threaded priors I/O, photometric
+      PatchMatch, training loss / colour-grid fixes; expected ~65 min vs 96, not yet measured; see the last LOG
+      block). When he pushes it, run his recipe on scan #3 and compare with R-031 (this PC, same room). Step 2 (upload / server) is
       parked: do not work on it.
 
     This session: COMPLETION_PLAN Step 4 (layout, semantics, mesh), Must items first.

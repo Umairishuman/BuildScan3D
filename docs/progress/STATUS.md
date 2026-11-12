@@ -346,8 +346,9 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 < 35 min on a 4090 (projection).
 
 - [ ] **[new 2026-11-12] Speed baseline on this PC (R-031, scan #3, 885 frames):** run_v8 64.7 min (SfM 12.1, prior 3.6,
-      init 14.8, train 33.6) + sem2d 13.7 min; 81.0 min in total. Tayyab is working on reducing the computation time
-      (which stage not known on 2026-11-12): ask him, so the speed ideas below are not done twice.
+      init 14.8, train 33.6) + sem2d 13.7 min; 81.0 min in total. Tayyab is doing the speed work on the RTX 3070 PC
+      (2026-11-12: SfM without retriangulation, threaded priors I/O, photometric PatchMatch, training loss / colour-grid
+      fixes; expected ~65 min vs 96 on newRoom, not yet measured; LOG 2026-11-12). Check his recipe on scan #3 vs R-031.
 - [ ] **[new] Optimise the processing pipeline** end to end; measure each change with `run_v8.py`'s stage times and log it.
 - [ ] Training 42 min (blur ×1.4) and SfM 22 min dominate; fast_mvs 20 min. Ideas: blur only in the last third,
       photometric-only PatchMatch, ViT-S prior. *(from TODO 2026-10-26)*
