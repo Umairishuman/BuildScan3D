@@ -38,7 +38,44 @@ from typing import Type
 import numpy as np
 import torch
 import torch.nn.functional as F
+import nerfstudio.models.splatfacto as _splatfacto
 from nerfstudio.models.splatfacto import SplatfactoModel, SplatfactoModelConfig
+
+
+class _TotalVariation(torch.autograd.Function):
+    """Same value and gradient as nerfstudio's lib_bilagrid.total_variation_loss. splatfacto applies it to ALL
+    per-image bilateral grids every step ([N_img, 12, 8, 16, 16], ~107 MB for 1100 frames); the original
+    (index_select, pow, autograd's zeroed full-size index_add_ per term) cost ~30 ms of every training step.
+    Here: the differences are recomputed in backward (no 3 x 107 MB saved tensors) and the gradient is written
+    in place: d/dx sum((x[k+1] - x[k])^2) / c = 2 d / c added at k+1, subtracted at k."""
+
+    @staticmethod
+    def forward(ctx, x):
+        ctx.save_for_backward(x)
+        tv = x.new_zeros(())
+        for i in range(2, x.dim()):
+            d = x.narrow(i, 1, x.shape[i] - 1) - x.narrow(i, 0, x.shape[i] - 1)
+            tv += d.square_().sum() / max(d[0].numel(), 1)
+        return tv / x.shape[0]
+
+    @staticmethod
+    def backward(ctx, g):
+        (x,) = ctx.saved_tensors
+        gx = torch.zeros_like(x)
+        for i in range(2, x.dim()):
+            n = x.shape[i]
+            d = x.narrow(i, 1, n - 1) - x.narrow(i, 0, n - 1)
+            d.mul_(2 * g / (max(d[0].numel(), 1) * x.shape[0]))
+            gx.narrow(i, 1, n - 1).add_(d)
+            gx.narrow(i, 0, n - 1).sub_(d)
+        return gx
+
+
+def _total_variation_fast(x):
+    return _TotalVariation.apply(x)
+
+
+_splatfacto.total_variation_loss = _total_variation_fast
 
 
 @dataclass
@@ -56,6 +93,7 @@ class GeoSplatfactoModelConfig(SplatfactoModelConfig):
     blur_start: int = 0
     blur_px_per_sub: float = 3.0     # one extra sub-render per this many px of blur (at the current resolution)
     blur_max_sub: int = 5
+    blur_grid_per_sub: bool = False  # True = old behaviour: bilateral grid on every sub-render (~2.8x its cost)
     pgsr: bool = False
     flat_lambda: float = 100.0       # PGSR's minimum-scale loss weight
     sv_lambda: float = 0.05          # single-view depth-normal consistency
@@ -152,19 +190,38 @@ class GeoSplatfactoModel(SplatfactoModel):
                 taus = torch.linspace(-cfg.blur_exposure / 2, cfg.blur_exposure / 2, n).tolist()
                 taus.sort(key=lambda t: -abs(t))                     # the most central pose is rendered last:
                 c2w = camera.camera_to_worlds[0]                     # its info drives densification
+                # The bilateral grid models the camera's colour processing, which acts on the light integrated
+                # over the exposure: apply it once to the averaged render, not to every sub-render (a sub-render
+                # camera without cam_idx skips it; the camera optimizer is off). Saves ~2/3 of its cost.
+                meta = camera.metadata
+                if not cfg.blur_grid_per_sub and self.config.use_bilateral_grid:
+                    meta = {k: v for k, v in camera.metadata.items() if k != "cam_idx"}
                 rgbs = []
                 for t in taus:
                     Rd = self._so3_exp(w * t)
                     new = torch.cat([c2w[:, :3] @ Rd, (c2w[:, :3] @ (v * t) + c2w[:, 3])[:, None]], 1)[None]
                     cam = Cameras(camera_to_worlds=new, fx=camera.fx, fy=camera.fy, cx=camera.cx, cy=camera.cy,
                                   width=camera.width, height=camera.height, camera_type=camera.camera_type,
-                                  metadata=camera.metadata)
+                                  metadata=meta)
                     out = super().get_outputs(cam)
                     rgbs.append(out["rgb"])
                 out["rgb"] = torch.stack(rgbs).mean(0)
+                if meta is not camera.metadata:
+                    out["rgb"] = self._apply_bilateral_grid(out["rgb"], self._geo_idx, *self.last_size)
                 self._blur_n = n
                 return out
         return super().get_outputs(camera)
+
+    def _apply_bilateral_grid(self, rgb, cam_idx, H, W):
+        """splatfacto's version, with the per-pixel 3x4 colour affine written out elementwise: the original
+        torch.matmul over H*W tiny matrices ran as a batched GEMM, ~26 ms per full-res call with its backward."""
+        gy, gx = torch.meshgrid(torch.linspace(0, 1.0, H, device=self.device), torch.linspace(0, 1.0, W, device=self.device),
+                                indexing="ij")
+        xy = torch.stack([gx, gy], dim=-1)[None, None]                   # [1, 1, H, W, 2]
+        c = rgb.reshape(1, 1, H, W, 3)                                   # [1, H, W, 3] (splatfacto) or [H, W, 3] (blur)
+        A = self.bil_grids(xy, c, torch.tensor([cam_idx], device=self.device))   # [1, 1, H, W, 3, 4]
+        out = (A[..., :3] * c[..., None, :]).sum(-1) + A[..., 3]
+        return out.reshape(rgb.shape)
 
     def step_post_backward(self, step):
         # with n sub-renders the image-space gradient of the last (central) render is ~1/n of a normal step;
@@ -315,6 +372,7 @@ if __name__ == "__main__":
     ap.add_argument("--planar_lambda", type=float, default=0.0, help="> 0: flatten plane_seg.py regions (needs planes/)")
     ap.add_argument("--blur_exposure", type=float, default=0.0, help="> 0 (s): motion-blur model (needs blur_motion.json)")
     ap.add_argument("--blur_start", type=int, default=0)
+    ap.add_argument("--blur_grid_per_sub", action="store_true", help="old behaviour: bilateral grid on every blur sub-render")
     ap.add_argument("--pgsr", action="store_true", help="PGSR-lite: flat Gaussians, unbiased depth, rendered normals")
     ap.add_argument("--flat_lambda", type=float, default=100.0); ap.add_argument("--sv_lambda", type=float, default=0.05)
     ap.add_argument("--pgsr_start", type=int, default=3000)
@@ -349,7 +407,7 @@ if __name__ == "__main__":
     kw = {f.name: getattr(base, f.name) for f in fields(SplatfactoModelConfig) if f.name != "_target" and f.init}
     kw.update(prior_file=os.path.abspath(prior) if prior else "", dash_schedule=sched, depth_lambda=args.depth_lambda, normal_lambda=args.normal_lambda,
               geo_start=args.geo_start, planar_lambda=args.planar_lambda, blur_exposure=args.blur_exposure,
-              blur_start=args.blur_start, pgsr=args.pgsr, flat_lambda=args.flat_lambda, sv_lambda=args.sv_lambda,
+              blur_start=args.blur_start, blur_grid_per_sub=args.blur_grid_per_sub, pgsr=args.pgsr, flat_lambda=args.flat_lambda, sv_lambda=args.sv_lambda,
               pgsr_start=args.pgsr_start, random_init=False, use_bilateral_grid=True, use_scale_regularization=not args.pgsr,
               densify_grad_thresh=args.densify_grad, num_downscales=args.num_downscales,
               resolution_schedule=args.resolution_schedule, stop_split_at=args.stop_split_at,
