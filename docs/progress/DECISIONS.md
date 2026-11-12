@@ -559,6 +559,19 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   runs need more GPU hours.
 - **By:** Umair · **Source:** session 2026-11-12 · **Status:** Active
 
+## D-070 · 2026-11-12 · Speed and noise runs on scan #3 are scored on a fixed held-out split
+- **Decision:** every Step 3 noise and speed run on scan #3 (D-069) uses `run_v8.py --split
+  dataset/scan_003_6de634cbb8b2/offpath_test.txt` and is scored with `eval_offpath.py` (PSNR, SSIM, sharpness,
+  flatness on the held-out frames). The list holds 6 contiguous 3 s stretches spread over the middle 90% of the walk,
+  written by the new `src/arcore3dgs/make_split.py` from R-031's `frames.json`: 87 of 875 frames (9.9%).
+- **Why:** without held-out frames a speed change can only be timed, not judged (R-030 / R-031: "model quality not
+  measured"). The same kind of split as `offpath_test.txt` in R-014 / R-020, so the numbers are comparable in kind.
+- **Rejected:** scoring on training frames (measures fit, not quality); a random 10% of frames (test frames would sit
+  next to training frames and flatter the model); R-031 itself as the quality baseline (it trains on all frames).
+- **Limits:** the R-031 model cannot be scored (no split); the split's PSNR is not comparable in value with
+  newRoomAttemptSadness (different room). If a later run's selection drops a listed frame, it is just not held out.
+- **By:** Umair (agent's recommendation) · **Source:** session 2026-11-12 · **Status:** Active
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |

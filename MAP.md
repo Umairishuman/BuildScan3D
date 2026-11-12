@@ -167,6 +167,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | File | Does | Status |
 |---|---|---|
 | `eval_offpath.py` | Off-path split metrics (PSNR, SSIM, sharpness, flatness) + sheets | [eval] current |
+| `make_split.py` | Writes the held-out list for `run_v8.py --split` / `eval_offpath.py`: 6 × 3 s stretches of the walk (D-070) | [eval] current |
 | `fair_compare.py` | Compares models from different SfM runs (trimmed Sim3 + test-pose refinement) | [eval] current |
 | `compare_models.py` | Photometric + geometric metrics and sheets on held-out frames | [eval] |
 | `compare.py` | Older held-out comparison | [eval] [legacy] |
@@ -340,7 +341,7 @@ tell what is current. **Nothing is ever deleted: retired files are archived** (`
      train/      run_v8.py geo_splatfacto.py export_nerfstudio.py
      scene/      layout.py semantic2d.py semantic3d.py verify_fixtures.py mesh.py mesh_labels.py
      export/     export_web.py to_spz.mjs
-     eval/       eval_offpath.py fair_compare.py compare_models.py fit_diag.py diagnose.py view.py ...
+     eval/       eval_offpath.py make_split.py fair_compare.py compare_models.py fit_diag.py diagnose.py view.py ...
      legacy/     ba.py mvs.py align_fuse.py pocket_prior.py make_init.py colmap_mvs.py train.py prepare.py ...
    ```
 
