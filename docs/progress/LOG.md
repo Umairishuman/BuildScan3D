@@ -200,3 +200,10 @@ Template:
   stalled (as in R-027) → key made with `openssl`; `ufw` is active (phone access untested).
 - Next: CI on the PR, merge, CD release v0.3.4; Umair uploads today's recording, then installs v0.3.4 (next to the old app,
   a separate package); ufw rules; then `check_capture.py` and the R-028 run options.
+
+## 2026-11-06 (seventh session) · Umair · `fix/upload-all-files`
+- Did: the app's upload left out `camera.csv`, `anchors.csv`, `lens_metadata.json`, `camera_characteristics.json` (found
+  on `scan_056fe94d3399`, R-028). Both upload screens now send them; the server saves them as optional files and warns
+  when an older app does not send them. Tests: 214 passed (2 new).
+- Next: PR → CI → merge → CD release; record a new room with the new app to get `camera.csv` (exposure) for `--blur`.
+
