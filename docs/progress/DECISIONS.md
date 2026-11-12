@@ -547,6 +547,18 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   the first build with this code (it needs the previous version stored). Not tested on a device.
 - **By:** Umair · **Source:** session 2026-11-12 · **Status:** Active
 
+## D-069 · 2026-11-12 · Step 3 speed and noise runs on scan #3, not scan #2
+- **Decision:** the run-to-run noise repeats (COMPLETION_PLAN 3.6) and every speed change (3.3 / 3.4) are run on
+  scan #3 (`scan_003_6de634cbb8b2`, classroom, 185 s, 885 frames selected), one change at a time.
+- **Why:** Umair chose scan #3 over scan #2. Scan #3 is the first recording with `camera.csv` / `anchors.csv` (v0.3.6)
+  and is about 3 min long, closer to a real room capture; scan #2 has the wrong 1.50 m layout ceiling (R-030).
+- **Evidence:** R-031 (scan #3 run with the default recipe) is the baseline for the stage times.
+- **Rejected:** scan #2 (482 frames, 41.7 min run_v8 in R-030): about half the GPU time per run, so cheaper, but
+  Umair did not want it.
+- **Limits:** each run on scan #3 takes longer than on scan #2 (R-031 total to fill in when it ends), so the planned
+  runs need more GPU hours.
+- **By:** Umair · **Source:** session 2026-11-12 · **Status:** Active
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |
