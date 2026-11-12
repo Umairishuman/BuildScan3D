@@ -322,3 +322,43 @@ Template:
   paths, STOPPED / FINISHED; `--raw` keeps the old log tail; `watch latest` picks the only or the running run. App:
   the bottom snackbar that repeated the tracking message and covered the bottom navigation removed (top banner only).
   Merged PR #6 to `master` at Umair's request after CI.
+- CD after the merge: CI gate, APK build and release all green; **v0.3.7** released (`5ac8e54`,
+  `BuildScan3D-v0.3.7.apk`) with the changelog text as its release notes: the new CD step (D-068) worked on its first
+  run. Not yet installed on the phone.
+- Next: Umair installs v0.3.7 (v0.3.6 offers it with the old dialog), records 1–2 min, uploads → NFR2 from
+  `scripts/buildscan check`; R-031 result. Hand-over prompt for the Step 3 session below.
+
+Hand-over prompt (2026-11-12, for the next session):
+
+    Read MAP.md, CLAUDE.md (I am Umair) and docs/progress/STATUS.md (§2 "Which recording is which", §4, §7.2, §7.3),
+    then the 2026-11-12 LOG.md blocks, docs/progress/COMPLETION_PLAN.md Step 3, and TRAINING.md R-020, R-023, R-030,
+    R-031. Deadline 2026-12-04; week-1 gate G1 on 2026-11-19 (new rooms processed).
+
+    State at the end of 2026-11-12:
+    - master = v0.3.7 (PR #6 merged; CD released it with the changelog as release notes, D-068). Not yet tested on the phone:
+      update prompt, "What's new", single quality banner, `iqa_ms` column (NFR2).
+    - Recordings on this PC (STATUS §2): scan #1 (`scan_001_056fe94d3399`, 46 s, R-029), scan #2 (`scan_002_646070948603`,
+      computer lab, 97 s, R-030: layout ceiling 1.50 m, wrong; model is ~3.1 m tall), scan #3 (`scan_003_6de634cbb8b2`,
+      classroom, 185 s, v0.3.6, R-031 started 15:04 with the default recipe, tag `r1112`; at 15:37 it was training, after
+      select 0.4 / SfM 12.1 / prior 3.6 / init 14.8 min). Room numbers not recorded.
+    - `scripts/buildscan watch latest` now shows stage n of 15, training step and GPU in plain words (`--raw` for logs).
+    - Uploading / server work (Step 2) is parked: Umair deals with it later. Do not work on Step 2 this session.
+
+    This session: COMPLETION_PLAN Step 3 (reconstruction), on a new branch (e.g. `exp/step3-speed`), committing after each
+    logical step, never pushing or merging without asking.
+    1. Finish R-031: result, stage times (`stages.tsv`, `timing.json`), verdict, index row; check the layout height
+       against the model and against Umair's tape numbers (ask him which rooms he measured and where the sheets are).
+    2. 3.2: one logged run per new room as Umair records them; models into `saved_models/YYYY-MM-DD_<tag>/` with README.txt.
+    3. 3.1 machine agreement: newRoomAttemptSadness lives on Tayyab's RTX 3070 PC. Ask Umair whether Tayyab can copy it
+       here (how: USB disk / scp over Tailscale); then run v9 and compare PSNR / SSIM / scale with R-020 / R-023.
+    4. 3.3 / 3.4 speed (Must): the stage times are the baseline (R-030: 41.7 min run_v8 + 8 min semantics; R-031: init
+       took 14.8 min for 885 frames, CPU-bound PatchMatch). Try one change at a time on the same scan and log each as its
+       own R-NNN with a before / after stage table: photometric-only PatchMatch or every-10th-frame `fast_mvs`, blur only
+       in the last third of training, ViT-S depth prior, faster `plane_seg`. Kept / rejected with numbers.
+    5. 3.6 run-to-run noise: 3 repeats of one setting, so a speed change can be told apart from noise.
+    6. 3.8 / OD-6 (IMU fallback in v9) is a team decision: prepare the options with a recommendation, let Umair decide.
+
+    Rules: every run gets a TRAINING.md entry before it starts, errors as they happen; never invent a number; decisions
+    (recipe changes, what to keep) are Umair's: bring options with a recommendation and record his answer in
+    DECISIONS.md; one run on the GPU at a time (check `scripts/buildscan status` first); update STATUS, LOG and the
+    COMPLETION_PLAN rows at the end of the session; no AI attribution in commits.

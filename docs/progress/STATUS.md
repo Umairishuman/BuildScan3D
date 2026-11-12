@@ -543,6 +543,9 @@ Dated milestones; details in [LOG.md](LOG.md), reasons in [DECISIONS.md](DECISIO
   tab, upload checks and Stop (D-064). `exp/first-linux-run` and `feature/usb-upload` merged to `master`.
 - **2026-11-12: ARCore depth bug closed** (Umair, D-067): scan #3 (classroom, 2026-11-12) has 782 distinct depth maps, 87% valid; the stale
   maps of newRoomAttemptSadness (realme, older app) did not come back.
+- **2026-11-12: app v0.3.7** (Umair, PR #6): update prompt at start and on return with the release notes, "What's new"
+  after an update, changelog per release (D-068), numbered scans (D-065), `iqa_ms` (NFR2), single quality banner.
+  Released by CD with the changelog as notes; not tested on a device.
 
 ## 9. Known limits
 
