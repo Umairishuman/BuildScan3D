@@ -240,3 +240,14 @@ Template:
   change.
 - Next: install v0.3.5 on the phone (not tested on a device) and record a room with it (`camera.csv` must arrive);
   update the server checkout to include PR #4; check R-030's room height; ask Tayyab about unpushed app work.
+- Later the same day: checked Zaid's `feat/splat-compress` (2026-11-03): `analyze.py` + `compress.py` (opacity pruning,
+  normals dropped, SH 3 → 1) run on R-030's `splat.ply` in the `bs-ns` env: 162 MB → 54 MB (66% smaller, 90.4% of
+  652,392 splats kept) in 0.3 s; its analysis showed the R-030 model is 3.08 m tall (TRAINING R-030 follow-up). The
+  `.ksplat` converter it relies on is not in the repo; quality only compared on software renders. OD-1 / OD-4 stay open.
+  Made the completion plan for 2026-12-04 with Umair: 94 tasks by step (14 capture, 12 server, 17 reconstruction,
+  12 layout / semantics, 10 compression / web, 10 evaluation, 12 infrastructure, 7 report / UAT / demo), three weekly
+  gates, nine decisions to take first; nothing cut (Umair). Shared doc
+  [BuildScan 3D Completion Plan](https://claude.ai/artifact/1V2YG8GSfBEpLXmnTJdctC) (private until shared), repo copy
+  `docs/progress/COMPLETION_PLAN.md`; MAP and STATUS §7 point to it.
+- Next (plan): the team assigns owners in the shared doc and takes the first decisions (owners, OD-7, OD-1, OD-4,
+  OD-6); keep the repo copy in step with the doc.

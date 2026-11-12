@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-12 by Umair (v0.3.5 released, R-030 logged, D-061). `master` holds v9/v10, the project records, the Linux port (PR #1, D-051) and the app fixes (PR #3, PR #4).
+Last updated: 2026-11-12 by Umair (v0.3.5 released, R-030 logged, D-061, completion plan). `master` holds v9/v10, the project records, the Linux port (PR #1, D-051) and the app fixes (PR #3, PR #4).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -199,6 +199,10 @@ Portability problems found while reading the code (not yet tested on Linux):
 ## 7. Open work (everything left)
 
 Tags: **[new]** added 2026-11-06; *(from TODO, date)* carried over from the old TODO.md. Sources in brackets.
+
+**Plan to finish by 2026-12-04:** [COMPLETION_PLAN.md](COMPLETION_PLAN.md) puts every item below into one task table per
+pipeline step, with done-when, dependencies, priority (Must / Should / Could), target week and gates (2026-11-19,
+11-26, 12-04). Owners are still to be agreed by the team.
 
 ### 7.1 Organisation, environments and infrastructure
 
