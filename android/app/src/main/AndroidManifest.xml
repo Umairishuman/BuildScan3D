@@ -21,6 +21,8 @@
   <uses-permission android:name="android.permission.CAMERA"/>
   <uses-permission android:name="android.permission.VIBRATE"/>
   <uses-permission android:name="android.permission.INTERNET"/>
+  <!-- ServerLink: tells "no network" / "mobile data" / "Wi-Fi" apart when the server does not answer (no prompt) -->
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
   <!-- In-app updates: download the new APK from GitHub Releases and open Android's installer -->
   <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
   <!-- Required to post notifications for Android T+ devices -->
