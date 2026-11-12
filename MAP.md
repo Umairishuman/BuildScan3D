@@ -257,6 +257,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `src/components/...` | Dashboard, projects, floor plan, notifications, modals (mostly mock data) |
 | `src/lib/mockData.ts` | All mock projects / scans (the real scan is `newroom-scan`) |
 | `public/scans/newroom/` | The real labelled scan bundle (from `export_web.py`) |
+| `public/scans/scan_<id>_<tag>/` | Per-run bundles written by every `run_full.sh` run; gitignored (D-061), live only on the machine that ran it |
 | `public/splats/` | Empty. The old v6 splat (`newroom_v6.spz`, 12.5 MB, unused since the labelled bundle) was taken out of git on 2026-11-06 (D-055); local copy in `saved_models/web/` on the Ubuntu PC |
 
 ## 8. `docs/`

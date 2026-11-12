@@ -447,6 +447,15 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **Rejected:** also building locally first (would need JDK + Android SDK on this PC); PR only with Umair merging.
   **By:** Umair.
 
+## D-061 · 2026-11-12 · Per-run web bundles stay out of git
+- **Decision:** `prototype/web-ui/.gitignore` ignores `public/scans/scan_*/`, the bundle the `web` stage of
+  `scripts/run_full.sh` writes for every run (`<scan>_<tag>/`, ~20 MB each). Only demo bundles that are picked on purpose,
+  such as `public/scans/newroom/`, are tracked; a scan is shown in the dashboard by adding it to `mockData.ts`.
+- **Why:** each run added an untracked ~20 MB folder (R-029 `scan_056fe94d3399_umair/`, the unrecorded `r1106` run
+  `scan_646070948603_r1106/`); no single file passes CI's 10 MB limit, so one could be committed by mistake.
+- **Rejected:** `export_web.py` writing to `saved_models/web/` instead and copying demos by hand; committing every bundle
+  (~20 MB of repo growth per scan). **By:** Umair.
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |
