@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-12 by Umair (R-031 finished: scan #3 classroom, 2.74 m, kept as the Step 3 baseline; D-069 / D-070 held-out split for speed runs on scan #3; earlier the same day: recordings table, NFR1 / NFR2, D-062 – D-068).
+Last updated: 2026-11-12 by Umair (Step 4 session: models were tilted 9–12° from gravity, fixed in the SfM export (D-071) and for scans #2 / #3 by `level_model.py`; ceiling rule D-072; scan #3 now 4 walls / 2.52 m (R-035); fixture size card in the viewer; newRoomAttemptSadness copied here, R-037 running).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -84,7 +84,7 @@ Older recordings (before numbering) are on the RTX 3070 PC and keep their names.
 | **scan #1** | `dataset/scan_001_056fe94d3399` | 2026-11-06 | Umair, Infinix X6833B, app ≤ v0.3.4 | Umair's first Linux test (LOG 2026-11-06: "Umair's room"; the layout found only 1 wall, like a corridor end, plan 4.10); room to fill in | 46 s | R-028 (stopped), R-029 |
 | **scan #2** | `dataset/scan_002_646070948603` | 2026-11-06 | Umair, Infinix X6833B, app ≤ v0.3.4 | Computer lab: desks, red chairs, glass partition; room number to fill in | 97 s | R-030 (ceiling 1.50 m, wrong) |
 | **scan #3** | `dataset/scan_003_6de634cbb8b2` | 2026-11-12 (uploaded 14:53 over USB) | Umair, Infinix X6833B, **v0.3.6** | Classroom: rows of wooden desks with red seats, projector screen, wooden door, blue curtains, ceiling AC units; room number to fill in | 185 s | R-031 (2.74 m, kept; `saved_models/2026-11-12_r1112_scan003/`) |
-| newRoomAttemptSadness | 3070 PC: `dataset/newRoomAttemptSadness` | by 2026-10-10 (first run R-007) | realme RMX5111; who recorded it not written down | Room of the best model (R-023) and semantics v10 | 240 s | R-007 … R-025 |
+| newRoomAttemptSadness | 3070 PC; **this PC since 2026-11-12** (raw recording only): `dataset/newRoomAttemptSadness` | by 2026-10-10 (first run R-007) | realme RMX5111; who recorded it not written down | Room of the best model (R-023) and semantics v10 | 240 s | R-007 … R-025; here R-037 |
 | roomAttemptSadness2 | 3070 PC | by 2026-10-09 (first run R-002) | realme RMX5111; who recorded it not written down | Second room of the mid report | not recorded here | R-002, R-004, R-010 |
 
 ## 3. Module status
@@ -100,7 +100,7 @@ Older recordings (before numbering) are on the RTX 3070 PC and keep their names.
 | 3DGS training | Done | `geo_splatfacto.py` (splatfacto subclass) | DashGaussian schedule, priors, planar, blur, PGSR-lite, checkpoints + resume. `train.py` (own trainer) kept for experiments |
 | End-to-end driver | Done | `run_v8.py` | Times every stage; v9 flags in section 5 |
 | Evaluation tools | Done | `eval_offpath.py`, `fair_compare.py`, `compare_models.py`, `fit_diag.py`, `diagnose.py` | Off-path split, pose-refined comparison, flatness metric |
-| Room layout | Done on one room | `layout.py` (v9), `structure.py` (older) | Walls (any number), floor, ceiling, corners, dimensions, `plan.png` |
+| Room layout | Done; needs a levelled model (D-071) | `layout.py` (v9), `structure.py` (older) | Walls (any number), floor, ceiling, corners, dimensions, `plan.png` |
 | Semantic labelling | v10 done on one room | `semantic2d.py`, `semantic3d.py`, `verify_fixtures.py` | Grounding DINO + SAM + decoys, 3D votes + class geometry rules, CLIP crop check. Needs room 2. **Umair's next focus** |
 | Mesh | Done | `mesh.py`, `mesh_labels.py` | TSDF of rendered depth, PGSR unbiased depth, shell denoising, labelled `.glb` |
 | Web viewer / dashboard | Working with a real scan | `prototype/web-ui` | Spark splat rendering, `.spz`, Scan Layers panel, mesh mode, measure tool. Many dashboard screens are mock data (see its STATUS) |
@@ -361,11 +361,15 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.3 Reconstruction quality
 
-- [ ] **[new 2026-11-12] R-031 (scan #3, classroom): layout height 2.74 m** (plausible), but only 2 walls and 0
-      corners; semantics rejected the ceiling plane fit (tilt 8.06°); `window_1` placed at the ceiling (2.72 m). Check
-      against tape (not measured yet) and by viewing the model; Umair checks the 21 fixtures (COMPLETION_PLAN 4.2).
-- [ ] **[new 2026-11-12] R-030 (`scan_646070948603`, lab room): room height 1.50 m cannot be right.** View the model,
-      check which plane the layout took as the ceiling and whether the scale is off; measure one length with a tape.
+- [ ] **[new 2026-11-12] scan #3 (classroom): check the levelled layout against the tape.** R-031's 2.74 m / 2 walls
+      came from a model tilted 12.1° from gravity (R-032). Levelled (R-034 / R-035): **2.52 m, 4 walls, 3 corners at
+      89–90°, 7.23 × 9.05 m, floor 32.27 m², 18 fixtures**. Tape not measured yet; Umair checks the 18 fixtures with
+      `gs_r1112lev/semantic_v10/fixture_check.md` (COMPLETION_PLAN 4.2).
+- [x] ~~R-030 (scan #2, lab): room height 1.50 m cannot be right.~~ **Cause found 2026-11-12 (R-032):** the model was
+      9.1° off gravity and its white ceiling was reconstructed 0.4 m above the camera (plus a reflection in the door
+      glass). Levelled + D-072: 2.41 m (R-036), still 1 wall. See the next item.
+- [ ] **[new 2026-11-12] Re-record the computer lab (scan #2) with the capture protocol** (§7.8): the camera stayed
+      within 0.8 × 0.7 m, so the ceiling and most walls never got a baseline (R-032 / R-036).
 
 - [ ] **Second room** (roomAttemptSadness2): full v9 pipeline + semantics (~2 h GPU), then a room check by the user. The
       real test of v9/v10. *(from TODO 2026-10-24 / 2026-10-27)*
@@ -413,7 +417,7 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 - [ ] Switch plates (8–14 cm) need ~30 confirming frames, so a fast walk past a switch can miss it. [P&S §4.17]
 - [ ] Rules were tuned on the same room they are scored on: get an independent score (room 2, then precision / recall
       as in proposal contribution 3). [P&S §4.17–4.18]
-- [ ] Per-element dimensions for fixtures in the viewer (FR10). [proposal v4]
+- [ ] Per-element dimensions for fixtures in the viewer (FR10). [proposal v4] **Built 2026-11-12:** a fixture row or marker opens a size card (width, height, area, centre / bottom / top above floor, wall); not checked in a browser or against tape yet (COMPLETION_PLAN 4.3).
 
 ### 7.6 Room layout, structure and mesh
 
@@ -423,6 +427,14 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       snapping or plan export format yet). *(from TODO, Novelty)*
 - [ ] `structure.py` ceiling height (2.555 m was probably cupboard tops); `layout.py` supersedes it. *(from TODO, Parked)*
 - [ ] Wall 3 and the ceiling stay rough in the mesh (> 2.5 cm, untouched by shell denoising). [P&S §4.17]
+- [ ] **[new 2026-11-12] Floor still fits 1.95° tilted on levelled scan #3** (1.57° on scan #2), while the ceiling fits
+      0.05°: not explained (glossy floor reflection, or a bend in the model). Look at the floor residual map. (R-035)
+- [ ] **[new 2026-11-12] scan #3's fourth corner is missing:** walls 2 and 3 stop > 2.5 m short of each other (door /
+      cupboards on that side?). Check in the model; then 4.5 (doorways from wall gaps). (R-035)
+- [ ] **[new 2026-11-12] Merge note for Tayyab:** `sfm_colmap.py` export now levels with ARCore gravity (D-071,
+      `--gravity centres` restores the old Sim3); his Step 3 changes are in the mapper part of the same file.
+- [ ] **[new 2026-11-12] Re-check older models for tilt:** any model exported before D-071 can be off gravity;
+      `level_model.py` levels it without retraining (R-034). Not checked for newRoom (R-023); R-037 prints it.
 
 ### 7.7 Android app
 
@@ -559,6 +571,11 @@ Dated milestones; details in [LOG.md](LOG.md), reasons in [DECISIONS.md](DECISIO
 - **2026-11-12: scan #3 processed** (Umair, R-031): first v0.3.6 room, full pipeline in 81.0 min on this PC, 875 / 885
   frames, layout height 2.74 m, 21 fixtures; model in `saved_models/2026-11-12_r1112_scan003/`. Held-out split tool
   `make_split.py` for scoring speed runs (D-070).
+- **2026-11-12: layout fixed for tilted models** (Umair, Step 4 session): the Sim3 to ARCore took its rotation from camera
+  centres only and left scans #2 / #3 9.1° / 12.1° off gravity (R-032). `sfm_colmap.py` now levels with ARCore gravity
+  (D-071, R-033); `level_model.py` levels trained models (R-034); the ceiling may not lie below the wall tops (D-072).
+  scan #3: 2 → 4 walls, 0 → 3 corners (89–90°), 2.74 → 2.52 m (R-035); scan #2: 1.50 → 2.41 m (R-036). Viewer:
+  fixture size card (FR10). `fixture_checklist.py` for the per-room fixture check.
 
 ## 9. Known limits
 

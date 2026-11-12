@@ -70,7 +70,7 @@ The v9 recipe gives the best model (R-023) but has been tested on one room only 
 
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 3.1 | Machine agreement: copy newRoomAttemptSadness here, run v9, compare with R-020 / R-023 | Logged run; PSNR / SSIM / scale within run-to-run noise of the 3070 | — | Must | W1 |  | Waiting: Umair asked Tayyab for newRoomAttemptSadness (2026-11-12) |
+| 3.1 | Machine agreement: copy newRoomAttemptSadness here, run v9, compare with R-020 / R-023 | Logged run; PSNR / SSIM / scale within run-to-run noise of the 3070 | — | Must | W1 |  | In progress: newRoomAttemptSadness copied here by Umair 2026-11-12; R-037 (R-023 recipe, all frames) running; PSNR comparison needs the R-014 split from Tayyab |
 | 3.2 | Process roomAttemptSadness2 and every new room (1.4) with the full v9 pipeline | One logged run per room, models kept in `saved_models/` | 1.4 | Must | W1 |  | scan #3 done (R-031, 2026-11-12, `saved_models/2026-11-12_r1112_scan003/`); new rooms to be recorded 2026-11-13 |
 | 3.3 | Optimise the processing time end to end; measure every change with the stage times | Before / after stage table for each change in TRAINING | 3.1 | Must | W2 |  | Baseline stage times from R-031; Tayyab is doing it on the 3070 PC (SfM, priors I/O, photometric PatchMatch, training; LOG 2026-11-12); check his recipe on scan #3 vs R-031; runs on scan #3 (D-069) |
 | 3.4 | Speed ideas to test in 3.3: blur only in the last third, photometric-only PatchMatch, ViT-S depth prior, faster `fast_mvs` (photometric or every 10th frame), faster `plane_seg` (~11 min CPU) | Each tried and kept or rejected with numbers | 3.3 | Must | W2 |  |  |
@@ -95,9 +95,9 @@ layout picked a wrong ceiling in R-030 (1.50 m in a room ~3.1 m tall).
 
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 4.1 | Fix the ceiling detection in `layout.py` (R-030: 1.50 m; model extent 3.08 m) | R-030 and the new rooms give the right height against tape | 1.5 | Must | W1 |  |  |
-| 4.2 | Run semantics v10 on roomAttemptSadness2 and every new room; a person checks each fixture | Per-room table of found / missed / false fixtures | 3.2 | Must | W2 |  |  |
-| 4.3 | Fixture dimensions in the viewer (width, height, height above floor, area) (FR10) | Clicking a fixture shows its size; checked against tape on one room | 4.2 | Must | W2 |  |  |
+| 4.1 | Fix the ceiling detection in `layout.py` (R-030: 1.50 m; model extent 3.08 m) | R-030 and the new rooms give the right height against tape | 1.5 | Must | W1 |  | Cause found and fixed 2026-11-12: models 9–12° off gravity (R-032); SfM export levels with ARCore gravity (D-071), `level_model.py` for old models, ceiling not below wall tops (D-072). scan #3 2.52 m / 4 walls (R-035), scan #2 2.41 m (R-036); tape pending |
+| 4.2 | Run semantics v10 on roomAttemptSadness2 and every new room; a person checks each fixture | Per-room table of found / missed / false fixtures | 3.2 | Must | W2 |  | scan #3 check sheet ready (`gs_r1112lev/semantic_v10/fixture_check.md`, 18 fixtures, `fixture_checklist.py`); waiting for Umair's check |
+| 4.3 | Fixture dimensions in the viewer (width, height, height above floor, area) (FR10) | Clicking a fixture shows its size; checked against tape on one room | 4.2 | Must | W2 |  | Built 2026-11-12: size card in Scan Layers + clickable markers; `export_web.py` adds bottom / top; not checked in a browser or against tape |
 | 4.4 | Confirm the three new v10 detections on newRoom (`door_1`, `door_6`, `tube_light_1`) | Checked by the person who knows the room | — | Should | W1 |  |  |
 | 4.5 | Open doorways (no door leaf) from gaps in the layout walls; windows on room 2 | Doorways found on one room | 4.1 | Should | W2 |  |  |
 | 4.6 | Fix the two misses on newRoom: socket under the ironing table, round light #14 (the "clock" decoy wins) | Both found without new false positives | — | Should | W2 |  |  |
