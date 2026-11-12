@@ -48,7 +48,7 @@
         android:name="com.buildscan3d.app.CaptureActivity"
         android:configChanges="orientation|screenSize"
         android:exported="true"
-        android:theme="@style/Theme.AppCompat.NoActionBar"
+        android:theme="@style/AppTheme.Capture"
         android:screenOrientation="locked">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
@@ -59,19 +59,25 @@
         android:name="com.buildscan3d.app.GalleryActivity"
         android:configChanges="orientation|screenSize"
         android:exported="false"
-        android:theme="@style/Theme.AppCompat.NoActionBar"
+        android:theme="@style/AppTheme"
         android:screenOrientation="locked" />
     <activity
         android:name="com.buildscan3d.app.ProcessingActivity"
         android:configChanges="orientation|screenSize"
         android:exported="false"
-        android:theme="@style/Theme.AppCompat.NoActionBar"
+        android:theme="@style/AppTheme"
+        android:screenOrientation="locked" />
+    <activity
+        android:name="com.buildscan3d.app.ServerActivity"
+        android:configChanges="orientation|screenSize"
+        android:exported="false"
+        android:theme="@style/AppTheme"
         android:screenOrientation="locked" />
     <activity
         android:name="com.buildscan3d.app.ScanDetailActivity"
         android:configChanges="orientation|screenSize"
         android:exported="false"
-        android:theme="@style/Theme.AppCompat.NoActionBar"
+        android:theme="@style/AppTheme"
         android:screenOrientation="locked" />
     <!-- Indicates whether "Google Play Services for AR" (ARCore) is "required" or "optional". -->
     <meta-data android:name="com.google.ar.core" android:value="required" />

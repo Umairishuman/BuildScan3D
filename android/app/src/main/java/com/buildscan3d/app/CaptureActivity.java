@@ -223,6 +223,7 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
       });
     }
 
+    BottomNav.attach(this, BottomNav.Tab.CAPTURE);
     new UpdateChecker(this).check();
   }
 
@@ -235,7 +236,7 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
       launchDepthSettingsMenuDialog();
       return true;
     } else if (item.getItemId() == R.id.server_settings) {
-      launchServerUrlDialog();
+      startActivity(new Intent(this, ServerActivity.class));
       return true;
     } else if (item.getItemId() == R.id.check_updates) {
       new UpdateChecker(this).check(true);
@@ -244,209 +245,6 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
     return false;
   }
 
-  private void launchServerUrlDialog() {
-    android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
-    String current = prefs.getString(ProcessingActivity.PREF_SERVER_URL, ProcessingActivity.DEFAULT_SERVER_URL);
-
-    // Build dialog with a scanning list + manual entry
-    android.widget.LinearLayout layout = new android.widget.LinearLayout(this);
-    layout.setOrientation(android.widget.LinearLayout.VERTICAL);
-    layout.setPadding(48, 24, 48, 0);
-
-    android.widget.TextView tvStatus = new android.widget.TextView(this);
-    tvStatus.setText("Searching for servers (about 10 s)...");
-    tvStatus.setTextSize(13);
-    tvStatus.setPadding(0, 0, 0, 16);
-    layout.addView(tvStatus);
-
-    android.widget.LinearLayout listContainer = new android.widget.LinearLayout(this);
-    listContainer.setOrientation(android.widget.LinearLayout.VERTICAL);
-    layout.addView(listContainer);
-
-    android.widget.TextView tvManual = new android.widget.TextView(this);
-    tvManual.setText("Or enter manually:");
-    tvManual.setTextSize(13);
-    tvManual.setPadding(0, 24, 0, 8);
-    layout.addView(tvManual);
-
-    android.widget.EditText input = new android.widget.EditText(this);
-    input.setText(current);
-    input.setSelectAllOnFocus(true);
-    input.setSingleLine();
-    input.setTextSize(14);
-    layout.addView(input);
-
-    AlertDialog dialog = new AlertDialog.Builder(this)
-        .setTitle("Server URL")
-        .setView(layout)
-        .setPositiveButton("Save", (d, w) -> {
-          String url = input.getText().toString().trim();
-          if (!url.isEmpty()) {
-            prefs.edit().putString(ProcessingActivity.PREF_SERVER_URL, url).apply();
-            rememberServer(this, url);
-            Toast.makeText(this, "Server: " + url, Toast.LENGTH_SHORT).show();
-          }
-        })
-        .setNegativeButton("Cancel", null)
-        .create();
-    dialog.show();
-
-    // Scan common subnets for the server in background
-    new Thread(() -> {
-      List<String> found = scanForServers();
-      runOnUiThread(() -> {
-        if (found.isEmpty()) {
-          tvStatus.setText("No servers found. Is the server running, and is the phone on the same Wi-Fi? You can type the URL below.");
-        } else {
-          tvStatus.setText("Found " + found.size() + " server(s) — tap to select:");
-        }
-        listContainer.removeAllViews();
-        for (String url : found) {
-          android.widget.Button btn = new android.widget.Button(this);
-          btn.setText(ServerLink.USB_URL.equals(url) ? "USB cable (" + url + ")" : url);
-          btn.setTextSize(13);
-          btn.setAllCaps(false);
-          btn.setBackgroundColor(0xFF1E1E2E);
-          btn.setTextColor(0xFF4FC3F7);
-          btn.setPadding(16, 8, 16, 8);
-          android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(
-              android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-              android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
-          lp.setMargins(0, 4, 0, 4);
-          btn.setLayoutParams(lp);
-          btn.setOnClickListener(v -> {
-            input.setText(url);
-            prefs.edit().putString(ProcessingActivity.PREF_SERVER_URL, url).apply();
-            rememberServer(this, url);
-            Toast.makeText(this, "Server: " + url, Toast.LENGTH_SHORT).show();
-            dialog.dismiss();
-          });
-          listContainer.addView(btn);
-        }
-      });
-    }).start();
-  }
-
-  static final String PREF_RECENT_SERVERS = "recent_servers";
-  static final int DISCOVERY_PORT = 8001;
-
-  /** Remember a server URL (newest first, at most 5) so the server list can offer it again. */
-  static void rememberServer(android.content.Context ctx, String url) {
-    android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(ctx);
-    List<String> recent = new ArrayList<>();
-    recent.add(url);
-    for (String u : prefs.getString(PREF_RECENT_SERVERS, "").split("\n")) {
-      if (!u.isEmpty() && !u.equals(url) && recent.size() < 5) recent.add(u);
-    }
-    prefs.edit().putString(PREF_RECENT_SERVERS, android.text.TextUtils.join("\n", recent)).apply();
-  }
-
-  /** True if url answers GET /health like our server. */
-  private static boolean isOurServer(String url) {
-    okhttp3.OkHttpClient quick = new okhttp3.OkHttpClient.Builder()
-        .connectTimeout(2, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(2, java.util.concurrent.TimeUnit.SECONDS)
-        .build();
-    okhttp3.Request req = new okhttp3.Request.Builder().url(url + "/health").build();
-    try (okhttp3.Response resp = quick.newCall(req).execute()) {
-      String body = resp.body() != null ? resp.body().string() : "";
-      return resp.isSuccessful() && body.contains("\"ok\"");
-    } catch (Exception e) {
-      return false;
-    }
-  }
-
-  /**
-   * Finds servers three ways: (1) UDP broadcast "BUILDSCAN_DISCOVER" on port 8001, answered by the server with its URL
-   * (works on networks larger than /24, like the lab Wi-Fi); (2) the saved and recently used servers; (3) a sweep of the
-   * phone's own /24 on port 8000. Networks that isolate Wi-Fi clients block all three: then type the URL.
-   */
-  private List<String> scanForServers() {
-    java.util.Set<String> found = java.util.Collections.synchronizedSet(new java.util.LinkedHashSet<>());
-    // (0) USB cable: the PC forwards the phone's 127.0.0.1:8000 to its server (adb reverse, scripts/usb_link.sh)
-    if (ServerLink.healthy(ServerLink.USB_URL)) found.add(ServerLink.USB_URL);
-    try {
-      // (1) UDP broadcast
-      java.util.Set<java.net.InetAddress> targets = new java.util.LinkedHashSet<>();
-      targets.add(java.net.InetAddress.getByName("255.255.255.255"));
-      java.util.Set<String> subnets = new java.util.LinkedHashSet<>();
-      java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
-      while (interfaces != null && interfaces.hasMoreElements()) {
-        java.net.NetworkInterface ni = interfaces.nextElement();
-        if (ni.isLoopback() || !ni.isUp()) continue;
-        for (java.net.InterfaceAddress addr : ni.getInterfaceAddresses()) {
-          if (addr.getAddress() instanceof java.net.Inet4Address) {
-            if (addr.getBroadcast() != null) targets.add(addr.getBroadcast());
-            String ip = addr.getAddress().getHostAddress();
-            subnets.add(ip.substring(0, ip.lastIndexOf('.')));
-          }
-        }
-      }
-      try (java.net.DatagramSocket udp = new java.net.DatagramSocket()) {
-        udp.setBroadcast(true);
-        udp.setSoTimeout(500);
-        byte[] probe = "BUILDSCAN_DISCOVER".getBytes("UTF-8");
-        for (java.net.InetAddress t : targets) {
-          try {
-            udp.send(new java.net.DatagramPacket(probe, probe.length, t, DISCOVERY_PORT));
-          } catch (Exception e) {
-            Log.w(TAG, "Discovery broadcast to " + t + " failed", e);
-          }
-        }
-        long until = System.currentTimeMillis() + 2500;
-        byte[] buf = new byte[1024];
-        while (System.currentTimeMillis() < until) {
-          java.net.DatagramPacket reply = new java.net.DatagramPacket(buf, buf.length);
-          try {
-            udp.receive(reply);
-          } catch (java.net.SocketTimeoutException e) {
-            continue;
-          }
-          try {
-            org.json.JSONObject j = new org.json.JSONObject(new String(reply.getData(), 0, reply.getLength(), "UTF-8"));
-            if ("buildscan3d".equals(j.optString("service"))) found.add(j.getString("url"));
-          } catch (Exception e) {
-            Log.w(TAG, "Bad discovery reply", e);
-          }
-        }
-      } catch (Exception e) {
-        Log.w(TAG, "UDP discovery failed", e);
-      }
-
-      // (2) saved + recent servers, (3) sweep of the phone's /24
-      java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(64);
-      android.content.SharedPreferences prefs = android.preference.PreferenceManager.getDefaultSharedPreferences(this);
-      java.util.Set<String> known = new java.util.LinkedHashSet<>();
-      known.add(prefs.getString(ProcessingActivity.PREF_SERVER_URL, ProcessingActivity.DEFAULT_SERVER_URL));
-      for (String u : prefs.getString(PREF_RECENT_SERVERS, "").split("\n")) if (!u.isEmpty()) known.add(u);
-      for (String u : known) {
-        if (!found.contains(u)) executor.submit(() -> { if (isOurServer(u)) found.add(u); });
-      }
-      int port = 8000;
-      for (String subnet : subnets) {
-        for (int i = 1; i <= 254; i++) {
-          String ip = subnet + "." + i;
-          executor.submit(() -> {
-            try (java.net.Socket socket = new java.net.Socket()) {
-              socket.connect(new java.net.InetSocketAddress(ip, port), 300);
-            } catch (Exception e) {
-              return;
-            }
-            String url = "http://" + ip + ":" + port;
-            if (isOurServer(url)) found.add(url);
-          });
-        }
-      }
-      executor.shutdown();
-      executor.awaitTermination(8, java.util.concurrent.TimeUnit.SECONDS);
-      executor.shutdownNow();
-    } catch (Exception e) {
-      Log.e(TAG, "Network scan error", e);
-    }
-    synchronized (found) {
-      return new ArrayList<>(found);
-    }
-  }
 
   @Override
   protected void onDestroy() {
@@ -766,6 +564,7 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
       session.startRecording(recordingConfig);
       qualityMonitor.resetSession();
       isRecording = true;
+      BottomNav.setVisible(this, false);  // no tab switching mid-recording (leaving the screen stops it)
       if (coverageText != null) {
         coverageText.setVisibility(View.VISIBLE);
       }
@@ -793,6 +592,7 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
     if (session == null) return;
     try {
       isRecording = false;
+      BottomNav.setVisible(this, true);
       session.stopRecording();
       if (captureLogger != null) {
         captureLogger.close();

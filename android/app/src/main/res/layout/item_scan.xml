@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- One recording on the Scans tab: name, status badge, size, upload progress, actions. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="#1E1E2E"
-    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_card"
+    android:layout_marginBottom="10dp"
     android:padding="14dp">
 
     <!-- Row 1: Title + status badge -->
@@ -19,7 +20,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/bs_text"
             android:textSize="16sp"
             android:textStyle="bold"
             android:singleLine="true" />
@@ -28,10 +29,11 @@
             android:id="@+id/tv_status_badge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:paddingTop="2dp"
-            android:paddingBottom="2dp"
+            android:background="@drawable/bg_pill"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
             android:textColor="#FFFFFF"
             android:textSize="11sp"
             android:textStyle="bold" />
@@ -43,24 +45,26 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:textColor="#78909C"
+        android:textColor="@color/bs_text_secondary"
         android:textSize="13sp" />
 
-    <!-- Row 3: Upload progress (hidden unless uploading) -->
+    <!-- Row 3: Upload progress / reason it stopped (hidden when idle) -->
     <ProgressBar
         android:id="@+id/pb_upload"
-        style="@android:style/Widget.ProgressBar.Horizontal"
+        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="8dp"
         android:max="100"
+        android:progressTint="@color/bs_primary"
         android:visibility="gone" />
 
     <TextView
         android:id="@+id/tv_upload_progress"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#4FC3F7"
+        android:layout_marginTop="4dp"
+        android:textColor="@color/bs_primary"
         android:textSize="12sp"
         android:visibility="gone" />
 
@@ -69,51 +73,59 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="12dp"
         android:gravity="center_vertical">
 
         <Button
             android:id="@+id/btn_play"
+            style="?android:attr/borderlessButtonStyle"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="38dp"
             android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_button_outline"
             android:text="Play"
-            android:textSize="12sp"
-            android:backgroundTint="#2563EB"
-            android:textColor="#FFFFFF"
-            android:layout_marginEnd="4dp" />
+            android:textAllCaps="false"
+            android:textColor="@color/bs_text"
+            android:textSize="13sp" />
 
         <Button
             android:id="@+id/btn_upload"
+            style="?android:attr/borderlessButtonStyle"
             android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
+            android:layout_height="38dp"
+            android:layout_weight="1.4"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_button"
             android:text="Upload"
-            android:textSize="12sp"
-            android:backgroundTint="#00C853"
+            android:textAllCaps="false"
             android:textColor="#FFFFFF"
-            android:layout_marginEnd="4dp" />
+            android:textSize="13sp"
+            android:textStyle="bold" />
 
         <Button
             android:id="@+id/btn_trim"
+            style="?android:attr/borderlessButtonStyle"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="38dp"
             android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_button_outline"
             android:text="Trim"
-            android:textSize="12sp"
-            android:backgroundTint="#FF9800"
-            android:textColor="#FFFFFF"
-            android:layout_marginEnd="4dp" />
+            android:textAllCaps="false"
+            android:textColor="@color/bs_text"
+            android:textSize="13sp" />
 
         <Button
             android:id="@+id/btn_delete"
+            style="?android:attr/borderlessButtonStyle"
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="38dp"
             android:layout_weight="1"
+            android:background="@drawable/bg_button_outline"
             android:text="Delete"
-            android:textSize="12sp"
-            android:backgroundTint="#FF3B30"
-            android:textColor="#FFFFFF" />
+            android:textAllCaps="false"
+            android:textColor="@color/bs_bad"
+            android:textSize="13sp" />
     </LinearLayout>
-
 </LinearLayout>

@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Server tab (ServerActivity): live connection, USB cable steps, Wi-Fi server address and search, app updates. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bs_bg">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@color/bs_card"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp">
+
+        <ImageView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/logo"
+            android:scaleType="fitCenter"
+            android:contentDescription="BuildScan 3D" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:text="Server"
+            android:textColor="@color/bs_primary_dark"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_app_version"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/bs_text_secondary"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <!-- Connection now -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CONNECTION"
+                    android:textColor="@color/bs_text_secondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_server_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="●  Checking connection..."
+                    android:textColor="@color/bs_text_secondary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_server_detail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/bs_text_secondary"
+                    android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/btn_check_now"
+                    style="?android:attr/borderlessButtonStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="42dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_button_outline"
+                    android:text="Check again"
+                    android:textAllCaps="false"
+                    android:textColor="@color/bs_primary" />
+            </LinearLayout>
+
+            <!-- USB cable -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="USB CABLE (FASTEST)"
+                    android:textColor="@color/bs_text_secondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="1. Start the server on the PC (it links the cable by itself).\n2. Phone: Settings → About phone → tap Build number 7 times; then Developer options → USB debugging on.\n3. Plug the phone into the PC and tap Allow on the USB debugging prompt.\nThe connection above turns green: uploads then go over the cable, no Wi-Fi needed."
+                    android:textColor="@color/bs_text"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Wi-Fi server -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="WI-FI SERVER"
+                    android:textColor="@color/bs_text_secondary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Used when no USB cable is connected. The PC prints its address when the server starts (scripts/buildscan status)."
+                    android:textColor="@color/bs_text_secondary"
+                    android:textSize="13sp" />
+
+                <EditText
+                    android:id="@+id/et_server_url"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:hint="http://192.168.1.100:8000"
+                    android:inputType="textUri"
+                    android:singleLine="true"
+                    android:textColor="@color/bs_text"
+                    android:textSize="15sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btn_save_url"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="42dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:background="@drawable/bg_button"
+                        android:text="Save and test"
+                        android:textAllCaps="false"
+                        android:textColor="#FFFFFF" />
+
+                    <Button
+                        android:id="@+id/btn_search"
+                        style="?android:attr/borderlessButtonStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="42dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_outline"
+                        android:text="Search network"
+                        android:textAllCaps="false"
+                        android:textColor="@color/bs_primary" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tv_search_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/bs_text_secondary"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:id="@+id/found_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
+
+            <!-- App -->
+            <Button
+                android:id="@+id/btn_updates"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="42dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_button_outline"
+                android:text="Check for app updates"
+                android:textAllCaps="false"
+                android:textColor="@color/bs_text" />
+        </LinearLayout>
+    </ScrollView>
+
+    <include layout="@layout/view_bottom_nav" />
+
+</LinearLayout>

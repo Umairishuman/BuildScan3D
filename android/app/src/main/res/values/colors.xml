@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BuildScan 3D light theme, taken from the logo (blue cube, slate building) and the web UI (AGENTS.md section 2). -->
+<resources>
+    <color name="bs_bg">#F8FAFC</color>            <!-- page background -->
+    <color name="bs_card">#FFFFFF</color>          <!-- cards, bars -->
+    <color name="bs_border">#E2E8F0</color>        <!-- card borders, dividers -->
+    <color name="bs_primary">#2563EB</color>       <!-- buttons, selected tab, links -->
+    <color name="bs_primary_dark">#1B4B8A</color>  <!-- logo navy: titles, brand -->
+    <color name="bs_primary_soft">#DBEAFE</color>  <!-- tinted backgrounds -->
+    <color name="bs_text">#0F172A</color>          <!-- main text -->
+    <color name="bs_text_secondary">#64748B</color><!-- quiet text, unselected tabs -->
+    <color name="bs_good">#16A34A</color>          <!-- connected over USB, uploaded -->
+    <color name="bs_warn">#D97706</color>          <!-- waiting, trim -->
+    <color name="bs_bad">#DC2626</color>           <!-- not connected, failed, delete -->
+    <color name="bs_neutral">#64748B</color>       <!-- local / stopped badges -->
+</resources>

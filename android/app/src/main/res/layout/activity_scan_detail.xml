@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#121212"
+    android:background="@color/bs_bg"
     android:padding="16dp">
 
     <!-- Header -->
@@ -20,7 +20,7 @@
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_revert"
-            android:tint="#FFFFFF"
+            android:tint="@color/bs_text"
             android:contentDescription="Back" />
 
         <TextView
@@ -28,7 +28,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/bs_primary_dark"
             android:textSize="20sp"
             android:textStyle="bold"
             android:layout_marginStart="8dp" />
@@ -53,13 +53,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:textColor="#CCCCCC"
+        android:textColor="@color/bs_text_secondary"
         android:textSize="14sp" />
 
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#333333"
+        android:background="@color/bs_border"
         android:layout_marginTop="12dp"
         android:layout_marginBottom="12dp" />
 
@@ -68,7 +68,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Trim Dataset &amp; Sensor Data"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/bs_text"
         android:textSize="16sp"
         android:textStyle="bold" />
 
@@ -77,7 +77,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:textColor="#00E676"
+        android:textColor="@color/bs_good"
         android:textSize="14sp" />
 
     <LinearLayout
@@ -91,7 +91,7 @@
             android:layout_width="50dp"
             android:layout_height="wrap_content"
             android:text="Start:"
-            android:textColor="#AAAAAA"
+            android:textColor="@color/bs_text_secondary"
             android:textSize="13sp" />
 
         <SeekBar
@@ -112,7 +112,7 @@
             android:layout_width="50dp"
             android:layout_height="wrap_content"
             android:text="End:"
-            android:textColor="#AAAAAA"
+            android:textColor="@color/bs_text_secondary"
             android:textSize="13sp" />
 
         <SeekBar
@@ -128,7 +128,9 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="Trim &amp; Save"
-        android:backgroundTint="#FF3B30"
+        style="?android:attr/borderlessButtonStyle"
+        android:background="@drawable/bg_button"
+        android:textAllCaps="false"
         android:textColor="#FFFFFF" />
 
     <TextView
@@ -137,7 +139,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:gravity="center"
-        android:textColor="#FFA726"
+        android:textColor="@color/bs_warn"
         android:textSize="13sp"
         android:visibility="gone" />
 

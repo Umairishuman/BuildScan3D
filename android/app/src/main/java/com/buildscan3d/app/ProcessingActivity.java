@@ -10,6 +10,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import java.io.File;
 import java.io.FileInputStream;
@@ -52,6 +53,10 @@ public class ProcessingActivity extends AppCompatActivity {
             .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)  // the server saves the files before answering
             .build();
     private boolean polling = false;
+    // Stop button: the running upload request, and whether the user asked to stop it
+    private volatile okhttp3.Call uploadCall;
+    private volatile boolean uploading = false;
+    private volatile boolean stopRequested = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,10 +71,16 @@ public class ProcessingActivity extends AppCompatActivity {
         btnRetry = findViewById(R.id.btn_retry);
         btnBack = findViewById(R.id.btn_back_processing);
 
-        btnBack.setOnClickListener(v -> finish());
+        btnBack.setOnClickListener(v -> {
+            if (uploading) {
+                stopUpload();
+            } else {
+                finish();
+            }
+        });
         btnRetry.setOnClickListener(v -> {
             btnRetry.setVisibility(View.GONE);
-            startUpload();
+            checkThenUpload();
         });
 
         serverUrl = PreferenceManager.getDefaultSharedPreferences(this)
@@ -81,12 +92,92 @@ public class ProcessingActivity extends AppCompatActivity {
             return;
         }
 
-        startUpload();
+        checkThenUpload();
+    }
+
+    /**
+     * Checks before anything is sent: the recording has the files the server needs, then the connection. No server ->
+     * asks to connect the USB cable or the Wi-Fi; Wi-Fi only -> offers the faster USB cable first; USB -> uploads.
+     */
+    private void checkThenUpload() {
+        File dir = new File(datasetPath);
+        StringBuilder missing = new StringBuilder();
+        for (String name : new String[] {"dataset.mp4", "poses.csv", "tracking.csv", "points.csv", "quality.csv",
+                "meta.json"}) {
+            File f = new File(dir, name);
+            if (!f.isFile() || f.length() == 0) missing.append(missing.length() > 0 ? ", " : "").append(name);
+        }
+        if (missing.length() > 0) {
+            tvStatus.setText("Recording incomplete");
+            tvStep.setText("Missing or empty: " + missing + ". Record the scan again.");
+            return;
+        }
+        tvStatus.setText("Checking the connection...");
+        tvStep.setText("USB cable first, then Wi-Fi");
+        progressBar.setIndeterminate(true);
+        new Thread(() -> {
+            ServerLink.State st = ServerLink.resolve(this);
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                progressBar.setIndeterminate(false);
+                if (st.route == ServerLink.Route.USB) {
+                    startUpload();
+                    return;
+                }
+                tvStatus.setText(st.route == ServerLink.Route.WIFI ? "Connected over Wi-Fi" : "Not connected");
+                tvStep.setText(st.detail);
+                btnRetry.setText("Check again");
+                btnRetry.setVisibility(View.VISIBLE);
+                double mb = new File(dir, "dataset.mp4").length() / (1024.0 * 1024.0);
+                if (st.route == ServerLink.Route.WIFI) {
+                    new AlertDialog.Builder(this)
+                        .setTitle("Upload over Wi-Fi?")
+                        .setMessage(String.format(Locale.US, "The USB cable is not connected, so this %.0f MB "
+                            + "recording would go over Wi-Fi to %s. That is slower and can drop.\n\nFor the cable: "
+                            + "plug the phone into the PC running the server (USB debugging on), then tap Check "
+                            + "again.", mb, ServerLink.hostOf(st.url)))
+                        .setPositiveButton("Upload over Wi-Fi", (d, w) -> {
+                            btnRetry.setVisibility(View.GONE);
+                            startUpload();
+                        })
+                        .setNeutralButton("Check again", (d, w) -> checkThenUpload())
+                        .setNegativeButton("Not now", null)
+                        .show();
+                } else {
+                    new AlertDialog.Builder(this)
+                        .setTitle("Not connected to the server")
+                        .setMessage(st.detail + "\n\nConnect the phone with a USB cable to the PC running the "
+                            + "server (USB debugging on), or join the same Wi-Fi as the server. Then tap Check "
+                            + "again. The recording stays on the phone (Scans tab).")
+                        .setPositiveButton("Check again", (d, w) -> checkThenUpload())
+                        .setNeutralButton("Server settings",
+                            (d, w) -> startActivity(new android.content.Intent(this, ServerActivity.class)))
+                        .setNegativeButton("Not now", null)
+                        .show();
+                }
+            });
+        }).start();
+    }
+
+    /** Stop button (Back while uploading): asks, then cancels the running upload. */
+    private void stopUpload() {
+        new AlertDialog.Builder(this)
+            .setTitle("Stop the upload?")
+            .setMessage("What was sent so far is not kept on the server. The recording stays on the phone (Scans tab).")
+            .setPositiveButton("Stop", (d, w) -> {
+                stopRequested = true;
+                okhttp3.Call c = uploadCall;
+                if (c != null) c.cancel();
+            })
+            .setNegativeButton("Keep uploading", null)
+            .show();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        okhttp3.Call c = uploadCall;
+        if (c != null) c.cancel();
         polling = false;
         handler.removeCallbacksAndMessages(null);
     }
@@ -95,6 +186,9 @@ public class ProcessingActivity extends AppCompatActivity {
         tvStatus.setText("Uploading dataset...");
         tvStep.setText("Preparing files...");
         progressBar.setIndeterminate(true);
+        stopRequested = false;
+        uploading = true;
+        btnBack.setText("Stop upload");
 
         new Thread(() -> {
             try {
@@ -138,12 +232,32 @@ public class ProcessingActivity extends AppCompatActivity {
                     addFilePart(builder, "depth_zip", depthZip, "application/zip");
                 }
 
+                final long t0 = android.os.SystemClock.elapsedRealtime();
+                RequestBody tracked = new GalleryActivity.ProgressRequestBody(builder.build(), (sent, total) -> {
+                    double el = Math.max((android.os.SystemClock.elapsedRealtime() - t0) / 1000.0, 0.001);
+                    double mbps = sent / 1048576.0 / el;
+                    long left = mbps > 0 ? Math.round((total - sent) / 1048576.0 / mbps) : 0;
+                    int pct = (int) (sent * 100 / Math.max(total, 1));
+                    String line = sent >= total
+                            ? "All sent, the server is saving the files..."
+                            : String.format(Locale.US, "%.1f / %.1f MB \u00b7 %.1f MB/s \u00b7 %d min %02d s left",
+                                sent / 1048576.0, total / 1048576.0, mbps, left / 60, left % 60);
+                    runOnUiThread(() -> {
+                        progressBar.setIndeterminate(false);
+                        progressBar.setProgress(pct);
+                        tvStatus.setText("Uploading via " + via + " \u00b7 " + pct + "%");
+                        tvStep.setText(line);
+                    });
+                });
                 Request request = new Request.Builder()
                         .url(serverUrl + "/upload")
-                        .post(builder.build())
+                        .post(tracked)
                         .build();
 
-                try (Response response = client.newCall(request).execute()) {
+                if (stopRequested) throw new IOException("stopped");
+                okhttp3.Call call = client.newCall(request);
+                uploadCall = call;
+                try (Response response = call.execute()) {
                     if (!response.isSuccessful()) {
                         String body = response.body() != null ? response.body().string() : "Unknown error";
                         throw new IOException("Upload failed: " + response.code() + " " + body);
@@ -153,7 +267,9 @@ public class ProcessingActivity extends AppCompatActivity {
                     JSONObject json = new JSONObject(responseBody);
                     jobId = json.getString("job_id");
 
+                    uploading = false;
                     runOnUiThread(() -> {
+                        btnBack.setText("Back");
                         tvStatus.setText("Processing...");
                         tvStep.setText("Job started: " + jobId);
                         progressBar.setIndeterminate(false);
@@ -169,12 +285,21 @@ public class ProcessingActivity extends AppCompatActivity {
 
             } catch (Exception e) {
                 Log.e(TAG, "Upload failed", e);
+                boolean stopped = stopRequested;
+                uploading = false;
                 runOnUiThread(() -> {
-                    tvStatus.setText("Upload Failed");
-                    tvStep.setText(e.getMessage());
+                    btnBack.setText("Back");
+                    tvStatus.setText(stopped ? "Upload stopped" : "Upload failed");
+                    tvStep.setText(stopped
+                            ? "Nothing was kept on the server. The recording stays on the phone (Scans tab)."
+                            : "Connection lost or refused: " + e.getMessage()
+                                + ". Connect the USB cable or check the Wi-Fi, then tap Retry.");
+                    btnRetry.setText("Retry");
                     btnRetry.setVisibility(View.VISIBLE);
                     progressBar.setIndeterminate(false);
                 });
+            } finally {
+                uploadCall = null;
             }
         }).start();
     }

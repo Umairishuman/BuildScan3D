@@ -17,7 +17,7 @@ import okhttp3.Response;
  * Which way the phone reaches the upload server right now, checked in this order:
  *  1. USB cable: http://127.0.0.1:8000 on the phone is forwarded to the PC by `adb reverse` (scripts/usb_link.sh runs
  *     it while the server runs). Needs no Wi-Fi, IP address or firewall rule, and is the fastest route.
- *  2. Wi-Fi: the saved server URL, then the recently used ones (CaptureActivity.rememberServer).
+ *  2. Wi-Fi: the saved server URL, then the recently used ones (ServerDiscovery.rememberServer).
  * {@link #resolve} blocks for up to a few seconds: call it off the main thread.
  */
 final class ServerLink {
@@ -46,12 +46,12 @@ final class ServerLink {
       }
     }
 
-    /** Status colour: green for USB, blue for Wi-Fi, red when the server cannot be reached. */
+    /** Status colour (colors.xml): green for USB, blue for Wi-Fi, red when the server cannot be reached. */
     int color() {
       switch (route) {
-        case USB: return 0xFF00C853;
-        case WIFI: return 0xFF2196F3;
-        default: return 0xFFFF3B30;
+        case USB: return 0xFF16A34A;   // bs_good
+        case WIFI: return 0xFF2563EB;  // bs_primary
+        default: return 0xFFDC2626;    // bs_bad
       }
     }
 
@@ -88,7 +88,7 @@ final class ServerLink {
     String saved = prefs.getString(ProcessingActivity.PREF_SERVER_URL, ProcessingActivity.DEFAULT_SERVER_URL);
     Set<String> candidates = new LinkedHashSet<>();
     if (!USB_URL.equals(saved)) candidates.add(saved);
-    for (String u : prefs.getString(CaptureActivity.PREF_RECENT_SERVERS, "").split("\n")) {
+    for (String u : prefs.getString(ServerDiscovery.PREF_RECENT_SERVERS, "").split("\n")) {
       if (!u.isEmpty() && !USB_URL.equals(u)) candidates.add(u);
     }
     for (String u : candidates) {

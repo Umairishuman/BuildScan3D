@@ -15,21 +15,24 @@
 -->
 <resources>
 
-  <!--
-      Base application theme, dependent on API level. This theme is replaced
-      by AppBaseTheme from res/values-vXX/styles.xml on newer devices.
-  -->
-  <style name="AppBaseTheme" parent="android:Theme.Light">
-    <!--
-        Theme customizations available in newer API levels can go in
-        res/values-vXX/styles.xml, while customizations related to
-        backward-compatibility can go here.
-    -->
+  <!-- BuildScan 3D: light theme in the logo's blues (colors.xml). Every screen uses it; the capture screen draws the
+       camera full screen on top of it. -->
+  <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+    <item name="colorPrimary">@color/bs_primary</item>
+    <item name="colorPrimaryDark">@color/bs_card</item>
+    <item name="colorAccent">@color/bs_primary</item>
+    <item name="android:windowBackground">@color/bs_bg</item>
+    <item name="android:statusBarColor">@color/bs_card</item>
+    <item name="android:windowLightStatusBar">true</item>
+    <item name="android:navigationBarColor">@color/bs_card</item>
+    <item name="android:textColorPrimary">@color/bs_text</item>
+    <item name="android:textColorSecondary">@color/bs_text_secondary</item>
   </style>
 
-  <!-- Application theme. -->
-  <style name="AppTheme" parent="AppBaseTheme">
-    <!-- All customizations that are NOT specific to a particular API-level can go here. -->
+  <!-- Capture screen: same theme, dark status bar over the camera image. -->
+  <style name="AppTheme.Capture">
+    <item name="android:statusBarColor">#000000</item>
+    <item name="android:windowLightStatusBar">false</item>
   </style>
 
 </resources>
