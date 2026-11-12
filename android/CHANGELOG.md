@@ -12,6 +12,7 @@ Entries up to v0.3.6 were written on 2026-11-12 from the git history and docs/pr
 - After an update the app shows once what is new in the installed version.
 - After you allow BuildScan 3D to install updates in Android settings, the update installs without checking again.
 - Recordings are numbered 1, 2, 3 on the PC; after an upload the app says "Saved on the PC as scan #N" (D-065).
+- The tracking message appears only in the quality banner at the top; the bar at the bottom that repeated it and covered the navigation is gone.
 - The quality check records how long it takes for every frame (`iqa_ms` in `quality.csv`), to measure NFR2.
 
 ## v0.3.6 · 2026-11-12

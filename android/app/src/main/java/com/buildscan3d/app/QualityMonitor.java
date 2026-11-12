@@ -252,6 +252,7 @@ public class QualityMonitor {
       case INSUFFICIENT_FEATURES: return "Tracking lost (plain surface)" + back;
       case CAMERA_UNAVAILABLE: return "Camera unavailable";
       case BAD_STATE: return "Tracking error - restart recording";
+      case NONE: return "Starting tracking - move the phone slowly";
       default: return "Tracking lost" + back;
     }
   }

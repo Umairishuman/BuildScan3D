@@ -53,7 +53,6 @@ import com.google.ar.core.PointCloud;
 import com.google.ar.core.Pose;
 import com.google.ar.core.Session;
 import com.google.ar.core.Trackable;
-import com.google.ar.core.TrackingFailureReason;
 import com.google.ar.core.TrackingState;
 import com.buildscan3d.app.common.helpers.CameraPermissionHelper;
 import com.buildscan3d.app.common.helpers.DepthSettings;
@@ -134,7 +133,6 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
 
   private static final String TAG = CaptureActivity.class.getSimpleName();
 
-  private static final String SEARCHING_PLANE_MESSAGE = "Searching for surfaces...";
 
   private static final float Z_NEAR = 0.1f;
   private static final float Z_FAR = 100f;
@@ -831,21 +829,8 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
     // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
     trackingStateHelper.updateKeepScreenOnFlag(camera.getTrackingState());
 
-    // Show a message based on whether tracking has failed, if planes are detected, and if the user
-    // has placed any objects.
-    String message = null;
-    if (camera.getTrackingState() == TrackingState.PAUSED) {
-      if (camera.getTrackingFailureReason() == TrackingFailureReason.NONE) {
-        message = SEARCHING_PLANE_MESSAGE;
-      } else {
-        message = TrackingStateHelper.getTrackingFailureReasonString(camera);
-      }
-    }
-    if (message == null) {
-      messageSnackbarHelper.hide(this);
-    } else {
-      messageSnackbarHelper.showMessage(this, message);
-    }
+    // Tracking messages are shown only in the quality banner at the top (QualityMonitor); the sample's bottom
+    // snackbar repeated them and covered the bottom navigation (removed 2026-11-12).
 
     // If not tracking, don't draw 3D objects.
     if (camera.getTrackingState() == TrackingState.PAUSED) {
