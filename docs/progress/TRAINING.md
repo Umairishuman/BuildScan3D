@@ -67,6 +67,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-032 | 2026-11-12 | Layout diagnostics on scan #2 / #3 (read-only, plan 4.1) | this PC (Ubuntu, RTX 4000 Ada) | seconds per pass | models tilted 9.1° / 12.1° from ARCore gravity (Sim3 from camera centres only); levelled prototype: scan #3 4 walls, 3 corners ~90°, 2.52 m | Diagnosis
 | R-033 | 2026-11-12 | `sfm_colmap.py --stage export` with ARCore gravity (D-071), scan #2 / #3, scratch output | this PC (CPU) | seconds | models level (0.06° / 0.00°); scale 0.0937 / 0.9521 (+0.45% on scan #3) | Kept
 | R-034 | 2026-11-12 | `level_model.py`: levelled copies of scan #2 / #3 models (tags `r1106lev`, `r1112lev`) | this PC | seconds | rotated 9.09° / 12.10°; renders match the source at 85–98 dB (after an SH transpose bug, fixed) | Kept
+| R-035 | 2026-11-12 | scan #3 levelled (`r1112lev`), layout → web | this PC | 18.0 min | 4 walls, 3 corners ~90°, height 2.52 m, floor 32.27 m², 18 fixtures | Kept (Step 4 layout / semantics of scan #3); tape pending |
 
 ## Runs
 
@@ -564,3 +565,29 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   selects the unbiased depth for the mesh, as in R-031)
 - **Goal:** layout with D-071 + D-072 (expected from the prototype: 4 walls, 3 corners, 2.52 m), then semantics v10,
   mesh and web bundle on the levelled model; compare with R-031 (2 walls, 0 corners, 2.74 m, 21 fixtures).
+- **Start → end:** 18:26:56 → 18:44:56 (18.0 min): layout 1.2, sem2d 13.7, sem3d 0.1, verify 0.2, sem3d2 0.1,
+  mesh 0.3, meshlabels 2.4, web 0.1 (`stages.tsv`)
+- **Errors during the run:** none (`run_full.log` has no tracebacks or errors).
+- **Result:** `dataset/scan_003_6de634cbb8b2/work_r1112lev_sfm/gs_r1112lev/`; web bundle
+  `prototype/web-ui/public/scans/scan_003_6de634cbb8b2_r1112lev/` (18 MB). **Layout:** 4 walls (8.97, 7.19, 7.68,
+  3.69 m), walls 0 ↔ 2 7.23 m apart, 1 ↔ 3 9.05 m apart, 3 corners at 89.5°, 89.8°, 88.9°; height **2.525 m**
+  (ceiling source: strongest plane above the cameras, already above the wall tops, so D-072 changed nothing here).
+  **Semantics v10:** ceiling plane fit accepted, tilt 0.05°, residual 0.5 cm, ceiling 2.504 m (R-031: fit rejected at
+  8.06°); floor plane tilt **1.95°**, residual 2.4 cm (R-031: 0.28° / 7.2 cm, an artefact of the ±15 cm band; the
+  remaining 1.95° is not explained yet); **floor area 32.27 m²** (R-031: none); walls net 22.47 / 15.25 / 19.24 /
+  9.24 m². **18 fixtures** (R-031: 21): 1 door (0.98 × 2.04 m, 0.12–2.17 m above floor; R-031's door ran from −0.58
+  to 1.41 m), 2 windows (2.20–2.63 m, high), 2 light switches (0.67–0.68 m), 2 power sockets (0.68 / 0.81 m),
+  7 ceiling lights, 1 lamp, 3 ceiling fans; 30 rejected. Mesh 2,720,768 triangles; area by class (m²) other 120.53,
+  ceiling 62.1, floor 18.02, walls 14.97 / 12.74 / 6.12 / 4.22, ceiling fan 1.97, door 1.72.
+  Fixture check sheet: `semantic_v10/fixture_check.md` (`fixture_checklist.py`), for Umair (plan 4.2).
+  **Not measured:** tape (height, lengths), whether the fixtures are real (check pending).
+- **Verdict:** **kept** as scan #3's current layout / semantics (replaces R-031's for Step 4; R-031's model stays the
+  trained source and the Step 3 timing baseline). Height and lengths wait for the tape.
+
+### R-036 · 2026-11-12 · scan #2 levelled (`r1106lev`): layout → semantics → mesh → web
+- **Who / machine:** Umair (agent) · this PC (Ubuntu, RTX 4000 Ada), `screen` session `run-r1106lev`
+- **Branch / commit:** `feature/step4-layout` @ `fc3d096` (uncommitted changes: TRAINING.md only)
+- **Dataset:** scan #2 (`scan_002_646070948603`), R-030's model levelled by R-034 (9.09°)
+- **Command(s):** `scripts/run_full.sh dataset/scan_002_646070948603 r1106lev --from layout -- --pgsr`
+- **Goal:** layout with D-071 + D-072 (prototype: 1 wall, ceiling 2.41 m from "above the wall tops", with a warning),
+  semantics, mesh, web on the levelled model; compare with R-030 (1.50 m, 2 walls, 8 fixtures).
