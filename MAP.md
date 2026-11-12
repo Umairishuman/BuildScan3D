@@ -113,7 +113,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does | Status |
 |---|---|---|
-| `sfm_colmap.py` | COLMAP 4.2: features, ARCore-guided / retrieval pairs, global mapper, lens self-calibration, undistortion, Sim3 to ARCore, mis-registration filter. COLMAP path from `toolpaths.py`; `tools/cudnn9` only for the rejected ALIKED path | **[v9]** [v3] |
+| `sfm_colmap.py` | COLMAP 4.2: features, ARCore-guided / retrieval pairs, global mapper, lens self-calibration, undistortion, Sim3 to ARCore (levelled with ARCore gravity since D-071), mis-registration filter. COLMAP path from `toolpaths.py`; `tools/cudnn9` only for the rejected ALIKED path | **[v9]** [v3] |
 | `fallback.py` | IMU featureless-tracking fallback: bridge tracking gaps, detect heading jumps | [v3] [legacy]; not in `run_v8.py` (OD-6) |
 | `relocalize_pnp.py` | Re-aligns post-gap segments to the map with PnP | [legacy] |
 | `relocalize.py` | Earlier image-content relocalisation of post-gap segments | [legacy] |
@@ -151,6 +151,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | File | Does | Status |
 |---|---|---|
 | `layout.py` | Room layout: any number of walls, floor, ceiling, corners, dimensions, `plan.png` | **[v9]** |
+| `level_model.py` | Levels an already trained model with ARCore gravity (rotates splats incl. colour coefficients and poses) into a new tag, for models exported before D-071 (2026-11-12) | **[v9]** one-off tool |
 | `semantic2d.py` | Grounding DINO + SAM fixture masks on upright frames, decoy classes, tile pass | **[v9]** semantic-env |
 | `semantic3d.py` | Votes 2D labels onto Gaussians, structure from layout, fixture instances + geometry rules | **[v9]** |
 | `verify_fixtures.py` | CLIP crop check of switch / socket candidates | **[v9]** semantic-env |

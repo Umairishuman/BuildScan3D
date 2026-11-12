@@ -66,6 +66,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-031 | 2026-11-12 | scan #3 `scan_003_6de634cbb8b2` (classroom, first v0.3.6 recording, 185 s), full pipeline (`--tag r1112`) | this PC (Ubuntu, RTX 4000 Ada) | 81.0 min (run_v8 64.7) | ran clean; 875/885 frames; **height 2.74 m** (plausible); 2 walls, 0 corners, 21 fixtures | Kept (`saved_models/2026-11-12_r1112_scan003/`); baseline stage times; quality and tape not measured |
 | R-032 | 2026-11-12 | Layout diagnostics on scan #2 / #3 (read-only, plan 4.1) | this PC (Ubuntu, RTX 4000 Ada) | seconds per pass | models tilted 9.1° / 12.1° from ARCore gravity (Sim3 from camera centres only); levelled prototype: scan #3 4 walls, 3 corners ~90°, 2.52 m | Diagnosis
 | R-033 | 2026-11-12 | `sfm_colmap.py --stage export` with ARCore gravity (D-071), scan #2 / #3, scratch output | this PC (CPU) | seconds | models level (0.06° / 0.00°); scale 0.0937 / 0.9521 (+0.45% on scan #3) | Kept
+| R-034 | 2026-11-12 | `level_model.py`: levelled copies of scan #2 / #3 models (tags `r1106lev`, `r1112lev`) | this PC | seconds | rotated 9.09° / 12.10°; renders match the source at 85–98 dB (after an SH transpose bug, fixed) | Kept
 
 ## Runs
 
@@ -532,3 +533,25 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   Outputs only in the scratchpad; `dataset/` untouched (`work_r1112_sfm/frames.json` still 15:16).
 - **Verdict:** kept: the export levels both models. Not yet run end to end on a new recording (the next new room is
   the first). The +0.45% scale change on scan #3 is within what the tape must decide.
+
+### R-034 · 2026-11-12 · `level_model.py`: levelled copies of the scan #2 and scan #3 models (D-071)
+- **Who / machine:** Umair (agent) · this PC (Ubuntu, RTX 4000 Ada)
+- **Branch / commit:** `feature/step4-layout` @ `ec170c7` + uncommitted new `src/arcore3dgs/level_model.py`
+- **Dataset:** scan #2 (`gs_r1106`, R-030) → tag `r1106lev`; scan #3 (`gs_r1112`, R-031) → tag `r1112lev`
+- **Command(s):** `micromamba run -n bs-ns python src/arcore3dgs/level_model.py --dataset dataset/<scan> --tag <tag>
+  --new_tag <tag>lev --check 3`
+- **Goal:** rotate the trained models and poses onto ARCore's gravity without retraining; the check renders 3 frames
+  from the source and the levelled model (levelled cameras) and must give the same images.
+- **Start → end:** 18:23 → 18:31 (seconds per model; two attempts)
+- **Errors during the run:**
+  1. 18:24 colour check — first attempt rendered source vs levelled at only 35.9–44.6 dB → cause: the SH rotation
+     matrix was applied transposed (`c'_j = Σ M[k, j] c_k` instead of `Σ M[j, k] c_k`); found by rendering at SH
+     degree 0 (geometry exact, 88–96 dB) vs degree 3 (35–40 dB) → fix in `level_model.py`; the faulty outputs were
+     moved out of `dataset/` into the agent's scratchpad (not used) and the script re-run (resolved: yes).
+- **Result:** `dataset/scan_002_646070948603/work_r1106lev_sfm/gs_r1106lev/splat.ply` (rotated 9.09°, 469 / 482 frames
+  agree, spread 0.83°) and `dataset/scan_003_6de634cbb8b2/work_r1112lev_sfm/gs_r1112lev/splat.ply` (12.10°, 875 / 875,
+  0.98°), each with `frames.json`, `level.json` and links to the source `images/` and `planes/`. Check: source vs
+  levelled renders **87.6–98.2 dB** (3 frames each; at SH degree 3 on scan #3 85.0–88.2 dB): the same model.
+  The SH coefficient order (channel-major, `f_rest_{c·15+k}`) was confirmed against photos: 22.81 / 16.20 / 19.24 dB
+  vs 21.71 / 15.14 / 17.04 dB for the other order.
+- **Verdict:** kept: levelled copies for re-running layout → web (R-035, R-036). Originals unchanged.
