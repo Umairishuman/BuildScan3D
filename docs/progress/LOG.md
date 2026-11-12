@@ -436,3 +436,31 @@ Hand-over prompt (2026-11-12, for the Step 4 session):
     bring options with a recommendation and record his answer in DECISIONS.md; one run on the GPU at a time (check
     `scripts/buildscan status` first); update STATUS, LOG and the COMPLETION_PLAN rows at the end of the session; no AI
     attribution in commits.
+
+## 2026-11-12 (Step 4 session) · Umair · `feature/step4-layout`
+- Did: branch `feature/step4-layout` from `exp/step3-speed` (not pushed). COMPLETION_PLAN 4.1: found why R-030 had a
+  1.50 m ceiling and R-031 only 2 walls: **both models were tilted against gravity** (9.1° / 12.1°), because the Sim3
+  to ARCore in `sfm_colmap.py` took its rotation from camera centres only (R-032; confirmed by ARCore's own per-frame
+  gravity and by the floor / desk / ceiling planes). Scan #2's ceiling is also reconstructed too close to the camera
+  (and reflected in the door glass). Fixes (Umair's choice of options, D-071 / D-072): the SfM export now levels with
+  ARCore gravity (`--gravity centres` = old behaviour; R-033); new `src/arcore3dgs/level_model.py` levels trained
+  models incl. SH colours (R-034; renders match the source at 85–98 dB); `layout.py` ignores ceiling candidates
+  below the wall tops and records `ceiling_source` / `warnings`. Re-runs from layout: scan #3 → 4 walls, 3 corners
+  89–90°, 7.23 × 9.05 m, 2.52 m, floor 32.27 m², 18 fixtures (R-035, kept); scan #2 → 2.41 m, 1 wall, 10 fixtures
+  (R-036, inconclusive: re-record). 4.2: new `src/arcore3dgs/fixture_checklist.py`; scan #3 sheet in
+  `dataset/scan_003_6de634cbb8b2/work_r1112lev_sfm/gs_r1112lev/semantic_v10/fixture_check.md`. 4.3 (FR10): fixture
+  size card + clickable markers in the web viewer (`ScanLayersPanel`, `SplatCanvas`, page, `scanTypes`), and
+  `export_web.py` writes bottom / top (tsc / eslint / next build pass; not checked in a browser).
+- Umair copied **newRoomAttemptSadness** here (raw recording only). He chose the R-023 recipe tonight: R-037 started
+  18:56:57 (`run-r1112nr`), for 3.1 and as the first end-to-end run with D-071 / D-072 on a room whose layout was right.
+- Runs: R-032, R-033, R-034, R-035, R-036, R-037 (running).
+- Decisions: D-071 (levelling: SfM export + `level_model.py` for old models), D-072 (ceiling not below wall tops); both
+  Umair on the agent's recommendation.
+- Problems: SH rotation first applied transposed (caught by the render check, fixed before use, R-034); I first wrote
+  run end times I had not measured (corrected in TRAINING); the web build changed `next-env.d.ts` (restored).
+- Team: tell Tayyab that `sfm_colmap.py`'s export changed (D-071) next to his mapper changes; ask him for the R-014
+  held-out list (`offpath_test.txt`, 79 frames) for a PSNR comparison on newRoom.
+- Next: finish R-037 (stage times vs R-020's 96 min on the 3070, layout vs 6.60 × 4.36 m / 2.72 m, scale vs tape
+  6.70 m, fixtures vs the 15 of v10, the tilt the export reports); Umair fills in scan #3's fixture sheet → per-room
+  found / missed / false table (4.2, E3); tape the classroom → check 2.52 m and 7.23 × 9.05 m; new rooms recorded
+  2026-11-13 go first on the GPU (they now come out level); re-record the lab (scan #2) with the protocol.
