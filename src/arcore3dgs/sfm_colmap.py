@@ -26,6 +26,9 @@ ap.add_argument("--work", required=True, help="existing work dir (frames.json + 
 ap.add_argument("--out", required=True)
 ap.add_argument("--colmap", default=toolpaths.colmap(), help="COLMAP 4.2 executable (default: see toolpaths.py)")
 ap.add_argument("--mapper", default="global_mapper", choices=["global_mapper", "mapper"])
+ap.add_argument("--skip_retriangulation", action="store_true",
+                help="global_mapper: skip the final retriangulation + refinement (6.5 of 14.3 min on newRoom; poses stay "
+                     "within the mapper's own run-to-run differences, TRAINING R-034)")
 ap.add_argument("--extract_gpu", type=int, default=1, help="0 = CPU SIFT (e.g. while the GPU is training)")
 ap.add_argument("--pairs", default="exhaustive", choices=["exhaustive", "arcore"],
                 help="arcore = match only temporal + ARCore-pose neighbours (much faster than exhaustive)")
@@ -136,7 +139,8 @@ if run("map"):
         if os.path.exists(sp):
             shutil.rmtree(sp)
         os.makedirs(sp)
-        colmap(args.mapper, "--database_path", db, "--image_path", os.path.join(WK, "images"), "--output_path", sp)
+        colmap(args.mapper, "--database_path", db, "--image_path", os.path.join(WK, "images"), "--output_path", sp,
+               *(["--GlobalMapper.skip_retriangulation", 1] if args.skip_retriangulation and args.mapper == "global_mapper" else []))
         comps = components(sp)
         print(f"mapping round {rnd}: components {[len(c[1]) for c in comps]} of {len(fr)} frames", flush=True)
         if comps and comps[0][0] != "0":                     # export reads sparse/0: make it the largest
