@@ -29,7 +29,7 @@ echo " Mode:  $PROCESSING_MODE"
 echo " Local: http://localhost:$PORT   (docs: /docs)"
 for ip in $(hostname -I); do
   [[ "$ip" == *:* ]] && continue
-  echo " Phone: http://$ip:$PORT   (Wi-Fi)"
+  echo " Phone: http://$ip:$PORT   (network)"
 done
 echo " Phone: http://127.0.0.1:$PORT   (USB cable, automatic when plugged in)"
 echo
