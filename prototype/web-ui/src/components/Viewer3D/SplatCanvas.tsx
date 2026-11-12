@@ -44,6 +44,8 @@ interface SplatCanvasProps {
   /** Scan bundles: show fixture markers. */
   showFixtures?: boolean;
   onScanLoaded?: (scan: ScanInfo) => void;
+  /** Scan bundles: a fixture marker was clicked (outside measure mode). */
+  onFixtureClick?: (id: string) => void;
   onMeasurementsChange: (measurements: MeasurementRecord[]) => void;
   onHoverCoordinate?: (coordinate: string | null) => void;
   onOrbitChange?: (theta: number, phi: number) => void;
@@ -66,6 +68,7 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
       showMesh = false,
       showFixtures = true,
       onScanLoaded,
+      onFixtureClick,
       onMeasurementsChange,
       onHoverCoordinate,
       onOrbitChange,
@@ -89,6 +92,7 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
     const onHoverCoordinateRef = useRef(onHoverCoordinate);
     const onOrbitChangeRef = useRef(onOrbitChange);
     const onScanLoadedRef = useRef(onScanLoaded);
+    const onFixtureClickRef = useRef(onFixtureClick);
     const initialRef = useRef({ initialPosition, initialTarget });
     const displayRef = useRef({ hiddenGroups, tintByClass, showMesh, showFixtures });
     useEffect(() => {
@@ -96,6 +100,7 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
       onHoverCoordinateRef.current = onHoverCoordinate;
       onOrbitChangeRef.current = onOrbitChange;
       onScanLoadedRef.current = onScanLoaded;
+      onFixtureClickRef.current = onFixtureClick;
       initialRef.current = { initialPosition, initialTarget };
       displayRef.current = { hiddenGroups, tintByClass, showMesh, showFixtures };
     });
@@ -224,6 +229,7 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
                 new THREE.MeshBasicMaterial({ color: FIXTURE_COLORS[f.cls] ?? "#ffffff" })
               );
               dot.position.set(...f.position);
+              dot.userData.fixtureId = f.id;
               markers.add(dot);
             }
             scene.add(markers);
@@ -253,13 +259,22 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
             return hits.length > 0 ? hits[0].point : null;
           };
 
-          // Click (not drag) while measuring -> measurement point on the splat surface.
+          // Click (not drag) while measuring -> measurement point on the splat surface;
+          // otherwise a click on a fixture marker selects that fixture (its size card in the Scan Layers panel).
           let down = { x: 0, y: 0 };
           const onDown = (e: MouseEvent) => (down = { x: e.clientX, y: e.clientY });
           const onUp = (e: MouseEvent) => {
-            if (!measurement.isMeasureModeActive || e.button !== 0) return;
+            if (e.button !== 0) return;
             if (Math.abs(e.clientX - down.x) + Math.abs(e.clientY - down.y) > 5) return;
             toNdc(e);
+            if (!measurement.isMeasureModeActive) {
+              const markers = markersRef.current;
+              if (!markers?.visible || !onFixtureClickRef.current) return;
+              raycaster.setFromCamera(ndc, camera);
+              const hit = raycaster.intersectObjects(markers.children, false)[0];
+              if (hit) onFixtureClickRef.current(hit.object.userData.fixtureId as string);
+              return;
+            }
             const p = hitPoint();
             if (p) {
               measurement.handlePointClick(p);

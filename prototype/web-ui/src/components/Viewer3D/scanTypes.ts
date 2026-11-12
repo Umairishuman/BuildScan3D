@@ -29,7 +29,11 @@ export interface ScanFixture {
   /** Detected class, e.g. "door", "light switch", "power socket", "ceiling light". */
   cls: string;
   position: [number, number, number];
+  /** Height of the fixture's centre above the floor (m). */
   height_above_floor: number;
+  /** Heights of its lowest / highest point above the floor (m); in bundles exported since 2026-11-12. */
+  bottom?: number;
+  top?: number;
   wall: number | null;
   along_wall: number | null;
   width: number;

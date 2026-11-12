@@ -103,6 +103,7 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
   const [hiddenGroups, setHiddenGroups] = useState<string[]>([]);
   const [tintByClass, setTintByClass] = useState(false);
   const [showFixtures, setShowFixtures] = useState(true);
+  const [selectedFixture, setSelectedFixture] = useState<string | null>(null);
   const isRealScan = Boolean(project.splatUrl || project.scanUrl);
   const chromeTimeoutRef = useRef<number | null>(null);
 
@@ -245,6 +246,10 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
                   showMesh={renderMode === "mesh"}
                   showFixtures={showFixtures}
                   onScanLoaded={setScanInfo}
+                  onFixtureClick={(id) => {
+                    setSelectedFixture(id);
+                    setOpenPanel("layers");
+                  }}
                   onMeasurementsChange={setMeasurements}
                   onHoverCoordinate={setHoveredCoordinate}
                   onOrbitChange={handleOrbitChange}
@@ -374,6 +379,8 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
                         showFixtures={showFixtures}
                         onToggleFixtures={() => setShowFixtures((v) => !v)}
                         onFlyTo={(point) => canvasRef.current?.flyTo?.(point)}
+                        selectedFixtureId={selectedFixture}
+                        onSelectFixture={setSelectedFixture}
                       />
                     </FloatingSidePanel>
                   ) : openPanel === "layers" ? (

@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-11-06 (unused `newroom_v6.spz` taken out of git; `newroom-scan` loads only the labelled bundle)
+Last updated: 2026-11-12 (fixture size card in Scan Layers, clickable fixture markers: FR10, COMPLETION_PLAN 4.3)
 
 ---
 
@@ -131,6 +131,20 @@ real path.** Currently only `/dashboard` has a href.
 ---
 
 ## 4. Completed
+
+### Fixture size card (FR10) and clickable fixture markers ✅ (2026-11-12, COMPLETION_PLAN 4.3, Umair's session)
+- **Why:** FR10 asks for per-element dimensions; the list showed width × height and the centre height in one grey line,
+  and clicking a marker in 3D did nothing.
+- **Modified** `ProjectDetail/ScanLayersPanel.tsx`: a clicked fixture row opens a size card (width, height, area,
+  centre / bottom / top above the floor, wall and position along it, confirming frames); clicking again closes it.
+  New optional props `selectedFixtureId`, `onSelectFixture`. `Viewer3D/SplatCanvas.tsx`: optional `onFixtureClick`;
+  outside measure mode a click (not a drag) on a fixture marker reports its id. `Viewer3D/scanTypes.ts`: optional
+  `bottom` / `top` on `ScanFixture`. `app/viewer/[id]/page.tsx`: `selectedFixture` state; a marker click opens the
+  Layers panel on that fixture. Pipeline side: `src/arcore3dgs/export_web.py` now also writes `bottom` / `top`
+  (older bundles without them still work: the card leaves those rows out).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` → 0 errors, 1 known warning
+  (ExportModal.tsx:29); `npx next build` compiled + prerendered all routes (run through `micromamba run -n bs-ns`,
+  where Node lives on the Ubuntu PC). **Not checked in a browser**, and no size checked against tape yet.
 
 ### Unused single-file splat removed from the repo ✅ (2026-11-06, user decision D-055)
 - **Why:** CI's repo-hygiene check rejects files over 10 MB; `public/splats/newroom_v6.spz` (12.5 MB) was the only one,
@@ -712,6 +726,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | Nav items are inert | `lib/navigation.ts` | Projects/Scans/Reports/Team/Settings have `href: null` by design until built. |
 | ~~Mock-scene controls on real scans~~ | `viewer/[id]/page.tsx` | Resolved 2026-10-24: hidden for splat projects. Bring back once real semantic layers exist. |
 | ~~148 MB PLY over HTTP~~ | `public/splats/` | Resolved 2026-10-24: served as 12.5 MB `.spz`. |
+| Small fixture markers | `Viewer3D/SplatCanvas.tsx` | Markers are 4.5 cm spheres, so clicking one in 3D needs a close view; the list in Scan Layers is the reliable way. |
 | Missing project thumbnails | `public/thumbnails/` | All pre-existing fixtures point at `/thumbnails/card*.jpg`, which do not exist (folder was absent until this step added `newroom_v6.jpg`). |
 
 ---
@@ -735,6 +750,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-11-12** — Fixture size card in Scan Layers (width, height, area, heights above floor, wall) and clickable fixture markers (FR10).
 - **2026-11-06** — `newroom-scan` no longer points at the unused `/splats/newroom_v6.spz`; the file is out of git (CI 10 MB limit).
 - **2026-11-03** — `public/scans/newroom/` regenerated with v10 labels (15 fixtures: 6 doors, tube light class); `FIXTURE_COLORS` gains "tube light".
 - **2026-10-27** — Scan Layers panel (groups, tint, fixtures with fly-to, wall areas) and Mesh render mode on `newroom-scan`.
