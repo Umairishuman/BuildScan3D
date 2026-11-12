@@ -486,8 +486,8 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   (same defaults as `layout.py`; writes nothing into `dataset/`)
 - **Goal:** find why R-030's layout took a plane at 1.50 m as the ceiling: the horizontal plane candidates (height
   histogram), the camera heights that bound the floor / ceiling search, and the splat height histogram.
-- **Start → end:** 17:59 → 18:40 (several short diagnostic passes, each a few seconds of GPU rendering; the time is
-  mostly analysis between them).
+- **Start → end:** 17:59 → before 18:20 (exact end not recorded); several diagnostic passes of a few seconds of GPU
+  rendering each, the time in between was analysis.
 - **Errors during the run:** none (one diagnostic script was first run with the system `python3`, which has no numpy;
   re-run in `bs-ns`).
 - **Result:** the 1.50 m ceiling and the 2-wall classroom have **one root cause: the models are not level.** The
@@ -521,7 +521,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   `work_<tag>_sfm/` (nothing written into `dataset/`)
 - **Goal:** check the new export: the printed tilt a centre-only Sim3 would leave must match R-032 (9.1° / 12.1°),
   the new frames.json must be level (ARCore gravity on +Y), scale and inliers comparable with R-030 / R-031.
-- **Start → end:** 18:20 → 18:23 (export only, seconds per scan)
+- **Start → end:** start not recorded (after R-032) → 18:22 (export only, seconds per scan)
 - **Errors during the run:** none. One wrong reading of my own diagnostic, corrected before commit: the first version
   printed "centre-only Sim3 would leave the model X deg off gravity" computed on the **new** inlier set (scan #3:
   0.74°), which is not what R-031's RANSAC did (it picked a different 268-frame set that absorbed 12.1°). Renamed
@@ -542,7 +542,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   --new_tag <tag>lev --check 3`
 - **Goal:** rotate the trained models and poses onto ARCore's gravity without retraining; the check renders 3 frames
   from the source and the levelled model (levelled cameras) and must give the same images.
-- **Start → end:** 18:23 → 18:31 (seconds per model; two attempts)
+- **Start → end:** first attempt ended 18:24; second attempt ended before 18:26 (R-035 start); seconds per model
 - **Errors during the run:**
   1. 18:24 colour check — first attempt rendered source vs levelled at only 35.9–44.6 dB → cause: the SH rotation
      matrix was applied transposed (`c'_j = Σ M[k, j] c_k` instead of `Σ M[j, k] c_k`); found by rendering at SH
@@ -555,3 +555,12 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   The SH coefficient order (channel-major, `f_rest_{c·15+k}`) was confirmed against photos: 22.81 / 16.20 / 19.24 dB
   vs 21.71 / 15.14 / 17.04 dB for the other order.
 - **Verdict:** kept: levelled copies for re-running layout → web (R-035, R-036). Originals unchanged.
+
+### R-035 · 2026-11-12 · scan #3 levelled (`r1112lev`): layout → semantics → mesh → web
+- **Who / machine:** Umair (agent) · this PC (Ubuntu, RTX 4000 Ada), `screen` session `run-r1112lev`
+- **Branch / commit:** `feature/step4-layout` @ `0b9c882` (uncommitted changes: TRAINING.md only)
+- **Dataset:** scan #3 (`scan_003_6de634cbb8b2`), R-031's model levelled by R-034 (12.10°)
+- **Command(s):** `scripts/run_full.sh dataset/scan_003_6de634cbb8b2 r1112lev --from layout -- --pgsr` (`--pgsr` only
+  selects the unbiased depth for the mesh, as in R-031)
+- **Goal:** layout with D-071 + D-072 (expected from the prototype: 4 walls, 3 corners, 2.52 m), then semantics v10,
+  mesh and web bundle on the levelled model; compare with R-031 (2 walls, 0 corners, 2.74 m, 21 fixtures).
