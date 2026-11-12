@@ -68,6 +68,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-033 | 2026-11-12 | `sfm_colmap.py --stage export` with ARCore gravity (D-071), scan #2 / #3, scratch output | this PC (CPU) | seconds | models level (0.06° / 0.00°); scale 0.0937 / 0.9521 (+0.45% on scan #3) | Kept
 | R-034 | 2026-11-12 | `level_model.py`: levelled copies of scan #2 / #3 models (tags `r1106lev`, `r1112lev`) | this PC | seconds | rotated 9.09° / 12.10°; renders match the source at 85–98 dB (after an SH transpose bug, fixed) | Kept
 | R-035 | 2026-11-12 | scan #3 levelled (`r1112lev`), layout → web | this PC | 18.0 min | 4 walls, 3 corners ~90°, height 2.52 m, floor 32.27 m², 18 fixtures | Kept (Step 4 layout / semantics of scan #3); tape pending |
+| R-036 | 2026-11-12 | scan #2 levelled (`r1106lev`), layout → web | this PC | 8.5 min | height 1.50 → 2.41 m (wall-top rule), 1 wall, 10 fixtures | Inconclusive: weak capture (camera in 0.8 × 0.7 m); re-record |
 
 ## Runs
 
@@ -591,3 +592,26 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Command(s):** `scripts/run_full.sh dataset/scan_002_646070948603 r1106lev --from layout -- --pgsr`
 - **Goal:** layout with D-071 + D-072 (prototype: 1 wall, ceiling 2.41 m from "above the wall tops", with a warning),
   semantics, mesh, web on the levelled model; compare with R-030 (1.50 m, 2 walls, 8 fixtures).
+- **Start → end:** 18:45:32 → 18:53:59 (8.5 min): layout 0.1, sem2d 7.8, the rest 0.1 each (`stages.tsv`)
+- **Errors during the run:** none.
+- **Result:** `dataset/scan_002_646070948603/work_r1106lev_sfm/gs_r1106lev/`; web bundle
+  `prototype/web-ui/public/scans/scan_002_646070948603_r1106lev/`. **Layout:** strongest ceiling plane 1.790 m was
+  below the wall top (2.274 m) → **2.408 m** ("strongest horizontal plane above the wall tops", D-072); 1 wall
+  (3.74 m), 0 corners (R-030: 2 walls). **Semantics v10:** ceiling plane fit accepted (tilt 0.42°, residual 2.0 cm),
+  ceiling 2.503 m; floor tilt 1.57°, residual 1.9 cm; floor area not computed (one wall); **10 fixtures** (window,
+  2 light switches, 2 power sockets, 2 ceiling lights, 2 lamps, air conditioner), 45 rejected (R-030: 8 / 44).
+- **Verdict:** **inconclusive.** The height is now plausible (1.50 → 2.41 m) but rests on the wall-top rule: this
+  model's ceiling is wrong (R-032), and with the camera within 0.8 × 0.7 m the room cannot get more walls. Better
+  fixed by a new recording of the lab with the capture protocol than by more rules. Not checked against tape.
+
+### R-037 · 2026-11-12 · newRoomAttemptSadness on this PC, R-023 recipe, full pipeline (tag `r1112nr`)
+- **Who / machine:** Umair (agent; Umair chose the recipe) · this PC (Ubuntu, RTX 4000 Ada), `screen` session `run-r1112nr`
+- **Branch / commit:** `feature/step4-layout` @ (filled at start, see `run_full.log` header) (uncommitted changes: TRAINING.md only)
+- **Dataset:** `dataset/newRoomAttemptSadness`, copied from the RTX 3070 PC on 2026-11-12 by Umair (raw recording only:
+  `dataset.mp4`, `poses.csv` 7,047 rows, `points.csv`, `depth/` 1,677 files, `quality.csv`, `tracking.csv`,
+  `meta.json`; realme RMX5111; no `camera.csv` / `anchors.csv`); the R-014 held-out list is not on this PC
+- **Command(s):** `scripts/run_full.sh dataset/newRoomAttemptSadness r1112nr -- --sfm_args "--retrieval 20" --init fmvs
+  --planar 0.2 --blur 0.0222 --pgsr` (the R-023 recipe, all frames)
+- **Goal:** COMPLETION_PLAN 3.1 machine agreement against R-023 (3070: 1165 frames, layout 6.60 × 4.36 m, ceiling
+  2.72 m, tape 6.70 m, 15 v10 fixtures, 96 min for the R-020 run) and the first end-to-end run with D-071 (gravity
+  in the export) and D-072 (ceiling rule) on a room whose layout was right. No PSNR comparison (no split here).
