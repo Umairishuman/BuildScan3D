@@ -292,9 +292,9 @@ Template:
 - Next: PR, CI, merge and release (app shows the number from the next version on).
 
 ## 2026-11-12 (evening) · Umair · `feature/numbered-scans`, `feature/iqa-timing`
-- Did: COMPLETION_PLAN Step 1 review with Umair: 1.1 (asked Tayyab), 1.2 and 1.3 done; 1.4 in progress (scan #3
+- Did: COMPLETION_PLAN Step 1 review with Umair: 1.1 (asked Tayyab), 1.2 and 1.3 done; 1.4 in progress (scan #3 (classroom, 2026-11-12)
   processing as R-031, started by Umair 15:04, tag `r1112`); 1.5 tape measured (sheet not yet saved next to a
-  dataset). Checked scan #3 for 1.6 / 1.7: `check_capture.py` READY; NFR1 **not met** (28.9 fps, 3.3% dropped-frame
+  dataset). Checked scan #3 (classroom, 2026-11-12) for 1.6 / 1.7: `check_capture.py` READY; NFR1 **not met** (28.9 fps, 3.3% dropped-frame
   gaps, longest 99 ms); ARCore depth live (782 distinct maps) → 1.7 closed (D-067). NFR2 could not be measured (the
   app never timed the quality check): `feature/iqa-timing` times `QualityMonitor.update()` per frame and writes it as
   the last `quality.csv` column `iqa_ms`; `check_capture.py` prints NFR1 / NFR2 lines.
@@ -304,8 +304,8 @@ Template:
   count (3.3%) replaced it in R-031 and the plan. No Android SDK here, so the app change is compiled by CI only.
 - Next: push `feature/iqa-timing` + PR when Umair agrees (CI builds the APK); install, record 1–2 min, upload,
   `scripts/buildscan check` → NFR2 numbers into STATUS §4; finish R-031 (result, verdict, ceiling height vs tape);
-  save the tape sheets next to the datasets; then 1.8 (scan #3: blur > 5 px on 75% of frames at 30 ms exposure) and 1.9.
-- Correction (same evening, Umair): scan #3 is from **v0.3.6**, not v0.3.5: the server log shows it came over the USB
+  save the tape sheets next to the datasets; then 1.8 (scan #3 (classroom, 2026-11-12): blur > 5 px on 75% of frames at 30 ms exposure) and 1.9.
+- Correction (same evening, Umair): scan #3 (classroom, 2026-11-12) is from **v0.3.6**, not v0.3.5: the server log shows it came over the USB
   cable (14:53:06, 815 MB in 22 s at 37 MB/s), which only v0.3.6 can do. So the USB upload (D-062) works on the phone,
   and `adb` is installed (`~/.local/bin/adb`). Records updated (R-031, D-067, STATUS §4 / §7.7, plan 1.3).
 - Then (same evening, `feature/iqa-timing`): update checks on start and on return to the app (at most every 6 h, not
@@ -315,3 +315,10 @@ Template:
   `cd.yml` turn "Unreleased" into each release's entry and notes; `tests/test_changelog.py` (6, pass locally without
   pytest). MAP, CI_CD.md updated. Decision D-068 (Umair). Java not compiled here (no JDK); CI compiles it. Pushed both
   branches and opened one PR at Umair's request.
+- Then (same evening, Umair's requests): STATUS §2 "Which recording is which" (scans #1 – #3 with folder, date, phone,
+  app, place, runs; room numbers not recorded) and every "scan #3" in the records labelled (classroom, 2026-11-12).
+  `scripts/buildscan watch` rewritten as a live view (`scripts/watch_run.py`): run and scan, stage n of 15 with what it
+  does, time in the stage vs R-030, training step / time left, GPU use labelled as GPU use, last message without
+  paths, STOPPED / FINISHED; `--raw` keeps the old log tail; `watch latest` picks the only or the running run. App:
+  the bottom snackbar that repeated the tracking message and covered the bottom navigation removed (top banner only).
+  Merged PR #6 to `master` at Umair's request after CI.

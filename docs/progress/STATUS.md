@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-12 by Umair (NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067; earlier the same day: USB upload D-062, app in `android/` D-063, light UI D-064, numbered scans D-065 / D-066).
+Last updated: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -73,6 +73,20 @@ length; the small negative offset is most likely where the clicks land.
 0.8849, v5 26.51 / 0.8879, **v6 26.52 / 0.8886**. Second room (roomAttemptSadness2, v3): SSIM 0.91, 1% badly placed
 surfaces. Splatfacto vs our own trainer (roomAttemptSadness2): held-out 27.81 vs 24.70 dB.
 
+### Which recording is which
+
+Recordings on this PC are numbered in the order they arrived (D-065); "scan #3" in the records means the row below.
+Older recordings (before numbering) are on the RTX 3070 PC and keep their names. Room names and numbers that are
+"to fill in" were not recorded; whoever knows them, please add them.
+
+| Name in the records | Folder | Recorded | By, phone, app | Place | Length | Runs |
+|---|---|---|---|---|---|---|
+| **scan #1** | `dataset/scan_001_056fe94d3399` | 2026-11-06 | Umair, Infinix X6833B, app ≤ v0.3.4 | Umair's first Linux test (LOG 2026-11-06: "Umair's room"; the layout found only 1 wall, like a corridor end, plan 4.10); room to fill in | 46 s | R-028 (stopped), R-029 |
+| **scan #2** | `dataset/scan_002_646070948603` | 2026-11-06 | Umair, Infinix X6833B, app ≤ v0.3.4 | Computer lab: desks, red chairs, glass partition; room number to fill in | 97 s | R-030 (ceiling 1.50 m, wrong) |
+| **scan #3** | `dataset/scan_003_6de634cbb8b2` | 2026-11-12 (uploaded 14:53 over USB) | Umair, Infinix X6833B, **v0.3.6** | Classroom: rows of wooden desks with red seats, projector screen, wooden door, blue curtains, ceiling AC units; room number to fill in | 185 s | R-031 (running) |
+| newRoomAttemptSadness | 3070 PC: `dataset/newRoomAttemptSadness` | by 2026-10-10 (first run R-007) | realme RMX5111; who recorded it not written down | Room of the best model (R-023) and semantics v10 | 240 s | R-007 … R-025 |
+| roomAttemptSadness2 | 3070 PC | by 2026-10-09 (first run R-002) | realme RMX5111; who recorded it not written down | Second room of the mid report | not recorded here | R-002, R-004, R-010 |
+
 ## 3. Module status
 
 | Module | State | Where | Notes |
@@ -115,7 +129,7 @@ The proposal is `docs/proposal/BuildScan3D_FYP_Proposal_v4.docx`. Several parts 
 | FR9 web rendering | `.ksplat` in Three.js, first-person navigation | Done with `.spz` + Spark (Three.js). No adaptive splat budget |
 | FR10 dimensions | Area / length of a labelled element | Wall gross / opening / net areas and point-to-point measure. Per-element area for fixtures not done |
 | FR11 X-ray overlay | Planned FYP-2 | Dropped by the team (D-033) |
-| NFR1 capture 30 FPS | ≥ 30 FPS | **Not met.** Re-measured 2026-11-12 on scan #3 (Infinix, v0.3.6, 185 s): 28.9 fps average, 3.3% dropped-frame gaps, longest 99 ms (R-031). Before the 2026-10-23 fixes: 0.7–3.6% |
+| NFR1 capture 30 FPS | ≥ 30 FPS | **Not met.** Re-measured 2026-11-12 on scan #3 (classroom, `scan_003_6de634cbb8b2`, Infinix, v0.3.6, 185 s): 28.9 fps average, 3.3% dropped-frame gaps, longest 99 ms (R-031). Before the 2026-10-23 fixes: 0.7–3.6% |
 | NFR2 IQA latency | < 16 ms per frame | Not measured. The app now logs it per frame (`quality.csv` `iqa_ms`, `feature/iqa-timing`, not yet on a phone); `check_capture.py` reports it |
 | NFR3 pipeline time | 60 s video in 15 min on a 4090 | Not met: 96 min on a 3070 (240 s video). FYP-2 target < 35 min on a 4090 (projection) |
 | NFR4 compression | ≥ 60% | Met (`.spz` ~92%, `.ksplat` 73–88%) |
@@ -409,7 +423,7 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       upload checks and Stop D-064): install `adb` on this PC (docs/PROCESSING_GUIDE.md), USB debugging on the phone,
       then an upload over the cable and over Wi-Fi, pulling the cable mid-upload (WAITING → restart), Stop, the
       "not connected" and "upload over Wi-Fi?" dialogs, and every tab. Built by CI only; not seen on a device.
-      **Partly done 2026-11-12:** `adb` installed (`~/.local/bin/adb`); scan #3 recorded with v0.3.6 and uploaded over
+      **Partly done 2026-11-12:** `adb` installed (`~/.local/bin/adb`); scan #3 (classroom, `scan_003_6de634cbb8b2`) recorded with v0.3.6 and uploaded over
       the cable: 815 MB in 22 s at 37 MB/s (Wi-Fi ~1.4 MB/s), all files arrived (server log). Still to test: Wi-Fi
       upload, pulling the cable mid-upload, Stop, the dialogs, every tab.
 
@@ -421,13 +435,17 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       finds this PC, and "Check for updates" installs the next build. Not tested on a device.
 - [x] **[new] Move the app code** out of `googleARCore/samples/hello_ar_java/` and Google's Java package — done
       2026-11-12: `android/`, package `com.buildscan3d.app`, `CaptureActivity` (D-063).
-- [x] ~~App bug: ARCore depth was stale in newRoomAttemptSadness (every map identical, confidence ≈ 0). Investigate.~~ *(from TODO 2026-10-10)* Closed 2026-11-12: not reproduced on scan #3 (D-067).
+- [x] ~~App bug: ARCore depth was stale in newRoomAttemptSadness (every map identical, confidence ≈ 0). Investigate.~~ *(from TODO 2026-10-10)* Closed 2026-11-12: not reproduced on scan #3 (classroom, 2026-11-12) (D-067).
 - [ ] **[new] NFR2 / NFR1 on the phone:** install the build with the `iqa_ms` column (`feature/iqa-timing`), record one
       walk of 1–2 min, upload, run `scripts/buildscan check` and copy the NFR1 / NFR2 lines into §4 (COMPLETION_PLAN 1.6).
 - [ ] **[new] Test the update flow on the phone (D-068):** after merging, v0.3.6 offers the new build (old dialog);
       on the build after that: prompt with "What's new" at start and after returning, the permission screen continuing
       by itself, "Updated to vX" once after installing. Not tested on a device.
-- [ ] **[new] NFR1 not met** (3.3% dropped, 28.9 fps on scan #3): find what drops frames (render thread, depth, IQA
+- [ ] **[new] Fill in the room names / numbers** of scans #1 – #3 in §2 "Which recording is which" (not recorded).
+- [x] **[new] Quality message twice on the capture screen** (Umair, 2026-11-12): the ARCore sample's bottom snackbar
+      repeated the tracking message and covered the bottom navigation; removed, the top banner shows it ("Starting
+      tracking" added for the start-up case). Not seen on a device yet.
+- [ ] **[new] NFR1 not met** (3.3% dropped, 28.9 fps on scan #3 (classroom, 2026-11-12)): find what drops frames (render thread, depth, IQA
       cost from the `iqa_ms` numbers); turning depth off (COMPLETION_PLAN 1.12) is one option.
 - [ ] Tune the IQA thresholds on the phone (predicted-blur warn > 5 px / bad > 10 px is new and untested on device). *(from TODO)*
 - [ ] Coverage overlay and tier-2 guidance: show what is left to scan (few viewpoints, ceiling / floor missing, depth
@@ -523,7 +541,7 @@ Dated milestones; details in [LOG.md](LOG.md), reasons in [DECISIONS.md](DECISIO
 - **2026-11-12: app restructured and restyled** (Umair): moved to `android/` with its own package (D-063); USB upload
   route with connection bar, speed, automatic restart (D-062); light theme from the logo, bottom navigation, Server
   tab, upload checks and Stop (D-064). `exp/first-linux-run` and `feature/usb-upload` merged to `master`.
-- **2026-11-12: ARCore depth bug closed** (Umair, D-067): scan #3 has 782 distinct depth maps, 87% valid; the stale
+- **2026-11-12: ARCore depth bug closed** (Umair, D-067): scan #3 (classroom, 2026-11-12) has 782 distinct depth maps, 87% valid; the stale
   maps of newRoomAttemptSadness (realme, older app) did not come back.
 
 ## 9. Known limits

@@ -519,14 +519,14 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 ## D-067 · 2026-11-12 · Close the stale ARCore depth bug (COMPLETION_PLAN 1.7) as not reproduced
 - **Decision:** the "ARCore depth was stale" item (newRoomAttemptSadness, 2026-10-10) is closed without a code fix.
 - **Why:** the newest recording does not show it, and the old recording is on the RTX 3070 PC only.
-- **Evidence:** scan #3 (`scan_003_6de634cbb8b2`, Infinix X6833B, app v0.3.6, R-031): 782 depth maps (160 × 90,
+- **Evidence:** scan #3 (`scan_003_6de634cbb8b2`, classroom, Infinix X6833B, app v0.3.6, R-031): 782 depth maps (160 × 90,
   4.2 / s), all 782 different (MD5), median valid fraction 0.86–0.87, median depth 0–5.5 m across maps, mean confidence
   0–81. In newRoomAttemptSadness (realme RMX5111, older app) every map was identical, median 9.3 m, confidence ≈ 0
   (R-007). The cause was not found; it was the other phone, the older app, or both.
 - **Rejected:** investigating further on newRoomAttemptSadness now (needs the 3070 PC, Should-priority, no current
   recording shows it); turning depth off for this reason (1.12 stays open, decided on the NFR1 numbers instead).
 - **If it comes back:** `check_capture.py` warns when depth maps are invalid; reopen this item.
-- **By:** Umair · **Source:** session 2026-11-12, agent check of scan #3 · **Status:** Active
+- **By:** Umair · **Source:** session 2026-11-12, agent check of scan #3 (classroom, 2026-11-12) · **Status:** Active
 
 ## D-068 · 2026-11-12 · The app checks for updates on start and on return, and every release says what changed
 - **Decision:** (1) the app checks GitHub Releases when it starts and whenever the user comes back to it (at most every
