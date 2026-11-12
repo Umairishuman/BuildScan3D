@@ -29,6 +29,7 @@ Pick a **new** tag for every new run (the old run stays untouched). Reuse a tag 
 | see what is running, the phone URL, GPU, newest recordings | `scripts/buildscan status` | start here |
 | start the upload server for the phone | `scripts/buildscan server start` | the phone URL is in `status`; phone on the same network |
 | watch uploads arrive | `scripts/buildscan server log` | leave with **Ctrl+A then D** |
+| upload over the USB cable (fastest) | start the server, plug the phone in (USB debugging on, tap Allow) | the server links it by itself; `status` shows the phone; one-time setup: [PROCESSING_GUIDE.md](PROCESSING_GUIDE.md#upload-over-a-usb-cable-fastest-no-wi-fi-needed) |
 | stop the upload server | `scripts/buildscan server stop` | |
 | list my recordings and their runs | `scripts/buildscan datasets` | |
 | check a recording before processing | `scripts/buildscan check latest` | must end with `READY TO PROCESS` |

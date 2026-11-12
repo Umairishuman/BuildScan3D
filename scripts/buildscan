@@ -95,6 +95,12 @@ case "$cmd" in
     if curl -s -m 2 localhost:8000/health >/dev/null; then
       say "   up: $(curl -s -m 2 localhost:8000/health)"; my_ips | while read -r c a; do say "   phone URL ($c): http://$a:8000"; done
     else say "   not running (scripts/buildscan server start)"; fi
+    ADB="$(command -v adb || ls "$HOME/.local/bin/adb" 2>/dev/null || true)"
+    if [[ -z "$ADB" ]]; then say "   USB cable: adb not installed (docs/PROCESSING_GUIDE.md, Upload over a USB cable)"
+    else
+      phones="$("$ADB" devices 2>/dev/null | awk 'NR>1 && NF {print $1" ("$2")"}' | paste -sd, -)"
+      say "   USB cable: ${phones:-no phone plugged in}$( "$ADB" reverse --list 2>/dev/null | grep -q 'tcp:8000' && echo ', linked to the server')"
+    fi
     say "== GPU"
     nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw \
       --format=csv,noheader 2>/dev/null | sed 's/^/   use, memory used, total, temp, power: /' || say "   nvidia-smi not available"

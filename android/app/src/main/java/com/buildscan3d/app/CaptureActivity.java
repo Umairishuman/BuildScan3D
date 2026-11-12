@@ -215,14 +215,6 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
           }
         });
 
-    ImageButton galleryButton = findViewById(R.id.btn_gallery);
-    if (galleryButton != null) {
-      galleryButton.setOnClickListener(v -> {
-        Intent intent = new Intent(CaptureActivity.this, GalleryActivity.class);
-        startActivity(intent);
-      });
-    }
-
     BottomNav.attach(this, BottomNav.Tab.CAPTURE);
     new UpdateChecker(this).check();
   }
