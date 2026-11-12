@@ -64,6 +64,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-029 | 2026-11-06 | Umair's own run of the same recording, full pipeline (`--tag umair`) | this PC (Ubuntu, RTX 4000 Ada) | 34.7 min | **first complete run on Linux**; corridor end, 0 fixtures, 1 wall | Kept as pipeline test (scene not a room) |
 | R-030 | 2026-11-06 | `scan_646070948603` (lab room, 97 s), full pipeline through `scripts/buildscan` (`--tag r1106`) | this PC (Ubuntu, RTX 4000 Ada) | 50.2 min | ran clean; 2 walls, 8 fixtures; **room height 1.50 m looks wrong** | Inconclusive (scale / ceiling not checked) |
 | R-031 | 2026-11-12 | scan #3 `scan_003_6de634cbb8b2` (classroom, first v0.3.6 recording, 185 s), full pipeline (`--tag r1112`) | this PC (Ubuntu, RTX 4000 Ada) | 81.0 min (run_v8 64.7) | ran clean; 875/885 frames; **height 2.74 m** (plausible); 2 walls, 0 corners, 21 fixtures | Kept (`saved_models/2026-11-12_r1112_scan003/`); baseline stage times; quality and tape not measured |
+| R-032 | 2026-11-12 | Layout diagnostics on scan #2 / #3 (read-only, plan 4.1) | this PC (Ubuntu, RTX 4000 Ada) | seconds per pass | models tilted 9.1° / 12.1° from ARCore gravity (Sim3 from camera centres only); levelled prototype: scan #3 4 walls, 3 corners ~90°, 2.52 m | Diagnosis
 
 ## Runs
 
@@ -472,3 +473,39 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Verdict:** **kept** as the first v0.3.6 room and as the stage-time baseline for COMPLETION_PLAN 3.3 / 3.4
   (D-069). The height is plausible (unlike R-030's 1.50 m) but unconfirmed until the tape; the layout found only 2 of
   the walls and no corners. To do: tape check; view the model (`scripts/buildscan view 3 r1112`).
+
+### R-032 · 2026-11-12 · Layout diagnostics on scan #2 and scan #3 (read-only, COMPLETION_PLAN 4.1)
+- **Who / machine:** Umair (agent) · this PC (Ubuntu, RTX 4000 Ada)
+- **Branch / commit:** `feature/step4-layout` @ `99f8efe` (uncommitted changes: no; the script is a copy of
+  `layout.py` steps 1–2 plus prints, kept in the agent's scratchpad, not in the repo)
+- **Dataset:** scan #2 (`scan_002_646070948603`, R-030 model `gs_r1106`), scan #3 (`scan_003_6de634cbb8b2`, R-031
+  model `gs_r1112`)
+- **Command(s):** `micromamba run -n bs-ns python diag_layout.py --ply <gs>/splat.ply --work <work_sfm> --out <scratch>`
+  (same defaults as `layout.py`; writes nothing into `dataset/`)
+- **Goal:** find why R-030's layout took a plane at 1.50 m as the ceiling: the horizontal plane candidates (height
+  histogram), the camera heights that bound the floor / ceiling search, and the splat height histogram.
+- **Start → end:** 17:59 → 18:40 (several short diagnostic passes, each a few seconds of GPU rendering; the time is
+  mostly analysis between them).
+- **Errors during the run:** none (one diagnostic script was first run with the system `python3`, which has no numpy;
+  re-run in `bs-ns`).
+- **Result:** the 1.50 m ceiling and the 2-wall classroom have **one root cause: the models are not level.** The
+  Sim3 to ARCore in `sfm_colmap.py` (export) takes its rotation from camera centres only. ARCore's own gravity
+  (each frame's `c2w_arcore` orientation) expressed in the model world is **9.11° off +Y in scan #2 and 12.10° in
+  scan #3**, the same in every frame (per-frame angle median 9.26° / 12.09°, spread < 1°). The planes agree: in
+  scan #3 the floor, desk-top and ceiling regions are all tilted 11.8–12.5° the same way; in scan #2 6.6–8.2°.
+  Scan #2's camera centres span only 0.8 × 0.7 m (the walk was mostly turning on the spot), so centres cannot fix
+  the rotation; in scan #3 the RANSAC inliers are 268 / 885 frames.
+  Consequences in `layout.py` (which assumes +Y is up): (1) scan #3: 807 of 3,982 flat regions (more pixel weight than
+  all vertical ones) have |n·up| ≈ 0.21 and are dropped as neither wall nor floor: these are the two long side
+  walls, hence 2 walls / 0 corners; (2) heights are measured along a tilted axis (12° over 9 m ≈ 1.9 m of height
+  change across the floor), so 2.74 m was not a real height; semantics' "floor tilt 0.28°" only fits a ±15 cm band
+  and so sees a level patch.
+  Scan #2 has a second, model problem: the white tiled ceiling appears at three heights in different frames
+  (0.3–0.5 m above the cameras when seen overhead, y ≈ 0.9 partly as a **reflection in the door glass**, y ≈ 1.6 when
+  seen across the room); the layout took the strongest, lowest one (1.50 m). Its walls reach 2.28–2.65 m.
+  **Prototype (scratchpad copy of `layout.py`, world levelled with ARCore gravity, same model, no retraining):**
+  scan #3 → **4 walls, 3 corners at 89.5°, 89.8°, 88.9°, walls 7.23 m and 9.05 m apart, one clean ceiling peak at
+  2.52 m** (walls reach 2.36–2.44 m; splat top p99 2.70 m); scan #2 → 1 wall, ceiling still 1.79 m (0.4 m above the
+  cameras: impossible); with "the ceiling may not lie below the top of the walls" 2.41 m. Without levelling that
+  rule alone gives scan #2 2.78 m, scan #3 2.83 m (tilted axis, so not trustworthy).
+- **Verdict:** diagnosis (no model changed). Cause found; fix options for Umair (DECISIONS). Heights still need the tape.
