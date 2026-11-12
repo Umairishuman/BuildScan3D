@@ -96,6 +96,7 @@ jobs:
       version_name: ${{ steps.version.outputs.version_name }}
       version_tag: ${{ steps.version.outputs.version_tag }}
       did_bump: ${{ steps.version.outputs.did_bump }}
+      notes: ${{ steps.version.outputs.notes }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -118,6 +119,9 @@ jobs:
               echo "version_name=$TAG_VERSION"
               echo "version_tag=v$TAG_VERSION"
               echo "did_bump=false"
+              echo "notes<<CHANGELOG_EOF"
+              python3 .github/android/changelog.py notes android/CHANGELOG.md "$TAG_VERSION"
+              echo "CHANGELOG_EOF"
             } >> "$GITHUB_OUTPUT"
             echo "Using tag version: $TAG_VERSION"
             exit 0
@@ -135,10 +139,16 @@ jobs:
 
           echo "Bumped version: $CURRENT_NAME ($CURRENT_CODE) -> $NEW_NAME ($NEW_CODE)"
 
+          # What changed: "Unreleased" in android/CHANGELOG.md becomes this version's entry and the release notes,
+          # which the app shows in its update dialog (UpdateChecker)
+          python3 .github/android/changelog.py release android/CHANGELOG.md "$NEW_NAME" "$(date -u +%F)" > "$RUNNER_TEMP/notes.md"
+          echo "Release notes:"; cat "$RUNNER_TEMP/notes.md"
+          { echo "### What changed in v$NEW_NAME"; cat "$RUNNER_TEMP/notes.md"; } >> "$GITHUB_STEP_SUMMARY"
+
           # Commit the version bump
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "$GRADLE"
+          git add "$GRADLE" android/CHANGELOG.md
           git commit -m "release: v$NEW_NAME (versionCode $NEW_CODE) [skip ci]"
           git tag "v$NEW_NAME"
           git push origin master --tags
@@ -147,6 +157,9 @@ jobs:
             echo "version_name=$NEW_NAME"
             echo "version_tag=v$NEW_NAME"
             echo "did_bump=true"
+            echo "notes<<CHANGELOG_EOF"
+            cat "$RUNNER_TEMP/notes.md"
+            echo "CHANGELOG_EOF"
           } >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-java@v4
@@ -218,6 +231,7 @@ jobs:
           tag_name: ${{ needs.build-android.outputs.version_tag }}
           name: BuildScan 3D ${{ needs.build-android.outputs.version_tag }}
           files: release-files/*
+          body: ${{ needs.build-android.outputs.notes }}
           generate_release_notes: true
 
   # Every push to master refreshes one pre-release called "latest" with the newest APK, so the app can be

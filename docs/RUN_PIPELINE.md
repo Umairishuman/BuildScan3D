@@ -16,7 +16,7 @@ scripts/buildscan server start              # phone-upload server (stop: server 
 scripts/buildscan datasets                  # recordings, newest first, with their runs
 scripts/buildscan check latest              # capture check of the newest recording
 scripts/buildscan run latest mytag          # full pipeline, best recipe, in screen session run-mytag
-scripts/buildscan watch latest mytag        # follow its logs (Ctrl+C stops watching only)
+scripts/buildscan watch latest mytag        # live view: stage n of 15, training step, GPU (--raw: raw logs; Ctrl+C stops watching only)
 scripts/buildscan results latest mytag      # where the outputs are + stage times
 scripts/buildscan view latest mytag         # 3D viewer, http://localhost:7010
 scripts/buildscan web                       # web dashboard, http://localhost:3000
@@ -25,7 +25,7 @@ scripts/buildscan help                      # everything else (attach, ip, gpu, 
 ```
 
 Leave arguments out and it asks (numbered lists). Cheat sheet: [COMMANDS.md](COMMANDS.md).
-`latest` = the newest recording; or give its folder name (`scan_056fe94d3399`). Everything long-running is in a
+`latest` = the newest recording; or give its folder name (`scan_001_056fe94d3399`). Everything long-running is in a
 named `screen` session, so it keeps running when the terminal or SSH closes. The sections below explain the steps and
 the scripts underneath (`start_server.sh`, `run_full.sh`).
 

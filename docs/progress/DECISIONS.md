@@ -493,6 +493,60 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **Rejected:** Material `BottomNavigationView` (would need a newer Material library than the app's 1.1.0); keeping the
   server dialog on the capture screen. Not tested on a device yet. **By:** Umair.
 
+## D-065 · 2026-11-12 · Recordings are numbered 1, 2, 3 in the order they arrived
+- **Decision:** every recording in `dataset/` has a fixed number, kept in `dataset/.scan_numbers.tsv`
+  (`server/scan_numbers.py`). New uploads are saved as `scan_<NNN>_<id>` (e.g. `scan_004_6de634cbb8b2`) and the
+  server answers with the number; the app shows it ("Saved on the PC as scan #4", badge "UPLOADED #4"). The three
+  earlier recordings keep their folder names and are #1 `scan_056fe94d3399`, #2 `scan_646070948603`, #3
+  `scan_6de634cbb8b2` (arrival order). `scripts/buildscan` lists the numbers and accepts them (`run 4 mytag`); `latest`
+  is the highest number. Folders copied in by hand get the next number on first sight.
+- **Why:** asked by Umair on 2026-11-12, to see which recording is the latest. The folder names were random ids, and
+  `buildscan` picked "latest" by folder date, which every processing run changes (an old recording became "latest"
+  after being processed).
+- **Rejected:** renaming the three earlier folders (TRAINING.md R-028 to R-030 and the web bundles use those names);
+  numbering by date at display time only (a copied-in or processed folder would shift the numbers). **By:** Umair.
+- **Status:** the "keep the old names" part superseded by D-066 the same day.
+
+## D-066 · 2026-11-12 · The three earlier recordings renamed with their numbers
+- **Decision:** `scan_056fe94d3399` → `scan_001_056fe94d3399`, `scan_646070948603` → `scan_002_646070948603`,
+  `scan_6de634cbb8b2` → `scan_003_6de634cbb8b2`, so every folder in `dataset/` starts with its number. The folder paths
+  stored in the working files (`frames.json`, COLMAP `project.ini`, `semantic.json`, `mesh_*.json`) were updated; the
+  run logs were left as written. Web bundles renamed to match (`scan_001_056fe94d3399_umair`,
+  `scan_002_646070948603_r1106`). TRAINING.md and LOG.md keep the old names (history) with a note.
+- **Why:** asked by Umair (2026-11-12) after D-065. **Checked:** `buildscan results 1 umair` finds the model; no old
+  path left in the working files. **By:** Umair.
+
+## D-067 · 2026-11-12 · Close the stale ARCore depth bug (COMPLETION_PLAN 1.7) as not reproduced
+- **Decision:** the "ARCore depth was stale" item (newRoomAttemptSadness, 2026-10-10) is closed without a code fix.
+- **Why:** the newest recording does not show it, and the old recording is on the RTX 3070 PC only.
+- **Evidence:** scan #3 (`scan_003_6de634cbb8b2`, classroom, Infinix X6833B, app v0.3.6, R-031): 782 depth maps (160 × 90,
+  4.2 / s), all 782 different (MD5), median valid fraction 0.86–0.87, median depth 0–5.5 m across maps, mean confidence
+  0–81. In newRoomAttemptSadness (realme RMX5111, older app) every map was identical, median 9.3 m, confidence ≈ 0
+  (R-007). The cause was not found; it was the other phone, the older app, or both.
+- **Rejected:** investigating further on newRoomAttemptSadness now (needs the 3070 PC, Should-priority, no current
+  recording shows it); turning depth off for this reason (1.12 stays open, decided on the NFR1 numbers instead).
+- **If it comes back:** `check_capture.py` warns when depth maps are invalid; reopen this item.
+- **By:** Umair · **Source:** session 2026-11-12, agent check of scan #3 (classroom, 2026-11-12) · **Status:** Active
+
+## D-068 · 2026-11-12 · The app checks for updates on start and on return, and every release says what changed
+- **Decision:** (1) the app checks GitHub Releases when it starts and whenever the user comes back to it (at most every
+  6 h per app process, never while recording) and prompts to install; after the "install unknown apps" permission the
+  update continues by itself. (2) Every app release carries a changelog: PRs that change the app add lines under
+  "Unreleased" in `android/CHANGELOG.md`; CD turns that section into the new version's entry at the auto-bump and uses
+  it as the GitHub release notes; the app shows those notes in the update dialog and once after an update.
+- **Why:** Umair asked for automatic update prompts and a record of what changed in each update. Before, the check ran
+  only in `CaptureActivity.onCreate`, the dialog said only the version, and the release notes were GitHub's generated
+  PR list.
+- **Evidence:** `UpdateChecker.java` before the change; `cd.yml` used `generate_release_notes` only. `changelog.py`
+  tested by `tests/test_changelog.py` (6 tests, run locally without pytest); the CD step itself runs only on `master`,
+  so it is first exercised by the merge of this branch.
+- **Rejected:** forced updates (the app blocks until updated): would stop a capture in a room without a connection;
+  release notes from commit messages only (written for developers, not for the person using the app); checking on
+  every resume (a GitHub API call each time, 60 per hour per IP without a token).
+- **Limits:** v0.3.6 and older still show the old dialog without notes; "What's new" first appears on the update after
+  the first build with this code (it needs the previous version stored). Not tested on a device.
+- **By:** Umair · **Source:** session 2026-11-12 · **Status:** Active
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |

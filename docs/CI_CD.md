@@ -37,6 +37,7 @@ Details of the design:
 - **Old runs are cancelled.** If I push again to the same branch while a run is in progress, the older run is cancelled (`concurrency`).
 - **Caching.** pip, npm, Gradle and the Next.js build cache are cached between runs, so most runs are much faster than the first.
 - **One status to watch.** `CI passed` is green only if no job failed. Skipped jobs (nothing changed there) count as fine. It is the check to mark as *required* in branch protection.
+- **Release notes from the changelog (D-068).** Every PR that changes the app adds lines under "Unreleased" in [android/CHANGELOG.md](../android/CHANGELOG.md). At the auto-bump, `build-android` runs `.github/android/changelog.py release`, which turns "Unreleased" into `## v<new version> · <date>` (committed with the version bump), and the release job uses that text as the release body (GitHub's generated PR list follows it). The app shows this text in its update dialog and once after an update. A tag push uses the notes already in the file for that version.
 - **Least privilege.** Workflows start with read-only access to the repository. Only the release job gets write access, and only on tags.
 - **Reports are kept.** Python test reports (14 days), the Android APK (14 days in CI, 30 days in CD) and the web bundle (30 days) are downloadable from the run page under *Artifacts*.
 

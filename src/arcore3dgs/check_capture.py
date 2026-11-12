@@ -59,6 +59,13 @@ if os.path.exists(os.path.join(root, "quality.csv")):
         report("PASS" if np.median(blur) <= 5 else "WARN",
                f"predicted motion blur: median {np.median(blur):.1f} px, > 5 px {100 * (blur > 5).mean():.0f}%, "
                f"> 10 px {100 * (blur > 10).mean():.0f}% of frames (3DGS wants < ~5 px)")
+    iqa = np.array([float(r[11]) for r in rows if len(r) > 11 and float(r[11]) >= 0])   # app >= v0.3.7 (iqa_ms)
+    if len(iqa):
+        report("PASS" if np.percentile(iqa, 95) < 16 else "WARN",
+               f"NFR2 quality-check time: median {np.median(iqa):.2f} ms, p95 {np.percentile(iqa, 95):.2f} ms, "
+               f"max {iqa.max():.1f} ms, > 16 ms {100 * (iqa > 16).mean():.1f}% of frames (target < 16 ms)")
+    else:
+        report("WARN", "NFR2 quality-check time not in quality.csv (app older than the iqa_ms column)")
 
 # dropped camera frames (render thread too slow -> ARCore skips frames)
 pk = subprocess.check_output(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "packet=pts_time",
@@ -66,8 +73,9 @@ pk = subprocess.check_output(["ffprobe", "-v", "error", "-select_streams", "v:0"
 vt = np.sort(np.array([float(x) for x in pk if x]))
 vd = np.diff(vt)
 drops = int((vd > 1.5 * np.median(vd)).sum())
-report("PASS" if drops < 0.01 * len(vt) else "WARN", f"video: {drops} dropped-frame gaps in {len(vt)} frames "
-       f"({100 * drops / max(1, len(vt)):.1f}%), longest {vd.max() * 1000:.0f} ms")
+report("PASS" if drops < 0.01 * len(vt) else "WARN", f"NFR1 video: {drops} dropped-frame gaps in {len(vt)} frames "
+       f"({100 * drops / max(1, len(vt)):.1f}%), longest {vd.max() * 1000:.0f} ms, "
+       f"average {(len(vt) - 1) / max(vt[-1] - vt[0], 1e-6):.1f} fps (target >= 30)")
 
 dd = os.path.join(root, "depth")
 if os.path.isdir(dd):

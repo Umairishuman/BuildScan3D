@@ -15,7 +15,7 @@ The longer guide (what each stage does, where the outputs are, problems met): [R
 
 | Argument | What it is | Where to find it | Example |
 |---|---|---|---|
-| `<scan>` | a recording: a folder in `dataset/` | `scripts/buildscan datasets` (newest first) | `scan_056fe94d3399`, or `latest` for the newest |
+| `<scan>` | a recording: its **number** (recordings are numbered 1, 2, 3 in the order they arrived), `latest`, or its folder in `dataset/` | `scripts/buildscan datasets` (newest first, with the numbers); the app shows the number after an upload | `4`, `latest`, `scan_004_1a2b3c4d5e6f` |
 | `<tag>` | the **name of one run** of a recording; names its output folders `work_<tag>_sfm/gs_<tag>/`. Any short name: letters, digits, `_`, `-` | for an existing run: `scripts/buildscan datasets` lists each recording's runs | `umair`, `r1106`, `test2` |
 | `<session>` | a background program started by buildscan | `scripts/buildscan status` | `bs-server`, `run-umair`, `viewer`, `web` |
 | `<stage>` | where to restart a run (see the list below) | `run_full.log` shows which stage failed | `sem2d` |
@@ -34,7 +34,7 @@ Pick a **new** tag for every new run (the old run stays untouched). Reuse a tag 
 | list my recordings and their runs | `scripts/buildscan datasets` | |
 | check a recording before processing | `scripts/buildscan check latest` | must end with `READY TO PROCESS` |
 | process a recording (everything, best recipe) | `scripts/buildscan run latest mytag` | or just `scripts/buildscan run` and answer the questions |
-| follow a run's progress | `scripts/buildscan watch latest mytag` | **Ctrl+C** stops watching only, not the run |
+| follow a run's progress | `scripts/buildscan watch latest` (or `watch 3 r1112`) | Live view: stage n of 15 and what it does, time in the stage vs R-030, training step and time left, GPU use (not run progress), last message. **Ctrl+C** stops watching only, not the run. `--raw` shows the raw logs |
 | see the full run screen | `scripts/buildscan attach run-mytag` | leave with **Ctrl+A then D** (Ctrl+C would stop the run) |
 | see where the results are + stage times | `scripts/buildscan results latest mytag` | |
 | look at the 3D model | `scripts/buildscan view latest mytag` | then open http://localhost:7010 |
@@ -69,4 +69,4 @@ exposure 1/45 s (0.0222), PGSR-lite.
 
 - One run at a time on the GPU (buildscan refuses a second one).
 - Every run gets an entry in [TRAINING.md](progress/TRAINING.md): before it starts, every error, and the result.
-- `<...>` in these docs means "put your value here": type `latest` or `scan_056fe94d3399`, never `<scan>`.
+- `<...>` in these docs means "put your value here": type `latest` or `scan_001_056fe94d3399`, never `<scan>`.

@@ -53,7 +53,6 @@ import com.google.ar.core.PointCloud;
 import com.google.ar.core.Pose;
 import com.google.ar.core.Session;
 import com.google.ar.core.Trackable;
-import com.google.ar.core.TrackingFailureReason;
 import com.google.ar.core.TrackingState;
 import com.buildscan3d.app.common.helpers.CameraPermissionHelper;
 import com.buildscan3d.app.common.helpers.DepthSettings;
@@ -96,6 +95,7 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
 
   // --- Recording State Variables - BLAZING ---
   private boolean isRecording = false;
+  private UpdateChecker updateChecker;
   private java.io.File currentDatasetDir;
   private CaptureLogger captureLogger;
   // Live capture IQA
@@ -133,7 +133,6 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
 
   private static final String TAG = CaptureActivity.class.getSimpleName();
 
-  private static final String SEARCHING_PLANE_MESSAGE = "Searching for surfaces...";
 
   private static final float Z_NEAR = 0.1f;
   private static final float Z_FAR = 100f;
@@ -216,7 +215,8 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
         });
 
     BottomNav.attach(this, BottomNav.Tab.CAPTURE);
-    new UpdateChecker(this).check();
+    updateChecker = new UpdateChecker(this);
+    updateChecker.showWhatsNewIfUpdated();   // once after an update; the update check itself runs in onResume
   }
 
   /** Menu button to launch feature specific settings. */
@@ -416,6 +416,10 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
   @Override
   protected void onResume() {
     super.onResume();
+    if (!isRecording && updateChecker != null) {
+      updateChecker.resumePendingInstall();   // back from "allow installs": continue the waiting update
+      updateChecker.checkIfDue();             // at start and on return, at most every 6 h
+    }
 
     if (session == null) {
       Exception exception = null;
@@ -492,7 +496,9 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
 
   /** Live IQA: evaluate this frame, log it while recording, refresh the banner at ~5 Hz. */
   private void updateQuality(Frame frame, Camera camera) {
+    final long iqaStartNs = System.nanoTime();
     final QualityMonitor.Result q = qualityMonitor.update(frame, camera, isRecording);
+    q.iqaMs = (System.nanoTime() - iqaStartNs) / 1e6f;   // NFR2, logged in quality.csv as iqa_ms
     if (isRecording && captureLogger != null) {
       captureLogger.logQuality(q.csv(frame.getTimestamp()));
     }
@@ -823,21 +829,8 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
     // Keep the screen unlocked while tracking, but allow it to lock when tracking stops.
     trackingStateHelper.updateKeepScreenOnFlag(camera.getTrackingState());
 
-    // Show a message based on whether tracking has failed, if planes are detected, and if the user
-    // has placed any objects.
-    String message = null;
-    if (camera.getTrackingState() == TrackingState.PAUSED) {
-      if (camera.getTrackingFailureReason() == TrackingFailureReason.NONE) {
-        message = SEARCHING_PLANE_MESSAGE;
-      } else {
-        message = TrackingStateHelper.getTrackingFailureReasonString(camera);
-      }
-    }
-    if (message == null) {
-      messageSnackbarHelper.hide(this);
-    } else {
-      messageSnackbarHelper.showMessage(this, message);
-    }
+    // Tracking messages are shown only in the quality banner at the top (QualityMonitor); the sample's bottom
+    // snackbar repeated them and covered the bottom navigation (removed 2026-11-12).
 
     // If not tracking, don't draw 3D objects.
     if (camera.getTrackingState() == TrackingState.PAUSED) {

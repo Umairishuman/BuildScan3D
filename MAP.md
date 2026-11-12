@@ -2,7 +2,7 @@
 
 **What is where, and what each file does.** Read this first in a new session (human or agent), then
 [CLAUDE.md](CLAUDE.md) (how we work) and [docs/progress/STATUS.md](docs/progress/STATUS.md) (where the project stands).
-Last checked against the code: 2026-11-12 (branch `feature/usb-upload`: app moved to `android/` §6, USB upload, light UI).
+Last checked against the code: 2026-11-12 (branch `feature/iqa-timing`: app changelog `android/CHANGELOG.md`, update checks on start and return, `iqa_ms`; earlier: app moved to `android/` §6, USB upload, light UI).
 When you add, move, retire or repurpose a file, update this map in the same commit.
 
 Markers: **[v9]** = part of the current best pipeline (v9 processing + v10 semantics) · [eval] = evaluation /
@@ -180,7 +180,8 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does |
 |---|---|
-| `main.py` | FastAPI app: `/upload`, `/status`, `/jobs`, `/logs`, `/retry`, `/datasets`, `/reprocess`, `/download`, `/config`, `/health`; modes local / runpod / remote / dry_run. Logs devices that connect, uploads while they arrive and every failed request; answers the app's server search on UDP 8001 (D-057) |
+| `main.py` | FastAPI app: `/upload`, `/status`, `/jobs`, `/logs`, `/retry`, `/datasets`, `/reprocess`, `/download`, `/config`, `/health`; modes local / runpod / remote / dry_run. Logs devices that connect, uploads while they arrive and every failed request; answers the app's server search on UDP 8001 (D-057). Saves uploads as `dataset/scan_<NNN>_<id>` and answers with the scan number (D-065) |
+| `scan_numbers.py` | Scan numbers: every recording in `dataset/` numbered 1, 2, 3 in arrival order, register `dataset/.scan_numbers.tsv`; used by `main.py` and `scripts/buildscan` (D-065) |
 | `pipeline.py` | Local runner: fallback → prepare → sfm_colmap → export_nerfstudio → ns-train splatfacto → ns-export (the **v3** recipe). Windows paths (`nerfstudio-env\Scripts\*.exe`) |
 | `runpod_client.py` | RunPod API: create pod from `umairishuman/buildscan-gpu:latest`, setup script (skipped if nerfstudio exists), SCP up, run, SCP down, always terminate, watchdog |
 | `remote_gpu.py` | Same flow over SSH to an always-on machine (a friend's GPU) |
@@ -192,6 +193,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | File | Does |
 |---|---|
 | `buildscan` | **Linux: one command for everything**: `status`, `server start/stop/log`, `datasets`, `check`, `run` (calls `run_full.sh` in screen `run-<tag>`), `watch`, `results`, `view` (port 7010), `web` (port 3000), `attach`, `stop`, `ip`, `gpu`. `latest` = newest recording |
+| `watch_run.py` | Live view behind `buildscan watch`: stage n of 15 and what it does, time vs R-030, training step, GPU, last message without paths (reads `run_full.log` / `train.log`; standard library only) |
 | `run_full.sh` | **Linux: the whole pipeline in one command**, recording → 3DGS → layout → semantics → mesh → web bundle, each stage in its env; `--from <stage>` restarts; prints GPU use / temperature / training progress every 30 s (`gpu.csv`). Guide: [docs/RUN_PIPELINE.md](docs/RUN_PIPELINE.md) |
 | `setup_linux.sh` | **Linux setup** (no sudo): micromamba, envs `bs-colmap` / `bs-ns` / `bs-system`, `semantic-env`, vocabulary tree, web-ui packages, then checks (GPU, COLMAP, gsplat, Open3D). `--check` = checks only. Same script for the Docker image (D-048) |
 | `run_arcore3dgs.bat` | [v3] pipeline: fallback → prepare → sfm_colmap → export_nerfstudio → ns-train → ns-export |
@@ -223,7 +225,7 @@ from the logo with bottom navigation Capture / Scans / Server (D-064). Code in
 | `CaptureLogger.java` | Writes poses, tracking, points, depth, `camera.csv`, `anchors.csv`, lens metadata on a background thread |
 | `QualityMonitor.java` | Live IQA: predicted blur, dark / overexposed, low texture, tracking; `quality.csv` |
 | `CoverageMap.java`, `CoverageOverlayView.java` | Live coverage map (red / yellow / green dots) |
-| `UpdateChecker.java` | Update check against GitHub Releases at start and from the Server tab / menu; downloads the APK and opens Android's installer (FileProvider `res/xml/update_paths.xml`) |
+| `UpdateChecker.java` | Update check against GitHub Releases at start and on return to the app (at most every 6 h, not while recording) and from the Server tab / menu; the dialog shows the release notes ("What's new"), after an update the installed version's notes are shown once; downloads the APK and opens Android's installer (FileProvider `res/xml/update_paths.xml`), continuing by itself after the "install unknown apps" permission |
 | `common/` | Google's helpers (rendering, camera permission, display rotation, ...), sample code, only the package renamed |
 
 **App UI files** (`app/src/main/`):
@@ -244,7 +246,8 @@ from the logo with bottom navigation Capture / Scans / Server (D-064). Code in
 | `assets/models/`, `assets/shaders/` | Google's sample 3D models and shaders for the AR rendering |
 | `AndroidManifest.xml` | Screens, permissions, update file provider |
 
-Uploads send every recorded file since v0.3.5 (PR #4). Build: Android Studio (open `android/`) or
+What changed in each release: [android/CHANGELOG.md](android/CHANGELOG.md); every PR that changes the app adds its
+lines under "Unreleased" (D-068). Uploads send every recorded file since v0.3.5 (PR #4). Build: Android Studio (open `android/`) or
 `./gradlew assembleDebug` in `android/` with JDK 21; CI builds it on every push (docs/CI_CD.md).
 
 A recording (`dataset/<capture>/`): `dataset.mp4` (video + IMU tracks), `poses.csv`, `tracking.csv`, `points.csv`,
@@ -304,14 +307,15 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `tests/conftest.py` | Shared fixtures (synthetic captures) |
 | `tests/test_common_*.py`, `test_imu.py`, `test_fallback.py`, `test_relocalize_and_sfm.py` | Pipeline maths: capture loading, poses, IMU, fallback, SfM helpers |
 | `tests/test_process_dataset.py` | First-prototype script |
-| `tests/test_server_api.py`, `test_server_pipeline.py`, `test_runpod_client.py` | Upload server, local runner, RunPod client |
+| `tests/test_server_api.py`, `test_server_pipeline.py`, `test_runpod_client.py`, `test_scan_numbers.py` | Upload server, local runner, RunPod client, scan numbers |
 | `tests/test_apk_checks.py` | APK / manifest checker and signing keys |
+| `tests/test_changelog.py` | App changelog tool (`.github/android/changelog.py`) and that `android/CHANGELOG.md` has the current version |
 | `tests/test_sources_compile.py` | Every Python file compiles |
 | `tests/requirements.txt` | Light test dependencies (no GPU) |
 | `.github/workflows/ci.yml` | CI: lint, tests (Python 3.10–3.12), web build, Android debug + release build, repo hygiene |
-| `.github/workflows/cd.yml` | CD on `master`: version bump, release APK signed with the private key (D-059), GitHub Release |
+| `.github/workflows/cd.yml` | CD on `master`: version bump + changelog entry (D-068), release APK signed with the private key (D-059), GitHub Release with the changelog as its notes |
 | `.github/workflows/docker-gpu.yml` | Builds / pushes the RunPod GPU image |
-| `.github/android/` | `check_apk.py` + `apk_expectations.json` (what a correct APK looks like), `debug.keystore` (CI builds only) |
+| `.github/android/` | `check_apk.py` + `apk_expectations.json` (what a correct APK looks like), `debug.keystore` (CI builds only), `changelog.py` (CD: "Unreleased" in `android/CHANGELOG.md` → the new version's entry and the release notes) |
 | `envs/linux/` | Linux env files (section 1) |
 | `docker/` | `Dockerfile.gpu` (out of date, STATUS §6) |
 | `report/mid-eval/` | FYP-1 mid evaluation: LaTeX report, fix notes (frozen) |

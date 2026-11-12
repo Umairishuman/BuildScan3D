@@ -276,3 +276,49 @@ Template:
   missing `ACCESS_NETWORK_STATE` permission (fixed); remaining lint items are old warnings (hard-coded strings etc.).
 - Problems: no Android SDK here, so every compile check ran in CI; the UI was not seen on a device or emulator.
 - Next: PR to `master`, CD release; install `adb`; test the new UI and the USB upload on the phone.
+
+## 2026-11-12 (later) · Umair · `feature/numbered-scans`
+- Did: recordings numbered 1, 2, 3 in arrival order (D-065): `server/scan_numbers.py` (register
+  `dataset/.scan_numbers.tsv`), uploads saved as `scan_<NNN>_<id>` with the number in the server's answer, `/datasets`
+  sorted by number, `scripts/buildscan` datasets / status / picker / `<scan>` arguments use the numbers, the app shows
+  "Saved on the PC as scan #N" and "UPLOADED #N". Current recordings: #1 `scan_056fe94d3399`, #2 `scan_646070948603`,
+  #3 `scan_6de634cbb8b2` (uploaded 2026-11-12 14:53 with `camera.csv` / `anchors.csv`, so the v0.3.5 upload fix works).
+  Found on the way: `buildscan latest` used folder dates, which processing runs change.
+- Tests: `tests/test_scan_numbers.py` (6) + `tests/test_server_api.py` (21) pass locally (pytest in a temporary path).
+- Then renamed the three earlier recordings with their numbers (D-066): `scan_001_056fe94d3399`,
+  `scan_002_646070948603`, `scan_003_6de634cbb8b2`; stored paths in `frames.json` / `project.ini` / `semantic.json` /
+  `mesh_*.json` updated, logs left as written, web bundles renamed, examples in COMMANDS.md / RUN_PIPELINE.md /
+  buildscan updated. Wrote the hand-over prompt for the next session (end of this block).
+- Next: PR, CI, merge and release (app shows the number from the next version on).
+
+## 2026-11-12 (evening) · Umair · `feature/numbered-scans`, `feature/iqa-timing`
+- Did: COMPLETION_PLAN Step 1 review with Umair: 1.1 (asked Tayyab), 1.2 and 1.3 done; 1.4 in progress (scan #3 (classroom, 2026-11-12)
+  processing as R-031, started by Umair 15:04, tag `r1112`); 1.5 tape measured (sheet not yet saved next to a
+  dataset). Checked scan #3 (classroom, 2026-11-12) for 1.6 / 1.7: `check_capture.py` READY; NFR1 **not met** (28.9 fps, 3.3% dropped-frame
+  gaps, longest 99 ms); ARCore depth live (782 distinct maps) → 1.7 closed (D-067). NFR2 could not be measured (the
+  app never timed the quality check): `feature/iqa-timing` times `QualityMonitor.update()` per frame and writes it as
+  the last `quality.csv` column `iqa_ms`; `check_capture.py` prints NFR1 / NFR2 lines.
+- Runs: R-031 (header and capture facts written while it runs).
+- Decisions: D-067.
+- Problems: a first dropped-frame count from `poses.csv` gaps (0.24%) was wrong (threshold missed most gaps); the video
+  count (3.3%) replaced it in R-031 and the plan. No Android SDK here, so the app change is compiled by CI only.
+- Next: push `feature/iqa-timing` + PR when Umair agrees (CI builds the APK); install, record 1–2 min, upload,
+  `scripts/buildscan check` → NFR2 numbers into STATUS §4; finish R-031 (result, verdict, ceiling height vs tape);
+  save the tape sheets next to the datasets; then 1.8 (scan #3 (classroom, 2026-11-12): blur > 5 px on 75% of frames at 30 ms exposure) and 1.9.
+- Correction (same evening, Umair): scan #3 (classroom, 2026-11-12) is from **v0.3.6**, not v0.3.5: the server log shows it came over the USB
+  cable (14:53:06, 815 MB in 22 s at 37 MB/s), which only v0.3.6 can do. So the USB upload (D-062) works on the phone,
+  and `adb` is installed (`~/.local/bin/adb`). Records updated (R-031, D-067, STATUS §4 / §7.7, plan 1.3).
+- Then (same evening, `feature/iqa-timing`): update checks on start and on return to the app (at most every 6 h, not
+  while recording), release notes in the update dialog, "Updated to vX" once after an update, install continues after
+  the permission screen (`UpdateChecker.java`, `CaptureActivity`, `ServerActivity`). App changelog
+  `android/CHANGELOG.md` (v0.3.3 – v0.3.6 written from git history + "Unreleased"); `.github/android/changelog.py` +
+  `cd.yml` turn "Unreleased" into each release's entry and notes; `tests/test_changelog.py` (6, pass locally without
+  pytest). MAP, CI_CD.md updated. Decision D-068 (Umair). Java not compiled here (no JDK); CI compiles it. Pushed both
+  branches and opened one PR at Umair's request.
+- Then (same evening, Umair's requests): STATUS §2 "Which recording is which" (scans #1 – #3 with folder, date, phone,
+  app, place, runs; room numbers not recorded) and every "scan #3" in the records labelled (classroom, 2026-11-12).
+  `scripts/buildscan watch` rewritten as a live view (`scripts/watch_run.py`): run and scan, stage n of 15 with what it
+  does, time in the stage vs R-030, training step / time left, GPU use labelled as GPU use, last message without
+  paths, STOPPED / FINISHED; `--raw` keeps the old log tail; `watch latest` picks the only or the running run. App:
+  the bottom snackbar that repeated the tracking message and covered the bottom navigation removed (top banner only).
+  Merged PR #6 to `master` at Umair's request after CI.

@@ -67,6 +67,7 @@ public class ServerActivity extends AppCompatActivity {
   @Override
   protected void onResume() {
     super.onResume();
+    new UpdateChecker(this).resumePendingInstall();   // back from "allow installs" after Check for updates
     watching = true;
     final int gen = ++watchGeneration;
     new Thread(() -> {

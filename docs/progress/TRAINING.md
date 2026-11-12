@@ -63,8 +63,12 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-028 | 2026-11-06 | First Linux run: Umair's room, full v9 + PGSR → semantics → mesh → web | this PC (Ubuntu, RTX 4000 Ada) | stopped after ~5 min | select / SfM / prior OK on Linux | Abandoned (stopped by Umair) |
 | R-029 | 2026-11-06 | Umair's own run of the same recording, full pipeline (`--tag umair`) | this PC (Ubuntu, RTX 4000 Ada) | 34.7 min | **first complete run on Linux**; corridor end, 0 fixtures, 1 wall | Kept as pipeline test (scene not a room) |
 | R-030 | 2026-11-06 | `scan_646070948603` (lab room, 97 s), full pipeline through `scripts/buildscan` (`--tag r1106`) | this PC (Ubuntu, RTX 4000 Ada) | 50.2 min | ran clean; 2 walls, 8 fixtures; **room height 1.50 m looks wrong** | Inconclusive (scale / ceiling not checked) |
+| R-031 | 2026-11-12 | scan #3 `scan_003_6de634cbb8b2` (classroom, first v0.3.6 recording, 185 s), full pipeline (`--tag r1112`) | this PC (Ubuntu, RTX 4000 Ada) | running | — | — |
 
 ## Runs
+
+> **Renamed 2026-11-12 (D-066):** `scan_056fe94d3399` is now `dataset/scan_001_056fe94d3399`, `scan_646070948603` is
+> `dataset/scan_002_646070948603`. The entries below keep the names they had when they were run.
 
 ### R-001 · 2026-10-06 · roomAttemptSadness, own gsplat trainer v1–v3
 - **Pipeline:** `prepare.py → ba.py → mvs.py → align_fuse.py --depth_dir depth_mvs → train.py` (7k steps).
@@ -421,3 +425,28 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Follow-up 2026-11-12:** Zaid's `analyze.py` (`feat/splat-compress`) on this `splat.ply`: 652,392 splats, extent
   p1–p99 8.46 × 3.08 × 4.78 m. The model itself is ~3.1 m tall, so the 1.50 m height is the layout taking a wrong
   plane as the ceiling, not a scale error (not yet confirmed by viewing the model or a tape).
+
+### R-031 · 2026-11-12 · scan #3 (classroom, `scan_003_6de634cbb8b2`) full pipeline (tag `r1112`)
+*Header written by the agent while the run was going, from `run_full.log` and the dataset files.*
+- **Who / machine:** Umair · this PC (Ubuntu, RTX 4000 Ada), in `screen` session `run-r1112`
+- **Branch / commit:** `feature/numbered-scans` @ `e4c3ee6` (from the `run_full.log` header; uncommitted changes: no)
+- **Dataset:** scan #3, `scan_003_6de634cbb8b2`: a classroom (rows of wooden desks with red seats, projector screen; room number not recorded, STATUS §2 "Which recording is which"), Infinix X6833B, app v0.3.6 (server log: USB upload 14:53:06, 815 MB in 22 s at 37 MB/s; only v0.3.6 uploads over USB), uploaded 2026-11-12 14:53 with `camera.csv`,
+  `anchors.csv`, `lens_metadata.json`, `camera_characteristics.json` (first recording with all of them). 184.7 s,
+  5,335 ARCore poses; 885 of 5,346 frames selected (predicted blur median 6.6 px over all frames, 5.3 px selected;
+  recorded exposure median 30.0 ms, used instead of the fixed 1/45 s).
+- **Command(s):** `scripts/run_full.sh dataset/scan_003_6de634cbb8b2 r1112 -- --sfm_args "--retrieval 20" --init fmvs
+  --planar 0.2 --blur 0.0222 --pgsr`
+- **Goal:** first room recorded with v0.3.5 (COMPLETION_PLAN 1.4 / 3.2); check the layout height against tape (4.1).
+- **Start → end:** 15:04:02 → (running)
+- **Errors during the run:** none so far.
+- **Capture facts measured on 2026-11-12 (agent, from the dataset files, for COMPLETION_PLAN 1.6 / 1.7):**
+  `check_capture.py`: READY TO PROCESS; **video 28.9 fps average, 176 dropped-frame gaps in 5,346 frames (3.3%),
+  longest 99 ms** (NFR1 not met); poses 28.9 Hz, tracking lost 0.0%; predicted blur median 6.7 px (> 5 px on 75% of
+  frames, > 10 px on 21%); exposure median 30.0 ms (range 10–30 ms), ISO median 842; rolling-shutter readout 28.2 ms;
+  ARCore world corrections at 22.3 s (123 cm, 6.0°), 31.5 s (26 cm) and six smaller ones; video ↔ pose sync +0.05 s,
+  r = 0.89. (A first count from `poses.csv` gaps gave 0.24% dropped; that count used a 1.5 × median threshold on pose
+  timestamps and missed most gaps, so the video count is the one to use.) ARCore depth: 782 maps
+  (160 × 90), all 782 different, median valid fraction 0.86, median depth 0–5.5 m across maps, mean confidence
+  0–81: **not stale** in this recording. IQA levels in `quality.csv`: GOOD 1,279, WARN 2,894, BAD 1,164.
+- **Result:** (to fill in at the end)
+- **Verdict:** (to fill in at the end)

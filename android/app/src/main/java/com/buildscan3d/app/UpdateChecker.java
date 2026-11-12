@@ -2,7 +2,9 @@ package com.buildscan3d.app;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.net.Uri;
 import android.os.Build;
@@ -26,13 +28,25 @@ import org.json.JSONObject;
 
 /**
  * Checks GitHub Releases for a newer app version, downloads the APK inside the app and opens Android's installer.
- * Automatic check at start-up stays quiet unless an update exists; the "Check for updates" menu item always reports
- * the result, including errors.
+ * Automatic check ({@link #checkIfDue()}: at start-up and when the user comes back to the app, at most every 6 h)
+ * stays quiet unless an update exists; the "Check for updates" button always reports the result, including errors.
+ * The update dialog lists what changed (the release notes, written from android/CHANGELOG.md by CD), and after an
+ * update {@link #showWhatsNewIfUpdated()} shows the installed version's notes once.
  */
 public class UpdateChecker {
     private static final String TAG = "UpdateChecker";
     private static final String GITHUB_API =
             "https://api.github.com/repos/Umairishuman/BuildScan3D/releases/latest";
+    private static final String GITHUB_TAG_API =
+            "https://api.github.com/repos/Umairishuman/BuildScan3D/releases/tags/";
+    private static final String PREFS = "updates";
+    private static final String KEY_LAST_VERSION = "last_seen_version";
+    private static final long AUTO_INTERVAL_MS = 6L * 60 * 60 * 1000;   // automatic checks at most every 6 h
+    private static final int MAX_NOTES_CHARS = 1500;
+
+    // per app process: last automatic check, and an install waiting for the "install unknown apps" permission
+    private static long lastAutoCheckMs = 0;
+    private static String pendingApkUrl = null, pendingVersion = null;
 
     private final Activity activity;
     private final OkHttpClient client = new OkHttpClient();
@@ -44,6 +58,82 @@ public class UpdateChecker {
     /** Quiet check (app start): only shows something when an update is available. */
     public void check() {
         check(false);
+    }
+
+    /** Quiet check unless one ran in the last 6 h in this app process (call from onResume). */
+    public void checkIfDue() {
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (lastAutoCheckMs != 0 && now - lastAutoCheckMs < AUTO_INTERVAL_MS) return;
+        lastAutoCheckMs = now;
+        check(false);
+    }
+
+    /**
+     * Call from onResume: when the user came back from the "install unknown apps" settings screen and allowed it,
+     * continue the update that was waiting for that permission.
+     */
+    public void resumePendingInstall() {
+        if (pendingApkUrl == null) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                && !activity.getPackageManager().canRequestPackageInstalls()) return;
+        String url = pendingApkUrl, version = pendingVersion;
+        pendingApkUrl = null;
+        pendingVersion = null;
+        downloadAndInstall(url, version);
+    }
+
+    /**
+     * Once after an update: show what changed in the installed version (its release notes from GitHub; without a
+     * connection just the version). Nothing on the first install.
+     */
+    public void showWhatsNewIfUpdated() {
+        String current = getCurrentVersion();
+        if (current == null) return;
+        SharedPreferences prefs = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        String last = prefs.getString(KEY_LAST_VERSION, null);
+        prefs.edit().putString(KEY_LAST_VERSION, current).apply();
+        if (last == null || last.equals(current)) return;
+        final String title = "Updated to v" + current;
+        Request request = new Request.Builder()
+                .url(GITHUB_TAG_API + "v" + current)
+                .header("Accept", "application/vnd.github.v3+json")
+                .build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                showMessage(title, "BuildScan 3D was updated from v" + last + " to v" + current + ".");
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) {
+                String notes = null;
+                try (Response r = response) {
+                    if (r.isSuccessful()) notes = plainNotes(new JSONObject(r.body().string()).optString("body", ""));
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not read the release notes", e);
+                }
+                showMessage(title, "BuildScan 3D was updated from v" + last + " to v" + current + "."
+                        + (notes != null && !notes.isEmpty() ? "\n\nWhat's new:\n" + notes : ""));
+            }
+        });
+    }
+
+    /** Release notes (Markdown) as plain text for a dialog: bullets kept, headings / links / bold removed. */
+    static String plainNotes(String body) {
+        if (body == null) return "";
+        StringBuilder sb = new StringBuilder();
+        for (String line : body.replace("\r", "").split("\n")) {
+            String t = line.trim();
+            // GitHub's generated part (PR list, contributors) follows our changelog text: not for the dialog
+            if (t.startsWith("## What's Changed") || t.startsWith("## New Contributors")) break;
+            if (t.isEmpty() || t.startsWith("#") || t.startsWith("**Full Changelog**") || t.startsWith("<!--")) continue;
+            if (t.startsWith("- ") || t.startsWith("* ")) t = "\u2022 " + t.substring(2);
+            t = t.replaceAll("\\*\\*([^*]+)\\*\\*", "$1").replaceAll("`([^`]+)`", "$1")
+                    .replaceAll("\\[([^\\]]+)\\]\\([^)]+\\)", "$1");
+            sb.append(t).append('\n');
+        }
+        String out = sb.toString().trim();
+        return out.length() > MAX_NOTES_CHARS ? out.substring(0, MAX_NOTES_CHARS) + "\u2026" : out;
     }
 
     /** @param manual true when the user asked: also report "up to date" and errors. */
@@ -78,7 +168,8 @@ public class UpdateChecker {
                     if (isNewer(latestVersion, currentVersion)) {
                         String apkUrl = findApkUrl(release);
                         String pageUrl = release.getString("html_url");
-                        activity.runOnUiThread(() -> showUpdateDialog(latestTag, apkUrl, pageUrl));
+                        String notes = plainNotes(release.optString("body", ""));
+                        activity.runOnUiThread(() -> showUpdateDialog(latestTag, currentVersion, notes, apkUrl, pageUrl));
                     } else if (manual) {
                         showMessage("Up to date", "You have the latest version (" + currentVersion + ").");
                     }
@@ -130,10 +221,14 @@ public class UpdateChecker {
         return null;
     }
 
-    private void showUpdateDialog(String version, String apkUrl, String pageUrl) {
+    private void showUpdateDialog(String version, String current, String notes, String apkUrl, String pageUrl) {
+        if (activity.isFinishing()) return;
+        String msg = "BuildScan 3D " + version + " is available (you have v" + current + ")."
+                + (notes != null && !notes.isEmpty() ? "\n\nWhat's new:\n" + notes : "")
+                + "\n\nInstall it now? Your recordings are kept.";
         AlertDialog.Builder b = new AlertDialog.Builder(activity)
                 .setTitle("Update available")
-                .setMessage("BuildScan 3D " + version + " is available. Install it now? Your recordings are kept.")
+                .setMessage(msg)
                 .setNegativeButton("Later", null);
         if (apkUrl != null) {
             b.setPositiveButton("Install", (d, w) -> downloadAndInstall(apkUrl, version));
@@ -148,14 +243,16 @@ public class UpdateChecker {
         // Android 8+: the user must allow this app to install updates (once).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 && !activity.getPackageManager().canRequestPackageInstalls()) {
+            pendingApkUrl = apkUrl;
+            pendingVersion = version;
             new AlertDialog.Builder(activity)
                     .setTitle("Allow updates")
                     .setMessage("To install updates, allow BuildScan 3D to install apps on the next screen, "
-                            + "then come back and choose Check for updates again.")
+                            + "then come back: the update continues by itself.")
                     .setPositiveButton("Open settings", (d, w) -> activity.startActivity(
                             new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                                     Uri.parse("package:" + activity.getPackageName()))))
-                    .setNegativeButton("Cancel", null)
+                    .setNegativeButton("Cancel", (d, w) -> { pendingApkUrl = null; pendingVersion = null; })
                     .show();
             return;
         }
@@ -227,7 +324,9 @@ public class UpdateChecker {
     }
 
     private void showMessage(String title, String msg) {
-        activity.runOnUiThread(() -> new AlertDialog.Builder(activity)
-                .setTitle(title).setMessage(msg).setPositiveButton("OK", null).show());
+        activity.runOnUiThread(() -> {
+            if (activity.isFinishing()) return;
+            new AlertDialog.Builder(activity).setTitle(title).setMessage(msg).setPositiveButton("OK", null).show();
+        });
     }
 }
