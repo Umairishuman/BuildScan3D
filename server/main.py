@@ -25,6 +25,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from .pipeline import Job, JobStatus, start_pipeline_thread
+from . import scan_numbers
 from .runpod_client import start_runpod_pipeline_thread, start_existing_pod_pipeline_thread
 from .remote_gpu import start_remote_pipeline_thread
 
@@ -248,9 +249,9 @@ async def upload_dataset(
     camera_characteristics: UploadFile = File(None, description="camera_characteristics.json — Camera2 characteristics"),
     iterations: int = Form(30000),
 ):
-    job_id = uuid.uuid4().hex[:12]
-    dataset_dir = DATASET_ROOT / f"scan_{job_id}"
-    dataset_dir.mkdir(parents=True, exist_ok=True)
+    # scan_<NNN>_<id>: the next number in dataset/.scan_numbers.tsv, so recordings read 1, 2, 3, ... (D-065)
+    dataset_dir, scan_number, job_id = scan_numbers.new_scan_dir(DATASET_ROOT)
+    log.info("Saving as scan #%d: %s", scan_number, dataset_dir.name)
     depth_dir = dataset_dir / "depth"
     depth_dir.mkdir(exist_ok=True)
 
@@ -300,6 +301,7 @@ async def upload_dataset(
     except Exception as e:
         log.error("Upload failed, %s removed: %s", dataset_dir.name, e)
         shutil.rmtree(dataset_dir, ignore_errors=True)
+        scan_numbers.release(DATASET_ROOT, dataset_dir.name)
         raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
 
     job = Job(job_id=job_id, dataset_dir=str(dataset_dir))
@@ -335,6 +337,8 @@ async def upload_dataset(
 
     return {
         "job_id": job_id,
+        "scan_number": scan_number,
+        "dataset": dataset_dir.name,
         "status": "queued" if mode == "dry_run" else "processing",
         "mode": mode,
         "poll": f"/status/{job_id}",
@@ -444,7 +448,9 @@ async def list_datasets():
     """List all scan datasets on disk (uploaded or not)."""
     datasets = []
     if DATASET_ROOT.exists():
-        for d in sorted(DATASET_ROOT.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+        # newest first by scan number (a processing run changes a folder's date, so dates are not reliable)
+        for number, name in reversed(scan_numbers.numbers(DATASET_ROOT)):
+            d = DATASET_ROOT / name
             if d.is_dir() and d.name.startswith("scan_"):
                 video = d / "dataset.mp4"
                 poses = d / "poses.csv"
@@ -457,6 +463,7 @@ async def list_datasets():
                         job_id = j.job_id
                         break
                 datasets.append({
+                    "number": number,
                     "name": d.name,
                     "path": str(d),
                     "size_mb": round(video.stat().st_size / (1024 * 1024), 1) if video.exists() else 0,
@@ -495,7 +502,7 @@ async def run_on_existing_pod(dataset_name: str = Form(...), pod_id: str = Form(
     if not (dataset_dir / "dataset.mp4").exists():
         raise HTTPException(status_code=400, detail="Dataset has no video file")
 
-    job_id = dataset_name.replace("scan_", "")[:12]
+    job_id = scan_numbers.job_id_of(dataset_name)
     if job_id in jobs:
         job = jobs[job_id]
         if job.status.value in ("processing", "uploading"):
@@ -528,7 +535,7 @@ async def reprocess_dataset(dataset_name: str = Form(...), iterations: int = For
     if not (dataset_dir / "dataset.mp4").exists():
         raise HTTPException(status_code=400, detail="Dataset has no video file")
 
-    job_id = dataset_name.replace("scan_", "")[:12]
+    job_id = scan_numbers.job_id_of(dataset_name)
     # If a job already exists for this dataset, reset it
     if job_id in jobs:
         job = jobs[job_id]

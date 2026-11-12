@@ -266,12 +266,13 @@ public class ProcessingActivity extends AppCompatActivity {
                     String responseBody = response.body().string();
                     JSONObject json = new JSONObject(responseBody);
                     jobId = json.getString("job_id");
+                    final int scanNo = json.optInt("scan_number", -1);  // server >= D-065
 
                     uploading = false;
                     runOnUiThread(() -> {
                         btnBack.setText("Back");
                         tvStatus.setText("Processing...");
-                        tvStep.setText("Job started: " + jobId);
+                        tvStep.setText(scanNo > 0 ? "Saved on the PC as scan #" + scanNo : "Job started: " + jobId);
                         progressBar.setIndeterminate(false);
                         progressBar.setProgress(0);
                         polling = true;

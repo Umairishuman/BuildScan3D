@@ -48,6 +48,8 @@ public class GalleryActivity extends AppCompatActivity {
 
   private static final String TAG = "GalleryActivity";
   private static final String PREF_UPLOADED = "uploaded_scans";
+  /** + scan folder name: the number the PC gave this recording (dataset/.scan_numbers.tsv, D-065). */
+  private static final String PREF_SCAN_NUMBER = "scan_number_";
 
   private ListView listView;
   private TextView tvEmpty;
@@ -468,10 +470,16 @@ public class GalleryActivity extends AppCompatActivity {
         if (stopRequested.contains(key)) throw new StoppedException();
         okhttp3.Call call = client.newCall(request);
         calls.put(key, call);
+        int scanNo = -1;
         try (Response response = call.execute()) {
+          String body = response.body() != null ? response.body().string() : "";
           if (!response.isSuccessful()) {
-            String body = response.body() != null ? response.body().string() : "Unknown error";
             throw new ServerRefusedException("Server error: " + response.code() + " " + body);
+          }
+          try {
+            scanNo = new org.json.JSONObject(body).optInt("scan_number", -1);  // server >= D-065
+          } catch (Exception ignored) {
+            // older server: no number
           }
         } finally {
           calls.remove(key);
@@ -483,8 +491,10 @@ public class GalleryActivity extends AppCompatActivity {
 
         double secs = (SystemClock.elapsedRealtime() - t0) / 1000.0;
         double mb = totalBytes / (1024.0 * 1024.0);
-        String done = String.format(Locale.US, "Upload complete via %s: %.1f MB in %s (%.1f MB/s)",
-            via, mb, formatDuration(secs), mb / Math.max(secs, 0.001));
+        if (scanNo > 0) prefs.edit().putInt(PREF_SCAN_NUMBER + key, scanNo).apply();
+        String done = String.format(Locale.US, "Upload complete via %s: %.1f MB in %s (%.1f MB/s)%s",
+            via, mb, formatDuration(secs), mb / Math.max(secs, 0.001),
+            scanNo > 0 ? ". Saved on the PC as scan #" + scanNo : "");
         autoRetries.remove(key);
         uploadStatus.put(key, "done");
         uploadProgress.put(key, 100);
@@ -640,7 +650,8 @@ public class GalleryActivity extends AppCompatActivity {
         btnUpload.setEnabled(true);
         btnUpload.setText("Upload");
       } else if (uploaded) {
-        tvBadge.setText("UPLOADED");
+        int no = prefs.getInt(PREF_SCAN_NUMBER + key, -1);
+        tvBadge.setText(no > 0 ? "UPLOADED #" + no : "UPLOADED");
         tint(tvBadge, color(R.color.bs_good));
         pbUpload.setVisibility(View.GONE);
         tvUploadProg.setVisibility(View.GONE);

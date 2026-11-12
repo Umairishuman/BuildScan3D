@@ -180,7 +180,8 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does |
 |---|---|
-| `main.py` | FastAPI app: `/upload`, `/status`, `/jobs`, `/logs`, `/retry`, `/datasets`, `/reprocess`, `/download`, `/config`, `/health`; modes local / runpod / remote / dry_run. Logs devices that connect, uploads while they arrive and every failed request; answers the app's server search on UDP 8001 (D-057) |
+| `main.py` | FastAPI app: `/upload`, `/status`, `/jobs`, `/logs`, `/retry`, `/datasets`, `/reprocess`, `/download`, `/config`, `/health`; modes local / runpod / remote / dry_run. Logs devices that connect, uploads while they arrive and every failed request; answers the app's server search on UDP 8001 (D-057). Saves uploads as `dataset/scan_<NNN>_<id>` and answers with the scan number (D-065) |
+| `scan_numbers.py` | Scan numbers: every recording in `dataset/` numbered 1, 2, 3 in arrival order, register `dataset/.scan_numbers.tsv`; used by `main.py` and `scripts/buildscan` (D-065) |
 | `pipeline.py` | Local runner: fallback → prepare → sfm_colmap → export_nerfstudio → ns-train splatfacto → ns-export (the **v3** recipe). Windows paths (`nerfstudio-env\Scripts\*.exe`) |
 | `runpod_client.py` | RunPod API: create pod from `umairishuman/buildscan-gpu:latest`, setup script (skipped if nerfstudio exists), SCP up, run, SCP down, always terminate, watchdog |
 | `remote_gpu.py` | Same flow over SSH to an always-on machine (a friend's GPU) |
@@ -304,7 +305,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `tests/conftest.py` | Shared fixtures (synthetic captures) |
 | `tests/test_common_*.py`, `test_imu.py`, `test_fallback.py`, `test_relocalize_and_sfm.py` | Pipeline maths: capture loading, poses, IMU, fallback, SfM helpers |
 | `tests/test_process_dataset.py` | First-prototype script |
-| `tests/test_server_api.py`, `test_server_pipeline.py`, `test_runpod_client.py` | Upload server, local runner, RunPod client |
+| `tests/test_server_api.py`, `test_server_pipeline.py`, `test_runpod_client.py`, `test_scan_numbers.py` | Upload server, local runner, RunPod client, scan numbers |
 | `tests/test_apk_checks.py` | APK / manifest checker and signing keys |
 | `tests/test_sources_compile.py` | Every Python file compiles |
 | `tests/requirements.txt` | Light test dependencies (no GPU) |

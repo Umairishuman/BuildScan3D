@@ -15,7 +15,7 @@ The longer guide (what each stage does, where the outputs are, problems met): [R
 
 | Argument | What it is | Where to find it | Example |
 |---|---|---|---|
-| `<scan>` | a recording: a folder in `dataset/` | `scripts/buildscan datasets` (newest first) | `scan_056fe94d3399`, or `latest` for the newest |
+| `<scan>` | a recording: its **number** (recordings are numbered 1, 2, 3 in the order they arrived), `latest`, or its folder in `dataset/` | `scripts/buildscan datasets` (newest first, with the numbers); the app shows the number after an upload | `4`, `latest`, `scan_004_6de634cbb8b2` |
 | `<tag>` | the **name of one run** of a recording; names its output folders `work_<tag>_sfm/gs_<tag>/`. Any short name: letters, digits, `_`, `-` | for an existing run: `scripts/buildscan datasets` lists each recording's runs | `umair`, `r1106`, `test2` |
 | `<session>` | a background program started by buildscan | `scripts/buildscan status` | `bs-server`, `run-umair`, `viewer`, `web` |
 | `<stage>` | where to restart a run (see the list below) | `run_full.log` shows which stage failed | `sem2d` |

@@ -493,6 +493,19 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **Rejected:** Material `BottomNavigationView` (would need a newer Material library than the app's 1.1.0); keeping the
   server dialog on the capture screen. Not tested on a device yet. **By:** Umair.
 
+## D-065 · 2026-11-12 · Recordings are numbered 1, 2, 3 in the order they arrived
+- **Decision:** every recording in `dataset/` has a fixed number, kept in `dataset/.scan_numbers.tsv`
+  (`server/scan_numbers.py`). New uploads are saved as `scan_<NNN>_<id>` (e.g. `scan_004_6de634cbb8b2`) and the
+  server answers with the number; the app shows it ("Saved on the PC as scan #4", badge "UPLOADED #4"). The three
+  earlier recordings keep their folder names and are #1 `scan_056fe94d3399`, #2 `scan_646070948603`, #3
+  `scan_6de634cbb8b2` (arrival order). `scripts/buildscan` lists the numbers and accepts them (`run 4 mytag`); `latest`
+  is the highest number. Folders copied in by hand get the next number on first sight.
+- **Why:** asked by Umair on 2026-11-12, to see which recording is the latest. The folder names were random ids, and
+  `buildscan` picked "latest" by folder date, which every processing run changes (an old recording became "latest"
+  after being processed).
+- **Rejected:** renaming the three earlier folders (TRAINING.md R-028 to R-030 and the web bundles use those names);
+  numbering by date at display time only (a copied-in or processed folder would shift the numbers). **By:** Umair.
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |

@@ -21,7 +21,8 @@
 #   scripts/buildscan stop   <session>           stop a session (bs-server, run-<tag>, viewer, web)
 #   scripts/buildscan gpu                        live GPU use / memory / temperature
 #
-# <scan>: a folder in dataset/ (scan_056fe94d3399, dataset/scan_056fe94d3399) or `latest` (newest recording).
+# <scan>: the recording's number (4 or #4: recordings are numbered 1, 2, 3 in the order they arrived, D-065),
+#         `latest` (highest number), or a folder in dataset/ (scan_004_6de634cbb8b2, dataset/scan_056fe94d3399).
 # [tag]: names the run's output folders (work_<tag>_sfm/gs_<tag>/). A new tag never mixes with older runs.
 # Leave an argument out and buildscan asks: a numbered list of recordings / runs / sessions to pick from.
 # Cheat sheet with every argument explained: docs/COMMANDS.md
@@ -59,20 +60,18 @@ pick() {   # pick <question> <options...>: numbered menu on the terminal, prints
   select c in "$@"; do [[ -n "$c" ]] && { echo "$c"; return; }; done
 }
 
-scan_dir() {   # scan name / path / latest / nothing (asks) -> dataset/<name>
+scan_numbers() { python3 server/scan_numbers.py "$@"; }   # numbered recordings: "<n>\t<folder>", oldest first
+
+scan_dir() {   # number / #number / latest / folder name or path / nothing (asks) -> dataset/<name>
   local s=${1:-}
   if [[ -z "$s" ]]; then
-    local all=(); for x in $(ls -td dataset/*/ 2>/dev/null); do x=${x%/}; all+=("${x#dataset/}"); done
+    local all=(); while IFS=$'\t' read -r n name; do all+=("#$n  $name"); done < <(scan_numbers | sort -rn)
     [[ ${#all[@]} -gt 0 ]] || die "no recordings in dataset/ (upload one from the app first)"
     s=$(pick "Which recording? (newest first)" "${all[@]}")
+    s=${s#*  }
   fi
-  if [[ "$s" == latest ]]; then
-    s=$(ls -td dataset/*/ 2>/dev/null | head -1) || true
-    [[ -n "$s" ]] || die "no recordings in dataset/"
-  fi
-  s=${s%/}; s=${s#dataset/}
-  [[ -d "dataset/$s" ]] || die "no recording dataset/$s (scripts/buildscan datasets lists them)"
-  echo "dataset/$s"
+  local d; d=$(scan_numbers resolve "$s") || die "no recording '$s' (scripts/buildscan datasets lists them)"
+  echo "$d"
 }
 out_dir() { echo "$1/work_${2}_sfm/gs_${2}"; }
 run_tag() {   # run_tag <dataset dir> [tag]: the given tag, or ask among that recording's runs
@@ -105,7 +104,7 @@ case "$cmd" in
     nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw \
       --format=csv,noheader 2>/dev/null | sed 's/^/   use, memory used, total, temp, power: /' || say "   nvidia-smi not available"
     say "== newest recordings"
-    ls -td dataset/*/ 2>/dev/null | head -3 | sed 's|^|   |' || say "   (none)"
+    scan_numbers | sort -rn | head -3 | awk -F'\t' '{printf "   #%s  %s\n", $1, $2}' | grep . || say "   (none)"
     ;;
 
   ip)
@@ -128,12 +127,13 @@ case "$cmd" in
     esac ;;
 
   datasets)
-    for d in $(ls -td dataset/*/ 2>/dev/null); do
-      d=${d%/}
+    printf '%-5s %-26s %6s  %-16s  %s\n' "#" "folder" "size" "arrived" "runs"
+    while IFS=$'\t' read -r n name; do
+      d="dataset/$name"
       runs=$(ls -d "$d"/work_*_sfm/gs_* 2>/dev/null | sed 's|.*/gs_||' | tr '\n' ' ' || true)
-      printf '%-32s %6s  %s  runs: %s\n' "$(basename "$d")" "$(du -sh "$d" 2>/dev/null | cut -f1)" \
-        "$(date -r "$d" '+%F %H:%M')" "${runs:-none}"
-    done ;;
+      printf '%-5s %-26s %6s  %-16s  %s\n' "#$n" "$name" "$(du -sh "$d" 2>/dev/null | cut -f1)" \
+        "$(date -d "@$(stat -c %W "$d" | awk -v m="$(stat -c %Y "$d")" '{print ($1>0?$1:m)}')" '+%F %H:%M')" "${runs:-none}"
+    done < <(scan_numbers | sort -rn) ;;
 
   check)
     d=$(scan_dir "${1:-}")

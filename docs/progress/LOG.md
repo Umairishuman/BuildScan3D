@@ -276,3 +276,13 @@ Template:
   missing `ACCESS_NETWORK_STATE` permission (fixed); remaining lint items are old warnings (hard-coded strings etc.).
 - Problems: no Android SDK here, so every compile check ran in CI; the UI was not seen on a device or emulator.
 - Next: PR to `master`, CD release; install `adb`; test the new UI and the USB upload on the phone.
+
+## 2026-11-12 (later) · Umair · `feature/numbered-scans`
+- Did: recordings numbered 1, 2, 3 in arrival order (D-065): `server/scan_numbers.py` (register
+  `dataset/.scan_numbers.tsv`), uploads saved as `scan_<NNN>_<id>` with the number in the server's answer, `/datasets`
+  sorted by number, `scripts/buildscan` datasets / status / picker / `<scan>` arguments use the numbers, the app shows
+  "Saved on the PC as scan #N" and "UPLOADED #N". Current recordings: #1 `scan_056fe94d3399`, #2 `scan_646070948603`,
+  #3 `scan_6de634cbb8b2` (uploaded 2026-11-12 14:53 with `camera.csv` / `anchors.csv`, so the v0.3.5 upload fix works).
+  Found on the way: `buildscan latest` used folder dates, which processing runs change.
+- Tests: `tests/test_scan_numbers.py` (6) + `tests/test_server_api.py` (21) pass locally (pytest in a temporary path).
+- Next: PR, CI, merge and release (app shows the number from the next version on).
