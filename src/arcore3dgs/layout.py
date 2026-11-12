@@ -10,7 +10,9 @@ structure.py assumes a box room (the outermost wall on each side of two Manhatta
      each cluster is refit (robust PCA line on all its points) with its extent along the line and its height.
      A cluster is a WALL if it is tall (>= half the room height) and nothing parallel lies behind it
      (furniture fronts, doors in their frames and pictures sit in front of a wall).
+     The ceiling may not lie below the top of the walls (D-072): lower candidates are ignored.
   4. corners = intersections of non-parallel walls whose segments end near each other.
+Needs a levelled model (+Y = gravity): sfm_colmap.py does it since D-071; older models: level_model.py.
 Works for any number of walls and non-Manhattan angles.
 
   nerfstudio-env\\Scripts\\python.exe src/arcore3dgs/layout.py --ply <splat.ply> --work <work_sfm> --out <dir>
@@ -203,6 +205,27 @@ for w in inner:
 print(f"{len(clusters)} vertical plane clusters -> {len(walls) and len(cand)} tall + long after merging -> "
       f"{len(inner)} without furniture fronts -> {len(final)} walls")
 
+# ---------------- 3b. the ceiling may not lie below the top of the walls (D-072) ----------------
+# A white, textureless ceiling can be reconstructed too close to the cameras and glass reflects it (scan #2, R-032:
+# the strongest plane above the cameras was 1.50 m above the floor, its walls reach 2.3-2.7 m). Walls run up to the
+# ceiling, so candidates below the highest wall top (98th percentile of its points) are ignored.
+ceil_first, ceil_source, warnings = ceil_y, "strongest horizontal plane above the cameras", []
+wall_top = max((w["y1"] for w in final), default=float("nan"))
+if np.isfinite(wall_top) and not (np.isfinite(ceil_y) and ceil_y >= wall_top):
+    c_ = mode_y(ys > wall_top)
+    if np.isfinite(c_):
+        ceil_y, ceil_source = c_, "strongest horizontal plane above the wall tops"
+    else:
+        ceil_y, ceil_source = wall_top, "top of the highest wall (no horizontal plane above it)"
+    print(f"ceiling {ceil_first - floor_y:.3f} m was below the wall top ({wall_top - floor_y:.3f} m) -> {ceil_y - floor_y:.3f} m ({ceil_source})")
+height = ceil_y - floor_y
+if np.isfinite(height) and height < 2.2:
+    warnings.append(f"room height {height:.2f} m is below 2.2 m: check the ceiling")
+if np.isfinite(ceil_y) and ceil_y - cy_.max() < 0.3:
+    warnings.append(f"ceiling only {ceil_y - cy_.max():.2f} m above the highest camera")
+for w_ in warnings:
+    print("WARNING:", w_)
+
 # ---------------- 4. corners: walls in angular order around the room centre ----------------
 ctr = C[:, [0, 2]].mean(0)
 def ang_of(w):
@@ -242,7 +265,8 @@ for i in range(len(final)):
         Qb = b["Q"][:, [0, 2]]; sep = float(np.median((Qb - a["cen"]) @ a["nrm"]))
         dims.append(dict(walls=[i, j], distance=abs(sep)))
         print(f"walls {i} <-> {j}: {abs(sep):.3f} m apart")
-res = dict(floor_y=floor_y, ceiling_y=ceil_y, height=height, dimensions=dims,
+res = dict(floor_y=floor_y, ceiling_y=ceil_y, height=height, ceiling_source=ceil_source,
+           ceiling_first_y=ceil_first, wall_top_y=wall_top, warnings=warnings, dimensions=dims,
            walls=[dict(id=k, p0=(w["cen"] + w["dir"] * w["t0"]).tolist(), p1=(w["cen"] + w["dir"] * w["t1"]).tolist(),
                        length=float(w["t1"] - w["t0"]), normal=w["nrm"].tolist(), corners=len(w.get("ends", [])))
                   for k, w in enumerate(final)],
