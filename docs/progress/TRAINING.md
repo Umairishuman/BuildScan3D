@@ -65,6 +65,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-030 | 2026-11-06 | `scan_646070948603` (lab room, 97 s), full pipeline through `scripts/buildscan` (`--tag r1106`) | this PC (Ubuntu, RTX 4000 Ada) | 50.2 min | ran clean; 2 walls, 8 fixtures; **room height 1.50 m looks wrong** | Inconclusive (scale / ceiling not checked) |
 | R-031 | 2026-11-12 | scan #3 `scan_003_6de634cbb8b2` (classroom, first v0.3.6 recording, 185 s), full pipeline (`--tag r1112`) | this PC (Ubuntu, RTX 4000 Ada) | 81.0 min (run_v8 64.7) | ran clean; 875/885 frames; **height 2.74 m** (plausible); 2 walls, 0 corners, 21 fixtures | Kept (`saved_models/2026-11-12_r1112_scan003/`); baseline stage times; quality and tape not measured |
 | R-032 | 2026-11-12 | Layout diagnostics on scan #2 / #3 (read-only, plan 4.1) | this PC (Ubuntu, RTX 4000 Ada) | seconds per pass | models tilted 9.1° / 12.1° from ARCore gravity (Sim3 from camera centres only); levelled prototype: scan #3 4 walls, 3 corners ~90°, 2.52 m | Diagnosis
+| R-033 | 2026-11-12 | `sfm_colmap.py --stage export` with ARCore gravity (D-071), scan #2 / #3, scratch output | this PC (CPU) | seconds | models level (0.06° / 0.00°); scale 0.0937 / 0.9521 (+0.45% on scan #3) | Kept
 
 ## Runs
 
@@ -509,3 +510,25 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   cameras: impossible); with "the ceiling may not lie below the top of the walls" 2.41 m. Without levelling that
   rule alone gives scan #2 2.78 m, scan #3 2.83 m (tilted axis, so not trustworthy).
 - **Verdict:** diagnosis (no model changed). Cause found; fix options for Umair (DECISIONS). Heights still need the tape.
+
+### R-033 · 2026-11-12 · `sfm_colmap.py --stage export` with ARCore gravity (D-071) on scan #2 / #3, into scratch folders
+- **Who / machine:** Umair (agent) · this PC (Ubuntu, RTX 4000 Ada); CPU only
+- **Branch / commit:** `feature/step4-layout` @ `8f8e605` + uncommitted `sfm_colmap.py` change (the D-071 export)
+- **Dataset:** scan #2 (`work_r1106_sfm`, R-030's COLMAP model), scan #3 (`work_r1112_sfm`, R-031's)
+- **Command(s):** `micromamba run -n bs-system python src/arcore3dgs/sfm_colmap.py --work dataset/<scan>/work_<tag>
+  --out <scratch>/exp_<tag> --stage export` with `<scratch>/exp_<tag>/{sparse,undist,images}` linked to the existing
+  `work_<tag>_sfm/` (nothing written into `dataset/`)
+- **Goal:** check the new export: the printed tilt a centre-only Sim3 would leave must match R-032 (9.1° / 12.1°),
+  the new frames.json must be level (ARCore gravity on +Y), scale and inliers comparable with R-030 / R-031.
+- **Start → end:** 18:20 → 18:23 (export only, seconds per scan)
+- **Errors during the run:** none. One wrong reading of my own diagnostic, corrected before commit: the first version
+  printed "centre-only Sim3 would leave the model X deg off gravity" computed on the **new** inlier set (scan #3:
+  0.74°), which is not what R-031's RANSAC did (it picked a different 268-frame set that absorbed 12.1°). Renamed
+  to `gravity_tilt_full_sim3_same_inliers_deg`, "for comparison" only.
+- **Result:** scan #2: scale 0.0937 (R-030 0.0937), 244 / 482 centre inliers (242), median 5.4 cm (5.25); scan #3:
+  scale **0.9521** (R-031 0.9478, +0.45%), 276 / 885 inliers (268), median 5.7 cm (4.0; higher because the old
+  fit could tilt the model to absorb ARCore position noise). Checked independently (`gravcheck`): ARCore gravity
+  now 0.06° (scan #2) and 0.00° (scan #3) from +Y; per-frame spread 0.85° / 0.98° (ARCore's own noise).
+  Outputs only in the scratchpad; `dataset/` untouched (`work_r1112_sfm/frames.json` still 15:16).
+- **Verdict:** kept: the export levels both models. Not yet run end to end on a new recording (the next new room is
+  the first). The +0.45% scale change on scan #3 is within what the tape must decide.
