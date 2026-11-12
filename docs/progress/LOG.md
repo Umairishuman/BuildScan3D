@@ -515,3 +515,10 @@ Hand-over prompt (2026-11-12, for the next session):
     owners in the plan are the team's to fill in; one run on the GPU at a time (`scripts/buildscan status` first);
     Node for the web UI runs through `micromamba run -n bs-ns`; update STATUS, LOG and the COMPLETION_PLAN rows at the
     end of the session; no AI attribution in commits.
+
+**Later on 2026-11-12 (Umair, agent):** R-037 finished at 20:39:57 (103.0 min, no errors) → step 1 of the hand-over
+above is done. Room 6.63 × 4.37 m (R-023 6.60 × 4.36 m); ARCore gravity 0.00° (old export would have been 0.57° off);
+height 2.81 m vs R-023's 2.72 m because D-072 skipped a plane at 2.69 m that lay below the wall tops (new STATUS item,
+needs a tape height or a look at the model); 18 fixtures vs 15 (door 7, switch 3, socket 2 are one more each), check
+sheet `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/semantic_v10/fixture_check.md`. Open for Umair:
+`saved_models/` or not, fill the sheet. Details: TRAINING.md R-037.

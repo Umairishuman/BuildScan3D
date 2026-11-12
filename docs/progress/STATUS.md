@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-12 by Umair (Step 4 session: models were tilted 9–12° from gravity, fixed in the SfM export (D-071) and for scans #2 / #3 by `level_model.py`; ceiling rule D-072; scan #3 now 4 walls / 2.52 m (R-035); fixture size card in the viewer; newRoomAttemptSadness copied here, R-037 running).
+Last updated: 2026-11-12 by Umair (R-037 newRoom done: size agrees with the 3070, height via D-072 open; Step 4 session: models were tilted 9–12° from gravity, fixed in the SfM export (D-071) and for scans #2 / #3 by `level_model.py`; ceiling rule D-072; scan #3 now 4 walls / 2.52 m (R-035); fixture size card in the viewer; newRoomAttemptSadness copied here, R-037 running).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -251,6 +251,13 @@ script, step 3 RunPod and the friend's PC.**
       `scan_056fe94d3399` through `scripts/run_full.sh`, all 15 stages, 34.7 min, no errors after the `imu.npz` fix (R-028).
 - [ ] **[new] 1h(b). Machine agreement:** copy `newRoomAttemptSadness` from the RTX 3070 PC, run the v9 pipeline, log it in
       TRAINING.md (every setup and run error), and compare with R-020 / R-023 to confirm the machines agree.
+      **2026-11-12: R-037 done** (R-023 recipe, 103.0 min, no errors): room 6.63 × 4.37 m vs R-023 6.60 × 4.36 m, so
+      the size agrees. Still open: PSNR / SSIM (needs the R-014 split from Tayyab), scale vs R-023 (R-023's scale is
+      not on this PC), 18 vs 15 fixtures (sheet for Umair), height 2.81 vs 2.72 m (next item).
+- [ ] **[new 2026-11-12] D-072 may overshoot the ceiling on newRoom (R-037):** the strongest horizontal plane was 2.69 m
+      above the floor but below the wall tops, so the rule took 2.81 m (R-023: 2.72 m). Tape the newRoom height, or
+      look at what sits above 2.69 m in the model (floaters above the ceiling?), before keeping or changing D-072
+      (Umair's decision).
 
 **Remote access and moving between lab PCs** (D-053)
 
@@ -435,6 +442,7 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       `--gravity centres` restores the old Sim3); his Step 3 changes are in the mapper part of the same file.
 - [ ] **[new 2026-11-12] Re-check older models for tilt:** any model exported before D-071 can be off gravity;
       `level_model.py` levels it without retraining (R-034). Not checked for newRoom (R-023); R-037 prints it.
+      2026-11-12: newRoom was nearly level anyway (old export would have been 0.57° off, R-037); R-023 itself not checked.
 
 ### 7.7 Android app
 
