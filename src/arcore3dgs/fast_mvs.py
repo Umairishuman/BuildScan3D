@@ -20,10 +20,14 @@ ap.add_argument("--work", required=True); ap.add_argument("--json", required=Tru
 ap.add_argument("--every", type=int, default=7); ap.add_argument("--size", type=int, default=640)
 ap.add_argument("--sources", type=int, default=6); ap.add_argument("--min_pixels", type=int, default=3)
 ap.add_argument("--mono", action="store_true", help="add mono-depth points where the MVS cloud is empty")
+ap.add_argument("--iters", type=int, default=5, help="PatchMatch iterations per pass (COLMAP default 5)")
+ap.add_argument("--photometric", action="store_true",
+                help="one photometric pass + fusion of photometric depth (no geometric-consistency pass: ~2.7x faster)")
+ap.add_argument("--suffix", default="", help="appended to the workspace / init cloud names (experiments)")
 ap.add_argument("--colmap", default=toolpaths.colmap())
 args = ap.parse_args()
 HERE = os.path.dirname(os.path.abspath(__file__)); WK = os.path.abspath(args.work); CM = os.path.abspath(args.colmap)
-ws = os.path.join(WK, "undist_fast")
+ws = os.path.join(WK, "undist_fast" + args.suffix)
 t0 = time.time()
 
 
@@ -66,13 +70,15 @@ open(os.path.join(ws, "stereo", "patch-match.cfg"), "w").write("\n".join(pm) + "
 open(os.path.join(ws, "stereo", "fusion.cfg"), "w").write("\n".join(fu) + "\n")
 print(f"{len(fu)} reference frames (every {args.every}th of {len(fr)}) at {args.size} px, {args.sources} sources each", flush=True)
 colmap("patch_match_stereo", "--workspace_path", ws, "--workspace_format", "COLMAP",
-       "--PatchMatchStereo.max_image_size", args.size, "--PatchMatchStereo.geom_consistency", "true")
+       "--PatchMatchStereo.max_image_size", args.size, "--PatchMatchStereo.num_iterations", args.iters,
+       "--PatchMatchStereo.geom_consistency", "false" if args.photometric else "true",
+       *(["--PatchMatchStereo.filter", "true"] if args.photometric else []))   # the geometric pass filters by itself
 t1 = time.time()
-colmap("stereo_fusion", "--workspace_path", ws, "--workspace_format", "COLMAP", "--input_type", "geometric",
+colmap("stereo_fusion", "--workspace_path", ws, "--workspace_format", "COLMAP", "--input_type", "photometric" if args.photometric else "geometric",
        "--output_path", os.path.join(ws, "fused.ply"), "--StereoFusion.min_num_pixels", args.min_pixels,
        "--StereoFusion.max_image_size", args.size)
 t2 = time.time()
-ply = "init_fmvs.ply"
+ply = f"init_fmvs{args.suffix}.ply"
 subprocess.run([sys.executable, os.path.join(HERE, "mvs_init.py"), "--work", WK, "--sparse", os.path.join(ws, "sparse"),
                 "--fused", os.path.join(ws, "fused.ply"), "--out_ply", ply, "--out_json", "_tmp_fmvs.json",
                 "--colmap", CM], check=True)

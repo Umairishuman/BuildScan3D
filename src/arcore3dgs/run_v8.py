@@ -28,6 +28,7 @@ ap.add_argument("--init", default="fmvs", choices=["mono", "fmvs", "fmvs_mono"],
                 help="dense init: mono depth (12 s), fast PatchMatch on every 7th frame (fast_mvs.py), or both")
 ap.add_argument("--planar", type=float, default=0.0, help="> 0: planar prior weight (plane_seg.py runs on the CPU during init)")
 ap.add_argument("--blur", type=float, default=0.0, help="> 0: motion-blur model with this exposure (s)")
+ap.add_argument("--init_args", default="", help='extra fast_mvs.py args, e.g. "--photometric" (7.5 vs 20 min, TRAINING R-033)')
 args = ap.parse_args()
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -94,7 +95,7 @@ if args.init == "mono":
                  "--every", "6", "--voxel", "0.015", "--min_views", "6"])
 else:
     run("init", [py, os.path.join(HERE, "fast_mvs.py"), "--work", S, "--json", data, "--out_json", init_json]
-        + (["--mono"] if args.init == "fmvs_mono" else []))
+        + (["--mono"] if args.init == "fmvs_mono" else []) + args.init_args.split())
 t_side = time.time()
 for p_ in side:
     if p_.wait():
