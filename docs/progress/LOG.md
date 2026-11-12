@@ -409,7 +409,7 @@ Hand-over prompt (2026-11-12, for the Step 4 session):
     This session: COMPLETION_PLAN Step 4 (layout, semantics, mesh), Must items first.
     1. 4.1 ceiling detection in `layout.py`: find out why R-030 took a plane at 1.50 m as the ceiling (look at its
        candidate planes and the splat height histogram), fix it, re-run only the layout stage on scan #2 and scan #3
-       (`run_full.sh ... --from layout` or `layout.py` directly; seconds, no retraining) and compare heights before /
+       (`layout.py` directly takes seconds; `run_full.sh <scan> <tag> --from layout` also re-runs semantics, ~14 min) and compare heights before /
        after. Also look at why scan #3 found only 2 walls and no corners. Each re-run gets an R-NNN entry.
     2. 4.2 fixture check on scan #3 with Umair: give him a short checklist of the 21 fixtures (name, height above floor,
        size, which wall) to tick real / wrong while viewing the model, and ask what was missed; record a per-room
