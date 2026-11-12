@@ -63,7 +63,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-028 | 2026-11-06 | First Linux run: Umair's room, full v9 + PGSR → semantics → mesh → web | this PC (Ubuntu, RTX 4000 Ada) | stopped after ~5 min | select / SfM / prior OK on Linux | Abandoned (stopped by Umair) |
 | R-029 | 2026-11-06 | Umair's own run of the same recording, full pipeline (`--tag umair`) | this PC (Ubuntu, RTX 4000 Ada) | 34.7 min | **first complete run on Linux**; corridor end, 0 fixtures, 1 wall | Kept as pipeline test (scene not a room) |
 | R-030 | 2026-11-06 | `scan_646070948603` (lab room, 97 s), full pipeline through `scripts/buildscan` (`--tag r1106`) | this PC (Ubuntu, RTX 4000 Ada) | 50.2 min | ran clean; 2 walls, 8 fixtures; **room height 1.50 m looks wrong** | Inconclusive (scale / ceiling not checked) |
-| R-031 | 2026-11-12 | scan #3 `scan_003_6de634cbb8b2` (classroom, first v0.3.6 recording, 185 s), full pipeline (`--tag r1112`) | this PC (Ubuntu, RTX 4000 Ada) | running | — | — |
+| R-031 | 2026-11-12 | scan #3 `scan_003_6de634cbb8b2` (classroom, first v0.3.6 recording, 185 s), full pipeline (`--tag r1112`) | this PC (Ubuntu, RTX 4000 Ada) | 81.0 min (run_v8 64.7) | ran clean; 875/885 frames; **height 2.74 m** (plausible); 2 walls, 0 corners, 21 fixtures | Kept (`saved_models/2026-11-12_r1112_scan003/`); baseline stage times; quality and tape not measured |
 
 ## Runs
 
@@ -437,8 +437,12 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Command(s):** `scripts/run_full.sh dataset/scan_003_6de634cbb8b2 r1112 -- --sfm_args "--retrieval 20" --init fmvs
   --planar 0.2 --blur 0.0222 --pgsr`
 - **Goal:** first room recorded with v0.3.5 (COMPLETION_PLAN 1.4 / 3.2); check the layout height against tape (4.1).
-- **Start → end:** 15:04:02 → (running)
-- **Errors during the run:** none so far.
+- **Start → end:** 15:04:02 → 16:25:03 (81.0 min). run_v8 64.7 min (`timing.json`): select 0.37, SfM 12.11, export
+  0.01, prior 3.56, init 14.76 (PatchMatch 14.5, fusion 0.2), train 33.57, ply 0.28. Then (`stages.tsv`) layout 0.4,
+  sem2d 13.7, sem3d 0.1, verify 0.2, sem3d2 0.1, mesh 0.3, meshlabels 1.5, web 0.1. GPU (`gpu.csv`, every 30 s): up
+  to 4.8 of 20.5 GB, 38–77 °C. Compared with R-030 (482 frames): run_v8 64.7 vs 41.7 min, train 33.6 vs 27.8, init
+  14.8 vs 6.6, SfM 12.1 vs 4.9, sem2d 13.7 vs 7.7.
+- **Errors during the run:** none (`run_full.log` has no tracebacks or errors).
 - **Capture facts measured on 2026-11-12 (agent, from the dataset files, for COMPLETION_PLAN 1.6 / 1.7):**
   `check_capture.py`: READY TO PROCESS; **video 28.9 fps average, 176 dropped-frame gaps in 5,346 frames (3.3%),
   longest 99 ms** (NFR1 not met); poses 28.9 Hz, tracking lost 0.0%; predicted blur median 6.7 px (> 5 px on 75% of
@@ -448,5 +452,23 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   timestamps and missed most gaps, so the video count is the one to use.) ARCore depth: 782 maps
   (160 × 90), all 782 different, median valid fraction 0.86, median depth 0–5.5 m across maps, mean confidence
   0–81: **not stale** in this recording. IQA levels in `quality.csv`: GOOD 1,279, WARN 2,894, BAD 1,164.
-- **Result:** (to fill in at the end)
-- **Verdict:** (to fill in at the end)
+- **Result:** `dataset/scan_003_6de634cbb8b2/work_r1112_sfm/gs_r1112/` (`splat.ply` 124 MB, 522,615 splats), copied to `saved_models/2026-11-12_r1112_scan003/` with README.txt; web bundle
+  `prototype/web-ui/public/scans/scan_003_6de634cbb8b2_r1112/` (18 MB). SfM (`report.json`): 875 / 885 frames
+  registered, 114,929 points, Sim3 to ARCore scale 0.9478, 268 inliers, median 4.0 cm. Metric3D prior aligned median
+  error 3.7% (raw 32.6%). Dense init: 472,582 points at 1 cm.
+  **Layout:** floor y −8.329, ceiling y −5.588 → **height 2.741 m**; 2 walls (6.39 m, 2.57 m), 9.03 m apart, 0
+  corners. **Semantics v10:** floor tilt 0.28° (median residual 7.2 cm); ceiling plane fit rejected (tilt 8.06°), so
+  the ceiling was set level at the layout height (2.73 m); 21 fixtures accepted (1 door, 2 windows, 2 light switches,
+  4 power sockets, 4 ceiling lights, 1 tube light, 3 lamps, 4 ceiling fans), 34 rejected; CLIP check kept all 6
+  switches / sockets. Mesh 2,986,324 → 2,884,227 triangles; area by class (m²) other 161.47, ceiling 62.27, wall_0
+  10.09, wall_1 3.40, floor 2.19, door 1.73; `mesh_web.glb` 400k triangles, 8.5 MB.
+  **Height check (agent, 2026-11-12):** `analyze.py` (`feat/splat-compress`): model extent
+  p1–p99 7.88 × 3.90 × 9.74 m. Splats with opacity > 0.5 span y −9.14 … −5.06 (p0.5–p99.5); the part below the floor
+  is probably reflection of the glossy floor (3.13); the densest top band is −5.5 … −5.2, slightly above the layout
+  ceiling, so the true height may be somewhat more than 2.74 m. Median camera height 1.74 m above the layout floor.
+  Ceiling fans sit 2.34–2.58 m above the floor; `window_1` at 2.72 m (at the ceiling) is probably a wrong placement.
+  **Not measured:** model quality (no held-out split; this run trains on all frames), tape lengths (Umair will measure
+  the room, expected within a few days of 2026-11-12), room number.
+- **Verdict:** **kept** as the first v0.3.6 room and as the stage-time baseline for COMPLETION_PLAN 3.3 / 3.4
+  (D-069). The height is plausible (unlike R-030's 1.50 m) but unconfirmed until the tape; the layout found only 2 of
+  the walls and no corners. To do: tape check; view the model (`scripts/buildscan view 3 r1112`).
