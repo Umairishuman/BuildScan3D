@@ -96,6 +96,7 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
 
   // --- Recording State Variables - BLAZING ---
   private boolean isRecording = false;
+  private UpdateChecker updateChecker;
   private java.io.File currentDatasetDir;
   private CaptureLogger captureLogger;
   // Live capture IQA
@@ -216,7 +217,8 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
         });
 
     BottomNav.attach(this, BottomNav.Tab.CAPTURE);
-    new UpdateChecker(this).check();
+    updateChecker = new UpdateChecker(this);
+    updateChecker.showWhatsNewIfUpdated();   // once after an update; the update check itself runs in onResume
   }
 
   /** Menu button to launch feature specific settings. */
@@ -416,6 +418,10 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
   @Override
   protected void onResume() {
     super.onResume();
+    if (!isRecording && updateChecker != null) {
+      updateChecker.resumePendingInstall();   // back from "allow installs": continue the waiting update
+      updateChecker.checkIfDue();             // at start and on return, at most every 6 h
+    }
 
     if (session == null) {
       Exception exception = null;

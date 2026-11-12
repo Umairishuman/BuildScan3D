@@ -424,6 +424,9 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 - [x] ~~App bug: ARCore depth was stale in newRoomAttemptSadness (every map identical, confidence ≈ 0). Investigate.~~ *(from TODO 2026-10-10)* Closed 2026-11-12: not reproduced on scan #3 (D-067).
 - [ ] **[new] NFR2 / NFR1 on the phone:** install the build with the `iqa_ms` column (`feature/iqa-timing`), record one
       walk of 1–2 min, upload, run `scripts/buildscan check` and copy the NFR1 / NFR2 lines into §4 (COMPLETION_PLAN 1.6).
+- [ ] **[new] Test the update flow on the phone (D-068):** after merging, v0.3.6 offers the new build (old dialog);
+      on the build after that: prompt with "What's new" at start and after returning, the permission screen continuing
+      by itself, "Updated to vX" once after installing. Not tested on a device.
 - [ ] **[new] NFR1 not met** (3.3% dropped, 28.9 fps on scan #3): find what drops frames (render thread, depth, IQA
       cost from the `iqa_ms` numbers); turning depth off (COMPLETION_PLAN 1.12) is one option.
 - [ ] Tune the IQA thresholds on the phone (predicted-blur warn > 5 px / bad > 10 px is new and untested on device). *(from TODO)*

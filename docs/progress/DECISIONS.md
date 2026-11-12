@@ -528,6 +528,25 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **If it comes back:** `check_capture.py` warns when depth maps are invalid; reopen this item.
 - **By:** Umair · **Source:** session 2026-11-12, agent check of scan #3 · **Status:** Active
 
+## D-068 · 2026-11-12 · The app checks for updates on start and on return, and every release says what changed
+- **Decision:** (1) the app checks GitHub Releases when it starts and whenever the user comes back to it (at most every
+  6 h per app process, never while recording) and prompts to install; after the "install unknown apps" permission the
+  update continues by itself. (2) Every app release carries a changelog: PRs that change the app add lines under
+  "Unreleased" in `android/CHANGELOG.md`; CD turns that section into the new version's entry at the auto-bump and uses
+  it as the GitHub release notes; the app shows those notes in the update dialog and once after an update.
+- **Why:** Umair asked for automatic update prompts and a record of what changed in each update. Before, the check ran
+  only in `CaptureActivity.onCreate`, the dialog said only the version, and the release notes were GitHub's generated
+  PR list.
+- **Evidence:** `UpdateChecker.java` before the change; `cd.yml` used `generate_release_notes` only. `changelog.py`
+  tested by `tests/test_changelog.py` (6 tests, run locally without pytest); the CD step itself runs only on `master`,
+  so it is first exercised by the merge of this branch.
+- **Rejected:** forced updates (the app blocks until updated): would stop a capture in a room without a connection;
+  release notes from commit messages only (written for developers, not for the person using the app); checking on
+  every resume (a GitHub API call each time, 60 per hour per IP without a token).
+- **Limits:** v0.3.6 and older still show the old dialog without notes; "What's new" first appears on the update after
+  the first build with this code (it needs the previous version stored). Not tested on a device.
+- **By:** Umair · **Source:** session 2026-11-12 · **Status:** Active
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |

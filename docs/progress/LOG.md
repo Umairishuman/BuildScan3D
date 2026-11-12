@@ -308,3 +308,10 @@ Template:
 - Correction (same evening, Umair): scan #3 is from **v0.3.6**, not v0.3.5: the server log shows it came over the USB
   cable (14:53:06, 815 MB in 22 s at 37 MB/s), which only v0.3.6 can do. So the USB upload (D-062) works on the phone,
   and `adb` is installed (`~/.local/bin/adb`). Records updated (R-031, D-067, STATUS §4 / §7.7, plan 1.3).
+- Then (same evening, `feature/iqa-timing`): update checks on start and on return to the app (at most every 6 h, not
+  while recording), release notes in the update dialog, "Updated to vX" once after an update, install continues after
+  the permission screen (`UpdateChecker.java`, `CaptureActivity`, `ServerActivity`). App changelog
+  `android/CHANGELOG.md` (v0.3.3 – v0.3.6 written from git history + "Unreleased"); `.github/android/changelog.py` +
+  `cd.yml` turn "Unreleased" into each release's entry and notes; `tests/test_changelog.py` (6, pass locally without
+  pytest). MAP, CI_CD.md updated. Decision D-068 (Umair). Java not compiled here (no JDK); CI compiles it. Pushed both
+  branches and opened one PR at Umair's request.
