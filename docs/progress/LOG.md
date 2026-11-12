@@ -207,6 +207,57 @@ Template:
   when an older app does not send them. Tests: 214 passed (2 new).
 - Next: PR → CI → merge → CD release; record a new room with the new app to get `camera.csv` (exposure) for `--blur`.
 
+## 2026-11-06 (eighth session) · Umair · `exp/first-linux-run`
+- Did: `scan_056fe94d3399` (Umair's room, Infinix X6833B, 46 s) checked: READY with warnings; the upload had dropped
+  `camera.csv`, `anchors.csv` and the lens files (fixed on `fix/upload-all-files`, not pushed). `scripts/run_full.sh`
+  (whole pipeline, one command) + `run_v8.py --pgsr --save_every`; `select_sharp.py` now extracts `imu.npz`. R-028
+  (agent) stopped by Umair after ~5 min; R-029 is his own run (tag `umair`). `run_full.sh` prints GPU use /
+  temperature / training progress every 30 s; guide `docs/RUN_PIPELINE.md`; MAP quick finder + app UI files.
+  Tailscale: offline on the lab Wi-Fi (cannot reach the coordination server), works on the cable; Umair's laptop
+  connects (direct). VS Code Remote-SSH steps given.
+- Runs: R-028 (abandoned), R-029 (running).
+- Problems: `ffprobe` not on PATH without env activation; `imu.npz` missing on fresh recordings; terminal silent
+  during training; placeholder `<new id>` typed literally; Tailscale blocked on the lab Wi-Fi.
+- Next: finish R-029 (results, verdict); push + release `fix/upload-all-files` (v0.3.5) when Umair agrees; firewall
+  rules for the wired card `enp0s31f6`; disable Tailscale key expiry; record a room with v0.3.5 (`camera.csv`).
+
+## 2026-11-06 (ninth session, backfilled 2026-11-12) · Umair · `exp/first-linux-run`
+- Did: `scripts/buildscan` (one command for server, runs, viewers, status; asks for missing arguments) and
+  `docs/COMMANDS.md` cheat sheet (`908ef6f`, `60c6611`, `718f884`). Recorded `scan_646070948603` (lab room, 97 s) and
+  processed it with `scripts/buildscan run` (tag `r1106`).
+- Runs: R-030 (50.2 min, no errors; room height 1.50 m looks wrong). Not logged at the time.
+
+## 2026-11-12 · Umair · `exp/first-linux-run`, `fix/upload-all-files`
+- Did: reviewed the records and listed everything still open in STATUS §7 for the end-of-month deadline
+  (2026-11-30). Found why `prototype/web-ui/public/scans/` held two untracked folders: the `web` stage of every run
+  writes `<scan>_<tag>/` there (R-029, R-030) → gitignored (D-061, `56d7517`), MAP.md row added. Wrote the missing
+  R-030 entry. Checked whether Tayyab changed the app: his last app commit is `6d0cab5` (2026-10-26, shipped in
+  v0.3.3: demo pawn / Instant Placement removed, motion-blur IQA messages); his only push since is the poster guide
+  (`f33aeaf`, 2026-11-11). Unpushed work on his PC cannot be seen. v0.3.3 → v0.3.4 changed only server search,
+  updates, package name and key (no ARCore / recording code). Confirmed the ARCore point-cloud dots are drawn on
+  screen only and never while recording; the MP4 is ARCore's raw camera stream (a frame of R-030 checked, clean).
+  ARCore is still used for metric scale / gravity (R-030: Sim3 with 242 inliers, median 5.25 cm), poses come from
+  COLMAP (D-014). Pushed `fix/upload-all-files`, PR #4 (CI green: app build, Python 3.10–3.12), merged; CD published
+  **v0.3.5** (`BuildScan3D-v0.3.5.apk`, 5.7 MB, 2026-11-12 08:16 UTC).
+- Runs: R-030 entry backfilled.
+- Decisions: D-061 (per-run web bundles out of git).
+- Problems: no local env has pytest + FastAPI, so the server tests ran only in CI. Local `master` is 12+ commits
+  behind `origin/master`; the upload server on this PC runs from `exp/first-linux-run`, which lacks the PR #4 server
+  change.
+- Next: install v0.3.5 on the phone (not tested on a device) and record a room with it (`camera.csv` must arrive);
+  update the server checkout to include PR #4; check R-030's room height; ask Tayyab about unpushed app work.
+- Later the same day: checked Zaid's `feat/splat-compress` (2026-11-03): `analyze.py` + `compress.py` (opacity pruning,
+  normals dropped, SH 3 → 1) run on R-030's `splat.ply` in the `bs-ns` env: 162 MB → 54 MB (66% smaller, 90.4% of
+  652,392 splats kept) in 0.3 s; its analysis showed the R-030 model is 3.08 m tall (TRAINING R-030 follow-up). The
+  `.ksplat` converter it relies on is not in the repo; quality only compared on software renders. OD-1 / OD-4 stay open.
+  Made the completion plan for 2026-12-04 with Umair: 94 tasks by step (14 capture, 12 server, 17 reconstruction,
+  12 layout / semantics, 10 compression / web, 10 evaluation, 12 infrastructure, 7 report / UAT / demo), three weekly
+  gates, nine decisions to take first; nothing cut (Umair). Shared doc
+  [BuildScan 3D Completion Plan](https://claude.ai/artifact/1V2YG8GSfBEpLXmnTJdctC) (private until shared), repo copy
+  `docs/progress/COMPLETION_PLAN.md`; MAP and STATUS §7 point to it.
+- Next (plan): the team assigns owners in the shared doc and takes the first decisions (owners, OD-7, OD-1, OD-4,
+  OD-6); keep the repo copy in step with the doc.
+
 ## 2026-11-12 · Umair · `feature/usb-upload`
 - Did: uploads were slow (~1.4 MB/s lab Wi-Fi, ~1 MB/s hotspot; PC Wi-Fi signal −76 dBm on the hotspot, link
   26 Mbit/s PC → phone) and the PC's address kept changing. Added a USB upload route (D-062):

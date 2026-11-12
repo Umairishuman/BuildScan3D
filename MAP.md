@@ -2,12 +2,33 @@
 
 **What is where, and what each file does.** Read this first in a new session (human or agent), then
 [CLAUDE.md](CLAUDE.md) (how we work) and [docs/progress/STATUS.md](docs/progress/STATUS.md) (where the project stands).
-Last checked against the code: 2026-11-06 (branch `docs/project-organisation`, off `feature/semantics-mesh`).
+Last checked against the code: 2026-11-06 (branch `exp/first-linux-run`; quick finder §0 and app UI files §6 added).
 When you add, move, retire or repurpose a file, update this map in the same commit.
 
 Markers: **[v9]** = part of the current best pipeline (v9 processing + v10 semantics) · [eval] = evaluation /
 diagnostics · [v3] = the older SfM pipeline the server still runs · [legacy] = the ARCore-pose pipeline from before
 2026-10-11, kept for the record · [exp] = experiment, not used by any pipeline · [dead] = backup copy, unused.
+
+## 0. Where is ...? (quick finder)
+
+| Looking for | Folder | Section |
+|---|---|---|
+| **Mobile app UI** (screens, buttons, menus, texts) | `googleARCore/samples/hello_ar_java/app/src/main/` → screens in `java/.../helloar/*Activity.java`, layouts in `res/layout/`, menu in `res/menu/`, texts in `res/values/strings.xml` | 6 |
+| Mobile app logic (recording, IQA, coverage, upload, updates) | same `java/.../helloar/` folder | 6 |
+| Reconstruction pipeline + "models" code (SfM, priors, 3DGS training, semantics, mesh) | `src/arcore3dgs/` | 2, 3 |
+| AI model weights (Metric3D, Grounding DINO, SAM, CLIP) | not in git: `~/.cache/torch/hub`, `~/.cache/huggingface` (downloaded on first use) | 9 |
+| Trained 3D models (results) | not in git: `saved_models/`, `dataset/<capture>/work_*` | 9 |
+| Phone-upload server | `server/` (start: `scripts/start_server.sh`) | 4, 5 |
+| Web dashboard + 3D viewer | `prototype/web-ui/` | 7 |
+| **One command for everything** (server, runs, viewers, status) | `scripts/buildscan` (`scripts/buildscan help`) | 5 |
+| **Which command, which arguments** (cheat sheet) | [docs/COMMANDS.md](docs/COMMANDS.md) | 8 |
+| **How to run the full pipeline** | [docs/RUN_PIPELINE.md](docs/RUN_PIPELINE.md) | 8 |
+| Launch / setup scripts | `scripts/` | 5 |
+| Python environments | `envs/linux/` (Linux), `requirements*.txt` (Windows) | 1 |
+| Tests | `tests/` | 11 |
+| CI/CD (GitHub Actions) and APK checks | `.github/` | 11 |
+| Project records (status, decisions, log, runs) | `docs/progress/` | 8 |
+| Reports for evaluations | `report/` | 1 |
 
 ## 1. Top level
 
@@ -169,6 +190,8 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does |
 |---|---|
+| `buildscan` | **Linux: one command for everything**: `status`, `server start/stop/log`, `datasets`, `check`, `run` (calls `run_full.sh` in screen `run-<tag>`), `watch`, `results`, `view` (port 7010), `web` (port 3000), `attach`, `stop`, `ip`, `gpu`. `latest` = newest recording |
+| `run_full.sh` | **Linux: the whole pipeline in one command**, recording → 3DGS → layout → semantics → mesh → web bundle, each stage in its env; `--from <stage>` restarts; prints GPU use / temperature / training progress every 30 s (`gpu.csv`). Guide: [docs/RUN_PIPELINE.md](docs/RUN_PIPELINE.md) |
 | `setup_linux.sh` | **Linux setup** (no sudo): micromamba, envs `bs-colmap` / `bs-ns` / `bs-system`, `semantic-env`, vocabulary tree, web-ui packages, then checks (GPU, COLMAP, gsplat, Open3D). `--check` = checks only. Same script for the Docker image (D-048) |
 | `run_arcore3dgs.bat` | [v3] pipeline: fallback → prepare → sfm_colmap → export_nerfstudio → ns-train → ns-export |
 | `run_arcore3dgs_legacy.bat` | [legacy] ARCore-pose pipeline: fallback → prepare → ba → relocalize_pnp → ba → mvs → pocket_prior → train.py |
@@ -196,6 +219,25 @@ Our code is in `app/src/main/java/com/google/ar/core/examples/java/helloar/`:
 | `GalleryActivity.java`, `ScanDetailActivity.java` | List of recordings and their details |
 | `UpdateChecker.java` | Update check against GitHub Releases at start and from the menu ("Check for updates"); downloads the APK in the app and opens Android's installer (FileProvider `res/xml/update_paths.xml`) |
 
+**App UI files** (`app/src/main/`):
+
+| File | Screen / use |
+|---|---|
+| `res/layout/activity_main.xml` | Main AR screen (`HelloArActivity`): camera view, record button, IQA / coverage text, gallery and menu buttons |
+| `res/layout/activity_gallery.xml`, `res/layout/item_scan.xml` | Recordings list (`GalleryActivity`) and one row of it |
+| `res/layout/activity_scan_detail.xml` | One recording's details (`ScanDetailActivity`) |
+| `res/layout/activity_processing.xml` | Upload & processing status (`ProcessingActivity`) |
+| `res/menu/settings_menu.xml` | ⋮ menu: camera, depth, Server URL, Check for updates |
+| `res/values/strings.xml`, `styles.xml` | Texts and theme; `res/drawable/bg_record_*.xml` record-button looks |
+| `res/xml/update_paths.xml` | Folder shared with the installer for in-app updates |
+| `java/com/google/ar/core/examples/java/common/` | Google's helpers (rendering, camera permission, display rotation, ...), unchanged sample code |
+| `assets/models/`, `assets/shaders/` | Google's sample 3D models and shaders for the AR rendering |
+| `AndroidManifest.xml` | Screens, permissions, update file provider |
+
+**Known gap (2026-11-06):** the app records `camera.csv`, `anchors.csv`, `lens_metadata.json` and
+`camera_characteristics.json`, but the upload (`GalleryActivity` / `ProcessingActivity`) does not send them, so
+server uploads lack them (STATUS §7.7).
+
 The other `googleARCore/samples/*` folders, `libraries/`, `assets/`, `media/` are Google's and unused. Build: Android
 Studio or `./gradlew assembleDebug` with JDK 21 (STATUS §7.7).
 
@@ -215,6 +257,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `src/components/...` | Dashboard, projects, floor plan, notifications, modals (mostly mock data) |
 | `src/lib/mockData.ts` | All mock projects / scans (the real scan is `newroom-scan`) |
 | `public/scans/newroom/` | The real labelled scan bundle (from `export_web.py`) |
+| `public/scans/scan_<id>_<tag>/` | Per-run bundles written by every `run_full.sh` run; gitignored (D-061), live only on the machine that ran it |
 | `public/splats/` | Empty. The old v6 splat (`newroom_v6.spz`, 12.5 MB, unused since the labelled bundle) was taken out of git on 2026-11-06 (D-055); local copy in `saved_models/web/` on the Ubuntu PC |
 
 ## 8. `docs/`
@@ -222,10 +265,13 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | Path | What |
 |---|---|
 | `progress/STATUS.md`, `DECISIONS.md`, `LOG.md`, `TRAINING.md` | The four live project records (CLAUDE.md §1) |
+| `progress/COMPLETION_PLAN.md` | **current** · Plan to finish by 2026-12-04: every open task by pipeline step, with done-when, dependencies, priority, week; snapshot of the shared doc (link inside) |
 | `progress/Problems_and_Solutions.md` | Technical evidence for every problem and fix (P&S §x) |
 | `progress/Research_Notes_2026-10-24.md` | Literature behind v8/v9 |
 | `progress/archive/` | Retired files (old TODO, Training_Analysis, early notes) |
 | `Flow.md` | System flow app → server → GPU → model |
+| `COMMANDS.md` | **Cheat sheet**: every `scripts/buildscan` command, what to type for each argument, examples |
+| `RUN_PIPELINE.md` | **How to run the full pipeline on Linux** (`scripts/run_full.sh`): setup, upload, check, run, watch, restart, results, known problems |
 | `PROCESSING_GUIDE.md` | Using the phone-upload server and job manager |
 | `CI_CD.md` | What CI/CD checks and how to run it locally |
 | `proposal/` | Proposal v1–v4 (+ unversioned copy), defence slides, guidelines, POC plans, workflow docs |
@@ -244,6 +290,26 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `saved_models/YYYY-MM-DD_<tag>/` | Kept models with a `README.txt` (best: `2026-10-27_v9_semantic_pgsr/`) |
 | `tools/colmap_dl/`, `tools/cudnn9/` | COLMAP 4.2 CUDA for Windows + vocabulary trees; cuDNN 9 DLLs |
 | `nerfstudio-env/`, `semantic-env/` | Python venvs (Windows) |
+
+## 10a. Tests, CI and other folders
+
+| Path | What |
+|---|---|
+| `tests/conftest.py` | Shared fixtures (synthetic captures) |
+| `tests/test_common_*.py`, `test_imu.py`, `test_fallback.py`, `test_relocalize_and_sfm.py` | Pipeline maths: capture loading, poses, IMU, fallback, SfM helpers |
+| `tests/test_process_dataset.py` | First-prototype script |
+| `tests/test_server_api.py`, `test_server_pipeline.py`, `test_runpod_client.py` | Upload server, local runner, RunPod client |
+| `tests/test_apk_checks.py` | APK / manifest checker and signing keys |
+| `tests/test_sources_compile.py` | Every Python file compiles |
+| `tests/requirements.txt` | Light test dependencies (no GPU) |
+| `.github/workflows/ci.yml` | CI: lint, tests (Python 3.10–3.12), web build, Android debug + release build, repo hygiene |
+| `.github/workflows/cd.yml` | CD on `master`: version bump, release APK signed with the private key (D-059), GitHub Release |
+| `.github/workflows/docker-gpu.yml` | Builds / pushes the RunPod GPU image |
+| `.github/android/` | `check_apk.py` + `apk_expectations.json` (what a correct APK looks like), `debug.keystore` (CI builds only) |
+| `envs/linux/` | Linux env files (section 1) |
+| `docker/` | `Dockerfile.gpu` (out of date, STATUS §6) |
+| `report/mid-eval/` | FYP-1 mid evaluation: LaTeX report, fix notes (frozen) |
+| `UI designs/`, `.vscode/`, `scratch/` | Design images, editor settings, old one-off scripts (section 1) |
 
 ## 10. Reorganisation plan (agreed 2026-11-06, DECISIONS D-049)
 

@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-06 by Umair (evening: upload server on Linux, app fixes, D-057 – D-060). `master` holds v9/v10, the project records and the Linux port (PR #1, D-051).
+Last updated: 2026-11-12 by Umair (v0.3.5 released, R-030 logged, D-061, completion plan). `master` holds v9/v10, the project records, the Linux port (PR #1, D-051) and the app fixes (PR #3, PR #4).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -200,7 +200,14 @@ Portability problems found while reading the code (not yet tested on Linux):
 
 Tags: **[new]** added 2026-11-06; *(from TODO, date)* carried over from the old TODO.md. Sources in brackets.
 
+**Plan to finish by 2026-12-04:** [COMPLETION_PLAN.md](COMPLETION_PLAN.md) puts every item below into one task table per
+pipeline step, with done-when, dependencies, priority (Must / Should / Could), target week and gates (2026-11-19,
+11-26, 12-04). Owners are still to be agreed by the team.
+
 ### 7.1 Organisation, environments and infrastructure
+
+- [x] **[new 2026-11-12] Update the server checkout on this PC** — done 2026-11-12: `origin/master` (PR #4) merged into `exp/first-linux-run`. Was: run the server from a branch that includes PR #4 (local `master` is
+      behind `origin/master`; the server runs from `exp/first-linux-run`), so v0.3.5 uploads keep the new files.
 
 **Order agreed on 2026-11-06 (Umair, D-047 – D-049): step 1 this PC, step 2 the Docker image from the same setup
 script, step 3 RunPod and the friend's PC.**
@@ -226,7 +233,9 @@ script, step 3 RunPod and the friend's PC.**
       `ns-export.exe`), `sfm_colmap.py` (`tools/colmap_dl/.../COLMAP.bat`, `tools/cudnn9` DLL path), `server/pipeline.py`;
       the `.bat` launchers need `.sh` equivalents.
 - [x] **[new] 1g. All of 1b–1f as one script** — done 2026-11-06: `scripts/setup_linux.sh` (+ `--check`); run here OK, fresh-machine run not yet tested. (`scripts/setup_linux.sh` + env files), so step 2 and the friend's PC reuse it (D-048).
-- [ ] **[new] 1h. First run here:** copy `newRoomAttemptSadness` from the RTX 3070 PC, run the v9 pipeline, log it in
+- [x] **[new] 1h(a). First complete run here** — done 2026-11-06 (R-029): Umair's corridor-end recording
+      `scan_056fe94d3399` through `scripts/run_full.sh`, all 15 stages, 34.7 min, no errors after the `imu.npz` fix (R-028).
+- [ ] **[new] 1h(b). Machine agreement:** copy `newRoomAttemptSadness` from the RTX 3070 PC, run the v9 pipeline, log it in
       TRAINING.md (every setup and run error), and compare with R-020 / R-023 to confirm the machines agree.
 
 **Remote access and moving between lab PCs** (D-053)
@@ -240,11 +249,20 @@ script, step 3 RunPod and the friend's PC.**
       starts at boot, MagicDNS on. Used **only** for Umair's laptop → this PC (the phone uploads over the Wi-Fi).
 - [ ] **[new] Tailscale: Umair's laptop** joins the tailnet and `ssh i230662@gpu-lab-precision-3680` is tested (the
       only other own device, `desktop-hnumpvk`, was last seen 2026-09-30); then VS Code Remote-SSH.
+- [ ] **[new] Tailscale offline on the lab Wi-Fi** (found 2026-11-06 18:02): `tailscale status` says this PC is
+      offline, "Unable to connect to the Tailscale coordination server". UDP / DERP work (netcheck: Singapore 131 ms) and
+      the TLS handshake with `controlplane.tailscale.com` succeeds (Let's Encrypt cert, so no TLS interception), but
+      the HTTPS requests time out / are closed (`tailscaled`: "read tcp 172.15.40.53 → 192.200.0.x:443: use of closed
+      network connection"). It worked earlier on the wired network (172.17.170.120). Likely the lab Wi-Fi cuts these
+      connections. Options: wired network, or ask lab IT whether Tailscale is blocked on the Wi-Fi.
 - [ ] **[new] Tailscale: disable key expiry** for this PC in the admin console (key expires 2027-05-05).
-- [ ] **[new] Firewall (`ufw` is active) for phone uploads** (Umair, sudo): allow TCP 8000 and UDP 8001 (server search)
-      from the Wi-Fi, e.g. `sudo ufw allow from 172.15.32.0/19 to any port 8000 proto tcp` and the same with
-      `port 8001 proto udp`. Not yet tested from the phone. The PC is on Wi-Fi now (`wlp0s20f3`, 172.15.40.53/19);
-      the wired card had no address on 2026-11-06.
+- [x] **[new] Firewall (`ufw` is active) for phone uploads** — done 2026-11-06 by Umair: TCP 8000 and UDP 8001 (server
+      search) allowed on the Wi-Fi card, so they work on the lab Wi-Fi and on the phone's hotspot:
+      `sudo ufw allow in on wlp0s20f3 to any port 8000 proto tcp` and the same with `port 8001 proto udp`.
+      Phone access not yet tested. The PC is on Wi-Fi (`wlp0s20f3`, 172.15.40.53/19 on the lab Wi-Fi); the wired card had no address.
+- [ ] **[new] SSH into this PC from the laptop: test.** No OpenSSH server is installed (no `sshd`, nothing on port 22);
+      remote login is **Tailscale SSH** only (`RunSSH` on, ssh capability granted, 2026-11-06). A test from this PC to its
+      own address is not possible (local traffic bypasses Tailscale); test from the laptop once it is in the tailnet.
 - [ ] **[new] Back up the release signing key** `~/.buildscan3d-keys/` (D-059) somewhere other than this PC.
 - [ ] **[new] Dockerise the upload server** so it runs the same on Windows and Linux (asked by Umair 2026-11-06;
       deferred with step 2, Docker not on this PC for now, D-045 / D-057).
@@ -325,6 +343,9 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.3 Reconstruction quality
 
+- [ ] **[new 2026-11-12] R-030 (`scan_646070948603`, lab room): room height 1.50 m cannot be right.** View the model,
+      check which plane the layout took as the ceiling and whether the scale is off; measure one length with a tape.
+
 - [ ] **Second room** (roomAttemptSadness2): full v9 pipeline + semantics (~2 h GPU), then a room check by the user. The
       real test of v9/v10. *(from TODO 2026-10-24 / 2026-10-27)*
 - [ ] Full PGSR multi-view geometric + photometric consistency (1–2 days, ~2× training time); removes the faint vertical
@@ -382,6 +403,8 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.7 Android app
 
+- [ ] **[new 2026-11-12] Ask Tayyab whether he has unpushed app changes.** GitHub shows none after `6d0cab5`
+      (2026-10-26); work only on his PC cannot be seen.
 - [ ] **[new 2026-11-12] USB upload (D-062)** on `feature/usb-upload`: install `adb` on this PC (docs/PROCESSING_GUIDE.md),
       USB debugging on the phone, then test an upload over the cable and the connection bar / automatic restart.
       Not built locally (CI builds the APK) and not tested on a device.
@@ -389,7 +412,7 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 - [x] **[new] Upload sends every recorded file** — fixed 2026-11-06 (branch `fix/upload-all-files`): the app recorded
       `camera.csv`, `anchors.csv`, `lens_metadata.json`, `camera_characteristics.json` but never uploaded them (found in
       R-028); the app now sends them and the server saves them (optional, so older apps still upload). Not tested on a device.
-- [ ] **[new] Test the 2026-11-06 app fixes on the phone** (v0.3.4+, D-058 – D-060): install from GitHub Releases (it installs
+- [ ] **[new] Test the 2026-11-06 app fixes on the phone** (now **v0.3.5**, released 2026-11-12 with PR #4; D-058 – D-060; also check that an upload now brings `camera.csv`, `anchors.csv` and the lens files): install from GitHub Releases (it installs
       next to the old app; uninstall the old one only after its recordings are uploaded), check whether Play Protect still warns, the server list
       finds this PC, and "Check for updates" installs the next build. Not tested on a device.
 - [ ] **[new] Move the app code** out of `googleARCore/samples/hello_ar_java/` and Google's Java package into its own
@@ -483,6 +506,9 @@ Dated milestones; details in [LOG.md](LOG.md), reasons in [DECISIONS.md](DECISIO
   server logs devices, upload progress, failures and answers a UDP server search (D-057). App: server search that
   works on the /19 lab Wi-Fi, in-app updates, own package name `com.buildscan3d.app`, release builds signed with a
   private key (D-058 – D-060). Branch `fix/android-app`.
+
+- **2026-11-12: app v0.3.5** (Umair, PR #4): uploads `camera.csv`, `anchors.csv` and the lens files; server accepts
+  them as optional. Per-run web bundles gitignored (D-061). R-030 (lab room, 50.2 min on Linux) logged.
 
 ## 9. Known limits
 

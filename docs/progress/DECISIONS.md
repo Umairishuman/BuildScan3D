@@ -447,12 +447,21 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **Rejected:** also building locally first (would need JDK + Android SDK on this PC); PR only with Umair merging.
   **By:** Umair.
 
+## D-061 · 2026-11-12 · Per-run web bundles stay out of git
+- **Decision:** `prototype/web-ui/.gitignore` ignores `public/scans/scan_*/`, the bundle the `web` stage of
+  `scripts/run_full.sh` writes for every run (`<scan>_<tag>/`, ~20 MB each). Only demo bundles that are picked on purpose,
+  such as `public/scans/newroom/`, are tracked; a scan is shown in the dashboard by adding it to `mockData.ts`.
+- **Why:** each run added an untracked ~20 MB folder (R-029 `scan_056fe94d3399_umair/`, the unrecorded `r1106` run
+  `scan_646070948603_r1106/`); no single file passes CI's 10 MB limit, so one could be committed by mistake.
+- **Rejected:** `export_web.py` writing to `saved_models/web/` instead and copying demos by hand; committing every bundle
+  (~20 MB of repo growth per scan). **By:** Umair.
+
 ## D-062 · 2026-11-12 · Uploads over a USB cable, preferred over Wi-Fi
 - **Decision:** the app uploads over a USB cable when one is connected: `scripts/usb_link.sh` (started by
   `scripts/start_server.sh`) keeps `adb reverse tcp:8000 tcp:8000` set while a phone is plugged in, and the app's
   `ServerLink` tries `http://127.0.0.1:8000` before the saved and recent Wi-Fi servers. The Scans screen shows the route
   (USB / Wi-Fi / not connected, with the reason), uploads show MB/s and time left, fail within 30 s when the link drops,
-  and restart by themselves up to 3 times. (D-061 is used on `exp/first-linux-run`.)
+  and restart by themselves up to 3 times.
 - **Why:** on 2026-11-12 uploads ran at ~1.4 MB/s on the lab Wi-Fi (772.5 MB recording, ~9 min) and ~1 MB/s on the
   phone hotspot (PC Wi-Fi signal −76 dBm); the PC's address changed four times that day, so the app kept losing the
   server; the app's write timeout of 10 min hid dropped connections.
