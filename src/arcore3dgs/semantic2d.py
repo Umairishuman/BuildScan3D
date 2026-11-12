@@ -94,39 +94,52 @@ def per_class_nms(dets):
 
 
 @torch.no_grad()
-def detect(rgb, prompt):
-    """[(class id in `classes`, score, box)]: each query goes to its best-scoring class"""
-    h, w = rgb.shape[:2]
-    inp = dp(images=Image.fromarray(rgb), text=prompt["text"], return_tensors="pt").to(dev)
+def detect_batch(rgbs, prompt):
+    """per image [(class id in `classes`, score, box)]: each query goes to its best-scoring class. Images of one
+    call must have the same size (one batch, no padding, so each result equals a call on that image alone)."""
+    h, w = rgbs[0].shape[:2]
+    inp = dp(images=[Image.fromarray(r) for r in rgbs], text=[prompt["text"]] * len(rgbs), return_tensors="pt").to(dev)
     o = dm(**inp)
-    L = o.logits.sigmoid()[0]                                 # [queries, tokens]
-    S = torch.stack([L[:, sp_].max(1).values for sp_ in prompt["spans"]], 1)   # [queries, classes of the prompt]
-    sc, ci = S.max(1)
-    if "door" in prompt["names"]:                             # furniture does not compete with door
-        door = prompt["names"].index("door"); furn = [prompt["names"].index(c) for c in FURNITURE if c in prompt["names"]]
-        m = torch.isin(ci, torch.tensor(furn, device=ci.device)) & (S[:, door] > args.box_thr)
-        ci[m] = door; sc[m] = S[m, door]
-    keep = sc > args.box_thr
-    bx = o.pred_boxes[0][keep]; sc = sc[keep]; ci = ci[keep]
-    cx, cy, bw, bh = bx.unbind(1)
-    boxes = torch.stack([(cx - bw / 2) * w, (cy - bh / 2) * h, (cx + bw / 2) * w, (cy + bh / 2) * h], 1)
-    res = [(prompt["ids"][int(c)], float(v), b.tolist()) for c, v, b in zip(ci, sc, boxes)]
-    # a box covering most of the frame is a "the whole scene is a room" hallucination
-    return [r for r in res if (r[2][2] - r[2][0]) * (r[2][3] - r[2][1]) < 0.6 * w * h]
+    out = []
+    for i in range(len(rgbs)):
+        L = o.logits[i].sigmoid()                             # [queries, tokens]
+        S = torch.stack([L[:, sp_].max(1).values for sp_ in prompt["spans"]], 1)   # [queries, classes of the prompt]
+        sc, ci = S.max(1)
+        if "door" in prompt["names"]:                         # furniture does not compete with door
+            door = prompt["names"].index("door"); furn = [prompt["names"].index(c) for c in FURNITURE if c in prompt["names"]]
+            m = torch.isin(ci, torch.tensor(furn, device=ci.device)) & (S[:, door] > args.box_thr)
+            ci[m] = door; sc[m] = S[m, door]
+        keep = sc > args.box_thr
+        bx = o.pred_boxes[i][keep]; sc = sc[keep]; ci = ci[keep]
+        cx, cy, bw, bh = bx.unbind(1)
+        boxes = torch.stack([(cx - bw / 2) * w, (cy - bh / 2) * h, (cx + bw / 2) * w, (cy + bh / 2) * h], 1)
+        res = [(prompt["ids"][int(c)], float(v), b.tolist()) for c, v, b in zip(ci, sc, boxes)]
+        # a box covering most of the frame is a "the whole scene is a room" hallucination
+        out.append([r for r in res if (r[2][2] - r[2][0]) * (r[2][3] - r[2][1]) < 0.6 * w * h])
+    return out
+
+
+def detect(rgb, prompt):
+    return detect_batch([rgb], prompt)[0]
 
 
 def detect_tiles(rgb, size):
-    """small objects on overlapping zoomed tiles, boxes back in frame coordinates; a box cut by a tile border is dropped"""
+    """small objects on overlapping zoomed tiles (one detector batch per frame), boxes back in frame coordinates; a
+    box cut by a tile border is dropped"""
     h, w = rgb.shape[:2]; step = int(size * 0.7); res = []
     xs = sorted({*range(0, max(1, w - size), step), max(0, w - size)}); ys = sorted({*range(0, max(1, h - size), step), max(0, h - size)})
-    for y0 in ys:
-        for x0 in xs:
-            cr = rgb[y0:y0 + size, x0:x0 + size]
-            for c, v, b in detect(cr, TILE):
-                cut = (b[0] < 4 and x0 > 0) or (b[1] < 4 and y0 > 0) or (b[2] > cr.shape[1] - 4 and x0 + size < w) or (b[3] > cr.shape[0] - 4 and y0 + size < h)
-                if cut or max(b[2] - b[0], b[3] - b[1]) > 0.6 * size:
-                    continue
-                res.append((c, v, [b[0] + x0, b[1] + y0, b[2] + x0, b[3] + y0]))
+    tiles = [(y0, x0) for y0 in ys for x0 in xs]
+    crops = [rgb[y0:y0 + size, x0:x0 + size] for y0, x0 in tiles]
+    if len({c.shape for c in crops}) > 1:                     # frame smaller than a tile: sizes differ, no batch
+        found = [detect(c, TILE) for c in crops]
+    else:
+        found = detect_batch(crops, TILE)
+    for (y0, x0), cr, dets in zip(tiles, crops, found):
+        for c, v, b in dets:
+            cut = (b[0] < 4 and x0 > 0) or (b[1] < 4 and y0 > 0) or (b[2] > cr.shape[1] - 4 and x0 + size < w) or (b[3] > cr.shape[0] - 4 and y0 + size < h)
+            if cut or max(b[2] - b[0], b[3] - b[1]) > 0.6 * size:
+                continue
+            res.append((c, v, [b[0] + x0, b[1] + y0, b[2] + x0, b[3] + y0]))
     return res
 
 
