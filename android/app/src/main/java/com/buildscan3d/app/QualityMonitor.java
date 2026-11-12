@@ -34,9 +34,11 @@ public class QualityMonitor {
     public float sharpness = -1, sharpnessRel = -1, brightness = -1, overexposed = -1;
     public float angSpeedDeg, linSpeed, blurPx = -1, exposureMs = -1;
     public boolean tracking;
+    /** Wall-clock time of update() for this frame in ms (NFR2: < 16 ms); set by the caller, -1 = not timed. */
+    public float iqaMs = -1;
     public String csv(long ts) {
-      return String.format(Locale.US, "%d,%s,%.1f,%.3f,%.1f,%.3f,%.2f,%.3f,%d,%.1f,%.2f\n", ts, level.name(), sharpness,
-          sharpnessRel, brightness, overexposed, angSpeedDeg, linSpeed, tracking ? 1 : 0, blurPx, exposureMs);
+      return String.format(Locale.US, "%d,%s,%.1f,%.3f,%.1f,%.3f,%.2f,%.3f,%d,%.1f,%.2f,%.3f\n", ts, level.name(), sharpness,
+          sharpnessRel, brightness, overexposed, angSpeedDeg, linSpeed, tracking ? 1 : 0, blurPx, exposureMs, iqaMs);
     }
   }
 

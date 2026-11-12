@@ -492,7 +492,9 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
 
   /** Live IQA: evaluate this frame, log it while recording, refresh the banner at ~5 Hz. */
   private void updateQuality(Frame frame, Camera camera) {
+    final long iqaStartNs = System.nanoTime();
     final QualityMonitor.Result q = qualityMonitor.update(frame, camera, isRecording);
+    q.iqaMs = (System.nanoTime() - iqaStartNs) / 1e6f;   // NFR2, logged in quality.csv as iqa_ms
     if (isRecording && captureLogger != null) {
       captureLogger.logQuality(q.csv(frame.getTimestamp()));
     }
