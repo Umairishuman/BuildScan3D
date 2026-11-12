@@ -8,6 +8,8 @@ Entries up to v0.3.6 were written on 2026-11-12 from the git history and docs/pr
 
 ## Unreleased
 
+## v0.3.7 · 2026-11-12
+
 - The app checks for updates when it starts and whenever you come back to it (at most every 6 hours, never while recording), and the update dialog lists what changed.
 - After an update the app shows once what is new in the installed version.
 - After you allow BuildScan 3D to install updates in Android settings, the update installs without checking again.
