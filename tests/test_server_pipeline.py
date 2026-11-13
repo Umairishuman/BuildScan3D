@@ -94,3 +94,44 @@ def test_scripts_called_on_the_pod_exist_in_the_repo(template):
 
 def test_setup_script_installs_what_the_pipeline_needs():
     assert "colmap" in rc.SETUP_SCRIPT and "nerfstudio" in rc.SETUP_SCRIPT
+
+
+# ---------------------------------------------------------------- BUILDSCAN_PIPELINE=v9 (scripts/run_full.sh)
+def test_default_recipe_is_still_v3(monkeypatch):
+    monkeypatch.delenv("BUILDSCAN_PIPELINE", raising=False)
+    assert pl.pipeline_recipe() == "v3"
+    monkeypatch.setenv("BUILDSCAN_PIPELINE", "v9")
+    assert pl.pipeline_recipe() == "v9"
+
+
+def test_v9_command_runs_run_full_with_the_default_recipe(monkeypatch):
+    monkeypatch.delenv("BUILDSCAN_V9_ARGS", raising=False)
+    cmd = pl.build_v9_command("/data/scan_7")
+    assert cmd[1].endswith(os.path.join("scripts", "run_full.sh")) and os.path.exists(cmd[1])
+    assert cmd[2:5] == ["/data/scan_7", pl.V9_TAG, "--"]
+    assert cmd[5:7] == ["--sfm_args", "--retrieval 20"]          # one argument with a space, as run_v8 expects
+    assert "--pgsr" in cmd
+
+
+def test_v9_args_can_be_overridden(monkeypatch):
+    monkeypatch.setenv("BUILDSCAN_V9_ARGS", "--init fmvs --init_args=--photometric")
+    assert pl.build_v9_command("/d")[5:] == ["--init", "fmvs", "--init_args=--photometric"]
+
+
+@pytest.mark.parametrize("line,stage", [
+    ("=== [01:30:42] layout", "layout"),
+    ("=== [01:31:00] layout done in 0 min 6 s", "layout"),
+    ("== train: C:/x/python.exe geo_splatfacto.py", "train"),
+    ("== select: python select_sharp.py", "select"),
+    ("=== [01:30:42] run_v8.py: select -> ply", None),
+    ("  [gpu 01:32:43] 11% | 1943 / 8192 MiB", None),
+    ("=== run_full.sh 2026-11-14 01:30:42  dataset=x", None),
+])
+def test_v9_stage_lines_are_recognised(line, stage):
+    assert pl.v9_stage_of(line) == stage
+
+
+def test_v9_stages_match_run_full_sh():
+    src = open(os.path.join(pl.PROJECT_ROOT, "scripts", "run_full.sh"), encoding="utf-8").read()
+    assert "ALL=(" + " ".join(pl.V9_STAGES) + ")" in src
+    assert set(pl.V9_LABELS) == set(pl.V9_STAGES)
