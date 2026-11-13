@@ -98,6 +98,9 @@ class GeoSplatfactoModelConfig(SplatfactoModelConfig):
     flat_lambda: float = 100.0       # PGSR's minimum-scale loss weight
     sv_lambda: float = 0.05          # single-view depth-normal consistency
     pgsr_start: int = 3000
+    mcmc_cap: int = 0                # > 0: gsplat MCMCStrategy (3DGS as MCMC, Kheradmand et al. 2024) with this many Gaussians max
+    mcmc_reg: float = 0.01           # its opacity and scale regularisers (paper default)
+    revised_opacity: bool = False    # gsplat DefaultStrategy: opacity correction on clone / split (Bulo et al. 2024)
 
 
 class GeoSplatfactoModel(SplatfactoModel):
@@ -116,6 +119,15 @@ class GeoSplatfactoModel(SplatfactoModel):
             self.prior_planes = torch.from_numpy(z["planes"]) if "planes" in z.files else None   # [N, h, w] uint8
             self.blur_motion = torch.from_numpy(z["motion"]).float() if "motion" in z.files else None  # [N, 6]
         self._blur_n = 1
+        if self.config.revised_opacity and self.config.mcmc_cap <= 0:
+            self.strategy.revised_opacity = True
+        if self.config.mcmc_cap > 0:
+            from gsplat.strategy import MCMCStrategy
+            self.strategy = MCMCStrategy(cap_max=self.config.mcmc_cap, refine_start_iter=self.config.warmup_length,
+                                         refine_stop_iter=self.config.stop_split_at, refine_every=self.config.refine_every,
+                                         min_opacity=0.005, verbose=True)
+            self.strategy.absgrad = False                            # splatfacto reads this when rasterising
+            self.strategy_state = self.strategy.initialize_state()
 
     @staticmethod
     def _so3_exp(w):
@@ -224,6 +236,11 @@ class GeoSplatfactoModel(SplatfactoModel):
         return out.reshape(rgb.shape)
 
     def step_post_backward(self, step):
+        if self.config.mcmc_cap > 0:                                 # relocation / growth + position noise
+            self.strategy.step_post_backward(params=self.gauss_params, optimizers=self.optimizers,
+                                             state=self.strategy_state, step=self.step, info=self.info,
+                                             lr=self.optimizers["means"].param_groups[0]["lr"])
+            return
         # with n sub-renders the image-space gradient of the last (central) render is ~1/n of a normal step;
         # rescale it so densification keeps its usual threshold
         if self._blur_n > 1 and self.info is not None:
@@ -261,6 +278,9 @@ class GeoSplatfactoModel(SplatfactoModel):
     def get_loss_dict(self, outputs, batch, metrics_dict=None):
         loss = super().get_loss_dict(outputs, batch, metrics_dict)
         cfg = self.config
+        if self.training and cfg.mcmc_cap > 0:
+            loss["mcmc_opacity"] = cfg.mcmc_reg * torch.sigmoid(self.opacities).mean()
+            loss["mcmc_scale"] = cfg.mcmc_reg * torch.exp(self.scales).mean()
         if self.training and cfg.pgsr:
             sc = torch.exp(self.scales).sort(dim=1).values      # ascending
             loss["flat"] = cfg.flat_lambda * sc[:, 0].mean()
@@ -376,6 +396,8 @@ if __name__ == "__main__":
     ap.add_argument("--pgsr", action="store_true", help="PGSR-lite: flat Gaussians, unbiased depth, rendered normals")
     ap.add_argument("--flat_lambda", type=float, default=100.0); ap.add_argument("--sv_lambda", type=float, default=0.05)
     ap.add_argument("--pgsr_start", type=int, default=3000)
+    ap.add_argument("--mcmc_cap", type=int, default=0, help="> 0: MCMC densification (gsplat MCMCStrategy) capped at this many Gaussians")
+    ap.add_argument("--revised_opacity", action="store_true", help="opacity correction when Gaussians are cloned / split")
     ap.add_argument("--save_every", type=int, default=2500, help="checkpoint interval (only the latest is kept)")
     ap.add_argument("--resume", action="store_true", help="continue from this run name's latest checkpoint (power cut)")
     args = ap.parse_args()
@@ -408,7 +430,7 @@ if __name__ == "__main__":
     kw.update(prior_file=os.path.abspath(prior) if prior else "", dash_schedule=sched, depth_lambda=args.depth_lambda, normal_lambda=args.normal_lambda,
               geo_start=args.geo_start, planar_lambda=args.planar_lambda, blur_exposure=args.blur_exposure,
               blur_start=args.blur_start, blur_grid_per_sub=args.blur_grid_per_sub, pgsr=args.pgsr, flat_lambda=args.flat_lambda, sv_lambda=args.sv_lambda,
-              pgsr_start=args.pgsr_start, random_init=False, use_bilateral_grid=True, use_scale_regularization=not args.pgsr,
+              pgsr_start=args.pgsr_start, mcmc_cap=args.mcmc_cap, revised_opacity=args.revised_opacity, random_init=False, use_bilateral_grid=True, use_scale_regularization=not args.pgsr,
               densify_grad_thresh=args.densify_grad, num_downscales=args.num_downscales,
               resolution_schedule=args.resolution_schedule, stop_split_at=args.stop_split_at,
               output_depth_during_training=not args.no_prior)
