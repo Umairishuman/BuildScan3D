@@ -56,9 +56,14 @@ if os.path.exists(os.path.join(root, "quality.csv")):
     rows = [l.strip().split(",") for l in open(os.path.join(root, "quality.csv")).readlines()[1:]]
     blur = np.array([float(r[9]) for r in rows if len(r) > 9 and float(r[9]) >= 0])   # app >= 2026-10-23
     if len(blur):
-        report("PASS" if np.median(blur) <= 5 else "WARN",
-               f"predicted motion blur: median {np.median(blur):.1f} px, > 5 px {100 * (blur > 5).mean():.0f}%, "
-               f"> 10 px {100 * (blur > 10).mean():.0f}% of frames (3DGS wants < ~5 px)")
+        # FAIL above 15 px: scan_3028a4de8fa0 (median 24.9 px, > 10 px on 92%, walked 0.39 m/s) passed this check as
+        # READY, then SfM shrank part of the hall into a "mini room" (TRAINING R-036 / R-037). Good captures: newRoom
+        # 6-12 px, scan #3 6.7 px.
+        mb = np.median(blur)
+        report("PASS" if mb <= 5 else ("WARN" if mb <= 15 else "FAIL"),
+               f"predicted motion blur: median {mb:.1f} px, > 5 px {100 * (blur > 5).mean():.0f}%, "
+               f"> 10 px {100 * (blur > 10).mean():.0f}% of frames (3DGS wants < ~5 px)"
+               + ("  -> record again, walking and turning slower" if mb > 15 else ""))
     iqa = np.array([float(r[11]) for r in rows if len(r) > 11 and float(r[11]) >= 0])   # app >= v0.3.7 (iqa_ms)
     if len(iqa):
         report("PASS" if np.percentile(iqa, 95) < 16 else "WARN",
