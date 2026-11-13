@@ -36,6 +36,9 @@ ap.add_argument("--classes", default=",".join(CLASSES + DECOYS))
 ap.add_argument("--limit", type=int, default=0)
 ap.add_argument("--out", default="semantic2d", help="output folder inside --work")
 ap.add_argument("--tiles", type=int, default=0, help="> 0: tile size (px) of the second pass for small objects, e.g. 640")
+ap.add_argument("--tile_batch", type=int, default=1,
+                help="tiles per detector call; 1 = one at a time. Batching all tiles of a frame filled the 8 GB RTX 3070, "
+                     "Windows spilled GPU memory to RAM and sem2d ran ~3x slower (TRAINING R-039)")
 ap.add_argument("--debug", type=int, default=0, help="write N overlay images to semantic2d/_debug")
 args = ap.parse_args()
 classes = args.classes.split(",")
@@ -124,16 +127,16 @@ def detect(rgb, prompt):
 
 
 def detect_tiles(rgb, size):
-    """small objects on overlapping zoomed tiles (one detector batch per frame), boxes back in frame coordinates; a
+    """small objects on overlapping zoomed tiles (--tile_batch tiles per detector call), boxes back in frame coordinates; a
     box cut by a tile border is dropped"""
     h, w = rgb.shape[:2]; step = int(size * 0.7); res = []
     xs = sorted({*range(0, max(1, w - size), step), max(0, w - size)}); ys = sorted({*range(0, max(1, h - size), step), max(0, h - size)})
     tiles = [(y0, x0) for y0 in ys for x0 in xs]
     crops = [rgb[y0:y0 + size, x0:x0 + size] for y0, x0 in tiles]
-    if len({c.shape for c in crops}) > 1:                     # frame smaller than a tile: sizes differ, no batch
+    if len({c.shape for c in crops}) > 1 or args.tile_batch <= 1:   # sizes differ (frame smaller than a tile) or unbatched
         found = [detect(c, TILE) for c in crops]
     else:
-        found = detect_batch(crops, TILE)
+        found = [d for i in range(0, len(crops), args.tile_batch) for d in detect_batch(crops[i:i + args.tile_batch], TILE)]
     for (y0, x0), cr, dets in zip(tiles, crops, found):
         for c, v, b in dets:
             cut = (b[0] < 4 and x0 > 0) or (b[1] < 4 and y0 > 0) or (b[2] > cr.shape[1] - 4 and x0 + size < w) or (b[3] > cr.shape[0] - 4 and y0 + size < h)
