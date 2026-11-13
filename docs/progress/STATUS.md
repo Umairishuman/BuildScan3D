@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-032 – R-038 (renumbered from R-029 – R-035 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
+Last updated: 2026-11-14 by Tayyab (agent, overnight session on `exp/overnight-2026-11-14`): roomAttemptSadness2 v9 run (R-039), newRoom technique tests (R-040 – R-043), layout ceiling fix, server v9 option, tape script, capture checks in the app and on the PC, coverage 45%. Before that: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-032 – R-038 (renumbered from R-029 – R-035 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -246,6 +246,11 @@ script, step 3 RunPod and the friend's PC.**
 - [ ] **[new] 1f. Port the Windows-only paths in code** — partly done 2026-11-06 on `feature/linux-port`: `toolpaths.py`, `run_v8.py`, `sfm_colmap.py`, `fast_mvs.py`, `mvs_init.py`, `colmap_mvs.py`. Still open: `server/pipeline.py`, `.sh` launchers (`scripts/start_server.sh` done 2026-11-06, D-057). `run_v8.py` (`nerfstudio-env/Scripts/python.exe`,
       `ns-export.exe`), `sfm_colmap.py` (`tools/colmap_dl/.../COLMAP.bat`, `tools/cudnn9` DLL path), `server/pipeline.py`;
       the `.bat` launchers need `.sh` equivalents.
+  - **2026-11-14:** `server/pipeline.py` now finds the nerfstudio programs through `toolpaths.ns_cmd` (no hard-coded
+    `Scripts/*.exe`), and `scripts/run_full.sh` runs on Windows Git Bash too. Not yet started on Linux through the server.
+- [ ] **[new 2026-11-14] Server jobs can run v9/v10** (COMPLETION_PLAN 2.3): `BUILDSCAN_PIPELINE=v9` makes a job run
+      `scripts/run_full.sh` (R-023/R-031 recipe, `BUILDSCAN_V9_ARGS` to override), with the 15 stages as job progress;
+      default still v3 until OD-7 is decided. To do: one upload end to end with it (2.5), then OD-7.
 - [x] **[new] 1g. All of 1b–1f as one script** — done 2026-11-06: `scripts/setup_linux.sh` (+ `--check`); run here OK, fresh-machine run not yet tested. (`scripts/setup_linux.sh` + env files), so step 2 and the friend's PC reuse it (D-048).
 - [x] **[new] 1h(a). First complete run here** — done 2026-11-06 (R-029): Umair's corridor-end recording
       `scan_056fe94d3399` through `scripts/run_full.sh`, all 15 stages, 34.7 min, no errors after the `imu.npz` fix (R-028).
@@ -327,6 +332,9 @@ script, step 3 RunPod and the friend's PC.**
 - [ ] Optional: remove the revoked key from git history (`00bc021`); needs a history rewrite + force-push, team decision.
       Not urgent now that the key is revoked.
 - [ ] **[new] Raise the coverage gate back to 40%** when the tests are written (D-054; now 35%, measured 37.4%).
+  - **2026-11-14 (Tayyab's overnight session, `exp/overnight-2026-11-14`):** with the new tests (`test_tape_check.py`,
+    v9 server tests) line coverage is **45%** locally (Windows, Python 3.10; CI on Linux not run yet). D-054 can be
+    flipped back to 40% once CI confirms it on the branch (Umair's decision).
 
 - [ ] **[new] Code reorganisation, step 2 of D-049:** regroup `src/arcore3dgs/` by stage (proposal in
       [MAP.md](../../MAP.md) §10) on its own branch, **after** step 1 works so every move can be checked with a real run.
@@ -365,8 +373,14 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
     incremental mapper; and do not trust ARCore neighbours after tracking loss. Adoption: DECISIONS OD-11.
 - [ ] **[new 2026-11-13] Speed-ups not tested with `--pgsr`** (the best model's recipe, R-023, now a `run_v8.py` flag
       from master) **nor on Linux**: one run of each before adopting OD-10.
+  - **2026-11-14:** tested on newRoom (R-041): training 33.0 min vs R-021's 46 min, PSNR 25.02 / SSIM 0.8232 /
+    sharpness 0.87 vs 25.09 / 0.8254 / 0.88 (one run each); off-path flatness of R-021 still to measure. Also used in
+    R-039 (roomAttemptSadness2, 36.2 min). Linux still not tested.
 - [ ] **[new 2026-11-13] Batched Grounding DINO tiles in `semantic2d.py`** are committed but have never run: compare the
       2D labels with the unbatched output on newRoom and time it (the 38-min semantics stage is the next big cost).
+  - **2026-11-14:** first real run (R-039, roomAttemptSadness2) was ~3× slower (~12 s per frame): batching all tiles
+    filled the 8 GB GPU and Windows spilled GPU memory to RAM. Now `--tile_batch` (default 1 = the old per-tile calls).
+    Batching only helps on a larger GPU; not measured there.
 - [ ] **[new 2026-11-13] Fast recipe vs v9e2e on the lecture hall is not known** (R-036/R-038 have no baseline; Tayyab
       is not sure R-038 is better than v9e2e). Umair's R-031 (scan #3, Ubuntu PC, old recipe + PGSR) looks like the
       same hall with a steadier capture (6.7 px vs 25 px blur): compare the two models side by side once R-031 has a result
@@ -390,6 +404,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 - [ ] **[new 2026-11-12] R-030 (`scan_646070948603`, lab room): room height 1.50 m cannot be right.** View the model,
       check which plane the layout took as the ceiling and whether the scale is off; measure one length with a tape.
+  - **2026-11-14:** `layout.py` fix (`exp/overnight-2026-11-14`): the ceiling is now the strongest horizontal cluster
+    above the cameras with < 3% of the opaque splats above it, not just the strongest one (an AC unit or cabinet
+    underside can win). newRoom unchanged (2.72 m); roomAttemptSadness2 2.78 m (R-039). **To do (Umair, Linux PC):**
+    rerun `layout` on R-030 (`buildscan`, `--from layout`) and check the height against the tape.
 
 - [ ] **Second room** (roomAttemptSadness2): full v9 pipeline + semantics (~2 h GPU), then a room check by the user. The
       real test of v9/v10. *(from TODO 2026-10-24 / 2026-10-27)*
@@ -411,6 +429,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 - [ ] **Metric scale:** a more robust Sim3 to ARCore (several segments, `anchors.csv` corrections), checked against the
       tape. The fast SfM is 1.5–1.9% off. *(from TODO 2026-10-26)*
+- [ ] **[new 2026-11-14] Tape comparison script** `src/arcore3dgs/tape_check.py` (COMPLETION_PLAN E2): fill a
+      `tape.csv` per room (template in its docstring) and run it on each room's `layout.json`. newRoom with the
+      2026-10-11 readings: v9 layout room length 6.600 vs 6.700 m (−10 cm, −1.49%; the v3 model measured in the viewer
+      was −0.8 cm). Check why the layout's wall-to-wall distance is 10 cm short (wall planes inside the wall surface?).
 - [ ] Use `anchors.csv` corrections in the pipeline: re-align pre-correction ARCore poses (better Sim3 inliers, a COLMAP-free fallback). *(from TODO 2026-10-12)*
 - [ ] More tape references (room 2, room height, doors) with 3 repeated clicks each, to quantify clicking error. *(from TODO)*
 - [ ] Tape-measure check on roomAttemptSadness2. *(from TODO 2026-10-10)*
@@ -450,6 +472,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 - [ ] **[new 2026-11-12] Ask Tayyab whether he has unpushed app changes.** GitHub shows none after `6d0cab5`
       (2026-10-26); work only on his PC cannot be seen.
+- [ ] **[new 2026-11-14] End-of-recording warning and repeated buzz** (`exp/overnight-2026-11-14`, commit c0d6b07):
+      the stop dialog says "Record again?" when the median predicted blur is > 15 px or > 50% of frames were bad, and the
+      bad-quality vibration repeats every 3 s. Compiled locally; **not tested on a phone**. `check_capture.py` now FAILs
+      the same 15 px case (scan_3028a4de8fa0 passed as READY before).
 - [ ] **[new 2026-11-12] Test the new app on the phone** (USB upload D-062, light UI + bottom navigation + Server tab +
       upload checks and Stop D-064): install `adb` on this PC (docs/PROCESSING_GUIDE.md), USB debugging on the phone,
       then an upload over the cable and over Wi-Fi, pulling the cable mid-upload (WAITING → restart), Stop, the
