@@ -502,10 +502,11 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
     if (isRecording && captureLogger != null) {
       captureLogger.logQuality(q.csv(frame.getTimestamp()));
     }
-    // short vibration when quality turns bad while recording (rate-limited)
+    // short vibration when quality turns bad while recording (rate-limited), and again every 3 s while it stays
+    // bad: one buzz was easy to miss on a long bad stretch (scan_3028a4de8fa0 was "bad" 93% of the time)
     long nowMs = System.currentTimeMillis();
-    if (isRecording && q.level == QualityMonitor.Level.BAD && lastLevel != QualityMonitor.Level.BAD
-        && nowMs - lastBuzzMs > 1500) {
+    if (isRecording && q.level == QualityMonitor.Level.BAD
+        && ((lastLevel != QualityMonitor.Level.BAD && nowMs - lastBuzzMs > 1500) || nowMs - lastBuzzMs > 3000)) {
       lastBuzzMs = nowMs;
       android.os.Vibrator vib = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
       if (vib != null && vib.hasVibrator()) {
@@ -596,7 +597,9 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
         captureLogger.close();
         captureLogger = null;
       }
-      final String summary = qualityMonitor.summary() + "\n" + coverageMap.summary();
+      final String verdict = qualityMonitor.verdict();
+      final String summary = (verdict != null ? verdict + "\n\n" : "") + qualityMonitor.summary() + "\n"
+          + coverageMap.summary();
       runOnUiThread(() -> {
         if (coverageOverlay != null) {
           coverageOverlay.setData(null);
@@ -607,7 +610,7 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
           coverageText.setVisibility(View.GONE);
         }
         final String datasetPath = currentDatasetDir != null ? currentDatasetDir.getAbsolutePath() : null;
-        new AlertDialog.Builder(this).setTitle("Capture quality").setMessage(summary)
+        new AlertDialog.Builder(this).setTitle(verdict != null ? "Record again?" : "Capture quality").setMessage(summary)
             .setPositiveButton("Upload & Process", (d, w) -> {
               if (datasetPath != null) {
                 Intent intent = new Intent(CaptureActivity.this, ProcessingActivity.class);
