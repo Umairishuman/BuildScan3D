@@ -15,6 +15,7 @@ def qrot(q):
 import argparse
 ap = argparse.ArgumentParser(); ap.add_argument("model"); ap.add_argument("mono_prior")
 ap.add_argument("--width", type=int, default=1920, help="width of the keyframes the model was made from")
+ap.add_argument("--json", default="", help="write the result here (run_v8.py: <gs dir>/sfm_scale_check.json)")
 args = ap.parse_args(); md, mp = args.model, args.mono_prior
 P = {}
 for l in open(os.path.join(md, "points3D.txt")):
@@ -42,3 +43,16 @@ for i in range(0, len(k), 40):
     w_ = a[i:i+40] / g
     print(f"{k[i]}  rel. scale median {np.median(w_):.2f}  p10 {np.percentile(w_,10):.2f}  p90 {np.percentile(w_,90):.2f}")
 print(f"frames at < 0.5x of the median: {(a/g < 0.5).sum()}, > 2x: {(a/g > 2).sum()}")
+# a shrunken (or blown-up) part shows as a run of consecutive frames, not as single outliers
+# Only shrunken blocks are flagged: a block > 2x was a close-up of a curtain filling the view in roomAttemptSadness2
+# (Metric3D reads such close-ups too near; SfM agreed with ARCore there to 8 cm, TRAINING R-039).
+bm = [(k[i], float(np.median(a[i:i + 40] / g))) for i in range(0, len(k), 40) if len(a[i:i + 40]) >= 10]
+blocks = [n for n, m in bm if m < 0.5]
+high = [n for n, m in bm if m > 2]
+verdict = "ok" if not blocks else "PART OF THE MODEL SHRUNKEN"
+print(f"verdict: {verdict}" + (f" (blocks of 40 frames starting at {', '.join(blocks)}; try --mapper mapper, "
+                                "TRAINING R-037)" if blocks else "")
+      + (f"; blocks > 2x (often Metric3D on close-ups, not SfM): {', '.join(high)}" if high else ""))
+if args.json:
+    json.dump(dict(frames=len(k), ratio_median=float(g), n_below_half=int((a / g < 0.5).sum()),
+                   n_above_double=int((a / g > 2).sum()), bad_blocks=blocks, high_blocks=high, verdict=verdict), open(args.json, "w"), indent=1)
