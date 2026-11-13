@@ -135,3 +135,44 @@ def test_v9_stages_match_run_full_sh():
     src = open(os.path.join(pl.PROJECT_ROOT, "scripts", "run_full.sh"), encoding="utf-8").read()
     assert "ALL=(" + " ".join(pl.V9_STAGES) + ")" in src
     assert set(pl.V9_LABELS) == set(pl.V9_STAGES)
+
+
+class _FakeProc:
+    def __init__(self, lines, rc):
+        self.stdout = iter(lines); self.returncode = rc
+    def wait(self):
+        return self.returncode
+    def kill(self):
+        pass
+
+
+def _run_v9(monkeypatch, tmp_path, lines, rc):
+    monkeypatch.setenv("BUILDSCAN_PIPELINE", "v9")
+    monkeypatch.setattr(pl.subprocess, "Popen", lambda *a, **k: _FakeProc(lines, rc))
+    job = pl.Job(job_id="j1", dataset_dir=str(tmp_path))
+    pl.run_pipeline(job)
+    return job
+
+
+def test_v9_job_follows_the_stages_and_completes(monkeypatch, tmp_path):
+    out = tmp_path / f"work_{pl.V9_TAG}_sfm" / f"gs_{pl.V9_TAG}"
+    out.mkdir(parents=True); (out / "splat.ply").write_bytes(b"ply")
+    job = _run_v9(monkeypatch, tmp_path, ["== select: x\n", "== train: y\n", "=== [03:00:00] web\n"], 0)
+    assert job.status == pl.JobStatus.COMPLETED and job.progress_pct == 100
+    assert job.total_steps == len(pl.V9_STAGES) and job.current_step == "web"
+    assert job.output_path.endswith("splat.ply")
+
+
+def test_v9_job_failure_names_the_stage(monkeypatch, tmp_path):
+    job = _run_v9(monkeypatch, tmp_path, ["== select: x\n", "=== [01:00:00] sem2d\n", "Traceback\n"], 1)
+    assert job.status == pl.JobStatus.FAILED and "sem2d" in job.error
+    assert job.step_index == pl.V9_STAGES.index("sem2d")
+
+
+def test_v9_job_reports_a_missing_bash(monkeypatch, tmp_path):
+    monkeypatch.setenv("BUILDSCAN_PIPELINE", "v9")
+    def boom(*a, **k):
+        raise FileNotFoundError("bash")
+    monkeypatch.setattr(pl.subprocess, "Popen", boom)
+    job = pl.Job(job_id="j2", dataset_dir=str(tmp_path)); pl.run_pipeline(job)
+    assert job.status == pl.JobStatus.FAILED and "not found" in job.error
