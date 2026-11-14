@@ -402,6 +402,13 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.3 Reconstruction quality
 
+- [ ] **[new 2026-11-14] Techniques tried on newRoom** (one run each, off-path 79 frames, baseline R-032 25.14 / 0.8251):
+      MCMC densification 620k / 1M (R-040, R-042: 24.65 / 24.74, visibly softer, **rejected**), revised opacity (R-043:
+      25.02, −10% size, inconclusive), lower densify threshold 0.0004 (R-044: 25.07, sharper score, +40% size,
+      inconclusive). None beats the current recipe; the off-path softness is more likely the capture (motion blur,
+      coverage) than densification. Untried: residual camera-pose refinement and exposure correction (LighthouseGS,
+      WACV 2026), longer training, measuring run-to-run noise first (3.6).
+
 - [ ] **[new 2026-11-12] R-030 (`scan_646070948603`, lab room): room height 1.50 m cannot be right.** View the model,
       check which plane the layout took as the ceiling and whether the scale is off; measure one length with a tape.
   - **2026-11-14:** `layout.py` fix (`exp/overnight-2026-11-14`): the ceiling is now the strongest horizontal cluster

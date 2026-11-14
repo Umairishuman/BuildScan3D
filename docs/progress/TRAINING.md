@@ -73,10 +73,10 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-038 | 2026-11-12 | `scan_3028a4de8fa0`: fast recipe on R-037's 581-frame SfM (`v10inc`) | 3070 | 35.8 min (+ map 25.4, R-037) | no mini room; right-side walk missing | Kept |
 | R-039 | 2026-11-14 | roomAttemptSadness2: full v9 + PGSR → semantics → mesh → web (`v9pgsr8`) | 3070 | 87.7 min to the model + 32 min after | height 2.78 m; 22 fixtures (unchecked) | Kept (fixtures to check) |
 | R-040 | 2026-11-14 | newRoom: MCMC densification at the baseline budget (`mcmc620`) | 3070 | 35.0 min train | 24.65 / 0.8216, sharpness 0.64 (softer) | Rejected |
-| R-041 | 2026-11-14 | newRoom: Fast training + PGSR-lite on newRoom (`pgsrfast`) | 3070 | 33.0 min train (R-021: 46) | 25.02 / 0.8232, sharpness 0.87 | Speed-ups OK with PGSR; flatness check pending |
+| R-041 | 2026-11-14 | newRoom: Fast training + PGSR-lite on newRoom (`pgsrfast`) | 3070 | 33.0 min train (R-021: 46) | 25.02 / 0.8232, sharpness 0.87 | Speed-ups OK with PGSR (R-021 flatness 1.27 vs 1.34 cm) |
 | R-042 | 2026-11-14 | newRoom: MCMC with a larger budget (`mcmc1m`) | 3070 | 40.4 min train | 24.74 / 0.8200, sharpness 0.69 | Rejected |
 | R-043 | 2026-11-14 | newRoom: revised opacity on clone / split (`revop`) | 3070 | 28.5 min train | 25.02 / 0.8244, flat 0.73 cm, −10% size | Inconclusive |
-| R-044 | 2026-11-14 | newRoom: lower densification threshold (`dg4`) | 3070 | queued | | |
+| R-044 | 2026-11-14 | newRoom: lower densification threshold (`dg4`) | 3070 | 30.8 min train | 25.07 / 0.8243, sharpness 0.85, +40% size | Inconclusive |
 
 ## Runs
 
@@ -743,7 +743,9 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   sharpness 0.88 in 46 min, and v9e2e 25.16 / 0.8247 / 0.80 / 0.77 cm. R-021's off-path flatness was never measured,
   so the 1.34 cm cannot yet be called a regression (to do: eval `gs_v9pgsr` with `eval_offpath.py` on the same frames).
 - **Verdict:** speed-ups work with PGSR (−13 min, −28%); PSNR −0.07 dB / SSIM −0.002 vs R-021 is within what one run
-  per setting can resolve (run-to-run noise not measured). Flatness check pending.
+  per setting can resolve (run-to-run noise not measured). Flatness check done 2026-11-14 06:53 (same 79 frames, `eval_offpath.py`): R-021 v9pgsr 25.09 / 0.8254 / sharpness 0.88 /
+  **flatness 1.27 cm**, R-041 25.02 / 0.8232 / 0.87 / **1.34 cm**: PGSR models score worse than v9e2e (0.77 cm) on this
+  flatness measure with or without the speed-ups, so the speed-ups are not the cause. **Speed-ups kept with PGSR.**
 
 ### R-042 · 2026-11-14 · newRoom: MCMC with a larger budget (`mcmc1m`)
 - **Who / machine:** Tayyab (agent, overnight session) · RTX 3070 PC
@@ -782,8 +784,10 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   gradient is high
 - **Goal:** do more Gaussians in detailed areas sharpen the off-path views (R-040 showed softness is the weak point),
   and at what size / time cost?
-- **Start → end:** queued after the roomAttemptSadness2 resume (scratchpad `queue4.sh`); followed by an off-path eval of
-  R-021's `gs_v9pgsr` next to R-041 (flatness check)
+- **Start → end:** 06:21 → 06:53 (train 30.8 min); then the R-021 / R-041 flatness eval (06:53)
 - **Errors during the run:** none so far
-- **Result:** (pending)
-- **Verdict:** (pending)
+- **Result:** `work_v9e2e_sfm/gs_dg4/` (**868,556 Gaussians, +40%** vs R-032). Off-path, 79 frames: **PSNR(cf) 25.07 /
+  SSIM 0.8243 / sharpness 0.85 / flatness 0.74 cm**, 30.8 min, vs R-032 25.14 / 0.8251 / 0.80 / 0.81 (28.2 min).
+  Crops next to v9e2e: printer, floor and plant look the same; leaves perhaps slightly crisper.
+- **Verdict:** **inconclusive, not adopted**: higher sharpness score and flatness, slightly lower PSNR / SSIM, no
+  visible gain, and 40% larger models (web delivery).
