@@ -71,7 +71,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-036 | 2026-11-12 | New room `scan_3028a4de8fa0` (tiered lecture hall), normal SfM + speed-ups | 3070 | 48.8 min | fits training views; mini room inside the room (SfM scale collapse, see R-037) | Rejected |
 | R-037 | 2026-11-12 | `scan_3028a4de8fa0`: incremental mapper instead of GLOMAP (fix R-036 mini room) | 3070 (CPU) | map 25.4 min | 581/842 frames in one correctly scaled model; front of room split off | Diagnosis confirmed |
 | R-038 | 2026-11-12 | `scan_3028a4de8fa0`: fast recipe on R-037's 581-frame SfM (`v10inc`) | 3070 | 35.8 min (+ map 25.4, R-037) | no mini room; right-side walk missing | Kept |
-| R-039 | 2026-11-14 | roomAttemptSadness2: full v9 + PGSR → semantics → mesh → web (`v9pgsr`) | 3070 | running | | |
+| R-039 | 2026-11-14 | roomAttemptSadness2: full v9 + PGSR → semantics → mesh → web (`v9pgsr8`) | 3070 | 87.7 min to the model + 32 min after | height 2.78 m; 22 fixtures (unchecked) | Kept (fixtures to check) |
 | R-040 | 2026-11-14 | newRoom: MCMC densification at the baseline budget (`mcmc620`) | 3070 | 35.0 min train | 24.65 / 0.8216, sharpness 0.64 (softer) | Rejected |
 | R-041 | 2026-11-14 | newRoom: Fast training + PGSR-lite on newRoom (`pgsrfast`) | 3070 | 33.0 min train (R-021: 46) | 25.02 / 0.8232, sharpness 0.87 | Speed-ups OK with PGSR; flatness check pending |
 | R-042 | 2026-11-14 | newRoom: MCMC with a larger budget (`mcmc1m`) | 3070 | 40.4 min train | 24.74 / 0.8200, sharpness 0.69 | Rejected |
@@ -678,7 +678,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Goal:** a v9 model + semantics of the second room (3.2, 4.2), and the first check of the speed-ups with PGSR.
 - **Restart (01:42):** `GPU_EVERY=120 bash scripts/run_full.sh dataset/roomAttemptSadness2 v9pgsr8 -- --window 8
   --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
-- **Start → end:** (running)
+- **Start → end:** 01:30 first attempt (failed 01:39); 01:42 → 03:27 (stopped in sem2d); resumed 05:54 → 06:21
 - **Errors during the run:**
   1. 01:39 sfm — `vocab_tree_matcher` exited with status 3221226505 (0xC0000409) right after `matches_importer`; Git Bash
      also printed `child_copy: cygheap read copy failed ... Win32 error 299`. Cause: system RAM exhausted (16 GB PC,
@@ -701,8 +701,17 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Stage times so far:** select 4.5 (first attempt) / not re-timed, SfM 21.3, prior ~6, init 19.1 (PatchMatch 18.7),
   train 36.2 (with PGSR, 15k steps), ply 1.2, layout 5.6 min (2.775 m room height; ceiling candidates 2.78 m weight 1.00
   with 1.7% above, 3.02 m weight 0.26, 2.46 m weight 0.20).
-- **Result:** (pending)
-- **Verdict:** (pending)
+- **Result:** `dataset/roomAttemptSadness2/work_v9pgsr8_sfm/gs_v9pgsr8/` (`splat.ply`, `layout/`, `semantic_v10/`,
+  `mesh/`, `stages.tsv`, `sfm_scale_check` not run: the warning was added after this run's prior stage); web bundle
+  `prototype/web-ui/public/scans/roomAttemptSadness2_v9pgsr8/` (33 MB, gitignored). Stage times: run_v8 87.7 min
+  (select 3.6, SfM 21.3, prior 6.3, init 19.1, train 36.2, ply 1.3), layout 5.6, sem2d 24.6 (resumed run, one tile per
+  call, 500 frames), sem3d 0.4, verify 0.3, sem3d2 0.4, mesh 0.3, meshlabels 0.5, web 0.2 min. Layout: 2.775 m
+  height. Semantics v10: floor tilt 0.67°, ceiling height 2.819 m, floor area 11.92 m²; **22 fixtures accepted**
+  (door 1, window 1, light switch 8, power socket 5, ceiling light 4, tube light 1, lamp 2), 51 rejected. Not
+  measured: off-path quality (no held-out split), tape, fixture correctness (no person has checked them; the v10 rules
+  were tuned on newRoom).
+- **Verdict:** **kept as the v9 model of the second room** (COMPLETION_PLAN 3.2 done for this room; 4.2 needs a person
+  to check the 22 fixtures against the room). Not copied to `saved_models/` (Tayyab to decide).
 
 ### R-040 · 2026-11-14 · newRoom: MCMC densification at the baseline budget (`mcmc620`)
 - **Who / machine:** Tayyab (agent, overnight session) · RTX 3070 PC

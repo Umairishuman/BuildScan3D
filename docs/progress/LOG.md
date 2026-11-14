@@ -357,3 +357,30 @@ Template:
 - Problems: Tayyab is not sure the lecture-hall model (R-038) beats v9e2e; no baseline on that room.
 - Next: OD-10 / OD-11; test the speed-ups with `--pgsr` and on Linux; run the batched semantics once; compare R-038
   with Umair's R-031 (probably the same hall); clean up experiment folders (ask first). Not pushed.
+
+## 2026-11-14 · Tayyab (agent, overnight session) · `exp/overnight-2026-11-14`
+Asked by Tayyab on 2026-11-13: work overnight on the Must tasks, improve the current output, check the app for capture
+issues, use the existing datasets, try new techniques. Branch from `exp/fast-pipeline` (d936e66); nothing pushed.
+- Did (code, each committed):
+  - `scripts/run_full.sh` runs on Windows Git Bash too (repo venvs), so the 3070 PC runs the same full pipeline.
+  - `layout.py`: ceiling = strongest horizontal candidate above the cameras with < 3% of the model above it (COMPLETION_PLAN
+    4.1, R-030's 1.50 m); newRoom unchanged (2.72 m). R-030 itself is on the Linux PC: rerun its layout there.
+  - `check_capture.py`: FAIL above a 15 px median predicted blur (scan_3028a4de8fa0 had 24.9 px and passed).
+  - App (`android/`): the stop dialog says "Record again?" for such recordings, and the bad-quality buzz repeats every 3 s.
+    Compiled locally with JDK 21; not tested on a phone.
+  - `server/pipeline.py`: portable nerfstudio paths (2.2) and an optional v9 recipe `BUILDSCAN_PIPELINE=v9` running
+    `run_full.sh` with stage progress (2.3); default still v3 (OD-7 open). Tests added.
+  - `tape_check.py` (E2): model vs tape table; newRoom room length −10 cm / −1.49% from the v9 layout.
+  - `sfm_scale_check.py` runs after the priors in `run_v8.py` (warning only, OD-11 open); flags shrunken blocks.
+  - `semantic2d.py --tile_batch` (default 1): the batched tiles of `exp/fast-pipeline` were ~3× slower on the 8 GB GPU.
+    Default output checked identical to the original code on 39 newRoom frames (detections.json equal).
+  - `geo_splatfacto.py`: `--mcmc_cap` (gsplat MCMCStrategy) and `--revised_opacity` options.
+  - Test coverage 45% locally (was 37.4%; gate 35%, D-054).
+- Runs: R-039 roomAttemptSadness2 full v9 + PGSR (3.2: SfM 1,000 / 1,042 frames, 777 ARCore inliers; height 2.78 m;
+  semantics resumed after the sem2d slowdown), R-040 MCMC 620k (rejected), R-041 speed-ups + PGSR (33 vs 46 min,
+  25.02 / 0.8232), R-042 MCMC 1M (rejected), R-043 revised opacity (inconclusive), R-044 lower densify threshold.
+- Decisions: none (agents do not decide). Open for Tayyab: OD-10, OD-11; for the team: OD-7; for Umair: the coverage gate.
+- Problems: the PC has 16 GB RAM with ~9 GB free; a parallel test exhausted it and crashed COLMAP's matcher (R-039
+  error 1): run one GPU job at a time. Disk 28 GB free at the start of the night.
+- Next: see the end-of-night summary in the R-039 / R-044 entries and STATUS; rerun R-030's layout on Linux; tape sheets
+  for the other rooms; test the app warning on a phone; OD-7 / OD-10 / OD-11.
