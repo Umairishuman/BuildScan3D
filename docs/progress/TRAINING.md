@@ -74,8 +74,9 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-039 | 2026-11-14 | roomAttemptSadness2: full v9 + PGSR → semantics → mesh → web (`v9pgsr`) | 3070 | running | | |
 | R-040 | 2026-11-14 | newRoom: MCMC densification at the baseline budget (`mcmc620`) | 3070 | 35.0 min train | 24.65 / 0.8216, sharpness 0.64 (softer) | Rejected |
 | R-041 | 2026-11-14 | newRoom: Fast training + PGSR-lite on newRoom (`pgsrfast`) | 3070 | 33.0 min train (R-021: 46) | 25.02 / 0.8232, sharpness 0.87 | Speed-ups OK with PGSR; flatness check pending |
-| R-042 | 2026-11-14 | newRoom: MCMC with a larger budget (`mcmc1m`) | 3070 | queued | | |
-| R-043 | 2026-11-14 | newRoom: revised opacity on clone / split (`revop`) | 3070 | queued | | |
+| R-042 | 2026-11-14 | newRoom: MCMC with a larger budget (`mcmc1m`) | 3070 | 40.4 min train | 24.74 / 0.8200, sharpness 0.69 | Rejected |
+| R-043 | 2026-11-14 | newRoom: revised opacity on clone / split (`revop`) | 3070 | 28.5 min train | 25.02 / 0.8244, flat 0.73 cm, −10% size | Inconclusive |
+| R-044 | 2026-11-14 | newRoom: lower densification threshold (`dg4`) | 3070 | queued | | |
 
 ## Runs
 
@@ -741,10 +742,13 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Dataset:** newRoomAttemptSadness, `work_v9e2e_sfm` (R-020's SfM, prior, fast-MVS init and off-path split)
 - **Command(s):** `train_eval.sh mcmc1m --mcmc_cap 1000000` (scratchpad helper = R-032's commands: `geo_splatfacto.py --data work_v9e2e_sfm/transforms_fmvs.json --iters 15000 --dash_res_steps 7500 --stop_split_at 7500 --no_eval --prior mono_prior/train_v9e2e.npz --planar_lambda 0.2 --blur_exposure 0.0222 --mcmc_cap 1000000`, `ns-export`, `eval_offpath.py` vs `gs_v9e2e` on the 79 off-path frames)
 - **Goal:** Does a 1M-Gaussian MCMC model improve off-path quality, and at what time / size cost?
-- **Start → end:** queued after R-039 (scratchpad `exp_queue.sh`)
+- **Start → end:** 04:37 → 05:19 (train 40.4 min)
 - **Errors during the run:** none so far
-- **Result:** (pending)
-- **Verdict:** (pending)
+- **Result:** `work_v9e2e_sfm/gs_mcmc1m/` (601,002 Gaussians exported). Off-path, 79 frames: **PSNR(cf) 24.74 / SSIM
+  0.8200 / sharpness 0.69 / flatness 0.93 cm**, 40.4 min training (v9e2e 25.16 / 0.8247 / 0.80 / 0.77, 42.5 min).
+- **Verdict:** **rejected**: a larger budget helps MCMC a little over R-040 (+0.09 dB, sharpness 0.64 → 0.69) but it
+  stays below splatfacto's densification on this pipeline. MCMC as wired here (relocation stopping at 7,500 steps,
+  DashGaussian, depth / normal / planar priors) is not worth more runs without changing those first.
 
 ### R-043 · 2026-11-14 · newRoom: revised opacity on clone / split (`revop`)
 - **Who / machine:** Tayyab (agent, overnight session) · RTX 3070 PC
@@ -753,7 +757,24 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Command(s):** as R-040 with `--revised_opacity` (gsplat `DefaultStrategy(revised_opacity=True)`: Bulò et al. 2024,
   "Revising Densification in Gaussian Splatting"; splatfacto turns it off)
 - **Goal:** cheaper floater / over-opacity fix than MCMC: does it beat R-032 (25.14 / 0.8251)?
-- **Start → end:** queued after R-042 and the semantics check (scratchpad `exp_queue2.sh`)
+- **Start → end:** 05:24 → 05:53 (train 28.5 min)
+- **Errors during the run:** none so far
+- **Result:** `work_v9e2e_sfm/gs_revop/` (561,425 Gaussians, −10% vs R-032's 621,430). Off-path, 79 frames: **PSNR(cf)
+  25.02 / SSIM 0.8244 / sharpness 0.79 / flatness 0.73 cm**, 28.5 min, vs R-032 (same code without the option)
+  25.14 / 0.8251 / 0.80 / 0.81 cm, 28.2 min.
+- **Verdict:** **inconclusive, not adopted**: −0.12 dB PSNR, flatness 0.08 cm better, 10% smaller model; differences of
+  this size are within what one run per setting can resolve (run-to-run noise not measured, STATUS 7.3).
+
+### R-044 · 2026-11-14 · newRoom: lower densification threshold (`dg4`)
+- **Who / machine:** Tayyab (agent, overnight session) · RTX 3070 PC
+- **Branch / commit:** `exp/overnight-2026-11-14`
+- **Dataset:** newRoomAttemptSadness, `work_v9e2e_sfm` (as R-040)
+- **Command(s):** as R-040 with `--densify_grad 0.0004` (default 0.0006): more splitting / cloning where the image
+  gradient is high
+- **Goal:** do more Gaussians in detailed areas sharpen the off-path views (R-040 showed softness is the weak point),
+  and at what size / time cost?
+- **Start → end:** queued after the roomAttemptSadness2 resume (scratchpad `queue4.sh`); followed by an off-path eval of
+  R-021's `gs_v9pgsr` next to R-041 (flatness check)
 - **Errors during the run:** none so far
 - **Result:** (pending)
 - **Verdict:** (pending)
