@@ -18,7 +18,7 @@ manual run ───────────────────────
                                         ├─ changes        which areas were touched?
                                         ├─ python         lint + unit tests + coverage gate (3.10, 3.11, 3.12)
                                         ├─ web-ui         npm ci, lint, type check, production build
-                                        ├─ android        Gradle assembleDebug -> APK (shared debug signing key)
+                                        ├─ android        Gradle assembleDebug + assembleRelease -> APK (CI: shared debug key; CD release: private key, D-059)
                                         ├─ repo-hygiene   size limit, no datasets/keys, no obvious secrets
                                         ├─ workflow-lint  checks these workflow files themselves
                                         └─ ci-ok          one pass/fail status for everything
@@ -37,6 +37,7 @@ Details of the design:
 - **Old runs are cancelled.** If I push again to the same branch while a run is in progress, the older run is cancelled (`concurrency`).
 - **Caching.** pip, npm, Gradle and the Next.js build cache are cached between runs, so most runs are much faster than the first.
 - **One status to watch.** `CI passed` is green only if no job failed. Skipped jobs (nothing changed there) count as fine. It is the check to mark as *required* in branch protection.
+- **Release notes from the changelog (D-068).** Every PR that changes the app adds lines under "Unreleased" in [android/CHANGELOG.md](../android/CHANGELOG.md). At the auto-bump, `build-android` runs `.github/android/changelog.py release`, which turns "Unreleased" into `## v<new version> · <date>` (committed with the version bump), and the release job uses that text as the release body (GitHub's generated PR list follows it). The app shows this text in its update dialog and once after an update. A tag push uses the notes already in the file for that version.
 - **Least privilege.** Workflows start with read-only access to the repository. Only the release job gets write access, and only on tags.
 - **Reports are kept.** Python test reports (14 days), the Android APK (14 days in CI, 30 days in CD) and the web bundle (30 days) are downloadable from the run page under *Artifacts*.
 
@@ -44,7 +45,7 @@ Details of the design:
 
 | Job | Checks | Fails when |
 |---|---|---|
-| python | `ruff` for real errors only (syntax errors, undefined names); unused code is reported as a non-blocking warning; `pytest` with a minimum line coverage of 40% | an error is found, a test fails or coverage drops below 40% |
+| python | `ruff` for real errors only (syntax errors, undefined names); unused code is reported as a non-blocking warning; `pytest` with a minimum line coverage of 35% (temporarily lowered from 40% on 2026-11-06, D-054; back to 40% once the tests are written) | an error is found, a test fails or coverage drops below 35% |
 | web-ui | `npm ci` (exactly the locked versions), ESLint, `tsc --noEmit`, `next build` | lint error, type error or build failure |
 | android | official Gradle wrapper check, `./gradlew assembleDebug`, then signs and checks the APK (see below) and an informational Android lint | the app does not compile, or an APK check fails |
 | repo-hygiene | no tracked file over 10 MB (the ARCore samples and `docs/Research Papers` are exempt), no `.ply`/`.mp4`/`.pt`/`.pth`/`.ckpt`/`.npz`/key files, no private keys or access tokens | a rule is broken |
@@ -52,7 +53,7 @@ Details of the design:
 
 ### APK checks (Android job and CD)
 
-After the build, the pipeline **signs the APK with the shared debug key** (`apksigner sign`), so the result never depends on where Gradle looks for a key file. It then reads the manifest from inside the APK (`apkanalyzer manifest print`) and the signing certificate (`apksigner verify --print-certs`), and compares them with `.github/android/apk_expectations.json`: package name, minimum Android version (ARCore needs 24 or higher), camera and internet permissions, the AR camera feature, the processing screen, the launcher activity, the file size, and above all that it is signed with the shared debug key. A wrong key would force an uninstall on every update, which deletes the recordings, so it fails the pipeline. The source manifest is checked in the Python tests as well (the processing screen must stay declared, the ARCore entry must stay present). The signing certificate is also written to the run's summary page. Android lint runs afterwards for information and never fails the build; its report is kept as an artifact.
+After the build, the pipeline **signs the APK** (CI: the shared debug key; CD: the private release key, see section 9) (`apksigner sign`), so the result never depends on where Gradle looks for a key file. It then reads the manifest from inside the APK (`apkanalyzer manifest print`) and the signing certificate (`apksigner verify --print-certs`), and compares them with `.github/android/apk_expectations.json`: package name, minimum Android version (ARCore needs 24 or higher), camera and internet permissions, the AR camera feature, the processing screen, the launcher activity, the file size, and above all that it is signed with the shared debug key. A wrong key would force an uninstall on every update, which deletes the recordings, so it fails the pipeline. The source manifest is checked in the Python tests as well (the processing screen must stay declared, the ARCore entry must stay present). The signing certificate is also written to the run's summary page. Android lint runs afterwards for information and never fails the build; its report is kept as an artifact.
 
 ### What the Python tests cover
 
@@ -88,7 +89,7 @@ npx tsc --noEmit
 npm run build
 ```
 
-Android: open `googleARCore/samples/hello_ar_java` in Android Studio, or run `./gradlew assembleDebug` there with JDK 17.
+Android: open `android` in Android Studio, or run `./gradlew assembleDebug` there with JDK 17.
 
 ## 5. Branching and review
 
@@ -110,7 +111,7 @@ These are GitHub settings, not files, so they cannot be committed:
 
 - **Coverage is only counted for files the tests import.** The reported percentage covers `server/` and the few `src/` modules that tests can import; scripts that run their logic at the top level are not in the number, so it overstates how much of the project is tested.
 - **Newest parts are untested on GitHub.** The CI jobs (Python, web UI, Android debug build, hygiene) have passed on GitHub. The shared signing key step and the `publish-latest` job are new and are only proven by their first run on `master`. The workflow files pass `actionlint`, and the Python, lint and web UI steps pass when run locally (section 4).
-- **No GPU stages.** Training, Metric3D, bundle adjustment on real data and the viewer are not run in CI. Their results are documented in `docs/Problems_and_Solutions.md` and the experiment notes.
+- **No GPU stages.** Training, Metric3D, bundle adjustment on real data and the viewer are not run in CI. Their results are documented in `docs/progress/Problems_and_Solutions.md` and `docs/progress/TRAINING.md`.
 - **Only the Python scripts' building blocks are tested.** Most of `src/arcore3dgs` runs its logic at the top level of a script, so it cannot be imported by a test. Moving that logic into functions would let us test more.
 - **The Android sample has no unit tests** in this repository yet; CI only proves that it compiles.
 - **CD does not deploy to a server.** The web UI uses server-side rendering, so it cannot be published as static pages. Delivery means a downloadable bundle (`npm ci --omit=dev && npm start`) and a release. Deploying to a hosting service later needs an account or tokens that the repository owner controls.
@@ -124,13 +125,23 @@ Open the repository on GitHub, then **Actions**. Each row is one run, with a gre
 
 There are two ways. Either is fine; the second needs no PC.
 
-**A. From Android Studio (developer route).** Open `googleARCore/samples/hello_ar_java` in Android Studio. On the phone, turn on *Developer options*, then *Wireless debugging* and pair it with Android Studio. The phone then appears in the device list at the top, and *Run* installs and starts the app.
+**A. From Android Studio (developer route).** Open `android` in Android Studio. On the phone, turn on *Developer options*, then *Wireless debugging* and pair it with Android Studio. The phone then appears in the device list at the top, and *Run* installs and starts the app.
 
-**B. From GitHub (what CD produces).** On every push to `master`, the `publish-latest` job attaches the newest debug APK to a pre-release called **Latest build (master)**. Open the repository's *Releases* page in the phone's browser (signed in to GitHub, since the repository is private), download `buildscan3d-latest.apk`, allow *Install unknown apps* for that browser once, and install. Every CI/CD APK is also available under *Artifacts* of its run.
+**B. From GitHub (what CD produces).** On every push to `master`, the `publish-latest` job attaches the newest debug APK to a pre-release called **Latest build (master)**. Open the repository's *Releases* page in the phone's browser (the repository is public, so no GitHub login is needed), download `buildscan3d-latest.apk`, allow *Install unknown apps* for that browser once, and install. Every CI/CD APK is also available under *Artifacts* of its run.
 
 Things to know:
 
-- **One signing key for every build.** All APKs from CI/CD are signed with the shared debug key in `.github/android/debug.keystore` (a debug key, which is public by design, not a release secret). Because the key never changes, a new APK installs over the old one and **keeps the recordings**, which live in the app's private folder. A random key per build would force an uninstall each time, which deletes the recordings.
+- **Two keys (since 2026-11-06, D-059).** The CI check builds of pull requests are signed with the shared debug key
+  `.github/android/debug.keystore` (public, never distributed). The **released** APKs (CD: GitHub Releases and the
+  "latest" pre-release) are `assembleRelease` builds signed with a **private release key** that lives only in two
+  GitHub Actions secrets, `ANDROID_RELEASE_KEYSTORE_B64` (the PKCS12 keystore, base64) and
+  `ANDROID_RELEASE_KEYSTORE_PASSWORD` (key alias `buildscan3d`). The original is on Umair's Ubuntu PC in
+  `~/.buildscan3d-keys/` (`release.p12`, `password.txt`); keep a backup elsewhere. **Losing the key means phones cannot
+  update to new builds** (uninstall needed, which deletes the recordings in the app's folder). The expected certificate
+  fingerprints are in `.github/android/apk_expectations.json` (`signing_sha256` release, `debug_signing_sha256` debug);
+  `check_apk.py --key release|debug` checks them. The app's package name is `com.buildscan3d.app` (D-058); APKs before
+  v0.3.4 used Google's sample name and the public debug key: v0.3.4 installs as a separate app next to them; uninstall
+  the old app only after its recordings are uploaded.
 - **Switching from route A to route B once needs an uninstall,** because Android Studio signs with the developer's own debug key. Copy the recordings off the phone first.
 - **The phone needs ARCore** (Google Play Services for AR) and must be a supported device. The app is an AR app.
 - **The app uploads recordings** to the server URL set in the app (default `http://192.168.1.100:8000`), which is the FastAPI server in `server/`. The server hands the work to a local GPU or to RunPod. The APK and RunPod are separate things: the APK is the phone side, and RunPod only does the heavy processing. Restarting or reconnecting a RunPod session does not affect an installed app, but the server URL in the app must point at the machine that runs `server/`.

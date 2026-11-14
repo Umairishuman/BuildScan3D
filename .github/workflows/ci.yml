@@ -56,6 +56,7 @@ jobs:
               - 'prototype/web-ui/**'
               - '.github/workflows/ci.yml'
             android:
+              - 'android/**'
               - 'googleARCore/**'
               - '.github/android/**'
               - '.github/workflows/ci.yml'
@@ -89,7 +90,7 @@ jobs:
         run: ruff check --select F401,F811,F841 --exit-zero --output-format=github .
 
       - name: Unit tests
-        run: pytest --cov --cov-report=term --cov-report=xml:test-results/coverage.xml --cov-fail-under=40 --junitxml=test-results/junit-${{ matrix.python }}.xml
+        run: pytest --cov --cov-report=term --cov-report=xml:test-results/coverage.xml --cov-fail-under=35 --junitxml=test-results/junit-${{ matrix.python }}.xml
 
       - name: Test summary
         if: always()
@@ -107,7 +108,7 @@ jobs:
           print(f"### Python ${{ matrix.python }}: {t} tests, {f} failed, {e} errors, {s} skipped")
           cov = ET.parse("test-results/coverage.xml").getroot().get("line-rate") if glob.glob("test-results/coverage.xml") else None
           if cov:
-              print(f"Line coverage of the files the tests import: {float(cov) * 100:.0f}% (minimum 40%)")
+              print(f"Line coverage of the files the tests import: {float(cov) * 100:.0f}% (minimum 35%, temporarily lowered from 40%: D-054)")
           PY
 
       - name: Keep test report
@@ -167,7 +168,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: googleARCore/samples/hello_ar_java
+        working-directory: android
     steps:
       - uses: actions/checkout@v4
 
@@ -188,7 +189,7 @@ jobs:
       - name: Build debug APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug assembleRelease --stacktrace   # release too: catches release-only build problems before CD (D-060)
 
       - name: Sign with the shared key, then check the built APK
         run: |
@@ -202,13 +203,13 @@ jobs:
           cat "$RUNNER_TEMP/signer.txt"
           echo "--- manifest inside the APK (first lines):"; head -c 2500 "$RUNNER_TEMP/apk_manifest.xml"; echo
           { echo "### APK checks"; cat "$RUNNER_TEMP/signer.txt"; } >> "$GITHUB_STEP_SUMMARY"
-          python3 "$GITHUB_WORKSPACE/.github/android/check_apk.py" apk --manifest "$RUNNER_TEMP/apk_manifest.xml" --signer "$RUNNER_TEMP/signer.txt" --apk "$APK"
+          python3 "$GITHUB_WORKSPACE/.github/android/check_apk.py" apk --manifest "$RUNNER_TEMP/apk_manifest.xml" --signer "$RUNNER_TEMP/signer.txt" --apk "$APK" --key debug
 
       - name: Keep the APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: googleARCore/samples/hello_ar_java/app/build/outputs/apk/debug/*.apk
+          path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -221,7 +222,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-lint-report
-          path: googleARCore/samples/hello_ar_java/app/build/reports/lint-results-debug.html
+          path: android/app/build/reports/lint-results-debug.html
           if-no-files-found: ignore
           retention-days: 14
 

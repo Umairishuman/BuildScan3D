@@ -13,7 +13,7 @@ import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ANDROID_DIR = os.path.join(ROOT, ".github", "android")
-MANIFEST = os.path.join(ROOT, "googleARCore", "samples", "hello_ar_java", "app", "src", "main", "AndroidManifest.xml")
+MANIFEST = os.path.join(ROOT, "android", "app", "src", "main", "AndroidManifest.xml")
 NS = "http://schemas.android.com/apk/res/android"
 
 spec = importlib.util.spec_from_file_location("check_apk", os.path.join(ANDROID_DIR, "check_apk.py"))
@@ -36,6 +36,7 @@ def apk_manifest(min_sdk="24", with_xmlns=True):
     """What `apkanalyzer manifest print` shows: the app's real manifest plus the <uses-sdk> element the build adds."""
     ET.register_namespace("android", NS)
     root = ET.parse(MANIFEST).getroot()
+    root.set("package", EXPECT["package"])      # the build writes the applicationId into the APK's manifest
     if min_sdk is not None:
         sdk = ET.Element("uses-sdk")
         sdk.set("{%s}minSdkVersion" % NS, min_sdk)
@@ -84,14 +85,14 @@ def test_missing_ar_feature_is_reported():
 
 
 def test_missing_processing_screen_is_reported():
-    bad = apk_manifest().replace("helloar.ProcessingActivity", "helloar.RenamedActivity")
+    bad = apk_manifest().replace("app.ProcessingActivity", "app.RenamedActivity")
     assert any("ProcessingActivity" in p for p in problems(manifest=bad))
 
 
 def test_apk_signed_with_a_different_key_is_reported_and_explains_why_it_matters():
     other = SIGNER.replace(GOOD_SHA, "ab" * 32)
     out = problems(signer=other)
-    assert len(out) == 1 and "NOT signed with the shared debug key" in out[0] and "recordings" in out[0]
+    assert len(out) == 1 and "NOT signed with the release key" in out[0] and "recordings" in out[0]
 
 
 def test_signer_digest_with_colons_and_capitals_still_matches():
@@ -131,7 +132,7 @@ def test_the_real_manifest_passes_the_checks():
 
 @pytest.mark.parametrize("old,new,needle", [
     ("android.permission.INTERNET", "android.permission.NOTHING", "android.permission.INTERNET"),
-    ("helloar.ProcessingActivity", "helloar.RenamedActivity", "ProcessingActivity"),
+    ("app.ProcessingActivity", "app.RenamedActivity", "ProcessingActivity"),
     ('com.google.ar.core" android:value', 'com.example.other" android:value', "meta-data"),
     ("android.hardware.camera.ar", "android.hardware.camera.nothing", "camera.ar"),
 ])
@@ -164,14 +165,27 @@ def test_the_shared_keystore_is_committed_and_matches_the_expected_fingerprint()
     out = subprocess.run([keytool, "-list", "-v", "-keystore", keystore, "-storepass", "android",
                           "-alias", "androiddebugkey"], capture_output=True, text=True).stdout
     line = next(row for row in out.splitlines() if row.strip().startswith("SHA256:"))
-    assert line.split("SHA256:")[1].strip().replace(":", "").lower() == GOOD_SHA
+    assert line.split("SHA256:")[1].strip().replace(":", "").lower() == EXPECT["debug_signing_sha256"]
 
 
 def test_expectation_file_is_complete():
-    for key in ("package", "min_sdk_at_least", "launchable_activity", "required_permissions",
-                "required_activities", "required_features", "signing_sha256", "min_apk_mb", "max_apk_mb"):
+    for key in ("package", "namespace", "min_sdk_at_least", "launchable_activity", "required_permissions",
+                "required_activities", "required_features", "signing_sha256", "debug_signing_sha256",
+                "min_apk_mb", "max_apk_mb"):
         assert key in EXPECT
     assert len(EXPECT["signing_sha256"]) == 64
+    assert len(EXPECT["debug_signing_sha256"]) == 64
+
+
+def test_release_and_debug_keys_are_told_apart():
+    debug_signer = SIGNER.replace(GOOD_SHA, EXPECT["debug_signing_sha256"])
+    assert check_apk.check_apk(apk_manifest(), debug_signer, SIZE, EXPECT, key="debug") == []
+    assert any("release key" in p for p in check_apk.check_apk(apk_manifest(), debug_signer, SIZE, EXPECT))
+    assert any("debug key" in p for p in check_apk.check_apk(apk_manifest(), SIGNER, SIZE, EXPECT, key="debug"))
+
+
+def test_the_app_no_longer_uses_googles_sample_package_name():
+    assert not EXPECT["package"].startswith("com.google.")
 
 
 def test_command_line_manifest_check_exit_codes(tmp_path):

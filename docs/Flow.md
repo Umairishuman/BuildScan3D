@@ -118,12 +118,18 @@ D:\FYP\
 │
 ├── docs/
 │   ├── Flow.md            — This file
-│   ├── progress/          — Development progress & analysis
-│   │   ├── TODO.md
-│   │   ├── Problems_and_Solutions.md
-│   │   └── Training_Analysis.md
+│   ├── progress/          — Project records (rules in CLAUDE.md)
+│   │   ├── STATUS.md      — Everything done and left
+│   │   ├── DECISIONS.md   — Every decision and why
+│   │   ├── LOG.md         — Dated project log
+│   │   ├── TRAINING.md    — Every run and the errors during it
+│   │   ├── Problems_and_Solutions.md — Technical evidence
+│   │   ├── Research_Notes_2026-10-24.md
+│   │   └── archive/       — Old TODO.md, Training_Analysis.md, early notes
 │   ├── proposal/          — FYP proposal documents & slides
 │   └── Research Papers/   — Reference papers
+│
+├── report/mid-eval/       — FYP-1 mid report (LaTeX + PDF), rubric, summary, report-fix notes
 │
 └── dataset/               — Captured scan datasets
 ```

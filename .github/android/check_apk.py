@@ -2,8 +2,9 @@
 
     python .github/android/check_apk.py manifest <AndroidManifest.xml>
         static check of the source manifest (no Android SDK needed)
-    python .github/android/check_apk.py apk --manifest <apkanalyzer manifest print output> --signer <apksigner output> --apk <file.apk>
-        checks the built APK: package, minimum Android version, permissions, features, activities, launcher, signing key, size
+    python .github/android/check_apk.py apk --manifest <apkanalyzer manifest print output> --signer <apksigner output> --apk <file.apk> [--key release|debug]
+        checks the built APK: package, minimum Android version, permissions, features, activities, launcher, signing key, size.
+        --key release (default): the private release key (CD, D-059); --key debug: the shared debug key (CI check builds).
 
 The expected values live in apk_expectations.json next to this file. Exit code 1 and a list of problems if
 anything is off, so the pipeline fails with a readable reason instead of shipping a broken APK.
@@ -39,8 +40,10 @@ def check_manifest_text(text, expect, from_apk=False):
         root = _parse_manifest_text(text)
     except ET.ParseError as e:
         return [f"could not read the manifest: {e}"]
-    if root.get("package") != expect["package"]:
-        problems.append(f"manifest package is {root.get('package')!r}, expected {expect['package']!r}")
+    # The built APK carries the applicationId (D-058); the source manifest keeps the code's namespace.
+    want = expect["package"] if from_apk else expect["namespace"]
+    if root.get("package") != want:
+        problems.append(f"manifest package is {root.get('package')!r}, expected {want!r}")
     perms = {e.get(ANDROID + "name") for e in root.iter("uses-permission")}
     for p in expect["required_permissions"]:
         if p not in perms:
@@ -81,15 +84,17 @@ def parse_signer_sha256(text):
     return m.group(1).replace(":", "").lower() if m else None
 
 
-def check_apk(manifest_text, signer_text, size_bytes, expect):
-    """manifest_text = `apkanalyzer manifest print app.apk`, signer_text = `apksigner verify --print-certs app.apk`."""
+def check_apk(manifest_text, signer_text, size_bytes, expect, key="release"):
+    """manifest_text = `apkanalyzer manifest print app.apk`, signer_text = `apksigner verify --print-certs app.apk`.
+    key = "release" (the private release key, D-059) or "debug" (the shared key of the CI check builds)."""
     problems = check_manifest_text(manifest_text, expect, from_apk=True)
     sig = parse_signer_sha256(signer_text)
+    want = expect["signing_sha256" if key == "release" else "debug_signing_sha256"].lower()
     if sig is None:
         problems.append("could not read the signing certificate (is the APK signed?)")
-    elif sig != expect["signing_sha256"].lower():
-        problems.append("APK is NOT signed with the shared debug key: phones would refuse to update over the previous "
-                        f"build and the app's recordings would be lost (got {sig}, expected {expect['signing_sha256']})")
+    elif sig != want:
+        problems.append(f"APK is NOT signed with the {key} key: phones would refuse to update over the previous "
+                        f"build and the app's recordings would be lost (got {sig}, expected {want})")
     mb = size_bytes / 1e6
     if not expect["min_apk_mb"] <= mb <= expect["max_apk_mb"]:
         problems.append(f"APK size {mb:.1f} MB is outside the expected {expect['min_apk_mb']}-{expect['max_apk_mb']} MB")
@@ -102,13 +107,14 @@ def main(argv=None):
     pm = sub.add_parser("manifest"); pm.add_argument("path")
     pa = sub.add_parser("apk")
     pa.add_argument("--manifest", required=True); pa.add_argument("--signer", required=True); pa.add_argument("--apk", required=True)
+    pa.add_argument("--key", choices=["release", "debug"], default="release")
     args = ap.parse_args(argv)
     expect = load_expectations()
     if args.cmd == "manifest":
         problems = check_manifest(args.path, expect)
     else:
         problems = check_apk(open(args.manifest, encoding="utf8").read(), open(args.signer, encoding="utf8").read(),
-                             os.path.getsize(args.apk), expect)
+                             os.path.getsize(args.apk), expect, key=args.key)
     for p in problems:
         print(f"::error::{p}")
     print("OK" if not problems else f"{len(problems)} problem(s)")

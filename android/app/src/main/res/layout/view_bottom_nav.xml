@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bottom navigation shared by the three main screens (BottomNav.java): Capture, Scans, Server. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/bottom_nav"
+    android:layout_width="match_parent"
+    android:layout_height="64dp"
+    android:orientation="horizontal"
+    android:background="@drawable/bg_bottom_nav"
+    android:elevation="8dp">
+
+    <LinearLayout
+        android:id="@+id/nav_capture"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="?attr/selectableItemBackground">
+        <ImageView
+            android:id="@+id/nav_capture_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_nav_capture"
+            android:contentDescription="Capture" />
+        <TextView
+            android:id="@+id/nav_capture_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Capture"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/nav_scans"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="?attr/selectableItemBackground">
+        <ImageView
+            android:id="@+id/nav_scans_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_nav_scans"
+            android:contentDescription="Scans" />
+        <TextView
+            android:id="@+id/nav_scans_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Scans"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/nav_server"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="?attr/selectableItemBackground">
+        <ImageView
+            android:id="@+id/nav_server_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_nav_server"
+            android:contentDescription="Server" />
+        <TextView
+            android:id="@+id/nav_server_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Server"
+            android:textSize="12sp" />
+    </LinearLayout>
+</LinearLayout>

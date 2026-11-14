@@ -25,16 +25,159 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from .pipeline import Job, JobStatus, start_pipeline_thread
+from . import scan_numbers
 from .runpod_client import start_runpod_pipeline_thread, start_existing_pod_pipeline_thread
 from .remote_gpu import start_remote_pipeline_thread
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
 log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATASET_ROOT = PROJECT_ROOT / "dataset"
 
+
+class UploadProgressLogger:
+    """ASGI middleware: logs POST /upload while its body is still arriving (start, progress, done or cut off).
+
+    FastAPI only calls the /upload handler after the whole multipart body is received, so without this the
+    server is silent for the whole network transfer of the video.
+    """
+
+    def __init__(self, app, every_s: float = 5.0):
+        self.app = app
+        self.every_s = every_s
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope["method"] != "POST" or scope["path"] != "/upload":
+            return await self.app(scope, receive, send)
+
+        headers = dict(scope.get("headers") or [])
+        total = int(headers.get(b"content-length", b"0") or 0)
+        client = _who(scope)
+        mb = 1024 * 1024
+        state = {"got": 0, "t0": time.monotonic(), "last": time.monotonic(), "done": False}
+        log.info("Upload started from %s: %s", client, f"{total / mb:.1f} MB" if total else "size unknown")
+
+        def line():
+            el = max(time.monotonic() - state["t0"], 1e-6)
+            pct = f" ({100 * state['got'] / total:.0f}%)" if total else ""
+            return f"{state['got'] / mb:.1f}{f' / {total / mb:.1f}' if total else ''} MB{pct}, " \
+                   f"{state['got'] / mb / el:.2f} MB/s, {el:.0f} s"
+
+        async def logged_receive():
+            msg = await receive()
+            if msg["type"] == "http.request":
+                state["got"] += len(msg.get("body", b""))
+                now = time.monotonic()
+                if not msg.get("more_body", False):
+                    state["done"] = True
+                    log.info("Upload received from %s: %s", client, line())
+                elif now - state["last"] >= self.every_s:
+                    state["last"] = now
+                    log.info("Upload receiving: %s", line())
+            elif msg["type"] == "http.disconnect" and not state["done"]:
+                log.warning("Upload from %s cut off: %s", client, line())
+            return msg
+
+        await self.app(scope, logged_receive, send)
+
+
+def _who(scope) -> str:
+    """The client address for the log; a phone request that arrives on 127.0.0.1 came over the USB cable (adb reverse,
+    scripts/usb_link.sh), so it is labelled as such. Local tools (curl, buildscan) also use 127.0.0.1 but are not okhttp."""
+    client = (scope.get("client") or ("?",))[0]
+    ua = dict(scope.get("headers") or []).get(b"user-agent", b"")
+    if client in ("127.0.0.1", "::1") and ua.startswith(b"okhttp"):
+        return f"{client} (USB cable)"
+    return client
+
+
+class ErrorLogger:
+    """ASGI middleware: logs when a device first talks to the server (or comes back after 5 min of silence), and
+    every request that fails (status >= 400 or a crash) with the client, the path and the reason the server sent
+    back, so an app-side failure is visible in the server terminal."""
+
+    def __init__(self, app, quiet_s: float = 300.0):
+        self.app = app
+        self.quiet_s = quiet_s
+        self.seen: dict[str, float] = {}
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        client = _who(scope)
+        what = f"{scope['method']} {scope['path']} from {client}"
+        state = {"status": 0, "body": b""}
+        now = time.monotonic()
+        last = self.seen.get(client)
+        if last is None or now - last > self.quiet_s:
+            ua = dict(scope.get("headers") or []).get(b"user-agent", b"?").decode("utf-8", "replace")
+            log.info("DEVICE %s %s (%s, first request: %s %s)", client,
+                     "connected" if last is None else "back after a pause", ua, scope["method"], scope["path"])
+        self.seen[client] = now
+
+        async def logged_send(msg):
+            if msg["type"] == "http.response.start":
+                state["status"] = msg["status"]
+            elif msg["type"] == "http.response.body" and state["status"] >= 400 and len(state["body"]) < 1000:
+                state["body"] += msg.get("body", b"")
+                if not msg.get("more_body", False):
+                    level = logging.ERROR if state["status"] >= 500 else logging.WARNING
+                    log.log(level, "FAILED %s -> %d: %s", what, state["status"],
+                            state["body"][:1000].decode("utf-8", "replace"))
+            await send(msg)
+
+        try:
+            await self.app(scope, receive, logged_send)
+        except Exception:
+            log.exception("CRASH while handling %s", what)
+            raise
+
+
+DISCOVERY_PORT = int(os.environ.get("DISCOVERY_PORT", "8001"))
+DISCOVERY_MAGIC = b"BUILDSCAN_DISCOVER"
+
+
+def _discovery_loop():
+    """Answer the app's UDP broadcast "BUILDSCAN_DISCOVER" with this server's URL, so the app's server list finds it
+    on any network size (the app's own address sweep only covers its /24)."""
+    import json
+    import socket
+    port = int(os.environ.get("PORT", "8000"))
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(("0.0.0.0", DISCOVERY_PORT))
+    except OSError as e:
+        log.warning("Discovery off: cannot listen on UDP %d (%s); the app can still use the URL typed in", DISCOVERY_PORT, e)
+        return
+    log.info("Discovery: answering the app's server search on UDP %d", DISCOVERY_PORT)
+    while True:
+        try:
+            data, addr = sock.recvfrom(1024)
+            if not data.startswith(DISCOVERY_MAGIC):
+                continue
+            probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            probe.connect((addr[0], addr[1]))           # no packet is sent: only picks the local address toward the phone
+            ip = probe.getsockname()[0]
+            probe.close()
+            url = f"http://{ip}:{port}"
+            reply = {"service": "buildscan3d", "url": url, "mode": processing_config["mode"], "host": socket.gethostname()}
+            sock.sendto(json.dumps(reply).encode(), addr)
+            log.info("DISCOVERY search from %s, answered %s", addr[0], url)
+        except Exception as e:                              # never let one bad packet stop discovery
+            log.warning("Discovery error: %s", e)
+
+
 app = FastAPI(title="BuildScan 3D Processing Server")
+app.add_middleware(UploadProgressLogger)
+app.add_middleware(ErrorLogger)
+
+
+@app.on_event("startup")
+async def _start_discovery():
+    import threading
+    threading.Thread(target=_discovery_loop, name="discovery", daemon=True).start()
 
 jobs: dict[str, Job] = {}
 
@@ -100,11 +243,15 @@ async def upload_dataset(
     quality: UploadFile = File(..., description="quality.csv"),
     meta: UploadFile = File(..., description="meta.json"),
     depth_zip: UploadFile = File(None, description="depth.zip — zipped depth/ folder"),
+    camera: UploadFile = File(None, description="camera.csv — per-frame exposure / rolling shutter (app >= 2026-10-12)"),
+    anchors: UploadFile = File(None, description="anchors.csv — anchor poses, shows ARCore re-anchors"),
+    lens_metadata: UploadFile = File(None, description="lens_metadata.json — ARCore lens calibration"),
+    camera_characteristics: UploadFile = File(None, description="camera_characteristics.json — Camera2 characteristics"),
     iterations: int = Form(30000),
 ):
-    job_id = uuid.uuid4().hex[:12]
-    dataset_dir = DATASET_ROOT / f"scan_{job_id}"
-    dataset_dir.mkdir(parents=True, exist_ok=True)
+    # scan_<NNN>_<id>: the next number in dataset/.scan_numbers.tsv, so recordings read 1, 2, 3, ... (D-065)
+    dataset_dir, scan_number, job_id = scan_numbers.new_scan_dir(DATASET_ROOT)
+    log.info("Saving as scan #%d: %s", scan_number, dataset_dir.name)
     depth_dir = dataset_dir / "depth"
     depth_dir.mkdir(exist_ok=True)
 
@@ -123,6 +270,21 @@ async def upload_dataset(
                     f.write(chunk)
             log.info("Saved %s (%d bytes)", dst.name, dst.stat().st_size)
 
+        for name, upload in [
+            ("camera.csv", camera),
+            ("anchors.csv", anchors),
+            ("lens_metadata.json", lens_metadata),
+            ("camera_characteristics.json", camera_characteristics),
+        ]:
+            if upload is None or not upload.filename:
+                log.warning("Optional %s not in this upload (older app?)", name)
+                continue
+            dst = dataset_dir / name
+            with open(dst, "wb") as f:
+                while chunk := await upload.read(8 * 1024 * 1024):
+                    f.write(chunk)
+            log.info("Saved %s (%d bytes)", dst.name, dst.stat().st_size)
+
         if depth_zip and depth_zip.filename:
             zip_path = dataset_dir / "depth.zip"
             with open(zip_path, "wb") as f:
@@ -130,10 +292,16 @@ async def upload_dataset(
                     f.write(chunk)
             shutil.unpack_archive(zip_path, dataset_dir)
             zip_path.unlink()
-            log.info("Extracted depth.zip")
+            log.info("Extracted depth.zip (%d depth files)", sum(1 for _ in depth_dir.iterdir()))
+        else:
+            log.warning("No depth.zip in this upload")
+
+        log.info("Upload complete: %s", dataset_dir)
 
     except Exception as e:
+        log.error("Upload failed, %s removed: %s", dataset_dir.name, e)
         shutil.rmtree(dataset_dir, ignore_errors=True)
+        scan_numbers.release(DATASET_ROOT, dataset_dir.name)
         raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
 
     job = Job(job_id=job_id, dataset_dir=str(dataset_dir))
@@ -169,6 +337,8 @@ async def upload_dataset(
 
     return {
         "job_id": job_id,
+        "scan_number": scan_number,
+        "dataset": dataset_dir.name,
         "status": "queued" if mode == "dry_run" else "processing",
         "mode": mode,
         "poll": f"/status/{job_id}",
@@ -278,7 +448,9 @@ async def list_datasets():
     """List all scan datasets on disk (uploaded or not)."""
     datasets = []
     if DATASET_ROOT.exists():
-        for d in sorted(DATASET_ROOT.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+        # newest first by scan number (a processing run changes a folder's date, so dates are not reliable)
+        for number, name in reversed(scan_numbers.numbers(DATASET_ROOT)):
+            d = DATASET_ROOT / name
             if d.is_dir() and d.name.startswith("scan_"):
                 video = d / "dataset.mp4"
                 poses = d / "poses.csv"
@@ -291,6 +463,7 @@ async def list_datasets():
                         job_id = j.job_id
                         break
                 datasets.append({
+                    "number": number,
                     "name": d.name,
                     "path": str(d),
                     "size_mb": round(video.stat().st_size / (1024 * 1024), 1) if video.exists() else 0,
@@ -329,7 +502,7 @@ async def run_on_existing_pod(dataset_name: str = Form(...), pod_id: str = Form(
     if not (dataset_dir / "dataset.mp4").exists():
         raise HTTPException(status_code=400, detail="Dataset has no video file")
 
-    job_id = dataset_name.replace("scan_", "")[:12]
+    job_id = scan_numbers.job_id_of(dataset_name)
     if job_id in jobs:
         job = jobs[job_id]
         if job.status.value in ("processing", "uploading"):
@@ -362,7 +535,7 @@ async def reprocess_dataset(dataset_name: str = Form(...), iterations: int = For
     if not (dataset_dir / "dataset.mp4").exists():
         raise HTTPException(status_code=400, detail="Dataset has no video file")
 
-    job_id = dataset_name.replace("scan_", "")[:12]
+    job_id = scan_numbers.job_id_of(dataset_name)
     # If a job already exists for this dataset, reset it
     if job_id in jobs:
         job = jobs[job_id]

@@ -76,7 +76,7 @@ def test_upload_saves_every_file_and_starts_a_local_job(api):
     job_id = body["job_id"]
     assert len(job_id) == 12 and body["poll"] == f"/status/{job_id}"
 
-    folder = api.root / "dataset" / f"scan_{job_id}"
+    folder = api.root / "dataset" / body["dataset"]
     for field, (name, content) in FILES.items():
         assert (folder / name).read_bytes() == content
     assert api.started.local == [(job_id, 1234)]
@@ -101,11 +101,32 @@ def test_upload_unpacks_the_optional_depth_zip(api):
         z.writestr("depth/100.depth", b"\x00\x01")
         z.writestr("depth/size.txt", "160 90\n")
     files = dict(FILES, depth_zip=("depth.zip", buf.getvalue()))
-    job_id = upload(api, files=files).json()["job_id"]
-    folder = api.root / "dataset" / f"scan_{job_id}"
+    body = upload(api, files=files).json()
+    job_id = body["job_id"]
+    folder = api.root / "dataset" / body["dataset"]
     assert (folder / "depth" / "100.depth").read_bytes() == b"\x00\x01"
     assert (folder / "depth" / "size.txt").exists()
     assert not (folder / "depth.zip").exists()                      # the archive is removed after unpacking
+
+
+def test_upload_saves_the_optional_sensor_and_lens_files(api):
+    extra = {"camera": ("camera.csv", b"timestamp_ns,exposure_ns\n1,22000000\n"),
+             "anchors": ("anchors.csv", b"timestamp_ns,anchor_id\n"),
+             "lens_metadata": ("lens_metadata.json", b"{}"),
+             "camera_characteristics": ("camera_characteristics.json", b"{}")}
+    body = upload(api, files=dict(FILES, **extra)).json()
+    job_id = body["job_id"]
+    folder = api.root / "dataset" / body["dataset"]
+    assert (folder / "camera.csv").read_bytes().endswith(b"22000000\n")
+    for name in ("anchors.csv", "lens_metadata.json", "camera_characteristics.json"):
+        assert (folder / name).exists()
+
+
+def test_upload_from_an_older_app_without_the_optional_files_still_works(api):
+    body = upload(api).json()
+    job_id = body["job_id"]
+    folder = api.root / "dataset" / body["dataset"]
+    assert (folder / "poses.csv").exists() and not (folder / "camera.csv").exists()
 
 
 def test_upload_with_a_corrupt_depth_zip_fails_cleanly(api):

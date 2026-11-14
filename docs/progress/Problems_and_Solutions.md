@@ -409,6 +409,240 @@ PocketGS's own reported quality is 22–23.5 dB PSNR on near-path test views (LL
 - **Kept:** ARCore-guided matching (`sfm_colmap.py --pairs arcore`), a safe and large speed-up.
 - **Next ideas** (TODO "Fast pipeline v7"): half-resolution training with a full-resolution finish, a fast dense initialisation (what keeps off-path views coherent), keeping ~1100 frames with guided matching, faster 3DGS training methods, cloud GPU, and an off-path quality metric.
 
+### 4.15 v8: half the training time, same or better off-path quality (overnight, 2026-10-24)
+- **Goal:** faster training, cleaner far walls and corners from views off the camera path. Research behind each idea: `docs/progress/Research_Notes_2026-10-24.md`.
+- **New off-path test** (`eval_offpath.py`): six contiguous 3 s stretches of the walk (79 frames) are held out of training (`transforms_offpath.json`), so test views look at the room from places the training cameras did not. It reports colour-fit PSNR, SSIM and a sharpness ratio, plus sheets: one frame per stretch, full-resolution crops, and four views from the room centre. All runs share the same SfM solution, so no pose refinement is needed.
+- **What was implemented** (`src/arcore3dgs/geo_splatfacto.py`, a splatfacto subclass):
+  - **DashGaussian resolution schedule** (CVPR 2025): train at 1/8 resolution first and step up to full resolution along the image-spectrum energy curve, reaching full resolution at half the iterations;
+  - **SfM-anchored monocular priors** (`mono_prior.py`): Metric3D depth for every frame, aligned per frame to that frame's metric SfM points by robust least squares (raw median error 19.5% → **2.7%**), normals from the aligned depth;
+  - **two training losses**: relative depth L1, and an edge-aware depth–normal consistency (PGSR form, weighted by (1−|∇I|)² so real edges and corners are not smoothed);
+  - **mono dense init** (`mono_init.py`): back-project the aligned depth of every 6th frame, keep 1.5 cm voxels that ≥ 6 frames agree on at 6 cm. 12 s instead of 2 h PatchMatch; unlike PatchMatch it covers the plain walls.
+- **Results on newRoomAttemptSadness** (79 off-path frames, RTX 3070, training time only):
+
+  | Run | Recipe | Train | PSNR(cf) | SSIM |
+  |---|---|---|---|---|
+  | R0 | v6 recipe (30k, MVS init) | 64.3 min | 25.13 | 0.8241 |
+  | v8dash30 | + DashGaussian | 55.5 min | 25.28 | 0.8267 |
+  | v8geo | + priors 0.05/0.05, 30k | 69.6 min | **25.43** | 0.8272 |
+  | v8fast15 | DashGaussian, 15k | 27.9 min | 24.82 | 0.8227 |
+  | **v8geofast15** | **priors + DashGaussian, 15k** | **30.2 min** | 25.27 | **0.8281** |
+  | strong20 | priors 0.1/0.2, 20k | 38.1 min | 25.03 | 0.8219 |
+  | mono15 | v8geofast15 with mono init | 27.8 min | 24.84 | 0.8210 |
+
+- **Visual check (the deciding factor):**
+  - **v8geofast15 is the winner.** On the hardest off-path frame (high picture at the wall–ceiling junction) it is the only model where the painting stays whole and the wall plain. Its room-centre views are as clean as R0's, minus R0's floater by the door.
+  - The priors do their job at normal strength; at 0.1/0.2 (strong20) they over-smooth and the high picture falls apart.
+  - Mono init alone loses things seen by few frames (the high picture, the strip beside the printer): the multi-view filter drops them, and PatchMatch had them. Not a replacement for MVS yet.
+  - Fine detail (printer vents) is gone in every model, including R0: it comes from motion blur in the frames (see 4.13), not from v8.
+- **Profiling:** ~75 ms/step at low resolution, 110–130 ms at full resolution, ~20 s start-up, and nerfstudio's eval passes cost 2–3 min per run (now `--no_eval`).
+- **Final model:** the v8geofast15 recipe retrained on all 1108 frames → `saved_models/2026-10-24_v8_geofast15/`.
+- **Metric3D speed** (100 frames, 3070): ViT-L 75 s, ViT-L fp16 39 s, ViT-S fp16 14 s; aligned error 1.8 / 1.8 / 2.0%. fp16 is now the default (1108 frames: 14 → ~6 min).
+- **End-to-end fast pipeline** (`run_v8.py`: selection → ARCore-guided SfM → fp16 priors → mono init → v8 training, nothing reused): **44 min total** (select 1.7, SfM 9.6, prior 6.2, init 0.1, train 26.0, export 0.6) vs ~4 h for v6. **Quality not yet acceptable:** the door wall seen from the room centre breaks apart, and few-view areas smear. Two causes: guided SfM from scratch registered only 956 frames (+20 dropped) vs 1108 for v6 (which registered into v3's exhaustive model), and the mono init (see above). Sheets: `dataset/newRoomAttemptSadness/work_v8e2e_sfm/gs_v8e2e/eval/`.
+- **So the remaining time sinks are SfM coverage and the dense init**, not training: the 2 h PatchMatch is still what gives v8final its quality.
+
+### 4.16 v9: processing-stage experiments (overnight, 2026-10-26, branch `feature/processing-v9`)
+User request: better 3D in less processing time, checking (1) IMU motion-blur modelling, (3) planar priors,
+(4) a fast init that keeps detail, (5) SfM coverage on the fast path, (6) learned features / retrieval for plain
+walls, (8) corner / room-layout detection. All training runs use the same SfM solution and off-path split as
+4.15 (79 held-out frames) and are compared with **v8geofast15** (30.2 min, 25.27 dB / SSIM 0.8281).
+
+**New metric: off-path flatness.** `eval_offpath.py` now also reports the median rms (cm) of the rendered
+surface around its best-fit plane inside every planar region (walls, floor, ceiling, doors from `plane_seg.py`),
+rendered from the held-out viewpoints. This measures "walls are not flat from off-path views" directly.
+R0 (v6 recipe) **4.31 cm**, v8geofast15 **1.43 cm**: the v8 priors already made surfaces 3× flatter.
+
+**(5) Why the fast SfM lost 15% of frames, and the fix.** The global mapper split the scene into two
+components (976 + 190 frames, a 39 s stretch of the walk) and only the largest was exported. ARCore-pose
+neighbours cannot close the loop where ARCore drifted. Pose agreement with v6's exhaustive-matching
+solution (`sfm_cmp`, after Sim3) also showed the fast solution was distorted: 14.2 cm / 3.5° median, scale
+0.953. New `sfm_colmap.py` options:
+| Variant (1166 frames) | SfM time | Registered | vs v6: centre / rotation / scale |
+|---|---|---|---|
+| guided pairs (4.15) | 9.6 min | 956 (2 components) | 14.2 cm / 3.46° / 0.953 |
+| + `--bridge 1` (re-match the cut-off frames against the main model, re-map) | 24.6 min | 1142 | 8.5 cm / 1.01° / 0.973 |
+| + `--retrieval 20` (vocabulary-tree loop pairs, faiss tree) | 21.8 min | **1164 (one component)** | **5.8 cm / 0.52° / 0.981** |
+| `--feature aliked` (ALIKED-N16rot + LightGlue, COLMAP 4.2 ONNX) | 33.1 min | 1159 (one component) | 74 cm / 15.7° / 0.959 |
+Retrieval is the fix: one component straight away. A 1.9% scale difference to v6 remains (v6 is the
+tape-validated one); exhaustive matching is still the most accurate. **ALIKED + LightGlue is rejected**:
+slower (extraction 12 min, matching 17 min) and the reconstruction is folded (74 cm median disagreement,
+although its Sim3 to ARCore looked fine at 3.1 cm on the inlier subset -- always compare whole trajectories).
+Setup notes: COLMAP's ONNX models need cuBLAS 12 + cuDNN 9 DLLs (`tools/cudnn9` from NVIDIA's
+`nvidia-cudnn-cu12` wheel + torch/lib, added to PATH by `sfm_colmap.py`); COLMAP ≥ 3.12 needs faiss vocabulary
+trees (`tools/colmap_dl/vocab/`, from the COLMAP 3.11.1 / 3.13.0 releases).
+
+**(4) Fast dense init** (`fast_mvs.py`): COLMAP PatchMatch on every 7th frame (152) at 640 px, sources chosen
+among the same subset by shared SfM points. ~19 min instead of 2 h 15 min, 310k fused points (init 230k vs 459k).
+`--mono` adds mono-depth points where the MVS has nothing (hybrid).
+
+**(3) Planar prior** (`plane_seg.py` + `geo_splatfacto.py --planar_lambda`): per-frame planes by 1-point
+RANSAC on the aligned Metric3D depth + normals (median 4 planes, 52% of pixels; borders eroded so corners stay
+free); in training the rendered points of each region are pulled onto their own best-fit plane (only the mask
+comes from the prior). ~0.6 s/frame on the CPU.
+
+**(1) Motion-blur model** (`blur_motion.py` + `--blur_exposure`): per-frame camera velocity from the 30 Hz
+ARCore poses (rotational blur at 1/45 s: median 5.8 px, p90 12.6 px); a training frame is rendered at 2–5
+poses spread over the exposure and averaged ("Gaussian Splatting on the Move"); densification gradients are
+rescaled by the number of sub-renders.
+
+| Run (15k, DashGaussian, depth+normal priors) | Train | PSNR(cf) | SSIM | flat cm |
+|---|---|---|---|---|
+| R0 (v6 recipe, 30k) | 64.3 min | 25.13 | 0.8241 | 4.31 |
+| v8geofast15 (full MVS init) | 30.2 min | **25.27** | **0.8281** | 1.43 |
+| v9planar (+ planar 0.2) | 30.1 min | 25.02 | 0.8241 | **0.85** |
+| v9fmvs (fast MVS init) | 27.7 min | 24.88 | 0.8232 | 1.39 |
+| v9fmvsmono (fast MVS + mono walls) | 28.0 min | 24.85 | 0.8203 | 1.23 |
+| v9blur (+ motion-blur model, 1/45 s) | 40.0 min | 25.00 | 0.8205 | 1.34 |
+Visual (sheets `work_sharp_sfm/v8/eval_v9/`): room-centre views are close for all; v9planar's walls are the
+smoothest. On the hardest off-path frame (the high picture) v8geofast15 is best, v9fmvs keeps most of the
+painting, v9planar and the hybrid lose more of it. One run per setting: this frame has varied between runs.
+v9blur renders **43% sharper** (render/photo Laplacian ratio 0.80 vs 0.56): pillows, frames, rug and table
+edges are visibly crisper from the room centre. Its PSNR/SSIM drop is expected -- the held-out photos are
+themselves blurred, so a sharper render matches them less well pixel by pixel. The printer vents are still
+lost (too fine for any model at this blur). The first blur run died of CUDA OOM because a layout check ran on
+the GPU at the same time; never share the GPU with a blur run (up to 5 sub-renders per step).
+
+**(8) Room layout** (`layout.py`, any number of walls, any angle): planar regions lifted to world with the
+model's rendered depth → horizontal ones give floor / ceiling, vertical ones are clustered into wall lines;
+furniture fronts (something parallel behind them) and surfaces seen through doorways are dropped; corners =
+intersections of walls in angular order around the room centre. On v8final: 4 walls, 4 corners (~88°),
+height 2.70 m, wall-to-wall 6.616 × 4.429 m. On **v9planar: 6.675 × 4.406 m, height 2.74 m** (tape: 6.70 m,
+−2.5 cm), rendered planes 0.7 cm rms vs 3.4 cm (ceiling 0.8 vs 6.5 cm). Outputs: `layout.json`, `plan.png`,
+`corners.jpg` in `work_sharp_sfm/v9/layout_*`.
+
+**End to end (the result of the night).** `run_v8.py --tag v9e2e --split <offpath_test.txt> --sfm_args
+"--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222`, from the raw capture, nothing reused:
+**96 min** (select 1.9, SfM 22.4, prior 8.1, fast init 20.4 with plane_seg in parallel, train 42.5, export
+0.7) vs ~4 h for v6 and 44 min for the failed v8 fast run. SfM: one component, 1165/1166 frames, poses
+5.5 cm / 0.42° from v6. On the same 79 held-out frames: **PSNR 25.16, SSIM 0.8247, sharpness 0.80, flatness
+0.77 cm** -- better than the v6 recipe on every number, the sharpest and flattest model so far, and the
+**hardest off-path frame (the high picture) is complete for the first time** (every earlier model smeared or
+lost it). Likely cause: the retrieval SfM registers frames the old pipeline lost (1086 training frames vs
+1029), plus the blur and planar terms. Weak spot: a smear at the right edge of the printer frame.
+Saved: `saved_models/2026-10-26_v9_e2e/` (held-out frames NOT used for training).
+**Open issue -- metric scale:** this SfM is 1.9% smaller than v6's after both are aligned to ARCore; the
+layout gives 6.617 m for the room length (tape 6.70 m, v6-based models 6.675 m). The Sim3-to-ARCore step
+needs a more robust scale (e.g. several ARCore segments, anchors.csv corrections) before relying on it.
+
+### 4.17 Semantic labelling, PGSR-style training and meshing (overnight, 2026-10-27, branch `feature/semantics-mesh`)
+Scope (user): label built rooms -- walls, floor, ceiling, doors / windows, switches, sockets, lights -- and turn
+the model into a mesh the PGSR way. Model: the v9 end-to-end scan (`work_v9e2e_sfm`, 4.16).
+
+**Semantic labelling = 2D proposals, 3D verification.**
+- `semantic2d.py` (separate `semantic-env`: a venv on the system PyTorch 2.1 with transformers 4.46;
+  `truststore` because this network re-signs TLS): every 2nd frame (583) is rotated upright by gravity (the
+  phone video is stored sideways), Grounding DINO tiny finds the fixtures from one text prompt, SAM ViT-B
+  makes masks. 7-8 min. At a permissive threshold (0.28) it over-detects: framed pictures -> "window",
+  microwave -> "socket", wardrobe -> "door", rug -> "ceiling fan". **Decoy classes** in the same prompt
+  (picture frame, wardrobe, cabinet, TV, microwave, mirror, clock, rug, curtain) absorb most of these: a
+  detection goes to the best-scoring class including the decoys (window detections 328 -> 184).
+- `semantic3d.py` (seconds): every frame's depth is rendered; Gaussians on the visible surface vote with the
+  2D label under them. Structure comes from the room layout (`layout.py`): floor / ceiling planes refit on the
+  model (the floor is 0.6 deg off gravity -- enough to leave a flat band over 7 m), walls from the layout lines.
+  Fixtures become instances (4 cm connected components) and must be **seen in >= 6 frames and pass class
+  geometry**: a room door is tall, reaches the floor and sits in the wall (signed distance -0.35..+0.15 m:
+  doors are recessed up to a 9-inch brick wall's depth behind the wall face, wardrobe fronts stand ~0.5 m in
+  front of it); windows have a sill >= 0.5 m; switches / sockets are small and on a wall; ceiling lights are
+  >= 8 cm and at the ceiling; fans are >= 0.6 m wide and away from walls.
+- Result on newRoom: **floor 29.2 m², ceiling 2.72 m, 4 walls with gross / opening / net areas** (e.g. wall 0:
+  6.69 x 2.72 m, 18.2 m² gross, 2 doors 3.4 m², **14.8 m² net**), and 15 fixtures: 4 doors, 1 high window,
+  2 light switches (1.35 / 1.40 m above the floor), 3 sockets (0.28 / 0.82 / 1.80 m; two of these are false, see the room check below), the pendant light over the table, 2 wall lights and a 1.1 m tube light, a table lamp.
+  45 candidates rejected with the reason recorded (`semantic.json`). Outputs: `semantic.json`, `labels.npy`
+  (per Gaussian), `semantic.ply` (coloured by class), `plan_semantic.png`, `views_semantic.jpg`.
+- **Room check by the user (2026-11-02, final model, `gs_v9final/semantic/audit_ground_truth.json`): 13 of 15 detected
+  fixtures are correct.** Doors 4/4, window 1/1, light switches 2/2, ceiling lights 4/4, lamp 1/1, **power sockets 1/3**:
+  the "socket" at 1.80 m is a hanging mirror piece (an earlier note here called it an AC socket: that was a guess, and
+  wrong) and the one at 0.81 m is a bottle label. Both passed because the rule only asks for small + near a wall.
+  **Missed (user): 4 -> recall 13/17** (doors 4/6, ceiling lights 4/5, sockets 1/2). Sockets hidden behind furniture are excluded.
+  - Tube light on wall 0: detected in 56 views but as "ceiling fan", then rejected by the fan rule "away from walls".
+    I added that rule after wrongly judging this candidate to be the same object as ceiling_light_3; they are 3.5 m apart.
+  - Door next to the fridge: an open doorway. The masks only cover strips of its frame (0.11 m wide) plus the room
+    behind it (3 m past the wall), so it fails the door width rule.
+  - Door left of door_2: not identified with certainty; only a fragment of its top frame is among the rejected candidates.
+    Possibly absorbed by the wardrobe / cabinet decoys (door detections fell from 534 to 366 when they were added): unverified.
+  - Socket under the ironing table: not among the rejected switch / socket candidates with >= 4 views; cause not checked.
+  One room only, and the rules were tuned on it, so these are not general accuracy figures.
+- Limits: open doorways without a door leaf
+  are not detected (no 2D detection) -- the layout's wall gaps could provide them; switch plates are 8-14 cm
+  and need ~30 confirming frames, so a fast walk past a switch may miss it.
+
+**Meshing (`mesh.py`).** Every 2nd training view is rendered (colour + depth) at half resolution and fused
+into a TSDF volume (Open3D 0.19 in nerfstudio-env -- Open3D 0.20's TSDF returns empty meshes here), marching
+cubes, small floating pieces removed: 20 s, 1.9 M triangles. Shell flatness (each wall / floor / ceiling
+region fitted with its own plane): walls 0.7-1.3 cm median deviation (40-64% of vertices within 1 cm),
+wall 3 3.0 cm, floor 1.5 cm, ceiling 3.9 cm (the ceiling is only ever seen at grazing angles from chest
+height -- a capture limit). `mesh_labels.py` labels the mesh (structure by plane + normal, fixtures from the
+verified fixture Gaussians), reports surface area per class and writes 400k-triangle `.glb` files (8 MB).
+
+**PGSR-lite (`geo_splatfacto.py --pgsr`).** PGSR (Chen et al. 2024) without its multi-view terms: Gaussians
+flattened into discs (min-scale loss, weight 100), a second pass at 1/4 resolution renders the disc normals and
+camera-to-plane distances -> PGSR's unbiased depth (ray / plane intersection, on the surface); the depth,
+normal and planar losses use it, plus single-view depth-normal consistency. splatfacto's scale regulariser
+(max/min < 10) forbids discs and is replaced by a max/middle limit. `mesh.py --depth unbiased`.
+Results (v9pgsr vs v9e2e: same SfM, split and recipe; 46 vs 42.5 min training):
+- held-out frames: PSNR 25.09 vs 25.16, SSIM 0.8254 vs 0.8247, sharpness **0.88 vs 0.80**; the hardest
+  off-path frame is complete in both.
+- mesh shell flatness, median deviation (v9e2e expected-depth mesh -> v9pgsr unbiased-depth mesh): floor
+  1.54 -> 1.42 cm, ceiling 3.88 -> 3.57, walls 0.86 -> 0.77, 1.29 -> 1.21, 0.72 -> 1.94, 3.02 -> 3.28. Meshed
+  with alpha-blended depth instead, the PGSR model's walls are 2.1-2.2 cm: the unbiased depth is what makes a
+  disc model mesh well. The meshes look nearly identical; both show faint vertical stripes on plain walls
+  (views disagree by ~1 cm), which is what PGSR's multi-view terms target -- not implemented yet.
+- semantics: both models give the same 15 fixtures, matched within 0.1-9.5 cm (most within 2.6 cm), heights
+  within 3 cm -- repeatable, but not independent evidence of correctness: all models share the same 2D detections, so they repeat the same mistakes.
+- **Verdict: marginal.** The Metric3D depth / normal + planar priors already do most of what PGSR's
+  single-view terms do. Kept for the final model (sharper splats, slightly flatter on 4 of 6 surfaces).
+**Shell denoising (`mesh_labels.py --clean 0.01`)**: floor / ceiling / wall vertices are pulled onto their
+surface's best-fit plane within 1 cm, fading out by 2.5 cm (only the mesh copy). Floor 1.42 -> **0.34 cm**,
+walls 0.77 -> **0.03**, 1.21 -> **0.17**, 1.94 -> **0.78 cm**; the ceiling and wall 3 (rougher than 2.5 cm) are
+untouched; door frames, the rug's edge and furniture keep their relief.
+
+**BUG found and fixed: per-frame priors on the wrong images when training without a split.**
+`geo_splatfacto.py` looks the priors (Metric3D depth / normals, plane masks, blur motion) up by the training
+camera's index. They were packed for every frame of the json, but a json without train/val/test lists makes
+nerfstudio hold out 10% of the frames by itself (`eval_mode="fraction"`), so the training images were a
+subset and **1039 of 1049 cameras got another frame's priors** (offset growing to > 100 frames). Symptom: the
+first all-frames v9 model came out far worse than its held-out twin (walls 1.9-5.0 cm instead of 0.8-3.3 cm,
+a "ceiling" at 2.42 m, a 3.89 m room width). Fix: the dataparser uses `eval_mode="all"` (split lists in the
+json still win), the packed prior stores its frame names, and before training they are compared with the
+trainer's actual image order (rebuilt if different). **Affected earlier:** `saved_models/2026-10-24_v8_geofast15`
+(trained on transforms_mvs.json, no split) -- its priors were misaligned; every model trained with a split
+(all v8 / v9 experiments, v9e2e, v9pgsr) was correct. run_v8.py without --split would have been affected.
+
+**Power cut at 83% of the final run (no checkpoint: only the last step was saved).** `geo_splatfacto.py` now
+checkpoints every `--save_every` 2500 steps (only the latest kept) and `--resume` continues a run name from its
+latest checkpoint; rerunning the same command after a power cut loses at most ~8 min. Two nerfstudio details
+found while testing it: a resumed trainer runs `max_num_iterations` MORE steps (so a resumed run is now given
+only the remaining steps), and `--no_eval` used to schedule the first eval at step iters + 1 -- an over-long run
+then cached every eval image (with `eval_mode="all"` a second copy of all frames) and stalled; eval is now off.
+
+**Final model (all 1165 frames, v9 recipe + PGSR-lite, 46 min) -> `saved_models/2026-10-27_v9_semantic_pgsr/`.**
+Layout: 4 walls, 6.60 x 4.36 m (tape 6.70 m), ceiling 2.72 m. Mesh (unbiased depth): walls 0.69-1.01 cm median
+from flat, wall 3 2.63, floor 1.60, ceiling 3.91 cm; after shell denoising walls 0.03-0.34 cm, floor 0.59 cm.
+Semantics: floor 28.8 m², 4 walls (net 52.6 m²), the same 15 fixtures as on v9e2e / v9pgsr. It is the web demo.
+
+**Web viewer.** `export_web.py` splits the labelled model into 6 groups (floor, ceiling, walls, openings,
+electrical, other; .spz, 12 MB together) + `scan.json` + the mesh; the BuildScan viewer's new Scan Layers
+panel shows / hides / tints the groups, lists walls with net areas and the fixtures (click to fly there), and
+the render dropdown switches between splats and the mesh (`prototype/web-ui/STATUS.md`).
+
+### 4.18 Semantics v10: fixes against the user's room check (2026-11-03)
+Same model as 4.17 (only the labels change, `gs_v9final/semantic_v10`, 2D masks in `semantic2d_v10`).
+| | v9 labels | v10 labels |
+|---|---|---|
+| Detections correct | 13/15 | 15/15 (3 new ones judged by me from images, not yet confirmed by the user) |
+| Visible fixtures found | 13/17 | 15/17 |
+| 2D stage | 8 min | 38 min (tiles) |
+What changed: wardrobe / cabinet decoys no longer compete with "door" (they hid a real door; geometry separates them);
+door fragments along a wall merge into one opening (open doorway by the fridge); overlapping doors de-duplicated; a
+"tube light" class and "long, thin, on a wall" fans become tube lights; a second detector pass on zoomed tiles for
+small objects; a candidate failing its class rule tries its next most voted class; `verify_fixtures.py` checks
+switch / socket candidates with CLIP on sharp crops (removed the mirror piece and the bottle label); a plate with
+> 25% switch votes counts as a switchboard.
+Still missed: the socket under the ironing table (never a good candidate) and the round light #14 (the "clock" decoy
+wins its votes: letting clocks count as lights would likely make the real clock a false light).
+**These numbers are not a general accuracy figure:** the fixes were made and scored against the same 17 fixtures. Margins
+are thin: the false sockets scored 0.45-0.47 in the crop check against a 0.5 threshold (real plates 0.69-0.88), and
+the 25% rule rests on 3 plates. The tile pass also caused new errors that the fallback rule then repaired. Next test: a second room.
+
 ## 5. 3DGS training quality
 
 ### 5.1 Scene rotated in the Nerfstudio viewer

@@ -21,7 +21,7 @@ if "%~1"=="" (
 )
 
 set "VERSION=%~1"
-set "GRADLE=googleARCore\samples\hello_ar_java\app\build.gradle"
+set "GRADLE=android\app\build.gradle"
 
 REM Get current versionCode
 for /f "tokens=2" %%A in ('findstr /C:"versionCode" "%GRADLE%"') do set "OLD_CODE=%%A"

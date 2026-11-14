@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Filled rounded button; colour from android:backgroundTint (primary by default). -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#33FFFFFF">
+    <item><shape android:shape="rectangle"><solid android:color="@color/bs_primary" /><corners android:radius="8dp" /></shape></item>
+</ripple>

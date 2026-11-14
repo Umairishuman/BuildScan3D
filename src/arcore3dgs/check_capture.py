@@ -53,6 +53,29 @@ if os.path.exists(os.path.join(root, "quality.csv")):
     q = [l.split(",")[1] for l in open(os.path.join(root, "quality.csv")).readlines()[1:]]
     g = {k: q.count(k) / max(1, len(q)) for k in ("GOOD", "WARN", "BAD")}
     report("PASS" if g["BAD"] < 0.1 else "WARN", f"live IQA: good {g['GOOD'] * 100:.0f}% / ok {g['WARN'] * 100:.0f}% / bad {g['BAD'] * 100:.0f}%")
+    rows = [l.strip().split(",") for l in open(os.path.join(root, "quality.csv")).readlines()[1:]]
+    blur = np.array([float(r[9]) for r in rows if len(r) > 9 and float(r[9]) >= 0])   # app >= 2026-10-23
+    if len(blur):
+        report("PASS" if np.median(blur) <= 5 else "WARN",
+               f"predicted motion blur: median {np.median(blur):.1f} px, > 5 px {100 * (blur > 5).mean():.0f}%, "
+               f"> 10 px {100 * (blur > 10).mean():.0f}% of frames (3DGS wants < ~5 px)")
+    iqa = np.array([float(r[11]) for r in rows if len(r) > 11 and float(r[11]) >= 0])   # app >= v0.3.7 (iqa_ms)
+    if len(iqa):
+        report("PASS" if np.percentile(iqa, 95) < 16 else "WARN",
+               f"NFR2 quality-check time: median {np.median(iqa):.2f} ms, p95 {np.percentile(iqa, 95):.2f} ms, "
+               f"max {iqa.max():.1f} ms, > 16 ms {100 * (iqa > 16).mean():.1f}% of frames (target < 16 ms)")
+    else:
+        report("WARN", "NFR2 quality-check time not in quality.csv (app older than the iqa_ms column)")
+
+# dropped camera frames (render thread too slow -> ARCore skips frames)
+pk = subprocess.check_output(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "packet=pts_time",
+                              "-of", "csv=p=0", os.path.join(root, "dataset.mp4")]).decode().split()
+vt = np.sort(np.array([float(x) for x in pk if x]))
+vd = np.diff(vt)
+drops = int((vd > 1.5 * np.median(vd)).sum())
+report("PASS" if drops < 0.01 * len(vt) else "WARN", f"NFR1 video: {drops} dropped-frame gaps in {len(vt)} frames "
+       f"({100 * drops / max(1, len(vt)):.1f}%), longest {vd.max() * 1000:.0f} ms, "
+       f"average {(len(vt) - 1) / max(vt[-1] - vt[0], 1e-6):.1f} fps (target >= 30)")
 
 dd = os.path.join(root, "depth")
 if os.path.isdir(dd):

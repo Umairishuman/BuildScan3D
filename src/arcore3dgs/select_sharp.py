@@ -25,6 +25,9 @@ args = ap.parse_args()
 cap_info = Capture(args.dataset)
 os.makedirs(os.path.join(args.out, "images"), exist_ok=True)
 
+if not os.path.exists(os.path.join(args.dataset, "imu.npz")):     # fresh capture: extract the IMU from dataset.mp4
+    from imu import extract_imu
+    extract_imu(args.dataset)
 imu = np.load(os.path.join(args.dataset, "imu.npz"))
 with open(os.path.join(args.dataset, "poses.csv")) as f:
     r = csv.reader(f); next(r); t0 = float(next(r)[0])

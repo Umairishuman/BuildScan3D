@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Folder UpdateChecker downloads update APKs into (getExternalFilesDir(null)/updates) -->
+<paths>
+  <external-files-path name="updates" path="updates/"/>
+</paths>
