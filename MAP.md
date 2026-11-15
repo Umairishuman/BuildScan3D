@@ -52,6 +52,7 @@ diagnostics · [v3] = the older SfM pipeline the server still runs · [legacy] =
 | `docs/` | Records, guides, proposal, papers (section 8) |
 | `report/mid-eval/` | Everything submitted for the FYP-1 mid evaluation (frozen) |
 | `UI designs/` | Two design reference images for the web UI |
+| `PosterVersion/` | **FYP-1 poster work** (22.5 × 34.5 in, made in Canva). `versions/` = every saved version (v1 to v8; `v8_submitted.pptx` / `.pdf` is the one submitted), `assets/` = logos, tool icons (`icons/`, and `icons_1in/` at 1 in square) and web-viewer screenshots |
 | `scratch/` | One-off Python scripts that once patched web-UI files (dashboard, logo, login image). Not used; to be archived once the owner agrees (D-049) |
 | `envs/linux/` | Linux micromamba env files (`colmap.yml` → `bs-colmap`, `nerfstudio.yml` → `bs-ns`, `system.yml` → `bs-system`) `requirements-nerfstudio.txt` (the Windows freeze minus Windows-only packages) and `bs-ns-activate.sh` (CUDA paths for gsplat's JIT build, copied into the env's `activate.d`). Used by this PC and, later, the Docker image (D-047, D-048) |
 | `requirements.txt` | `nerfstudio-env` (Windows `pip freeze`) |
