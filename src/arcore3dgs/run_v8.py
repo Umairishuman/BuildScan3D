@@ -18,6 +18,8 @@ ap.add_argument("--dataset", required=True)
 ap.add_argument("--tag", default="v8")
 ap.add_argument("--iters", type=int, default=15000)
 ap.add_argument("--window", type=int, default=6, help="select_sharp window (frames)")
+ap.add_argument("--pose_free", action="store_true",
+                help="select_sharp --pose_free: keep frames without an ARCore pose; SfM places them from the images")
 ap.add_argument("--mono_model", default="large", choices=["large", "small"],
                 help="Metric3D size; per 1108 frames on a 3070 (fp16): large ~7 min, small ~2.6 min, aligned error 1.8%% vs 2.0%%")
 ap.add_argument("--no_fp16", action="store_true", help="Metric3D in full precision (2x slower, same aligned error)")
@@ -65,7 +67,8 @@ def run(stage, cmd, log=None, extra_env=None):
 
 
 py, nspy = sys.executable, toolpaths.ns_cmd("python")   # nspy is a command list
-run("select", [py, os.path.join(HERE, "select_sharp.py"), "--dataset", D, "--out", W, "--window", str(args.window)])
+run("select", [py, os.path.join(HERE, "select_sharp.py"), "--dataset", D, "--out", W, "--window", str(args.window)]
+    + (["--pose_free"] if args.pose_free else []))
 run("sfm", [py, os.path.join(HERE, "sfm_colmap.py"), "--work", W, "--out", S, "--pairs", "arcore"] + args.sfm_args.split())
 if STAGES.index(args.from_stage) <= STAGES.index("export"):
     shutil.rmtree(os.path.join(S, "undist", "images"), ignore_errors=True)   # export copies what it needs
