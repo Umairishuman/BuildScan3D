@@ -291,7 +291,12 @@ for cn in corners:
 
 # ---------------- plan.png ----------------
 P = means.cpu().numpy(); o = opac.cpu().numpy()
-m = (o > 0.5) & (P[:, 1] > floor_y + 0.1) & (P[:, 1] < (ceil_y if np.isfinite(ceil_y) else floor_y + 2.4) - 0.1)
+# no floor / ceiling found (partial scans, e.g. TRAINING R-045 / R-046): plan from all opaque splats instead of crashing
+y_lo = floor_y + 0.1 if np.isfinite(floor_y) else -np.inf
+y_hi = (ceil_y if np.isfinite(ceil_y) else floor_y + 2.4) - 0.1 if (np.isfinite(ceil_y) or np.isfinite(floor_y)) else np.inf
+m = (o > 0.5) & (P[:, 1] > y_lo) & (P[:, 1] < y_hi)
+if not m.any():
+    m = o > 0.5
 xz = P[m][:, [0, 2]]; lo = np.percentile(xz, 0.5, 0) - 0.5; hi = np.percentile(xz, 99.5, 0) + 0.5
 sc = 150; Wp, Hp = ((hi - lo) * sc).astype(int)
 img = np.full((Hp, Wp, 3), 255, np.uint8)
