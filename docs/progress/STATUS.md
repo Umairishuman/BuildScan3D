@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-14 by Tayyab (agent, overnight session on `exp/overnight-2026-11-14`): roomAttemptSadness2 v9 run (R-039), newRoom technique tests (R-040 – R-043), layout ceiling fix, server v9 option, tape script, capture checks in the app and on the PC, coverage 45%. Before that: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-032 – R-038 (renumbered from R-029 – R-035 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
+Last updated: 2026-11-15 by Tayyab (agent, on `exp/overnight-2026-11-14`): scan_009 runs R-045 / R-046, `--pose_free` keyframes, layout no-floor fix, app feature-point map + coverage dots per frame + depth/pose pairing, 7 real models in the web viewer. Before that: 2026-11-14 by Tayyab (agent, overnight session on `exp/overnight-2026-11-14`): roomAttemptSadness2 v9 run (R-039), newRoom technique tests (R-040 – R-043), layout ceiling fix, server v9 option, tape script, capture checks in the app and on the PC, coverage 45%. Before that: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-032 – R-038 (renumbered from R-029 – R-035 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -402,6 +402,19 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.3 Reconstruction quality
 
+- [ ] **[new 2026-11-15] Frames without an ARCore pose (`--pose_free`) and ALIKED SfM** (R-045, R-046,
+      `exp/overnight-2026-11-14`): on scan_009 (ARCore lost tracking 63.7% of the time) the default recipe kept 87 frames
+      (R-045); `select_sharp.py --pose_free` keeps frames without a pose (894 vs 238), and `--feature aliked` joined 761 of
+      them in one SfM component (SIFT: largest 234 / 409). After the jump filter 535 frames trained (R-046, inconclusive):
+      misplaced cameras remain, scale unreliable (26 ARCore inliers). **Re-opens D-022 (ALIKED rejected 2026-10-26) with
+      new evidence on another capture: Tayyab's call.** To do: run `--pose_free` + ALIKED on newRoom against R-032 before
+      any default change; a stricter mis-registration filter (only jumps > 30 cm are dropped now).
+- [ ] **[new 2026-11-15] Scale fallback when ARCore poses are poor:** Metric3D ÷ ARCore scale measured 0.83 (newRoom),
+      0.93 (room2), 0.52 (lecture hall), so Metric3D is not a usable fallback; ARCore depth on scan_009: 17 maps, mutually
+      inconsistent (possibly the depth/pose pairing bug fixed in the app on 2026-11-15, 7.7). Unsolved.
+- [ ] **[new 2026-11-15] Re-record scan_009's room** (bedroom with cabinets / AC / curtains): `check_capture.py` FAIL on
+      tracking lost 63.7% and median blur 21.7 px; the walk looked mostly at upper walls, the floor is barely in view.
+
 - [ ] **[new 2026-11-14] Techniques tried on newRoom** (one run each, off-path 79 frames, baseline R-032 25.14 / 0.8251):
       MCMC densification 620k / 1M (R-040, R-042: 24.65 / 24.74, visibly softer, **rejected**), revised opacity (R-043:
       25.02, −10% size, inconclusive), lower densify threshold 0.0004 (R-044: 25.07, sharper score, +40% size,
@@ -477,6 +490,17 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.7 Android app
 
+- [ ] **[new 2026-11-15] Capture-screen dots fixed, test on the phone** (`exp/overnight-2026-11-14`; Tayyab reported lag,
+      flicker, no dots and floating). Measured on the recordings: the app drew at 29.9 fps (scan_009, `tracking.csv`),
+      IQA median 0.2 ms; ARCore's point cloud updates every 100 ms with 7 – 76 points (median per recording) and the same
+      point id moves 1.3 – 19.4 cm (median per recording). Fixes: `FeatureMap.java` keeps a persistent smoothed map
+      (replayed on the saved `points.csv`: 9,863 settled points at the end of roomAttemptSadness2 vs 41 per update);
+      feature dots sized to the screen; coverage dots drawn every frame from world positions (were a 2 Hz Canvas
+      snapshot), hidden while tracking is lost, voxel search off the GL thread; raw depth stored with the timestamp and
+      pose of the frame it came from (`depth/timestamps.csv` records the pairing). Compiled locally (debug APK);
+      **not tested on a phone**. On the next recording check `depth/timestamps.csv`: if depth_ts differs from frame_ts,
+      the old depth files (named by the acquiring frame) were misaligned.
+
 - [ ] **[new 2026-11-12] Ask Tayyab whether he has unpushed app changes.** GitHub shows none after `6d0cab5`
       (2026-10-26); work only on his PC cannot be seen.
 - [ ] **[new 2026-11-14] End-of-recording warning and repeated buzz** (`exp/overnight-2026-11-14`, commit c0d6b07):
@@ -540,6 +564,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 - [ ] Decide whether the v9 pipeline (`run_v8.py`) should use the fallback at all, now that SfM registers 1165/1166 frames.
 
 ### 7.10 Web viewer and delivery
+
+- [ ] **[new 2026-11-15] 7 real models in the project list** (bedroom labelled, lecture hall, scan 009 R-045 and pose-free
+      R-046, newRoom v9e2e / v6 / v3; prototype/web-ui/STATUS.md §4). Model files and thumbnails are git-ignored, so they
+      exist only on Tayyab's PC. Not looked at in a browser; roomAttemptSadness2 v3 (359 MB PLY) not added.
 
 - [ ] `.spz` (in use) vs `.ksplat` (proposal, Zaid's branch): team decision. If `.ksplat` stays: finish v2-B/v2-C/scan-2
       renders, quality vs photos, FPS on the target laptop. [feat/splat-compress README]

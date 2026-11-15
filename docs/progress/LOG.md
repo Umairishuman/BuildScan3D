@@ -384,3 +384,19 @@ issues, use the existing datasets, try new techniques. Branch from `exp/fast-pip
   error 1): run one GPU job at a time. Disk 28 GB free at the start of the night.
 - Next: see the end-of-night summary in the R-039 / R-044 entries and STATUS; rerun R-030's layout on Linux; tape sheets
   for the other rooms; test the app warning on a phone; OD-7 / OD-10 / OD-11.
+
+## 2026-11-15 · Tayyab (agent) · `exp/overnight-2026-11-14`
+- Did:
+  - New recording `scan_009_057ed3beb4fc` uploaded over Wi-Fi (server on port 8010, dry_run, stopped after the upload);
+    `check_capture.py`: FAIL (tracking lost 63.7%, median blur 21.7 px).
+  - `select_sharp.py` / `run_v8.py --pose_free`: keep sharp frames without an ARCore pose; `sfm_colmap.py` handles
+    them (temporal + retrieval pairs, left out of the Sim3); `layout.py` no longer crashes when no floor is found.
+  - Web viewer (`prototype/web-ui`): 7 real models in the project list, local-only files (web-ui STATUS §4).
+  - App (`android/`): persistent feature-point map (`FeatureMap.java`), coverage dots drawn every frame, raw depth paired
+    with its own frame's pose, larger dots; debug APK built locally (JDK: Android Studio's JBR), not tested on a phone.
+  - Corrected my own wrong claim in R-045 ("scale ~7× off": the ratio is against arbitrary COLMAP units).
+- Runs: R-045 (v9 + PGSR on scan_009: 87 frames, rejected), R-046 (pose-free + ALIKED: 535 frames, inconclusive).
+- Decisions: none. R-046 re-opens D-022 (ALIKED rejected) with new evidence: Tayyab's call, after a newRoom test.
+- Problems: 16 GB RAM, so PLY→SPZ conversions waited for training to finish; disk ~98% full.
+- Next: install the debug APK and check the dots + `depth/timestamps.csv`; `--pose_free` + ALIKED on newRoom; re-record
+  scan_009's room; OD-7 / OD-10 / OD-11.

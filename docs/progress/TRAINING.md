@@ -77,6 +77,8 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-042 | 2026-11-14 | newRoom: MCMC with a larger budget (`mcmc1m`) | 3070 | 40.4 min train | 24.74 / 0.8200, sharpness 0.69 | Rejected |
 | R-043 | 2026-11-14 | newRoom: revised opacity on clone / split (`revop`) | 3070 | 28.5 min train | 25.02 / 0.8244, flat 0.73 cm, −10% size | Inconclusive |
 | R-044 | 2026-11-14 | newRoom: lower densification threshold (`dg4`) | 3070 | 30.8 min train | 25.07 / 0.8243, sharpness 0.85, +40% size | Inconclusive |
+| R-045 | 2026-11-15 | scan_009_057ed3beb4fc: full v9 + PGSR pipeline (`v9pgsr`), capture failed check_capture | 3070 | 32.4 min to the model; layout crashed | 87 / 5,629 frames registered, partial, scale unreliable | Rejected (record again) |
+| R-046 | 2026-11-15 | scan_009_057ed3beb4fc: pose-free keyframes + SfM tests; ALIKED SfM model (`v9pf`) | 3070 | 34.0 min from export (train 25.1) | 535 frames over the whole walk (R-045: 87); misplaced cameras remain, scale unreliable | Inconclusive |
 
 ## Runs
 
@@ -791,3 +793,106 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   Crops next to v9e2e: printer, floor and plant look the same; leaves perhaps slightly crisper.
 - **Verdict:** **inconclusive, not adopted**: higher sharpness score and flatness, slightly lower PSNR / SSIM, no
   visible gain, and 40% larger models (web delivery).
+
+### R-045 · 2026-11-15 · scan_009_057ed3beb4fc: full v9 + PGSR pipeline on a capture that failed check_capture
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/overnight-2026-11-14` @ eeebb42 (uncommitted changes: no, apart from the untracked
+  roomAttemptSadness2 web bundle)
+- **Dataset:** `dataset/scan_009_057ed3beb4fc` (realme RMX5111, uploaded 2026-11-15 13:47 over Wi-Fi to a dry-run
+  server on 192.168.18.78:8010; 1920x1080, 5,629 frames, 188 s; 285 depth files)
+- **Capture check (`check_capture.py`, before the run):** FAIL: tracking lost on 63.7% of frames (7 pose gaps > 0.5 s,
+  longest 26.9 s); FAIL: predicted blur median 21.7 px (> 10 px on 77% of frames); live IQA bad 92%; exposure 20 ms at
+  ISO 689. Run at Tayyab's request anyway, to see what the pipeline makes of it.
+- **Command(s):** `GPU_EVERY=120 bash scripts/run_full.sh dataset/scan_009_057ed3beb4fc v9pgsr -- --sfm_args
+  "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr` (the R-039 recipe, default select window)
+- **Goal:** a v9 model of this capture; see whether SfM recovers where ARCore tracking was lost.
+- **Errors during the run:**
+
+  1. 14:47 select — only 238 keyframes from 5,629 frames (window 6 would give ~940); selected frames' predicted blur
+     median 18.2 px vs 12.9 px over all frames. Likely cause (not confirmed): selection only uses frames with an ARCore
+     pose, and tracking was lost on 63.7% of the capture. Run continued (resolved: n/a, observation).
+  2. 14:5x sfm — 6 components [101, 76, 16, 10, 8, 3] of 238 frames; the bridge round joined none. 87 frames kept
+     (14 dropped as jumps), all from video frames 3443–4855 (115–162 s of 188 s, with a gap 3884–4759). Sim3 to
+     ARCore: scale 0.207, only 23 inliers, median 2.3 cm. Cause: the blur / tracking loss check_capture flagged.
+     Run continued (resolved: no; the model can only cover this part of the walk).
+  3. prior — `sfm_scale_check.json` verdict "ok" but `ratio_median` 6.86 (SfM depth / Metric3D depth; ~1 expected):
+     the whole model is likely ~7x off in metric scale (weak ARCore alignment). The check only flags blocks relative
+     to the median, not a global ratio far from 1 → follow-up: also flag a global median outside ~0.5–2x
+     (resolved: no).
+  4. 15:18 layout — `IndexError: index -1 is out of bounds for axis 0 with size 0` in `layout.py` line 295 (plan.png
+     bounds). Cause: no floor found in the fragment (`floor y nan`), so the splat mask for the plan was empty; ceiling
+     candidate y 2.416, 10 short walls (0.55–2.0 m). run_full.sh stopped; semantics, mesh and web export not run.
+     Follow-up: layout.py should skip plan.png / exit cleanly when the floor is not found (resolved: no; not re-run,
+     semantics of an 87-frame fragment would not be meaningful).
+- **Start → end:** 14:46 → 15:19 (run_v8 32.4 min: select 1.51, sfm 1.18, export 0.01, prior 0.95, init 0.39,
+  train 27.87, ply 0.50; layout crashed at once)
+- **Result:** `dataset/scan_009_057ed3beb4fc/work_v9pgsr_sfm/gs_v9pgsr/splat.ply` (353,628 Gaussians, 88 MB), around a
+  bathroom doorway only. Web viewer copy `prototype/web-ui/public/splats/scan009_v9pgsr.spz` (7.1 MB, local only).
+  No metrics (no held-out split); metric scale unreliable (errors 2–3).
+- **Verdict:** rejected as a room model (partial, scale unreliable): the capture must be recorded again. Kept on disk
+  as an example of what a capture that fails check_capture produces.
+
+### R-046 · 2026-11-15 · scan_009_057ed3beb4fc: v9 + PGSR with pose-free keyframe selection
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/overnight-2026-11-14` @ eeebb42 (uncommitted changes: yes: `select_sharp.py --pose_free`,
+  `sfm_colmap.py` handles frames without an ARCore pose, `run_v8.py --pose_free`; web-ui project list)
+- **Dataset:** `dataset/scan_009_057ed3beb4fc` (as R-045)
+- **Why:** R-045 trained on 87 frames because select_sharp.py dropped every frame without a settled ARCore pose
+  (63.7% tracking loss) before SfM. Tayyab: ARCore is guidance (matching pairs where featureless) and scale only;
+  COLMAP should place the frames. `--pose_free` keeps those frames (`c2w` null); sfm_colmap gives them temporal +
+  retrieval pairs only and leaves them out of the Sim3 fit.
+- **Select test (14:5x→15:4x, before the run):** 894 keyframes (window 6), 230 with a usable ARCore pose, 664
+  without; predicted blur median 10.5 px (R-045's pose-only selection: 238 frames, 18.2 px).
+- **Command(s):** `GPU_EVERY=120 bash scripts/run_full.sh dataset/scan_009_057ed3beb4fc v9pf -- --pose_free
+  --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
+- **Goal:** more of the room registered than R-045's 87 frames, at a usable scale.
+- **Errors during the run:**
+  1. (before the run) select_sharp.py `--pose_free` first attempt: `ValueError: The truth value of an array with more
+     than one element is ambiguous` (`if not idx` on a numpy array once the pose filter is skipped) → fixed to
+     `len(idx) == 0` (resolved: yes).
+
+  2. 15:4x sfm — 701 of 894 frames registered, in 5 components [234, 234, 150, 63, 20]; the bridge round joined none.
+     Components are not time segments: component 0 covers video 13–19, 27–35, 108–130, 154–164, 186–188 s (places
+     revisited), so the breaks are between places the images cannot link (blur, plain walls). Kept component: 224
+     frames (10 dropped as jumps), Sim3 to ARCore 22 inliers, scale 0.292 (resolved: no).
+  3. Diagnosis (agent, 2026-11-15): ARCore lost tracking 7 times (13.4–16.9, 22.6–38.7, 45.4–47.4, 52.1–78.9,
+     85.2–110.0, 134.0–155.8, 162.3–186.9 s), and its poses are not consistent across these stretches. They are not
+     consistent inside one stretch either: component 0's 82 poses in stretch 5 (110–134 s) span 7.3 m and fit the SfM
+     camera centres with a 1.48 m median residual (component 1 vs stretch 0: 12.9 cm over a 0.4 m path). So ARCore can
+     neither scale nor join the components of this capture; the low inlier count and R-045's wrong scale come from this.
+  4. 16:0x — run stopped by the agent during `prior` (training a 224-frame component at an unreliable scale was not
+     worth it); GPU used for SfM connectivity experiments instead (scratchpad `sfm_exp.sh`: A = temporal 30 +
+     retrieval 30, B = A's matches with the incremental mapper, C = ALIKED + LightGlue) (resolved: n/a).
+  5. 15:44–16:19 SfM experiments on the 894 pose-free keyframes (scratchpad `sfm_exp.sh`, SfM only):
+     A (SIFT, `--temporal 30 --retrieval 30`, global mapper): round 0 [237, 234, 150, 65, 24, 20, 3], after the bridge
+     round **[409, 234, 65, 24]**; B (A's matches, incremental mapper): [194, 141, 110, 22, 20]; C (`--feature aliked`
+     ALIKED + LightGlue, `--temporal 30 --retrieval 30`, global mapper): **one component, 761 / 894** (no bridge needed).
+  6. Scale sources checked on C (none reliable for this capture): ARCore Sim3 per tracking stretch gives scales
+     0.06–3.3 (stretch 5's ARCore path spans 7.3 m around one doorway); ARCore depth maps: only 17 keyframes within
+     40 ms of a map, scale 0.10–0.42 by part of the video; Metric3D: calibrated on rooms with good ARCore scale,
+     Metric3D ÷ ARCore scale = 0.83 newRoom, 0.93 roomAttemptSadness2, 0.52 lecture hall (`sfm_scale_check.py` on
+     `sparse/0`, 1 / ratio_median vs report.json sim3_scale), so not a usable fallback either.
+     **Correction to R-045 error 3:** `ratio_median` is against the raw COLMAP model (`sparse/0`, arbitrary units), so
+     6.86 is not a 7x metric error; R-045's Metric3D vs ARCore scales were 0.146 vs 0.207 (~30% apart).
+  7. 16:2x export of C (`work_v9pf_sfmC` renamed to `work_v9pf_sfm`; the SIFT model kept as `work_v9pf_sfm_sift`):
+     226 of 761 frames dropped as jumps > 30 cm (many of C's frames are placed absurdly: raw extent ~90 km), 535 kept,
+     covering the whole video (0–188 s); Sim3 to ARCore 26 inliers, median 5.0 cm, scale 0.558 (unreliable, see 6);
+     kept cameras' height spread 2 m (p5–p95), 1% of steps > 3.4 m: some wrong placements remain.
+  8. 16:3x continued: `GPU_EVERY=120 bash scripts/run_full.sh dataset/scan_009_057ed3beb4fc v9pf --from export --
+     --pose_free --sfm_args "--feature aliked --temporal 30 --retrieval 30" --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
+  9. 16:57 layout — same `IndexError` as R-045 (no floor / ceiling: the walk films upper walls, cabinets, AC and
+     curtains; the floor is hardly in view). Fixed in `layout.py`: the plan uses all opaque splats when no floor /
+     ceiling is found instead of crashing; re-run by hand: completes, 2 walls, no height (resolved: yes). The rest of
+     run_full (semantics, mesh, web) not run: not meaningful on this model.
+- **Start → end:** 15:37 → 17:0x (select 15:37; SIFT SfM; stopped 15:5x; SfM tests 15:44–16:19; 16:23 → 16:57
+  export → ply: export 0.01, prior 3.15, init 4.78, train 25.13, ply 0.93 min)
+- **Result:** `dataset/scan_009_057ed3beb4fc/work_v9pf_sfm/gs_v9pf/splat.ply` (534,096 Gaussians); web copy
+  `prototype/web-ui/public/splats/scan009_v9pf.spz` (10.1 MB, local), project `scan-009-posefree`. Renders at 8
+  training views over the walk (scratchpad `r046_views.jpg`): recognisable but soft, smeared dark cabinet doors (45 s)
+  and curtain; top-down (`r046_topdown.jpg`): camera path with long jumps, splats spread over ~9 x 11 m. No held-out
+  metrics. Scale unreliable (error 6).
+- **Verdict:** inconclusive. Pose-free selection + ALIKED SfM register the whole walk where R-045 got 87 frames, so
+  frames without an ARCore pose are usable; but this capture's blur and ARCore drift still leave misplaced cameras and
+  no metric scale: record again. Follow-ups: test `--pose_free` and `--feature aliked` on newRoom (does it change a
+  good capture?), and a stricter mis-registration filter (reprojection / neighbour consistency, not just 30 cm jumps).
+

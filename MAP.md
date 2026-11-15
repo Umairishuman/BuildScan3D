@@ -226,7 +226,8 @@ from the logo with bottom navigation Capture / Scans / Server (D-064). Code in
 | `BottomNav.java` | The bottom navigation bar (`res/layout/view_bottom_nav.xml`) |
 | `CaptureLogger.java` | Writes poses, tracking, points, depth, `camera.csv`, `anchors.csv`, lens metadata on a background thread |
 | `QualityMonitor.java` | Live IQA: predicted blur, dark / overexposed, low texture, tracking; `quality.csv` |
-| `CoverageMap.java`, `CoverageOverlayView.java` | Live coverage map (red / yellow / green dots) |
+| `CoverageMap.java`, `CoverageOverlayView.java` | Live coverage map (red / yellow / green dots). Since 2026-11-15 the dots are drawn by the GL renderer every frame (`CaptureActivity.drawCoverage`, shader `assets/shaders/coverage_point.frag`); `CoverageOverlayView` only gets cleared |
+| `FeatureMap.java` | Persistent, smoothed map of ARCore feature points for the camera preview (by point id, shown after 3 observations, reset on a > 15 cm jump); replaces drawing ARCore's per-update point set (2026-11-15) |
 | `UpdateChecker.java` | Update check against GitHub Releases at start and on return to the app (at most every 6 h, not while recording) and from the Server tab / menu; the dialog shows the release notes ("What's new"), after an update the installed version's notes are shown once; downloads the APK and opens Android's installer (FileProvider `res/xml/update_paths.xml`), continuing by itself after the "install unknown apps" permission |
 | `common/` | Google's helpers (rendering, camera permission, display rotation, ...), sample code, only the package renamed |
 
