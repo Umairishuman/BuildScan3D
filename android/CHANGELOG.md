@@ -8,6 +8,8 @@ Entries up to v0.3.6 were written on 2026-11-12 from the git history and docs/pr
 
 ## Unreleased
 
+## v0.3.8 · 2026-11-15
+
 - While recording, the coverage dots stay fixed on the surfaces they mark and move smoothly with the camera image; before, they were redrawn only twice a second, so they lagged behind the image and seemed to float.
 - Coverage dots are hidden while tracking is lost, instead of being drawn in the wrong place.
 - The ARCore feature dots on the camera screen build up into a steady map: each point appears once ARCore has seen it a few times, stays when the camera looks away, and disappears again if its position jumps. Before, the screen showed only the handful of points from the latest update, so dots were often missing, flickered or floated away. The dots are also larger.
