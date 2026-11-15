@@ -110,6 +110,26 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
   private CoverageOverlayView coverageOverlay;
   private long lastCoverageNs = 0;
   private final float[] coverageMvp = new float[16];
+  // The coverage dots are drawn by the GL renderer every camera frame from their WORLD positions, with the current
+  // camera matrices. Until 2026-11-15 they were screen positions computed twice a second and drawn on a Canvas
+  // overlay, so between updates they stayed put while the camera image moved: they lagged and slid ("floated").
+  // The visible-voxel search (whole map + occlusion grid) runs on coverageExec, off the GL thread, ~5 Hz.
+  private final java.util.concurrent.ExecutorService coverageExec =
+      java.util.concurrent.Executors.newSingleThreadExecutor();
+  private final java.util.concurrent.atomic.AtomicBoolean coverageBusy =
+      new java.util.concurrent.atomic.AtomicBoolean(false);
+  private final java.util.concurrent.atomic.AtomicReference<CoverageMap.Projection> coveragePending =
+      new java.util.concurrent.atomic.AtomicReference<>();
+  private volatile boolean coverageClear = false;
+  private Shader coverageShader;
+  private final VertexBuffer[] coverageBuffers = new VertexBuffer[3];
+  private final Mesh[] coverageMeshes = new Mesh[3];
+  private final int[] coverageCounts = new int[3];
+  // red = seen from 1 direction, yellow = 2-3, green = 4+ (CoverageMap.RED / YELLOW / GREEN, alpha 0xCC)
+  private static final float[][] COVERAGE_COLORS = {
+      {0xE5 / 255f, 0x39 / 255f, 0x35 / 255f, 0.8f},
+      {0xFD / 255f, 0xD8 / 255f, 0x35 / 255f, 0.8f},
+      {0x43 / 255f, 0xA0 / 255f, 0x47 / 255f, 0.8f}};
   private View recordToggleButton;
   private android.widget.TextView recordTimerText;
   private android.widget.TextView cameraInfoText;
@@ -164,6 +184,10 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
   // Keep track of the last point cloud rendered to avoid updating the VBO if point cloud
   // was not changed.  Do this using the timestamp since we can't compare PointCloud objects.
   private long lastPointCloudTimestamp = 0;
+  // Persistent smoothed feature map drawn instead of ARCore's per-update point set (which vanished, flickered and
+  // floated). GL thread only; featureMapClear is set from the UI thread (new session world after onResume).
+  private final FeatureMap featureMap = new FeatureMap();
+  private volatile boolean featureMapClear = false;
 
   // Temporary matrix allocated here to reduce number of allocations for each frame.
   private final float[] modelMatrix = new float[16];
@@ -248,6 +272,7 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
       session.close();
       session = null;
     }
+    coverageExec.shutdownNow();
 
     super.onDestroy();
   }
@@ -416,6 +441,7 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
   @Override
   protected void onResume() {
     super.onResume();
+    featureMapClear = true;
     if (!isRecording && updateChecker != null) {
       updateChecker.resumePendingInstall();   // back from "allow installs": continue the waiting update
       updateChecker.checkIfDue();             // at start and on return, at most every 6 h
@@ -549,6 +575,7 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
       try {
         captureLogger = new CaptureLogger(currentDatasetDir);
         coverageMap.clear();
+        coverageClear = true;
         captureLogger.setCoverage(coverageMap);
         captureLogger.writeCameraCharacteristics(this, session);
       } catch (java.io.IOException e) {
@@ -600,6 +627,7 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
       final String verdict = qualityMonitor.verdict();
       final String summary = (verdict != null ? verdict + "\n\n" : "") + qualityMonitor.summary() + "\n"
           + coverageMap.summary();
+      coverageClear = true;
       runOnUiThread(() -> {
         if (coverageOverlay != null) {
           coverageOverlay.setData(null);
@@ -693,7 +721,9 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
                   /* defines= */ null)
               .setVec4(
                   "u_Color", new float[] {31.0f / 255.0f, 188.0f / 255.0f, 210.0f / 255.0f, 1.0f})
-              .setFloat("u_PointSize", 5.0f);
+              .setFloat("u_PointSize", 5.0f)
+              // same threshold CaptureLogger uses for points.csv
+              .setFloat("u_MinConfidence", 0.3f);
       // four entries per vertex: X, Y, Z, confidence
       pointCloudVertexBuffer =
           new VertexBuffer(render, /* numberOfEntriesPerVertex= */ 4, /* entries= */ null);
@@ -701,6 +731,23 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
       pointCloudMesh =
           new Mesh(
               render, Mesh.PrimitiveMode.POINTS, /* indexBuffer= */ null, pointCloudVertexBuffers);
+
+      // Coverage dots: one mesh per colour, drawn over the camera image without depth test.
+      coverageShader =
+          Shader.createFromAssets(
+                  render, "shaders/point_cloud.vert", "shaders/coverage_point.frag", /* defines= */ null)
+              .setDepthTest(false)
+              .setDepthWrite(false)
+              .setBlend(Shader.BlendFactor.SRC_ALPHA, Shader.BlendFactor.ONE_MINUS_SRC_ALPHA)
+              .setFloat("u_PointSize", 14.0f)
+              .setFloat("u_MinConfidence", 0.0f);
+      for (int k = 0; k < 3; k++) {
+        coverageBuffers[k] = new VertexBuffer(render, /* numberOfEntriesPerVertex= */ 3, /* entries= */ null);
+        coverageMeshes[k] =
+            new Mesh(render, Mesh.PrimitiveMode.POINTS, /* indexBuffer= */ null,
+                new VertexBuffer[] {coverageBuffers[k]});
+        coverageCounts[k] = 0;
+      }
 
     } catch (IOException e) {
       Log.e(TAG, "Failed to read a required asset file", e);
@@ -711,6 +758,77 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
   @Override
   public void onSurfaceChanged(SampleRender render, int width, int height) {
     displayRotationHelper.onSurfaceChanged(width, height);
+    if (pointCloudShader != null) {
+      // was a fixed 5 px: barely visible on a 1080 x 2400 phone screen
+      pointCloudShader.setFloat("u_PointSize", Math.max(6f, Math.min(width, height) / 120f));
+    }
+    if (coverageShader != null) {
+      // same dot size the Canvas overlay used (radius width / 160)
+      coverageShader.setFloat("u_PointSize", Math.max(6f, Math.min(width, height) / 80f));
+    }
+  }
+
+  /** GL thread: replace the coverage dot buffers with a new snapshot (null = clear). */
+  private void uploadCoverage(CoverageMap.Projection p) {
+    int[] cnt = new int[3];
+    int n = p == null ? 0 : p.n;
+    for (int i = 0; i < n; i++) cnt[coverageColorIndex(p.colors[i])]++;
+    java.nio.FloatBuffer[] fb = new java.nio.FloatBuffer[3];
+    for (int k = 0; k < 3; k++) {
+      if (cnt[k] > 0) {
+        fb[k] = ByteBuffer.allocateDirect(cnt[k] * 3 * 4).order(java.nio.ByteOrder.nativeOrder()).asFloatBuffer();
+      }
+    }
+    for (int i = 0; i < n; i++) {
+      java.nio.FloatBuffer b = fb[coverageColorIndex(p.colors[i])];
+      b.put(p.world[3 * i]).put(p.world[3 * i + 1]).put(p.world[3 * i + 2]);
+    }
+    for (int k = 0; k < 3; k++) {
+      if (fb[k] != null) fb[k].rewind();
+      coverageBuffers[k].set(fb[k]);
+      coverageCounts[k] = cnt[k];
+    }
+  }
+
+  private static int coverageColorIndex(int color) {
+    return color == CoverageMap.GREEN ? 2 : (color == CoverageMap.YELLOW ? 1 : 0);
+  }
+
+  /** GL thread, while recording: refresh the visible voxel set in the background, draw the dots every frame. */
+  private void drawCoverage(SampleRender render, Camera camera) {
+    if (coverageShader == null) return;
+    if (coverageClear) {
+      coverageClear = false;
+      coveragePending.set(null);
+      uploadCoverage(null);
+    }
+    CoverageMap.Projection p = coveragePending.getAndSet(null);
+    if (p != null) uploadCoverage(p);
+    // A paused camera has a frozen pose: dots drawn with it would not match the image.
+    if (camera.getTrackingState() != TrackingState.TRACKING) return;
+    Matrix.multiplyMM(coverageMvp, 0, projectionMatrix, 0, viewMatrix, 0);
+    if (System.nanoTime() - lastCoverageNs > 200_000_000L && coverageBusy.compareAndSet(false, true)) {
+      lastCoverageNs = System.nanoTime();
+      final float[] mvp = coverageMvp.clone();
+      final float[] cam = camera.getPose().getTranslation();
+      try {
+        coverageExec.execute(() -> {
+          try {
+            coveragePending.set(coverageMap.project(mvp, cam));
+          } finally {
+            coverageBusy.set(false);
+          }
+        });
+      } catch (java.util.concurrent.RejectedExecutionException e) {
+        coverageBusy.set(false);
+      }
+    }
+    coverageShader.setMat4("u_ModelViewProjection", coverageMvp);
+    for (int k = 0; k < 3; k++) {
+      if (coverageCounts[k] == 0) continue;
+      coverageShader.setVec4("u_Color", COVERAGE_COLORS[k]);
+      render.draw(coverageMeshes[k], coverageShader);
+    }
   }
 
   @Override
@@ -801,15 +919,13 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
     if (isRecording) {
       camera.getProjectionMatrix(projectionMatrix, 0, Z_NEAR, Z_FAR);
       camera.getViewMatrix(viewMatrix, 0);
-      if (coverageOverlay != null && System.nanoTime() - lastCoverageNs > 500_000_000L) {
-        lastCoverageNs = System.nanoTime();
-        Matrix.multiplyMM(coverageMvp, 0, projectionMatrix, 0, viewMatrix, 0);
-        final CoverageMap.Projection proj = coverageMap.project(coverageMvp, camera.getPose().getTranslation());
-        runOnUiThread(() -> coverageOverlay.setData(proj));
-      }
+      drawCoverage(render, camera);
       try (PointCloud pointCloud = frame.acquirePointCloud()) {
         if (pointCloud.getTimestamp() > lastPointCloudTimestamp) {
           lastPointCloudTimestamp = pointCloud.getTimestamp();
+          if (camera.getTrackingState() == TrackingState.TRACKING) {
+            featureMap.update(pointCloud);       // keep the preview map growing while recording
+          }
           if (captureLogger != null) {
             captureLogger.onPointCloud(pointCloud);
           }
@@ -859,9 +975,13 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
     // Code Injection - BLAZING
     // Visualize tracked points.
     // Use try-with-resources to automatically release the point cloud.
+    if (featureMapClear) {
+      featureMapClear = false;
+      featureMap.clear();
+    }
     try (PointCloud pointCloud = frame.acquirePointCloud()) {
       if (pointCloud.getTimestamp() > lastPointCloudTimestamp) {
-        pointCloudVertexBuffer.set(pointCloud.getPoints());
+        featureMap.update(pointCloud);
         lastPointCloudTimestamp = pointCloud.getTimestamp();
 
         // --- START POINT CLOUD DUMP ---
@@ -871,6 +991,10 @@ public class CaptureActivity extends AppCompatActivity implements SampleRender.R
         // --- END POINT CLOUD DUMP ---
       }
 
+      java.nio.FloatBuffer settled = featureMap.takeIfChanged();
+      if (settled != null) {
+        pointCloudVertexBuffer.set(settled);
+      }
       Matrix.multiplyMM(modelViewProjectionMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
       pointCloudShader.setMat4("u_ModelViewProjection", modelViewProjectionMatrix);
       render.draw(pointCloudMesh, pointCloudShader);

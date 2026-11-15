@@ -73,23 +73,27 @@ public class CoverageMap {
     }
   }
 
-  /** Result of a projection: normalised device coords (x right, y up, -1..1) + colours. */
+  /** Result of a projection: normalised device coords (x right, y up, -1..1) + colours + world positions. */
   public static class Projection {
     public float[] ndc = new float[0];
+    public float[] world = new float[0];   // x, y, z per voxel (world frame), for re-projection every GL frame
     public int[] colors = new int[0];
     public int n = 0;
   }
 
-  /** Project voxels into the current view. mvp = projection * view (column-major, from ARCore). */
+  /** Voxels near the current view. mvp = projection * view (column-major, from ARCore). The NDC margin (1.3) keeps
+   *  dots that enter the screen before the next snapshot (the GL thread re-projects the world positions each frame).
+   *  Iterates the whole map, so call it off the GL thread. */
   public Projection project(float[] mvp, float[] camPos) {
     final int GW = 48, GH = 27;
     Projection out = new Projection();
     int cap;
-    float[] xs, ys, ds;
+    float[] xs, ys, ds, wx, wy, wz;
     int[] cols;
     synchronized (this) {
       cap = cells.size();
       xs = new float[cap]; ys = new float[cap]; ds = new float[cap]; cols = new int[cap];
+      wx = new float[cap]; wy = new float[cap]; wz = new float[cap];
       int m = 0;
       int limit = 5000;
       for (Map.Entry<Long, int[]> e : cells.entrySet()) {
@@ -102,12 +106,12 @@ public class CoverageMap {
         if (cw <= 0.05f) continue;
         float nx = (mvp[0] * x + mvp[4] * y + mvp[8] * z + mvp[12]) / cw;
         float ny = (mvp[1] * x + mvp[5] * y + mvp[9] * z + mvp[13]) / cw;
-        if (nx < -1 || nx > 1 || ny < -1 || ny > 1) continue;
+        if (nx < -1.3f || nx > 1.3f || ny < -1.3f || ny > 1.3f) continue;
         float dx = x - camPos[0], dy = y - camPos[1], dz = z - camPos[2];
         float d = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (d > MAX_DEPTH) continue;
         int dirs = Integer.bitCount(e.getValue()[0]);
-        xs[m] = nx; ys[m] = ny; ds[m] = d;
+        xs[m] = nx; ys[m] = ny; ds[m] = d; wx[m] = x; wy[m] = y; wz[m] = z;
         cols[m] = dirs >= 4 ? GREEN : (dirs >= 2 ? YELLOW : RED);
         m++;
       }
@@ -118,17 +122,19 @@ public class CoverageMap {
     java.util.Arrays.fill(near, Float.MAX_VALUE);
     int[] cellOf = new int[cap];
     for (int i = 0; i < cap; i++) {
-      int gx = Math.min(GW - 1, (int) ((xs[i] + 1) * 0.5f * GW));
-      int gy = Math.min(GH - 1, (int) ((ys[i] + 1) * 0.5f * GH));
+      int gx = Math.max(0, Math.min(GW - 1, (int) ((xs[i] + 1) * 0.5f * GW)));
+      int gy = Math.max(0, Math.min(GH - 1, (int) ((ys[i] + 1) * 0.5f * GH)));
       cellOf[i] = gy * GW + gx;
       if (ds[i] < near[cellOf[i]]) near[cellOf[i]] = ds[i];
     }
     out.ndc = new float[cap * 2];
     out.colors = new int[cap];
+    out.world = new float[cap * 3];
     int n = 0;
     for (int i = 0; i < cap; i++) {
       if (ds[i] > near[cellOf[i]] + 0.3f) continue;
       out.ndc[2 * n] = xs[i]; out.ndc[2 * n + 1] = ys[i]; out.colors[n] = cols[i];
+      out.world[3 * n] = wx[i]; out.world[3 * n + 1] = wy[i]; out.world[3 * n + 2] = wz[i];
       n++;
     }
     out.n = n;
