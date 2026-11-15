@@ -6,8 +6,13 @@ within each window of --window frames we keep the frame with the least predicted
 (|gyro| * exposure * focal + |v| / depth * exposure * focal), using image sharpness (Laplacian) as a
 tie-break and dropping frames far below the local image sharpness median.
 
-  python src/arcore3dgs/select_sharp.py --dataset <dataset> --out <dataset>/work_sharp [--window 6]
+  python src/arcore3dgs/select_sharp.py --dataset <dataset> --out <dataset>/work_sharp [--window 6] [--pose_free]
 Writes <out>/images/frame_XXXXX.jpg (full res), <out>/frames.json (ARCore c2w per frame, predicted blur).
+
+--pose_free: also keep frames without a usable ARCore pose (tracking lost, or within --settle s after a loss).
+COLMAP places every frame from the images; ARCore poses only guide matching and give the metric scale
+(sfm_colmap.py), so a frame does not need one. Those frames get "c2w": null and "arcore_pose": "lost" / "unsettled";
+their predicted blur uses the gyro only. Without the flag such frames are skipped (the original behaviour).
 """
 import os, sys, json, csv, argparse
 import numpy as np, cv2
@@ -21,6 +26,7 @@ ap.add_argument("--window", type=int, default=6)
 ap.add_argument("--exposure", type=float, default=1 / 45, help="s, assumed (ARCore does not record it)")
 ap.add_argument("--rel_sharpness", type=float, default=0.6)
 ap.add_argument("--settle", type=float, default=3.0)
+ap.add_argument("--pose_free", action="store_true", help="keep frames without a usable ARCore pose (see above)")
 args = ap.parse_args()
 cap_info = Capture(args.dataset)
 os.makedirs(os.path.join(args.out, "images"), exist_ok=True)
@@ -46,7 +52,10 @@ cap.release()
 pts = np.asarray(cap_info.pts[:N])
 wk = np.interp(pts, gt, np.convolve(w, np.ones(9) / 9, mode="same"))                # ~40 ms smoothed rad/s
 C = np.array([(cap_info.frame_pose(k) if cap_info.frame_pose(k) is not None else np.full((4, 4), np.nan))[:3, 3] for k in range(N)])
-v = np.linalg.norm(np.gradient(np.nan_to_num(C), pts, axis=0), axis=1)
+if args.pose_free:     # no pose -> no translation term (gyro only); nan_to_num(C) would turn a gap edge into a 'jump'
+    v = np.nan_to_num(np.linalg.norm(np.gradient(C, pts, axis=0), axis=1), nan=0.0)
+else:
+    v = np.linalg.norm(np.gradient(np.nan_to_num(C), pts, axis=0), axis=1)
 exposure = np.full(N, args.exposure)
 cam_csv = os.path.join(args.dataset, "camera.csv")                                     # app >= 2026-10-12
 if os.path.exists(cam_csv):
@@ -62,14 +71,19 @@ sel = []
 for s in range(0, N, args.window):
     idx = np.arange(s, min(s + args.window, N))
     idx = idx[(sharp[idx] >= args.rel_sharpness * local_med[idx])]
-    idx = [k for k in idx if cap_info.frame_pose(k) is not None and cap_info.tracking_settled(pts[k], args.settle)]
-    if not idx:
+    if not args.pose_free:
+        idx = [k for k in idx if cap_info.frame_pose(k) is not None and cap_info.tracking_settled(pts[k], args.settle)]
+    if len(idx) == 0:
         continue
     idx = np.array(idx)
     score = blur[idx] - 0.5 * (sharp[idx] / local_med[idx])                          # mostly gyro, Laplacian tie-break
     sel.append(int(idx[np.argmin(score)]))
 print(f"selected {len(sel)} frames: predicted blur median {np.median(blur[sel]):.1f} px "
       f"(vs {np.median(blur):.1f} px over all frames)")
+pose_ok = {k: cap_info.frame_pose(k) is not None and cap_info.tracking_settled(pts[k], args.settle) for k in sel}
+if args.pose_free:
+    print(f"  {sum(pose_ok.values())} with a usable ARCore pose, {len(sel) - sum(pose_ok.values())} without "
+          f"(placed by SfM from the images only)")
 frames = []
 cap = cv2.VideoCapture(cap_info.video); S = set(sel)
 for k in range(max(sel) + 1):
@@ -82,10 +96,13 @@ for k in range(max(sel) + 1):
     p = os.path.join(args.out, "images", name + ".jpg")
     if not os.path.exists(p):
         cv2.imwrite(p, f, [cv2.IMWRITE_JPEG_QUALITY, 95])
-    c2w = cap_info.frame_pose(k)
-    frames.append({"name": name, "video_index": k, "pts": float(pts[k]), "sharpness": float(sharp[k]),
-                   "pred_blur_px": float(blur[k]), "fallback": cap_info.is_fallback(pts[k]),
-                   "c2w": c2w.tolist(), "c2w_arcore": c2w.tolist()})
+    c2w = cap_info.frame_pose(k) if pose_ok[k] else None
+    fd = {"name": name, "video_index": k, "pts": float(pts[k]), "sharpness": float(sharp[k]),
+          "pred_blur_px": float(blur[k]), "fallback": cap_info.is_fallback(pts[k]),
+          "c2w": None if c2w is None else c2w.tolist(), "c2w_arcore": None if c2w is None else c2w.tolist()}
+    if c2w is None:
+        fd["arcore_pose"] = "lost" if cap_info.frame_pose(k) is None else "unsettled"
+    frames.append(fd)
 cap.release()
 H, W = f.shape[:2] if f is not None else (1080, 1920)
 json.dump({"dataset": os.path.abspath(args.dataset), "W": 1920, "H": 1080, "fx": cap_info.fx, "fy": cap_info.fy,

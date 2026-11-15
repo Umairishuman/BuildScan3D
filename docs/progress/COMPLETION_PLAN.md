@@ -51,8 +51,8 @@ only runs from the command line.
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2.1 | Run the upload server from a checkout that includes PR #4 (local `master` is behind; the server runs from `exp/first-linux-run`) | `/health` answers from the updated code; a v0.3.5 upload keeps all files | — | Must | W1 |  |  |
-| 2.2 | Port `server/pipeline.py` to Linux (last part of STATUS 7.1 1f) | Server starts a job on this PC without Windows paths | — | Must | W1 |  |  |
-| 2.3 | Server jobs run the v9/v10 pipeline (`scripts/run_full.sh`) instead of v3 (OD-7) | An uploaded recording produces splat, layout, semantics, mesh and web bundle | 2.2, OD-7 | Must | W1 |  |  |
+| 2.2 | Port `server/pipeline.py` to Linux (last part of STATUS 7.1 1f) | Server starts a job on this PC without Windows paths | — | Must | W1 |  | In progress 2026-11-14 (Tayyab, `exp/overnight-2026-11-14`): `server/pipeline.py` uses `toolpaths.ns_cmd`; not yet run on Linux |
+| 2.3 | Server jobs run the v9/v10 pipeline (`scripts/run_full.sh`) instead of v3 (OD-7) | An uploaded recording produces splat, layout, semantics, mesh and web bundle | 2.2, OD-7 | Must | W1 |  | Option built 2026-11-14: `BUILDSCAN_PIPELINE=v9` runs `scripts/run_full.sh`; default v3 until OD-7; not yet run through an upload |
 | 2.4 | Job progress and results go back to the app and the dashboard (stage, percent, model link) | App shows progress; the finished scan opens in the dashboard | 2.3, 5.3 | Must | W2 |  |  |
 | 2.5 | Final-1 exit gate (a): a 60 s capture uploads and triggers processing end to end | One logged run (TRAINING R-NNN) from phone to model | 2.3, 1.3 | Must | W2 |  |  |
 | 2.6 | Back up the release signing key `~/.buildscan3d-keys/` off this PC | Copy stored in an agreed safe place | — | Should | W1 |  |  |
@@ -71,9 +71,9 @@ The v9 recipe gives the best model (R-023) but has been tested on one room only 
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 3.1 | Machine agreement: copy newRoomAttemptSadness here, run v9, compare with R-020 / R-023 | Logged run; PSNR / SSIM / scale within run-to-run noise of the 3070 | — | Must | W1 |  |  |
-| 3.2 | Process roomAttemptSadness2 and every new room (1.4) with the full v9 pipeline | One logged run per room, models kept in `saved_models/` | 1.4 | Must | W1 |  |  |
-| 3.3 | Optimise the processing time end to end; measure every change with the stage times | Before / after stage table for each change in TRAINING | 3.1 | Must | W2 |  |  |
-| 3.4 | Speed ideas to test in 3.3: blur only in the last third, photometric-only PatchMatch, ViT-S depth prior, faster `fast_mvs` (photometric or every 10th frame), faster `plane_seg` (~11 min CPU) | Each tried and kept or rejected with numbers | 3.3 | Must | W2 |  |  |
+| 3.2 | Process roomAttemptSadness2 and every new room (1.4) with the full v9 pipeline | One logged run per room, models kept in `saved_models/` | 1.4 | Must | W1 |  | In progress 2026-11-14: roomAttemptSadness2 v9 + PGSR model and layout done (R-039), semantics → web resuming |
+| 3.3 | Optimise the processing time end to end; measure every change with the stage times | Before / after stage table for each change in TRAINING | 3.1 | Must | W2 |  | In progress (Tayyab): training 42.5 → 28.2 min, init 20.1 → 7.5 min at equal quality (R-032, R-033), with PGSR 46 → 33 min (R-041); adoption OD-10 |
+| 3.4 | Speed ideas to test in 3.3: blur only in the last third, photometric-only PatchMatch, ViT-S depth prior, faster `fast_mvs` (photometric or every 10th frame), faster `plane_seg` (~11 min CPU) | Each tried and kept or rejected with numbers | 3.3 | Must | W2 |  | In progress: photometric PatchMatch kept (R-033); MCMC rejected (R-040); more in TRAINING R-042, R-043 |
 | 3.5 | Time the pipeline on a cloud RTX 4090 (NFR3 is stated for a 4090) | Measured total and stage times on a 4090 | 2.8 | Should | W2 |  |  |
 | 3.6 | Repeat runs of one setting to measure run-to-run noise | ≥ 3 runs, spread of PSNR / SSIM / scale reported | 3.1 | Should | W2 |  |  |
 | 3.7 | Ceiling and upper walls are the weakest surfaces: capture guidance to look up, or stronger planar priors | Ceiling quality improved on one room, measured | 3.2 | Should | W2 |  |  |
@@ -95,7 +95,7 @@ layout picked a wrong ceiling in R-030 (1.50 m in a room ~3.1 m tall).
 
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 4.1 | Fix the ceiling detection in `layout.py` (R-030: 1.50 m; model extent 3.08 m) | R-030 and the new rooms give the right height against tape | 1.5 | Must | W1 |  |  |
+| 4.1 | Fix the ceiling detection in `layout.py` (R-030: 1.50 m; model extent 3.08 m) | R-030 and the new rooms give the right height against tape | 1.5 | Must | W1 |  | Fix on `exp/overnight-2026-11-14` (strongest ceiling candidate with < 3% of the model above it); needs a rerun of R-030's layout and a tape check |
 | 4.2 | Run semantics v10 on roomAttemptSadness2 and every new room; a person checks each fixture | Per-room table of found / missed / false fixtures | 3.2 | Must | W2 |  |  |
 | 4.3 | Fixture dimensions in the viewer (width, height, height above floor, area) (FR10) | Clicking a fixture shows its size; checked against tape on one room | 4.2 | Must | W2 |  |  |
 | 4.4 | Confirm the three new v10 detections on newRoom (`door_1`, `door_6`, `tube_light_1`) | Checked by the person who knows the room | — | Should | W1 |  |  |
@@ -135,7 +135,7 @@ NFR6 (accuracy, on v3) are met with measurements.
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | E1 | Final-1 exit gate (d) / contribution 1: COLMAP with vs without ARCore priors on low-texture captures (ATE, track completion) | Table for ≥ 2 rooms in the report | 3.2 | Must | W2 |  |  |
-| E2 | Accuracy vs tape (NFR6 ≤ 5%): script that compares model measurements with tape, mean / max error in cm, on ≥ 2 rooms with v9 | Script in repo; numbers per room | 1.5, 3.2, 4.1 | Must | W2 |  |  |
+| E2 | Accuracy vs tape (NFR6 ≤ 5%): script that compares model measurements with tape, mean / max error in cm, on ≥ 2 rooms with v9 | Script in repo; numbers per room | 1.5, 3.2, 4.1 | Must | W2 |  | Script done 2026-11-14 (`tape_check.py`); newRoom: room length −1.49%; other rooms need tape sheets |
 | E3 | Semantic precision / recall / mIoU on rooms the rules were not tuned on (contribution 3) | Per-class table on ≥ 2 rooms | 4.2 | Must | W2 |  |  |
 | E4 | Pipeline time per stage, per machine (NFR3: 60 s video in 15 min on a 4090) | Table: this PC, 3070, 4090 if available | 3.3, 3.5 | Must | W2 |  |  |
 | E5 | Viewer FPS, GPU memory and load time on a mid-range Android browser vs an unoptimised viewer (NFR5 ≥ 30 FPS, contribution 4) | Measured table for 2 scans | 5.3 | Must | W2 |  |  |
@@ -151,8 +151,8 @@ NFR6 (accuracy, on v3) are met with measurements.
 
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| I1 | Merge `exp/first-linux-run` (Linux scripts, `buildscan`, records) into `master` through a PR | PR merged with CI green | — | Must | W1 |  |  |
-| I2 | Write the missing tests; raise the coverage gate back to 40% (D-054; now 35%, measured 37.4%) | CI passes at 40% | — | Must | W3 |  |  |
+| I1 | Merge `exp/first-linux-run` (Linux scripts, `buildscan`, records) into `master` through a PR | PR merged with CI green | — | Must | W1 |  | Done 2026-11-12 (merged in PR #5) |
+| I2 | Write the missing tests; raise the coverage gate back to 40% (D-054; now 35%, measured 37.4%) | CI passes at 40% | — | Must | W3 |  | Tests added 2026-11-14: 45% locally; gate back to 40% after CI confirms (D-054, Umair) |
 | I3 | Update README and AGENTS.md: folder tree, dropped MEP / YOLOv8 layers, ~75 min, `structure.py` (OD-9) | Both match the current pipeline | OD-9 | Must | W3 |  |  |
 | I4 | Keep the records current: a TRAINING entry for every run, LOG per session, STATUS at the end of each session | Checked at each weekly gate | — | Must | W1–W3 |  |  |
 | I5 | Archive the dead files with their owners' agreement: `train_fixed2_backup.py`, `train_v3_backup.py`, old `run_*.bat`, `scratch/`, `ViewerHUD.tsx` (OD-8) | Moved to archive folders, MAP updated | OD-8 | Should | W3 |  |  |

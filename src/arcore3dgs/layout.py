@@ -27,6 +27,8 @@ ap.add_argument("--ply", required=True); ap.add_argument("--work", required=True
 ap.add_argument("--every", type=int, default=6); ap.add_argument("--down", type=int, default=4)
 ap.add_argument("--ang", type=float, default=6.0); ap.add_argument("--off", type=float, default=0.08)
 ap.add_argument("--min_len", type=float, default=0.5)
+ap.add_argument("--above_frac", type=float, default=0.03,
+                help="a ceiling candidate is rejected if more than this fraction of the opaque splats lies > 15 cm above it")
 ap.add_argument("--max_rms", type=float, default=0.05, help="m: a region is used if the rendered surface fits a plane this well")
 args = ap.parse_args()
 os.makedirs(args.out, exist_ok=True)
@@ -90,7 +92,41 @@ def mode_y(sel):
     h_, e_ = np.histogram(ys[sel], bins=np.arange(ys[sel].min() - 0.03, ys[sel].max() + 0.05, 0.02), weights=wts[sel])
     y0 = e_[h_.argmax()] + 0.01
     return float(np.median(ys[sel & (np.abs(ys - y0) < 0.03)]))
-floor_y = mode_y(ys < cy_.min() - 0.5); ceil_y = mode_y(ys > cy_.max() + 0.1)
+floor_y = mode_y(ys < cy_.min() - 0.5)
+
+
+def ceiling_y():
+    """The ceiling is the horizontal surface above the cameras with (almost) nothing of the model above it.
+    The strongest horizontal cluster above the cameras is not always the ceiling: the undersides of AC units, wall
+    cabinets, shelves or a partition top are seen more often (the ceiling only at grazing angles). R-030 (lab room)
+    took such a surface 1.50 m above the floor in a ~3.1 m tall model. Candidates are the histogram peaks above the
+    cameras, strongest first; the first one with < --above_frac of the opaque splats above it wins; if none, the
+    highest candidate."""
+    sel = ys > cy_.max() + 0.1
+    if sel.sum() < 50:
+        return float("nan")
+    h_, e_ = np.histogram(ys[sel], bins=np.arange(ys[sel].min() - 0.03, ys[sel].max() + 0.05, 0.02), weights=wts[sel])
+    h_ = np.convolve(h_, [0.25, 0.5, 0.25], mode="same")
+    pk = [i for i in range(len(h_)) if h_[i] > 0.05 * h_.max() and h_[i] >= h_[max(i - 1, 0)] and h_[i] >= h_[min(i + 1, len(h_) - 1)]]
+    Py = means[:, 1][opac > 0.5].cpu().numpy()
+    cands = []
+    for i in sorted(pk, key=lambda i: -h_[i]):
+        y0 = e_[i] + 0.01; near = sel & (np.abs(ys - y0) < 0.03)
+        if near.sum() < 20:
+            continue
+        y = float(np.median(ys[near]))
+        if any(abs(y - c[0]) < 0.06 for c in cands):
+            continue
+        cands.append((y, float(h_[i] / h_.max()), float((Py > y + 0.15).mean())))
+    for y, w, a in cands:
+        print(f"  ceiling candidate y {y:.3f} (height {y - floor_y:.2f} m): weight {w:.2f}, splats above {100 * a:.1f}%")
+    if not cands:
+        return float("nan")
+    ok = [c for c in cands if c[2] < args.above_frac]
+    return (ok[0] if ok else max(cands))[0]
+
+
+ceil_y = ceiling_y()
 if not np.isfinite(ceil_y):
     print("no ceiling found above the cameras")
 height = ceil_y - floor_y
@@ -255,7 +291,12 @@ for cn in corners:
 
 # ---------------- plan.png ----------------
 P = means.cpu().numpy(); o = opac.cpu().numpy()
-m = (o > 0.5) & (P[:, 1] > floor_y + 0.1) & (P[:, 1] < (ceil_y if np.isfinite(ceil_y) else floor_y + 2.4) - 0.1)
+# no floor / ceiling found (partial scans, e.g. TRAINING R-045 / R-046): plan from all opaque splats instead of crashing
+y_lo = floor_y + 0.1 if np.isfinite(floor_y) else -np.inf
+y_hi = (ceil_y if np.isfinite(ceil_y) else floor_y + 2.4) - 0.1 if (np.isfinite(ceil_y) or np.isfinite(floor_y)) else np.inf
+m = (o > 0.5) & (P[:, 1] > y_lo) & (P[:, 1] < y_hi)
+if not m.any():
+    m = o > 0.5
 xz = P[m][:, [0, 2]]; lo = np.percentile(xz, 0.5, 0) - 0.5; hi = np.percentile(xz, 99.5, 0) + 0.5
 sc = 150; Wp, Hp = ((hi - lo) * sc).astype(int)
 img = np.full((Hp, Wp, 3), 255, np.uint8)

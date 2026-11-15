@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
+Last updated: 2026-11-15 by Tayyab (agent, on `exp/overnight-2026-11-14`): scan_009 runs R-045 / R-046, `--pose_free` keyframes, layout no-floor fix, app feature-point map + coverage dots per frame + depth/pose pairing, 7 real models in the web viewer. Before that: 2026-11-14 by Tayyab (agent, overnight session on `exp/overnight-2026-11-14`): roomAttemptSadness2 v9 run (R-039), newRoom technique tests (R-040 – R-043), layout ceiling fix, server v9 option, tape script, capture checks in the app and on the PC, coverage 45%. Before that: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-032 – R-038 (renumbered from R-029 – R-035 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -246,6 +246,11 @@ script, step 3 RunPod and the friend's PC.**
 - [ ] **[new] 1f. Port the Windows-only paths in code** — partly done 2026-11-06 on `feature/linux-port`: `toolpaths.py`, `run_v8.py`, `sfm_colmap.py`, `fast_mvs.py`, `mvs_init.py`, `colmap_mvs.py`. Still open: `server/pipeline.py`, `.sh` launchers (`scripts/start_server.sh` done 2026-11-06, D-057). `run_v8.py` (`nerfstudio-env/Scripts/python.exe`,
       `ns-export.exe`), `sfm_colmap.py` (`tools/colmap_dl/.../COLMAP.bat`, `tools/cudnn9` DLL path), `server/pipeline.py`;
       the `.bat` launchers need `.sh` equivalents.
+  - **2026-11-14:** `server/pipeline.py` now finds the nerfstudio programs through `toolpaths.ns_cmd` (no hard-coded
+    `Scripts/*.exe`), and `scripts/run_full.sh` runs on Windows Git Bash too. Not yet started on Linux through the server.
+- [ ] **[new 2026-11-14] Server jobs can run v9/v10** (COMPLETION_PLAN 2.3): `BUILDSCAN_PIPELINE=v9` makes a job run
+      `scripts/run_full.sh` (R-023/R-031 recipe, `BUILDSCAN_V9_ARGS` to override), with the 15 stages as job progress;
+      default still v3 until OD-7 is decided. To do: one upload end to end with it (2.5), then OD-7.
 - [x] **[new] 1g. All of 1b–1f as one script** — done 2026-11-06: `scripts/setup_linux.sh` (+ `--check`); run here OK, fresh-machine run not yet tested. (`scripts/setup_linux.sh` + env files), so step 2 and the friend's PC reuse it (D-048).
 - [x] **[new] 1h(a). First complete run here** — done 2026-11-06 (R-029): Umair's corridor-end recording
       `scan_056fe94d3399` through `scripts/run_full.sh`, all 15 stages, 34.7 min, no errors after the `imu.npz` fix (R-028).
@@ -311,6 +316,13 @@ script, step 3 RunPod and the friend's PC.**
 
 **Other organisation items**
 
+- [ ] **[new] Upload server exposed to the internet on the RTX 3070 PC's network (found 2026-11-12, Tayyab's session).**
+      With the server on port 8000 (dry-run mode, 17:45 – 18:25), ~30 public IP addresses (internet scanners, e.g.
+      Infrawatch, a WinRM probe on `/wsman`) reached it within minutes, so the router forwards port 8000 to this PC (port
+      forwarding / DMZ / UPnP). All of their requests got 404; the phone upload (`scan_3028a4de8fa0`) was the only
+      successful POST. The server has no authentication (`/upload`, `/config`). Before running it on that network again:
+      remove the router forwarding (or run on the PC's own hotspot, 192.168.137.1), and/or add a token to the server.
+
 - [x] **[new] Revoke the leaked RunPod API key** — done 2026-11-06 by Umair (the old key no longer works; the new one is
       only in the local `.env`). History:  commit `00bc021` (2026-10-18) committed `.env` with a
       real `RUNPOD_API_KEY`; untracking it on 2026-10-22 did not remove it from history, and the repository is
@@ -320,6 +332,9 @@ script, step 3 RunPod and the friend's PC.**
 - [ ] Optional: remove the revoked key from git history (`00bc021`); needs a history rewrite + force-push, team decision.
       Not urgent now that the key is revoked.
 - [ ] **[new] Raise the coverage gate back to 40%** when the tests are written (D-054; now 35%, measured 37.4%).
+  - **2026-11-14 (Tayyab's overnight session, `exp/overnight-2026-11-14`):** with the new tests (`test_tape_check.py`,
+    v9 server tests) line coverage is **45%** locally (Windows, Python 3.10; CI on Linux not run yet). D-054 can be
+    flipped back to 40% once CI confirms it on the branch (Umair's decision).
 
 - [ ] **[new] Code reorganisation, step 2 of D-049:** regroup `src/arcore3dgs/` by stage (proposal in
       [MAP.md](../../MAP.md) §10) on its own branch, **after** step 1 works so every move can be checked with a real run.
@@ -346,6 +361,36 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 < 35 min on a 4090 (projection).
 
 - [ ] **[new] Optimise the processing pipeline** end to end; measure each change with `run_v8.py`'s stage times and log it.
+  - **2026-11-12 (Tayyab's session, branch `exp/fast-pipeline`):** training 42.5 → 28.2 min and dense init 20.1 → 7.5 min
+    at equal quality on newRoom (TRAINING R-032, R-033); Metric3D 8.1 → 6.8 min (identical output). Normal SfM + these:
+    ~67 min end to end on newRoom (estimate from the measured stages), 48.8 min on the new lecture hall (R-036). The SfM
+    shortcut `--skip_retriangulation` lost quality (R-035, rejected). Adoption: DECISIONS OD-10.
+  - **[new 2026-11-12] SfM can shrink part of a room (GLOMAP).** R-036's lecture-hall model had a "mini room": ~175
+    frames (ARCore lost after frame ~2200, so `--pairs arcore` matched the wrong neighbours) were placed by GLOMAP at
+    ~0.38× scale. The incremental mapper (`--mapper mapper`, R-037) keeps the main part correct (581/842 frames) and
+    splits off the rest; R-038 trained on it (no mini room, right-side walk missing). To do: a per-frame scale check
+    after SfM (SfM depth / Metric3D depth, a block of frames < 0.5× = shrunken part) that warns or falls back to the
+    incremental mapper; and do not trust ARCore neighbours after tracking loss. Adoption: DECISIONS OD-11.
+- [ ] **[new 2026-11-13] Speed-ups not tested with `--pgsr`** (the best model's recipe, R-023, now a `run_v8.py` flag
+      from master) **nor on Linux**: one run of each before adopting OD-10.
+  - **2026-11-14:** tested on newRoom (R-041): training 33.0 min vs R-021's 46 min, PSNR 25.02 / SSIM 0.8232 /
+    sharpness 0.87 vs 25.09 / 0.8254 / 0.88 (one run each); off-path flatness of R-021 still to measure. Also used in
+    R-039 (roomAttemptSadness2, 36.2 min). Linux still not tested.
+- [ ] **[new 2026-11-13] Batched Grounding DINO tiles in `semantic2d.py`** are committed but have never run: compare the
+      2D labels with the unbatched output on newRoom and time it (the 38-min semantics stage is the next big cost).
+  - **2026-11-14:** first real run (R-039, roomAttemptSadness2) was ~3× slower (~12 s per frame): batching all tiles
+    filled the 8 GB GPU and Windows spilled GPU memory to RAM. Now `--tile_batch` (default 1 = the old per-tile calls).
+    Batching only helps on a larger GPU; not measured there.
+- [ ] **[new 2026-11-13] Fast recipe vs v9e2e on the lecture hall is not known** (R-036/R-038 have no baseline; Tayyab
+      is not sure R-038 is better than v9e2e). Umair's R-031 (scan #3, Ubuntu PC, old recipe + PGSR) looks like the
+      same hall with a steadier capture (6.7 px vs 25 px blur): compare the two models side by side once R-031 has a result
+      (not checked that it is the same room).
+- [ ] **[new 2026-11-13] Clean up the speed-up experiment folders on the 3070 PC** (`work_v9e2e_sfm/_mapper_exp`,
+      `undist_fast_it3`, `undist_fast_photo`, `gs_fast_t1`, `gs_fast_t2_photo`, `work_v10fast*` in newRoomAttemptSadness;
+      `work_v10_sfm` of `scan_3028a4de8fa0` holds the rejected mini-room model). Ask Tayyab first; disk 93% full (70 GB free).
+- [ ] **[new 2026-11-13] `scan_3028a4de8fa0` has no recording number** (D-065 numbers the recordings on the Ubuntu PC;
+      this one was uploaded to the 3070 PC on 2026-11-12 with an older app, no `camera.csv`). Decide whether recordings
+      on the 3070 PC get numbers too.
 - [ ] Training 42 min (blur ×1.4) and SfM 22 min dominate; fast_mvs 20 min. Ideas: blur only in the last third,
       photometric-only PatchMatch, ViT-S prior. *(from TODO 2026-10-26)*
 - [ ] Faster `fast_mvs` (photometric only or every 10th frame) and `plane_seg` (~11 min CPU). *(from TODO 2026-10-26)*
@@ -357,8 +402,32 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.3 Reconstruction quality
 
+- [ ] **[new 2026-11-15] Frames without an ARCore pose (`--pose_free`) and ALIKED SfM** (R-045, R-046,
+      `exp/overnight-2026-11-14`): on scan_009 (ARCore lost tracking 63.7% of the time) the default recipe kept 87 frames
+      (R-045); `select_sharp.py --pose_free` keeps frames without a pose (894 vs 238), and `--feature aliked` joined 761 of
+      them in one SfM component (SIFT: largest 234 / 409). After the jump filter 535 frames trained (R-046, inconclusive):
+      misplaced cameras remain, scale unreliable (26 ARCore inliers). **Re-opens D-022 (ALIKED rejected 2026-10-26) with
+      new evidence on another capture: Tayyab's call.** To do: run `--pose_free` + ALIKED on newRoom against R-032 before
+      any default change; a stricter mis-registration filter (only jumps > 30 cm are dropped now).
+- [ ] **[new 2026-11-15] Scale fallback when ARCore poses are poor:** Metric3D ÷ ARCore scale measured 0.83 (newRoom),
+      0.93 (room2), 0.52 (lecture hall), so Metric3D is not a usable fallback; ARCore depth on scan_009: 17 maps, mutually
+      inconsistent (possibly the depth/pose pairing bug fixed in the app on 2026-11-15, 7.7). Unsolved.
+- [ ] **[new 2026-11-15] Re-record scan_009's room** (bedroom with cabinets / AC / curtains): `check_capture.py` FAIL on
+      tracking lost 63.7% and median blur 21.7 px; the walk looked mostly at upper walls, the floor is barely in view.
+
+- [ ] **[new 2026-11-14] Techniques tried on newRoom** (one run each, off-path 79 frames, baseline R-032 25.14 / 0.8251):
+      MCMC densification 620k / 1M (R-040, R-042: 24.65 / 24.74, visibly softer, **rejected**), revised opacity (R-043:
+      25.02, −10% size, inconclusive), lower densify threshold 0.0004 (R-044: 25.07, sharper score, +40% size,
+      inconclusive). None beats the current recipe; the off-path softness is more likely the capture (motion blur,
+      coverage) than densification. Untried: residual camera-pose refinement and exposure correction (LighthouseGS,
+      WACV 2026), longer training, measuring run-to-run noise first (3.6).
+
 - [ ] **[new 2026-11-12] R-030 (`scan_646070948603`, lab room): room height 1.50 m cannot be right.** View the model,
       check which plane the layout took as the ceiling and whether the scale is off; measure one length with a tape.
+  - **2026-11-14:** `layout.py` fix (`exp/overnight-2026-11-14`): the ceiling is now the strongest horizontal cluster
+    above the cameras with < 3% of the opaque splats above it, not just the strongest one (an AC unit or cabinet
+    underside can win). newRoom unchanged (2.72 m); roomAttemptSadness2 2.78 m (R-039). **To do (Umair, Linux PC):**
+    rerun `layout` on R-030 (`buildscan`, `--from layout`) and check the height against the tape.
 
 - [ ] **Second room** (roomAttemptSadness2): full v9 pipeline + semantics (~2 h GPU), then a room check by the user. The
       real test of v9/v10. *(from TODO 2026-10-24 / 2026-10-27)*
@@ -380,6 +449,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 - [ ] **Metric scale:** a more robust Sim3 to ARCore (several segments, `anchors.csv` corrections), checked against the
       tape. The fast SfM is 1.5–1.9% off. *(from TODO 2026-10-26)*
+- [ ] **[new 2026-11-14] Tape comparison script** `src/arcore3dgs/tape_check.py` (COMPLETION_PLAN E2): fill a
+      `tape.csv` per room (template in its docstring) and run it on each room's `layout.json`. newRoom with the
+      2026-10-11 readings: v9 layout room length 6.600 vs 6.700 m (−10 cm, −1.49%; the v3 model measured in the viewer
+      was −0.8 cm). Check why the layout's wall-to-wall distance is 10 cm short (wall planes inside the wall surface?).
 - [ ] Use `anchors.csv` corrections in the pipeline: re-align pre-correction ARCore poses (better Sim3 inliers, a COLMAP-free fallback). *(from TODO 2026-10-12)*
 - [ ] More tape references (room 2, room height, doors) with 3 repeated clicks each, to quantify clicking error. *(from TODO)*
 - [ ] Tape-measure check on roomAttemptSadness2. *(from TODO 2026-10-10)*
@@ -417,8 +490,23 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.7 Android app
 
+- [ ] **[new 2026-11-15] Capture-screen dots fixed, test on the phone** (`exp/overnight-2026-11-14`; Tayyab reported lag,
+      flicker, no dots and floating). Measured on the recordings: the app drew at 29.9 fps (scan_009, `tracking.csv`),
+      IQA median 0.2 ms; ARCore's point cloud updates every 100 ms with 7 – 76 points (median per recording) and the same
+      point id moves 1.3 – 19.4 cm (median per recording). Fixes: `FeatureMap.java` keeps a persistent smoothed map
+      (replayed on the saved `points.csv`: 9,863 settled points at the end of roomAttemptSadness2 vs 41 per update);
+      feature dots sized to the screen; coverage dots drawn every frame from world positions (were a 2 Hz Canvas
+      snapshot), hidden while tracking is lost, voxel search off the GL thread; raw depth stored with the timestamp and
+      pose of the frame it came from (`depth/timestamps.csv` records the pairing). Compiled locally (debug APK);
+      **not tested on a phone**. On the next recording check `depth/timestamps.csv`: if depth_ts differs from frame_ts,
+      the old depth files (named by the acquiring frame) were misaligned.
+
 - [ ] **[new 2026-11-12] Ask Tayyab whether he has unpushed app changes.** GitHub shows none after `6d0cab5`
       (2026-10-26); work only on his PC cannot be seen.
+- [ ] **[new 2026-11-14] End-of-recording warning and repeated buzz** (`exp/overnight-2026-11-14`, commit c0d6b07):
+      the stop dialog says "Record again?" when the median predicted blur is > 15 px or > 50% of frames were bad, and the
+      bad-quality vibration repeats every 3 s. Compiled locally; **not tested on a phone**. `check_capture.py` now FAILs
+      the same 15 px case (scan_3028a4de8fa0 passed as READY before).
 - [ ] **[new 2026-11-12] Test the new app on the phone** (USB upload D-062, light UI + bottom navigation + Server tab +
       upload checks and Stop D-064): install `adb` on this PC (docs/PROCESSING_GUIDE.md), USB debugging on the phone,
       then an upload over the cable and over Wi-Fi, pulling the cable mid-upload (WAITING → restart), Stop, the
@@ -476,6 +564,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 - [ ] Decide whether the v9 pipeline (`run_v8.py`) should use the fallback at all, now that SfM registers 1165/1166 frames.
 
 ### 7.10 Web viewer and delivery
+
+- [ ] **[new 2026-11-15] 7 real models in the project list** (bedroom labelled, lecture hall, scan 009 R-045 and pose-free
+      R-046, newRoom v9e2e / v6 / v3; prototype/web-ui/STATUS.md §4). Model files and thumbnails are git-ignored, so they
+      exist only on Tayyab's PC. Not looked at in a browser; roomAttemptSadness2 v3 (359 MB PLY) not added.
 
 - [ ] `.spz` (in use) vs `.ksplat` (proposal, Zaid's branch): team decision. If `.ksplat` stays: finish v2-B/v2-C/scan-2
       renders, quality vs photos, FPS on the target laptop. [feat/splat-compress README]

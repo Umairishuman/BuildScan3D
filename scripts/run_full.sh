@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# BuildScan3D: the whole v9 / v10 pipeline on Linux, capture -> 3DGS -> layout -> semantics -> mesh -> web bundle.
+# BuildScan3D: the whole v9 / v10 pipeline on Linux or Windows (Git Bash), capture -> 3DGS -> layout -> semantics -> mesh -> web bundle.
 # Same commands as STATUS §5 (the Windows recipe), each stage in its own env (envs/linux/, scripts/setup_linux.sh).
 #
 #   scripts/run_full.sh <dataset_dir> <tag> [--from STAGE] [-- extra run_v8.py args]
@@ -49,8 +49,15 @@ exec > >(tee -a "$LOG") 2>&1
 echo "=== run_full.sh $(date '+%F %T')  dataset=$D tag=$TAG from=$FROM  commit=$(git rev-parse --short HEAD)"
 echo "    run_v8 args: ${V8_ARGS[*]:-(none)}"
 
-ns()  { "$MM" run -n bs-ns python -u -W ignore "$@"; }
-sem() { "$MM" run -n bs-system "$ROOT/semantic-env/bin/python" -u -W ignore "$@"; }
+if [[ -x "$ROOT/nerfstudio-env/Scripts/python.exe" ]]; then   # Windows (Git Bash, RTX 3070 PC): venvs in the repo
+  ns()  { "$ROOT/nerfstudio-env/Scripts/python.exe" -u -W ignore "$@"; }
+  sem() { "$ROOT/semantic-env/Scripts/python.exe" -u -W ignore "$@"; }
+  sys() { python -u "$@"; }
+else                                                            # Linux: micromamba envs (scripts/setup_linux.sh)
+  ns()  { "$MM" run -n bs-ns python -u -W ignore "$@"; }
+  sem() { "$MM" run -n bs-system "$ROOT/semantic-env/bin/python" -u -W ignore "$@"; }
+  sys() { "$MM" run -n bs-system python -u "$@"; }
+fi
 
 gpu_monitor() {   # one status line every GPU_EVERY s: GPU use / memory / temperature / power (+ training step)
   local every=${GPU_EVERY:-30} q u mu mt t p tr warn
@@ -89,7 +96,7 @@ stage() {   # stage <name> <command...>: skipped before --from, timed, recorded 
 if [[ $FROM_I -le $(idx ply) ]]; then
   echo; echo "=== [$(date '+%T')] run_v8.py: $FROM -> ply (its own stage times: $M/timing.json)"
   t0=$SECONDS
-  "$MM" run -n bs-system python -u "$HERE/run_v8.py" --dataset "$D" --tag "$TAG" --from_stage "$FROM" "${V8_ARGS[@]}"
+  sys "$HERE/run_v8.py" --dataset "$D" --tag "$TAG" --from_stage "$FROM" "${V8_ARGS[@]}"
   awk -v d="$(date '+%F %T')" -v n="run_v8 ($FROM-ply)" -v t="$((SECONDS - t0))" 'BEGIN{printf "%s\t%s\t%.1f min\n", d, n, t/60}' >> "$M/stages.tsv"
   FROM_I=$(( $(idx ply) + 1 ))
 fi

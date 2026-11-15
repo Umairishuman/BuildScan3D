@@ -4,7 +4,11 @@ with per-step timeouts and progress reporting.
 """
 
 import os
+import re
+import shlex
+import shutil
 import subprocess
+import sys
 import threading
 import time
 import logging
@@ -17,10 +21,55 @@ log = logging.getLogger(__name__)
 # ---------- configuration ----------
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-PYTHON = "python"
-NS_PYTHON = os.path.join(PROJECT_ROOT, "nerfstudio-env", "Scripts", "python.exe")
-NS_TRAIN = os.path.join(PROJECT_ROOT, "nerfstudio-env", "Scripts", "ns-train.exe")
-NS_EXPORT = os.path.join(PROJECT_ROOT, "nerfstudio-env", "Scripts", "ns-export.exe")
+PYTHON = sys.executable or "python"
+# nerfstudio programs: the repo's venv on Windows, the micromamba env bs-ns on Linux (src/arcore3dgs/toolpaths.py)
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "src", "arcore3dgs"))
+import toolpaths  # noqa: E402
+NS_PYTHON = toolpaths.ns_cmd("python")
+NS_TRAIN = toolpaths.ns_cmd("ns-train")
+NS_EXPORT = toolpaths.ns_cmd("ns-export")
+
+# Which recipe a job runs (OD-7 is open: the default stays the old v3 recipe).
+#   BUILDSCAN_PIPELINE=v3  fallback -> prepare -> COLMAP -> splatfacto (_build_commands)
+#   BUILDSCAN_PIPELINE=v9  scripts/run_full.sh: v9 3DGS -> layout -> semantics -> mesh -> web bundle
+# BUILDSCAN_V9_ARGS overrides the run_v8.py arguments, BUILDSCAN_BASH the bash used for run_full.sh.
+V9_STAGES = ["select", "sfm", "export", "prior", "init", "train", "ply", "layout", "sem2d", "sem3d", "verify",
+             "sem3d2", "mesh", "meshlabels", "web"]
+V9_LABELS = {"select": "Choosing sharp keyframes", "sfm": "COLMAP camera poses", "export": "Exporting cameras",
+             "prior": "Depth / normal priors", "init": "Dense starting points", "train": "Training 3D Gaussian Splatting",
+             "ply": "Exporting the model", "layout": "Room layout", "sem2d": "Finding fixtures in the images",
+             "sem3d": "Labelling the model", "verify": "Checking fixtures", "sem3d2": "Final labels",
+             "mesh": "Building the mesh", "meshlabels": "Labelling the mesh", "web": "Web viewer bundle"}
+V9_DEFAULT_ARGS = '--sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr'   # R-023 / R-031 recipe
+V9_TAG = "srv"
+V9_TIMEOUT_SEC = 6 * 3600
+_STAGE_LINE = re.compile(r"^==+ (?:\[[0-9:]+\] )?([a-z0-9]+)(?:[: ]|$)")
+
+
+def pipeline_recipe() -> str:
+    return "v9" if os.environ.get("BUILDSCAN_PIPELINE", "v3").lower() in ("v9", "v10") else "v3"
+
+
+def _bash() -> str:
+    if os.environ.get("BUILDSCAN_BASH"):
+        return os.environ["BUILDSCAN_BASH"]
+    if os.name == "nt":                     # Git Bash, not WSL's System32ash.exe
+        for p in (r"C:\Program Files\Gitinash.exe", r"C:\Program Files (x86)\Gitinash.exe"):
+            if os.path.exists(p):
+                return p
+    return shutil.which("bash") or "bash"
+
+
+def build_v9_command(dataset_dir: str, tag: str = V9_TAG) -> list:
+    """scripts/run_full.sh <dataset> <tag> -- <run_v8 args>; output in <dataset>/work_<tag>_sfm/gs_<tag>/."""
+    args = shlex.split(os.environ.get("BUILDSCAN_V9_ARGS", V9_DEFAULT_ARGS))
+    return [_bash(), os.path.join(PROJECT_ROOT, "scripts", "run_full.sh"), dataset_dir, tag, "--"] + args
+
+
+def v9_stage_of(line: str) -> Optional[str]:
+    """The run_full.sh / run_v8.py stage a log line starts ("=== [12:00:00] layout", "== train: ..."), else None."""
+    m = _STAGE_LINE.match(line.strip())
+    return m.group(1) if m and m.group(1) in V9_STAGES else None
 
 
 class StepName(str, Enum):
@@ -123,13 +172,13 @@ def _build_commands(dataset_dir: str, iterations: int = 30000) -> list:
 
     # 4. export_nerfstudio
     commands.append((STEPS[3], [
-        NS_PYTHON, os.path.join(PROJECT_ROOT, "src", "arcore3dgs", "export_nerfstudio.py"),
+        *NS_PYTHON, os.path.join(PROJECT_ROOT, "src", "arcore3dgs", "export_nerfstudio.py"),
         "--work", work_sfm, "--downscale", "1",
     ]))
 
     # 5. ns-train splatfacto
     commands.append((STEPS[4], [
-        NS_TRAIN, "splatfacto",
+        *NS_TRAIN, "splatfacto",
         "--data", work_sfm,
         "--output-dir", os.path.join(work_sfm, "ns"),
         "--experiment-name", "gs", "--timestamp", "run",
@@ -155,7 +204,7 @@ def _build_commands(dataset_dir: str, iterations: int = 30000) -> list:
     config_yml = os.path.join(work_sfm, "ns", "gs", "splatfacto", "run", "config.yml")
     output_dir = os.path.join(work_sfm, "gs_sfm")
     commands.append((STEPS[5], [
-        NS_EXPORT, "gaussian-splat",
+        *NS_EXPORT, "gaussian-splat",
         "--load-config", config_yml,
         "--output-dir", output_dir,
     ]))
@@ -163,8 +212,58 @@ def _build_commands(dataset_dir: str, iterations: int = 30000) -> list:
     return commands
 
 
+def run_v9_pipeline(job: Job):
+    """BUILDSCAN_PIPELINE=v9: one run_full.sh process; its stage lines move the job's step / progress."""
+    job.status = JobStatus.PROCESSING
+    job.started_at = time.time()
+    job.total_steps = len(V9_STAGES)
+    env = os.environ.copy()
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
+    env.setdefault("GPU_EVERY", "0")
+    cmd = build_v9_command(job.dataset_dir)
+    job._append_log("[v9] " + " ".join(cmd))
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=PROJECT_ROOT,
+                                env=env, bufsize=1, encoding="utf-8", errors="replace")
+    except FileNotFoundError as e:
+        job.status = JobStatus.FAILED
+        job.error = f"run_full.sh: executable not found — {e}"
+        job.finished_at = time.time()
+        return
+    deadline = time.time() + V9_TIMEOUT_SEC
+    for line in proc.stdout:                     # readline blocks; the timeout is checked per line
+        job._append_log(line)
+        st = v9_stage_of(line)
+        if st:
+            job.step_index = V9_STAGES.index(st)
+            job.current_step = st
+            job.current_step_label = V9_LABELS[st]
+            job.progress_pct = int(100 * job.step_index / len(V9_STAGES))
+        if time.time() > deadline:
+            proc.kill()
+            break
+    proc.wait()
+    job.finished_at = time.time()
+    if time.time() > deadline:
+        job.status = JobStatus.FAILED
+        job.error = f"v9 pipeline timed out after {V9_TIMEOUT_SEC}s"
+    elif proc.returncode != 0:
+        job.status = JobStatus.FAILED
+        job.error = f"v9 pipeline failed at stage {job.current_step} (exit code {proc.returncode})"
+    else:
+        splat = os.path.join(job.dataset_dir, f"work_{V9_TAG}_sfm", f"gs_{V9_TAG}", "splat.ply")
+        job.status = JobStatus.COMPLETED
+        job.progress_pct = 100
+        job.current_step_label = "Done"
+        job.output_path = splat if os.path.exists(splat) else None
+    log.info("Job %s: v9 %s in %.0fs", job.job_id, job.status.value, job.finished_at - job.started_at)
+
+
 def run_pipeline(job: Job, iterations: int = 30000):
     """Run all pipeline steps sequentially. Called from a background thread."""
+    if pipeline_recipe() == "v9":
+        return run_v9_pipeline(job)
     job.status = JobStatus.PROCESSING
     job.started_at = time.time()
 

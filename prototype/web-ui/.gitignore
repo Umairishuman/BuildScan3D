@@ -42,3 +42,6 @@ next-env.d.ts
 
 # per-run web bundles written by export_web.py / run_full.sh (D-061); only demo bundles such as newroom/ are tracked
 /public/scans/scan_*/
+# local model copies for the viewer: over CI's 10 MB file limit (D-055), copied from saved_models/ or a run on each machine
+/public/splats/*.spz
+/public/scans/roomAttemptSadness2_v9pgsr8/

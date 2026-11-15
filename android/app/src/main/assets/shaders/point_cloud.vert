@@ -17,10 +17,18 @@
 
 uniform mat4 u_ModelViewProjection;
 uniform float u_PointSize;
+// ARCore feature points carry a confidence in .w; points below this are not drawn (0 = draw all). Low-confidence
+// points are the ones whose depth ARCore has not settled yet: they jump and float. Vec3 buffers read w = 1.
+uniform float u_MinConfidence;
 
 layout(location = 0) in vec4 a_Position;
 
 void main() {
+  if (a_Position.w < u_MinConfidence) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);   // outside the clip volume: culled
+    gl_PointSize = 0.0;
+    return;
+  }
   gl_Position = u_ModelViewProjection * vec4(a_Position.xyz, 1.0);
   gl_PointSize = u_PointSize;
 }
