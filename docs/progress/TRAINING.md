@@ -70,6 +70,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-035 | 2026-11-12 | scan #3 levelled (`r1112lev`), layout → web | this PC | 18.0 min | 4 walls, 3 corners ~90°, height 2.52 m, floor 32.27 m², 18 fixtures | Kept (Step 4 layout / semantics of scan #3); tape pending |
 | R-036 | 2026-11-12 | scan #2 levelled (`r1106lev`), layout → web | this PC | 8.5 min | height 1.50 → 2.41 m (wall-top rule), 1 wall, 10 fixtures | Inconclusive: weak capture (camera in 0.8 × 0.7 m); re-record |
 | R-037 | 2026-11-12 | newRoomAttemptSadness, R-023 recipe, full pipeline (`r1112nr`), first run with D-071 / D-072 | this PC (Ubuntu, RTX 4000 Ada) | 103.0 min (run_v8 81.4) | 1157/1166 frames; gravity 0.00°; 6.63 × 4.37 m (R-023 6.60 × 4.36); height 2.81 m (R-023 2.72, via D-072); 18 fixtures (15) | Kept (machine agreement on size); height and PSNR not settled |
+| R-038 | 2026-11-16 | scan_008_7b486c855ed6, R-023 recipe, full pipeline (`r1116`), first Infinix X6833B capture | this PC (Ubuntu, RTX 4000 Ada) | 49.7 min, did not finish | 1639 of 10255 frames; COLMAP `global_mapper` killed by OOM (26.1 GB) at 13:16 | Failed (OOM in SfM) |
 
 ## Runs
 
@@ -645,3 +646,35 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Verdict:** **kept** as the machine-agreement run for this PC: the pipeline runs end to end and the room size agrees
   with the 3070 within 3 cm. Not settled: height (+9 cm, D-072), 3 extra fixtures, PSNR / SSIM (needs the R-014 split
   from Tayyab). Whether the model goes to `saved_models/`: Umair to decide.
+
+### R-038 · 2026-11-16 · scan_008 full pipeline, R-023 recipe (tag `r1116`)
+- **Who / machine:** Umair (started the run himself; agent wrote the entry) · this PC (Ubuntu, RTX 4000 Ada), `screen`
+  session `run-r1116`
+- **Branch / commit:** `feature/step4-layout` @ `4f0f710` (uncommitted changes: none in code; `.gitignore` /
+  DECISIONS.md edited during the run, no effect on the pipeline)
+- **Dataset:** `dataset/scan_008_7b486c855ed6`, added by Umair on 2026-11-16 with scan_005 / 006 / 007 (not run yet).
+  Phone **INFINIX Infinix X6833B** (first capture from this phone in the log; earlier rooms were realme), 1920 × 1080 at
+  30 fps; 10,255 frames, `poses.csv` 10,172 rows, `depth/` 1,027 files; first dataset with `imu.npz`. Which room it is:
+  not recorded yet (Umair to fill in). Length: not measured (`ffprobe` not installed).
+- **Command(s):** `scripts/run_full.sh dataset/scan_008_7b486c855ed6 r1116 -- --sfm_args "--retrieval 20" --init fmvs
+  --planar 0.2 --blur 0.0222 --pgsr` (the R-023 recipe, as in R-037)
+- **Goal:** first new-room run for COMPLETION_PLAN Step 3/4: SfM on the new phone, layout + height with D-071 / D-072,
+  semantics v10 on a room the rules were not tuned on (plan 4.1 / 4.2).
+- **Start → end:** 12:27:13 → 13:16:55 (49.7 min, **did not finish**). select 0.7 min (1639 of 10255 frames, predicted
+  blur median 4.2 px vs 5.2 px); SfM: feature extraction to 12:28:34; 37,345 ARCore-guided pairs (22.8 per frame),
+  `matches_importer` 12:28 → 12:32:56; `vocab_tree_matcher` (retrieval 20) to 12:39:53; `global_mapper` from 12:39:54:
+  37,250 matched pairs, 1 connected component with all 1639 images, rotation averaging 4.0 s, **1,265,512 tracks from
+  16,188,709 observations** (track establishment 35.0 s), global positioning started 12:42:48 on the CPU (log: "Ceres
+  was compiled without cuDSS support. Falling back to CPU-based sparse solvers").
+- **Errors during the run:**
+  1. 13:16:55 SfM (`global_mapper`, global positioning) — killed by the kernel OOM killer: `Out of memory: Killed process
+     71833 (colmap) total-vm:46212272kB, anon-rss:26138352kB` (26.1 GB resident; this PC has 30 GB RAM + 7 GB swap).
+     The `screen` session `run-r1116` ended, no `sparse/0` written. `scripts/buildscan watch` only showed "STOPPED ...
+     did not finish" with the last message `> global_mapper`; the cause is only in the kernel log (`journalctl -k`).
+     → cause: 1639 frames × 8192 SIFT features gives 16.2 M observations; GLOMAP's global positioning on the CPU did not
+     fit in memory. R-037 (1166 frames) and R-031 (885 frames) fitted on the same PC; their peak memory was not
+     measured. → fix / workaround: not chosen yet (options to Umair 2026-11-16: fewer frames with a larger select
+     window, fewer SIFT features, or the incremental mapper) (resolved: no).
+- **Result:** none; partial output `dataset/scan_008_7b486c855ed6/work_r1116_sfm/` (database.db 4.3 GB, matcher logs),
+  log `gs_r1116/run_full.log`.
+- **Verdict:** **failed** (OOM in SfM); re-run pending Umair's choice.
