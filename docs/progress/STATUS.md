@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-12 by Umair (R-037 newRoom done: size agrees with the 3070, height via D-072 open; Step 4 session: models were tilted 9–12° from gravity, fixed in the SfM export (D-071) and for scans #2 / #3 by `level_model.py`; ceiling rule D-072; scan #3 now 4 walls / 2.52 m (R-035); fixture size card in the viewer; newRoomAttemptSadness copied here, R-037 running).
+Last updated: 2026-11-16 by Umair (scans #5–#8 added; scan #8 R-038 killed by OOM in SfM, re-run R-039 with `--window 9` (D-073) passed SfM mapping; plan 3.18 hierarchical_mapper test planned for 2026-11-19; web bundles: every folder but `newroom/` ignored (D-061 addendum)).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -84,6 +84,11 @@ Older recordings (before numbering) are on the RTX 3070 PC and keep their names.
 | **scan #1** | `dataset/scan_001_056fe94d3399` | 2026-11-06 | Umair, Infinix X6833B, app ≤ v0.3.4 | Umair's first Linux test (LOG 2026-11-06: "Umair's room"; the layout found only 1 wall, like a corridor end, plan 4.10); room to fill in | 46 s | R-028 (stopped), R-029 |
 | **scan #2** | `dataset/scan_002_646070948603` | 2026-11-06 | Umair, Infinix X6833B, app ≤ v0.3.4 | Computer lab: desks, red chairs, glass partition; room number to fill in | 97 s | R-030 (ceiling 1.50 m, wrong) |
 | **scan #3** | `dataset/scan_003_6de634cbb8b2` | 2026-11-12 (uploaded 14:53 over USB) | Umair, Infinix X6833B, **v0.3.6** | Classroom: rows of wooden desks with red seats, projector screen, wooden door, blue curtains, ceiling AC units; room number to fill in | 185 s | R-031 (2.74 m, kept; `saved_models/2026-11-12_r1112_scan003/`) |
+| scan #4 | (number 4 = `newRoomAttemptSadness`, registered when it was copied here, `dataset/.scan_numbers.tsv`) | | | | | |
+| **scan #5** | `dataset/scan_005_4aadb16181d9` | on this PC 2026-11-16 (folder 12:05) | Umair, Infinix X6833B | room to fill in | 352.5 s | none yet |
+| **scan #6** | `dataset/scan_006_1e457a214ce1` | on this PC 2026-11-16 (folder 12:06) | Umair, Infinix X6833B | room to fill in | 259.8 s | none yet |
+| **scan #7** | `dataset/scan_007_e6d4f090f88e` | on this PC 2026-11-16 (folder 12:06) | Umair, Infinix X6833B | room to fill in | 269.2 s | none yet |
+| **scan #8** | `dataset/scan_008_7b486c855ed6` | on this PC 2026-11-16 (folder 12:27) | Umair, Infinix X6833B | room to fill in | 366.5 s | R-038 (OOM in SfM), R-039 (window 9, running) |
 | newRoomAttemptSadness | 3070 PC; **this PC since 2026-11-12** (raw recording only): `dataset/newRoomAttemptSadness` | by 2026-10-10 (first run R-007) | realme RMX5111; who recorded it not written down | Room of the best model (R-023) and semantics v10 | 240 s | R-007 … R-025; here R-037 |
 | roomAttemptSadness2 | 3070 PC | by 2026-10-09 (first run R-002) | realme RMX5111; who recorded it not written down | Second room of the mid report | not recorded here | R-002, R-004, R-010 |
 
@@ -356,6 +361,12 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       init 14.8, train 33.6) + sem2d 13.7 min; 81.0 min in total. Tayyab is doing the speed work on the RTX 3070 PC
       (2026-11-12: SfM without retriangulation, threaded priors I/O, photometric PatchMatch, training loss / colour-grid
       fixes; expected ~65 min vs 96 on newRoom, not yet measured; LOG 2026-11-12). Check his recipe on scan #3 vs R-031.
+- [ ] **[new 2026-11-16] SfM memory and time on long recordings (plan 3.18, Thursday 2026-11-19):** scan #8 (366.5 s,
+      10,255 frames) ran out of RAM in COLMAP `global_mapper` with 1,639 frames (R-038, 26.1 GB, OOM kill); with
+      `--window 9` (1,118 frames, D-073) it passed with ~2 GB to spare and global positioning took 28.3 min (R-037:
+      1.7 min). Test `hierarchical_mapper` and `--max_features 4096` against R-037; consider a RAM line / low-memory
+      warning in `run_full.sh` and a clear "killed: out of memory" message in `buildscan watch` (today the cause is only in
+      `journalctl -k`). Ceres here has no cuDSS, so bundle adjustment runs on the CPU.
 - [ ] **[new] Optimise the processing pipeline** end to end; measure each change with `run_v8.py`'s stage times and log it.
 - [ ] Training 42 min (blur ×1.4) and SfM 22 min dominate; fast_mvs 20 min. Ideas: blur only in the last third,
       photometric-only PatchMatch, ViT-S prior. *(from TODO 2026-10-26)*
@@ -508,6 +519,9 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 - [ ] `.spz` (in use) vs `.ksplat` (proposal, Zaid's branch): team decision. If `.ksplat` stays: finish v2-B/v2-C/scan-2
       renders, quality vs photos, FPS on the target laptop. [feat/splat-compress README]
+- [ ] **[new 2026-11-16] Show every processed scan in the viewer with its semantics:** today only `newroom/` is wired
+      (`mockData.ts`); per-run bundles in `public/scans/<scan>_<tag>/` are not listed. Umair to choose: a scan picker that
+      lists the bundles, or adding scans by hand to `mockData.ts`. The FR10 size card is still not checked in a browser.
 - [ ] Adaptive splat budget / level of detail (FR9, NFR5). [proposal v4]
 - [ ] Web-UI step 8 (S9 empty and error states) and the known issues in `prototype/web-ui/STATUS.md` §6 (list view toggle,
       `globals.css` conflicts, stub buttons, every floor-plan room opens the same model, inert measurement types, missing thumbnails).

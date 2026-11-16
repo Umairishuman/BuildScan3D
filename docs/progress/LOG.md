@@ -522,3 +522,27 @@ height 2.81 m vs R-023's 2.72 m because D-072 skipped a plane at 2.69 m that lay
 needs a tape height or a look at the model); 18 fixtures vs 15 (door 7, switch 3, socket 2 are one more each), check
 sheet `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/semantic_v10/fixture_check.md`. Open for Umair:
 `saved_models/` or not, fill the sheet. Details: TRAINING.md R-037.
+
+## 2026-11-16 · Umair · feature/step4-layout
+- Did: Umair copied four new recordings onto this PC (scans #5–#8, all Infinix X6833B, 259.8–366.5 s; rooms not
+  written down yet, STATUS "Which recording is which"). `prototype/web-ui/.gitignore` now ignores every per-run bundle
+  in `public/scans/` except `newroom/` (D-061 addendum): `newRoomAttemptSadness_r1112nr/` from R-037 had shown as
+  untracked because only `scan_*/` was ignored. Plan row 3.18 (optional, Thursday 2026-11-19): `hierarchical_mapper`
+  and `--max_features 4096` against R-037 for SfM memory. Answered: where the stage times are (`gs_<tag>/stages.tsv`,
+  `timing.json`, `scripts/buildscan results <scan> <tag>`, TRAINING.md entries); the web viewer already shows semantics
+  for `newroom/` (Scan Layers: groups, tint, markers, size card, mesh), but no other scan is wired in.
+- Runs: R-038 scan #8 full pipeline, R-023 recipe (tag `r1116`, started by Umair 12:27): 1,639 frames, killed by the
+  kernel OOM killer in COLMAP `global_mapper` at 13:16:55 (26.1 GB, 16.2 M observations), failed. R-039 the same with
+  `--window 9` (tag `r1116w9`, started 13:21:30): 1,118 frames, 10.8 M observations, global positioning 28.3 min with
+  RAM down to ~2.1 GB available at 13:50 (swap 4 of 8 GB), passed; at 14:04 in bundle adjustment, run continuing.
+- Decisions: D-061 addendum (ignore all bundles but `newroom/`, Umair); D-073 fewer frames for long recordings
+  (`--window 9` for scan #8, Umair, chosen over fewer SIFT features and the incremental mapper).
+- Problems: `buildscan watch` only said "STOPPED ... did not finish" for R-038; the OOM cause was only in
+  `journalctl -k`. The agent's Bash permission check failed (no verdict) for part of the session, so two commits were
+  made late. The agent first wrote in R-038 that scan #8 was the first Infinix capture and that it had ~10× more
+  observations per frame: both wrong, corrected (same phone as scans #1–#3; ~4–6×).
+  Not possible without sudo: more swap (Umair can add it, command in this session's notes / plan 3.18).
+- Next: finish R-039 (stage times, gravity tilt, layout, height, fixtures, check sheet; Umair names the room); then
+  scans #5–#7 (each a logged run; #5 is 352.5 s long, so use `--window 9` per D-073 and watch RAM). Umair to choose
+  how new scans reach the viewer (scan picker or `mockData.ts`). Thursday 2026-11-19: plan 3.18. Tape heights and the
+  fixture sheets (4.1, 4.2, 4.4) still wait for Umair (no tape today).

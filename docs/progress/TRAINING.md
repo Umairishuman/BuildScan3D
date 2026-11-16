@@ -654,9 +654,11 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Branch / commit:** `feature/step4-layout` @ `4f0f710` (uncommitted changes: none in code; `.gitignore` /
   DECISIONS.md edited during the run, no effect on the pipeline)
 - **Dataset:** `dataset/scan_008_7b486c855ed6`, added by Umair on 2026-11-16 with scan_005 / 006 / 007 (not run yet).
-  Phone **INFINIX Infinix X6833B** (first capture from this phone in the log; earlier rooms were realme), 1920 × 1080 at
-  30 fps; 10,255 frames, `poses.csv` 10,172 rows, `depth/` 1,027 files; first dataset with `imu.npz`. Which room it is:
-  not recorded yet (Umair to fill in). Length: not measured (`ffprobe` not installed).
+  Phone INFINIX Infinix X6833B (the same phone as scans #1–#3; *corrected 2026-11-16: this entry first said it was the
+  first Infinix capture, which was wrong*), 1920 × 1080 at 30 fps; **366.5 s video** (ffprobe from the `bs-system`
+  env), 10,255 frames, `poses.csv` 10,172 rows, `depth/` 1,027 files (`imu.npz` is written by the pipeline at
+  12:27:16, not recorded). The longest recording on this PC (scan #3: 185 s; newRoom: 240 s). Which room it is: not
+  recorded yet (Umair to fill in).
 - **Command(s):** `scripts/run_full.sh dataset/scan_008_7b486c855ed6 r1116 -- --sfm_args "--retrieval 20" --init fmvs
   --planar 0.2 --blur 0.0222 --pgsr` (the R-023 recipe, as in R-037)
 - **Goal:** first new-room run for COMPLETION_PLAN Step 3/4: SfM on the new phone, layout + height with D-071 / D-072,
