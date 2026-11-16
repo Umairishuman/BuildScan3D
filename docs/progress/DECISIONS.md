@@ -614,6 +614,20 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   No tape check yet.
 - **By:** Umair (agent's recommendation) · **Source:** session 2026-11-12 (Step 4), R-032 · **Status:** Active
 
+## D-073 · 2026-11-16 · Long recordings: fewer frames (larger select window) so SfM fits in memory
+- **Decision:** when a recording gives far more frames than the rooms that fitted, re-run with a larger
+  `select_sharp` window (`run_v8.py --window`) instead of changing the SfM settings. For scan_008 (10,255 frames):
+  `--window 9` instead of 6, ~1,140 frames, close to R-037's 1,166; the rest of the R-023 recipe is unchanged.
+- **Why:** R-038 (window 6, 1,639 frames) was killed by the OOM killer in COLMAP `global_mapper` (global positioning on
+  the CPU, 26.1 GB resident on a 30 GB PC); R-037 with 1,166 frames ran on the same PC.
+- **Evidence:** R-038 (kernel log, `global_mapper.log`: 1,265,512 tracks, 16.2 M observations). Peak memory of
+  R-037 / R-031: not measured, so where the limit lies is not known.
+- **Rejected:** 4,096 SIFT features instead of 8,192 (keeps the frames but moves SfM away from the tested recipe);
+  incremental `mapper` (much slower, untested here); more swap (not tried).
+- **Limits:** frames are ~0.3 s apart instead of ~0.2 s, so fewer views per surface for training; not yet compared.
+  A fixed rule (window from frame count) is not made yet.
+- **By:** Umair (agent's recommendation) · **Source:** session 2026-11-16, R-038 · **Status:** Active
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |

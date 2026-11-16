@@ -71,6 +71,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-036 | 2026-11-12 | scan #2 levelled (`r1106lev`), layout → web | this PC | 8.5 min | height 1.50 → 2.41 m (wall-top rule), 1 wall, 10 fixtures | Inconclusive: weak capture (camera in 0.8 × 0.7 m); re-record |
 | R-037 | 2026-11-12 | newRoomAttemptSadness, R-023 recipe, full pipeline (`r1112nr`), first run with D-071 / D-072 | this PC (Ubuntu, RTX 4000 Ada) | 103.0 min (run_v8 81.4) | 1157/1166 frames; gravity 0.00°; 6.63 × 4.37 m (R-023 6.60 × 4.36); height 2.81 m (R-023 2.72, via D-072); 18 fixtures (15) | Kept (machine agreement on size); height and PSNR not settled |
 | R-038 | 2026-11-16 | scan_008_7b486c855ed6, R-023 recipe, full pipeline (`r1116`), first Infinix X6833B capture | this PC (Ubuntu, RTX 4000 Ada) | 49.7 min, did not finish | 1639 of 10255 frames; COLMAP `global_mapper` killed by OOM (26.1 GB) at 13:16 | Failed (OOM in SfM) |
+| R-039 | 2026-11-16 | scan_008 re-run with `--window 9` (`r1116w9`, D-073), R-023 recipe otherwise | this PC (Ubuntu, RTX 4000 Ada) | running | pending | Running |
 
 ## Runs
 
@@ -673,8 +674,20 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
      did not finish" with the last message `> global_mapper`; the cause is only in the kernel log (`journalctl -k`).
      → cause: 1639 frames × 8192 SIFT features gives 16.2 M observations; GLOMAP's global positioning on the CPU did not
      fit in memory. R-037 (1166 frames) and R-031 (885 frames) fitted on the same PC; their peak memory was not
-     measured. → fix / workaround: not chosen yet (options to Umair 2026-11-16: fewer frames with a larger select
-     window, fewer SIFT features, or the incremental mapper) (resolved: no).
+     measured. → fix / workaround: Umair chose fewer frames (`--window 9`, D-073) → re-run R-039 (resolved: in R-039).
 - **Result:** none; partial output `dataset/scan_008_7b486c855ed6/work_r1116_sfm/` (database.db 4.3 GB, matcher logs),
   log `gs_r1116/run_full.log`.
-- **Verdict:** **failed** (OOM in SfM); re-run pending Umair's choice.
+- **Verdict:** **failed** (OOM in SfM); re-run as R-039 with fewer frames (D-073).
+
+### R-039 · 2026-11-16 · scan_008 re-run with fewer frames (tag `r1116w9`)
+- **Who / machine:** Umair (chose the fix, D-073; agent started the run) · this PC (Ubuntu, RTX 4000 Ada), `screen`
+  session `run-r1116w9`
+- **Branch / commit:** `feature/step4-layout` @ `3959d4d` (uncommitted changes: TRAINING.md / DECISIONS.md only)
+- **Dataset:** `dataset/scan_008_7b486c855ed6` (as R-038)
+- **Command(s):** `scripts/buildscan run scan_008_7b486c855ed6 r1116w9 -- --window 9 --sfm_args "--retrieval 20"
+  --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
+- **Goal:** R-038's goal; SfM has to fit in memory with ~1,140 frames (R-037: 1,166 frames ran on this PC).
+- **Start → end:** 13:21:30 → (running). select 0.7 min: **1118 frames** (predicted blur median 3.9 px vs 5.2 px).
+- **Errors during the run:** none so far.
+- **Result:** pending. Output `dataset/scan_008_7b486c855ed6/work_r1116w9_sfm/gs_r1116w9/`.
+- **Verdict:** pending.
