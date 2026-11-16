@@ -688,6 +688,12 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
 - **Goal:** R-038's goal; SfM has to fit in memory with ~1,140 frames (R-037: 1,166 frames ran on this PC).
 - **Start → end:** 13:21:30 → (running). select 0.7 min: **1118 frames** (predicted blur median 3.9 px vs 5.2 px).
-- **Errors during the run:** none so far.
+  SfM: 25,622 ARCore-guided pairs (22.9 per frame); `global_mapper` from ~13:30: **1,404,275 tracks from 10,774,946
+  observations** (R-037: 289,543 tracks / 1.78 M observations for 1,166 frames, so ~6× more per frame);
+  **global positioning 1699.9 s (28.3 min)** (R-037: 99.0 s), done 13:59:16; iterative bundle adjustment from 13:59:17.
+- **Memory** (agent's watcher, every 10 s; ``ps`` RSS of colmap and ``MemAvailable``): colmap 12.6 GB at 13:50:36, then
+  19.8 GB at 13:50:46 and **23.3 GB at 13:50:56 with 2.1 GB available** (the watcher stopped there, so the true peak
+  is not measured); swap in use 4.0 of 8.0 GB at 14:02. No OOM kill. At 14:02 colmap 10.4 GB in bundle adjustment.
+- **Errors during the run:** none so far (memory came within ~2 GB of running out at 13:50, see above).
 - **Result:** pending. Output `dataset/scan_008_7b486c855ed6/work_r1116w9_sfm/gs_r1116w9/`.
 - **Verdict:** pending.
