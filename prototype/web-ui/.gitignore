@@ -40,5 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# per-run web bundles written by export_web.py / run_full.sh (D-061); only demo bundles such as newroom/ are tracked
-/public/scans/scan_*/
+# per-run web bundles written by export_web.py / run_full.sh (D-061); only demo bundles such as newroom/ are tracked.
+# Every folder is ignored, not only scan_*/, so datasets with other names (newRoomAttemptSadness_r1112nr/) are covered.
+/public/scans/*/
+!/public/scans/newroom/

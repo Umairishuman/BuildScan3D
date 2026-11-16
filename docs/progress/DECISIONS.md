@@ -455,6 +455,10 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   `scan_646070948603_r1106/`); no single file passes CI's 10 MB limit, so one could be committed by mistake.
 - **Rejected:** `export_web.py` writing to `saved_models/web/` instead and copying demos by hand; committing every bundle
   (~20 MB of repo growth per scan). **By:** Umair.
+- **Addendum 2026-11-16:** the pattern `public/scans/scan_*/` missed bundles of datasets not named `scan_*`
+  (`newRoomAttemptSadness_r1112nr/` from R-037 showed as untracked). Now `public/scans/*/` is ignored with
+  `!public/scans/newroom/` as the exception; further demo bundles need their own `!` line. Rejected: adding only
+  `newRoomAttemptSadness_*/` (the next oddly named dataset would leak again). **By:** Umair.
 
 ## D-062 · 2026-11-12 · Uploads over a USB cable, preferred over Wi-Fi
 - **Decision:** the app uploads over a USB cable when one is connected: `scripts/usb_link.sh` (started by
