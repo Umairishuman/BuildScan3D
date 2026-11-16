@@ -541,7 +541,7 @@ sheet `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/semantic_v10/fi
   `journalctl -k`. The agent's Bash permission check failed (no verdict) for part of the session, so two commits were
   made late. The agent first wrote in R-038 that scan #8 was the first Infinix capture and that it had ~10× more
   observations per frame: both wrong, corrected (same phone as scans #1–#3; ~4–6×).
-  Not possible without sudo: more swap (Umair can add it, command in this session's notes / plan 3.18).
+  Not possible without sudo: more swap (Umair can add it: `sudo fallocate -l 24G /swap2.img && sudo chmod 600 /swap2.img && sudo mkswap /swap2.img && sudo swapon /swap2.img`; not done).
 - Next: finish R-039 (stage times, gravity tilt, layout, height, fixtures, check sheet; Umair names the room); then
   scans #5–#7 (each a logged run; #5 is 352.5 s long, so use `--window 9` per D-073 and watch RAM). Umair to choose
   how new scans reach the viewer (scan picker or `mockData.ts`). Thursday 2026-11-19: plan 3.18. Tape heights and the
