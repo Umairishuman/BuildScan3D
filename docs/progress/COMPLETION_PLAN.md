@@ -87,6 +87,7 @@ The v9 recipe gives the best model (R-023) but has been tested on one room only 
 | 3.15 | Anti-aliasing (Mip-Splatting idea, gsplat `antialiased`) with an antialiased-aware viewer | Zoomed views compared | 5.10 | Could | W3 |  |  |
 | 3.16 | Faster 3DGS methods with their own CUDA rasterizer (FastGS, Taming-3DGS budget), cloud only | Tried on RunPod, or recorded as future work | 2.8 | Could | W3 |  |  |
 | 3.17 | Legacy own-trainer items (block-wise training, `diagnose.py`, Census + SGM, PocketGS, `--near_cam`, 7.4% floaters): confirm obsolete | Each marked obsolete in STATUS with the reason | — | Could | W3 |  |  |
+| 3.18 | Optional: SfM memory for long recordings. Add COLMAP `hierarchical_mapper` (images in overlapping groups, solved one group at a time, then merged) as a `sfm_colmap.py --mapper` choice; test it on newRoomAttemptSadness against R-037 (registered frames 1157 / 1166, Sim3 median 3.3 cm, room 6.63 × 4.37 m, PSNR / SSIM where a split exists) and on scan_008; also compare `--max_features 4096` | Peak RAM, time and quality measured for each option against R-037; kept or rejected in DECISIONS (follows D-073) | — | Could | W1 | Umair | Planned for Thursday 2026-11-19 (Umair). Why: R-038 killed by OOM in `global_mapper` (26.1 GB, 16.2 M observations); scan_008 gives ~10× more observations per frame than earlier rooms; R-039 (window 9) has 10.8 M |
 
 ## Step 4 · Room layout, semantics and mesh
 
