@@ -72,6 +72,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-037 | 2026-11-12 | newRoomAttemptSadness, R-023 recipe, full pipeline (`r1112nr`), first run with D-071 / D-072 | this PC (Ubuntu, RTX 4000 Ada) | 103.0 min (run_v8 81.4) | 1157/1166 frames; gravity 0.00°; 6.63 × 4.37 m (R-023 6.60 × 4.36); height 2.81 m (R-023 2.72, via D-072); 18 fixtures (15) | Kept (machine agreement on size); height and PSNR not settled |
 | R-038 | 2026-11-16 | scan_008_7b486c855ed6, R-023 recipe, full pipeline (`r1116`), first Infinix X6833B capture | this PC (Ubuntu, RTX 4000 Ada) | 49.7 min, did not finish | 1639 of 10255 frames; COLMAP `global_mapper` killed by OOM (26.1 GB) at 13:16 | Failed (OOM in SfM) |
 | R-039 | 2026-11-16 | scan_008 re-run with `--window 9` (`r1116w9`, D-073), R-023 recipe otherwise | this PC (Ubuntu, RTX 4000 Ada) | running | pending | Running |
+| R-040 | 2026-11-18 | scan #7 `scan_007_e6d4f090f88e` (269 s), R-023 recipe, default window 6 (`r1118`) | this PC (Ubuntu, RTX 4000 Ada) | running | pending | Running |
 
 ## Runs
 
@@ -698,4 +699,23 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   is not measured); swap in use 4.0 of 8.0 GB at 14:02. No OOM kill. At 14:02 colmap 10.4 GB in bundle adjustment.
 - **Errors during the run:** none so far (memory came within ~2 GB of running out at 13:50, see above).
 - **Result:** pending. Output `dataset/scan_008_7b486c855ed6/work_r1116w9_sfm/gs_r1116w9/`.
+- **Verdict:** pending.
+
+### R-040 · 2026-11-18 · scan #7 full pipeline, R-023 recipe (tag `r1118`)
+- **Who / machine:** Umair (started the run himself through the `scripts/buildscan` menu, recording 2) · this PC
+  (Ubuntu, RTX 4000 Ada), `screen` session `run-r1118`. Before it, the agent closed the finished R-039 session
+  `run-r1116w9` (it was waiting at "press Enter to close" and blocked the one-run-at-a-time check). The `viewer`
+  session (`view.py` on scan #8's `splat.ply`, ~2.3 GB GPU) was still open when the run started.
+- **Branch / commit:** `feature/viewer-scan-008` @ `b969f49` (uncommitted changes: `prototype/web-ui/next-env.d.ts`,
+  `tsconfig.tsbuildinfo` from a `next build`; nothing in the pipeline)
+- **Dataset:** `dataset/scan_007_e6d4f090f88e` (Umair, Infinix X6833B, 269.2 s, 7,243 frames; room not named yet)
+- **Command(s):** `scripts/run_full.sh dataset/scan_007_e6d4f090f88e r1118 -- --sfm_args "--retrieval 20" --init fmvs
+  --planar 0.2 --blur 0.0222 --pgsr` (started by `scripts/buildscan`; no `--window`, so `select_sharp` uses 6)
+- **Goal:** first model of scan #7 (STATUS §7, scans #5–#7). The default window was kept; D-073's `--window 9` was
+  needed for scan #8 (342 s). SfM has to fit in memory (R-037: 1,166 frames ran; R-038: 1,639 frames killed by OOM).
+  Then check `report.json` gravity tilt, layout walls / height, fixtures and the check sheet.
+- **Start → end:** 10:19:18 → (running). select 0.6 min: **1160 frames** of 7,243 (predicted blur median 0.6 px vs
+  0.8 px over all frames). SfM started right after (`feature_extractor` running at 10:20:06; `vocab_tree_matcher` by the time of writing). At 10:20:06: 25 GB RAM available, swap 1 of 7 GB used.
+- **Errors during the run:** none so far.
+- **Result:** pending. Output `dataset/scan_007_e6d4f090f88e/work_r1118_sfm/gs_r1118/`.
 - **Verdict:** pending.
