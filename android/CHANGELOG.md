@@ -8,6 +8,8 @@ Entries up to v0.3.6 were written on 2026-11-12 from the git history and docs/pr
 
 ## Unreleased
 
+- On plain walls the quality banner asks you to keep a room corner or edge in view (where walls, floor and ceiling meet): that is what processing can still track there.
+
 ## v0.3.8 · 2026-11-15
 
 - While recording, the coverage dots stay fixed on the surfaces they mark and move smoothly with the camera image; before, they were redrawn only twice a second, so they lagged behind the image and seemed to float.
