@@ -150,6 +150,27 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [2.1, 0.19, 0.04], target: [2.89, 0.37, 0.63] },
   },
   {
+    // R-047 (2026-11-18): R-046's model with the gyro rotation check. File is local only (git-ignored).
+    id: "scan-009-gyro",
+    name: "Scan 009 · gyro-checked cameras (best so far)",
+    floor: "—",
+    block: "Residence",
+    area: "Not measured",
+    location: "scan_009_057ed3beb4fc • gyro-checked, rough",
+    dateCaptured: "Nov 15, 2026",
+    status: "draft",
+    statusLabel: "Experimental · 370 of 894 keyframes · scale unreliable",
+    thumbnail: "/thumbnails/scan009_v9pgsr.jpg",
+    scansCount: 1,
+    gaussianCount: "562,769",
+    accuracy: "Scale unreliable (ARCore barely tracked this room)",
+    captureDevice: "realme RMX5111 (ARCore)",
+    description:
+      "Same recording as Scan 009. Cameras whose rotation disagreed with the phone's gyroscope were dropped before training (R-047): 370 keyframes instead of 535, half as many jumps in the camera path, sharper in some views (about +1 dB on shared training views). The best model of this recording so far; parts of the room are still smeared and the size is not reliable.",
+    splatUrl: "/splats/scan009_v9pfg.spz",
+    splatStart: { position: [0.22, -0.04, 1.82], target: [-0.33, -0.07, 0.99] },
+  },
+  {
     // R-012 (2026-10-12), saved_models/2026-10-12_sharp_mvs_v6. File is local only (git-ignored, > 10 MB).
     id: "newroom-v6",
     name: "Living Room · v6 sharp frames + MVS (older)",

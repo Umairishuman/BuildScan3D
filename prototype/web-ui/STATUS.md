@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-11-15 (real models in the project list: bedroom, lecture hall, scan 009 + its pose-free model, newRoom v9e2e / v6 / v3; local-only files)
+Last updated: 2026-11-18 (`scan-009-gyro`: R-047, the best scan_009 model so far, added to the project list)
 
 ---
 
@@ -131,6 +131,13 @@ real path.** Currently only `/dashboard` has a href.
 ---
 
 ## 4. Completed
+
+### Best scan_009 model in the project list ✅ (2026-11-18, night session for Tayyab)
+- **Modified** `src/lib/mockData.ts`: `scan-009-gyro` (`/splats/scan009_v9pfg.spz`, R-047: R-046's model with the gyro
+  rotation check, 562,769 splats, 10.5 MB, status draft, start pose frame_05437 [0.22, -0.04, 1.82] → [-0.33, -0.07,
+  0.99], thumbnail reused from `scan009_v9pgsr.jpg`). File local only (git-ignored like the other `.spz`).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src` → 0 errors, 1 known warning (ExportModal.tsx:29).
+  `next build` not re-run; not looked at in a browser.
 
 ### More real models in the project list ✅ (partly, 2026-11-15, user ask: "add other splats as an option to be viewed too which exist")
 - **Modified** `src/lib/mockData.ts`: `bedroom-scan` (labelled bundle `/scans/roomAttemptSadness2_v9pgsr8/`, R-039,
@@ -758,6 +765,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-11-18** — `scan-009-gyro` (R-047, gyro-checked cameras) added to the project list.
 - **2026-11-15** — Real models added to the project list: `bedroom-scan` (labelled), `lecture-hall-scan`, `scan-009` (partial), `scan-009-posefree` (R-046), `newroom-v9e2e`, `newroom-v6`, `newroom-v3`; local model files git-ignored.
 - **2026-11-06** — `newroom-scan` no longer points at the unused `/splats/newroom_v6.spz`; the file is out of git (CI 10 MB limit).
 - **2026-11-03** — `public/scans/newroom/` regenerated with v10 labels (15 fixtures: 6 doors, tube light class); `FIXTURE_COLORS` gains "tube light".
