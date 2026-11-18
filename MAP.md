@@ -168,6 +168,14 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 |---|---|---|
 | `eval_offpath.py` | Off-path split metrics (PSNR, SSIM, sharpness, flatness) + sheets | [eval] current |
 | `sfm_scale_check.py` | Finds parts of an SfM model rebuilt at the wrong scale ("mini room"): per-frame SfM depth / Metric3D depth from `mono_prior` (TRAINING R-036, R-037) | [eval] diagnostic |
+| `texture_probe.py` | Per keyframe: SIFT keypoints, LSD long lines, faint / strong gradient share; grouped by ARCore pose state and by whether a model kept the frame (FEATURELESS_TRACKING_PLAN §1.1) | [eval] diagnostic |
+| `gyro_check.py` | Gyro rotation check of an SfM model: IMU→camera rotation + time offset from the model, per-frame rotation disagreement with the gyroscope; `fill_rotations` gives rotations for frames SfM could not place. Used by `sfm_colmap.py --gyro_thr` (FEATURELESS_TRACKING_PLAN step 1, R-047) | **[v9]** option, default off |
+| `known_rot_pnp.py` | Places a camera from >= 2 matched 3D points with its rotation fixed (gyro); cut-gap test vs PnP. Used by `sfm_colmap.py --place_unplaced` (R-049) | [experiment] option, default off |
+| `imu_scale.py` | Metric scale of an SfM model from the accelerometer (pre-integrated over keyframe triplets, VINS-style), gravity and bias; `--gyro_orient` | [eval] diagnostic |
+| `gyro_pairs.py` | Rejects image pairs whose matches contradict the gyro rotation; `Orientation` (gyro integrated once over a capture, bias removable) | [experiment] |
+| `rot_sfm.py` | SfM with gyro rotations + positions from pair directions and the accelerometer (one linear system), then COLMAP triangulation / BA (R-051: rejected on scan_009) | [experiment] |
+| `vggt_poses.py` | VGGT (learned poses) on chunks of keyframes, chained, checked against gyro / accelerometer / ARCore, written in the export layout. Needs VGGT outside the repo; **never run** (needs Tayyab's OK) | [experiment] not run |
+| `gap_test.py` | Cut-gap test: removes windows of keyframes from a trusted model and predicts their rotation from the gyro (plan step 0 / 3) | [eval] |
 | `tape_check.py` | Model vs tape table for a room (`<dataset>/tape.csv`: layout room length / width / height or values measured in the viewer), mean / max error, NFR6 (≤ 5%) check (COMPLETION_PLAN E2) | [eval] current |
 | `fair_compare.py` | Compares models from different SfM runs (trimmed Sim3 + test-pose refinement) | [eval] current |
 | `compare_models.py` | Photometric + geometric metrics and sheets on held-out frames | [eval] |
@@ -277,6 +285,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | Path | What |
 |---|---|
 | `progress/STATUS.md`, `DECISIONS.md`, `LOG.md`, `TRAINING.md` | The four live project records (CLAUDE.md §1) |
+| `progress/FEATURELESS_TRACKING_PLAN.md` | **current** · Draft plan (2026-11-18) for placing cameras in featureless stretches: gyro rotation, lines / junctions, the room layout as a map, dense matchers; measurements, steps, options (OD-12) |
 | `progress/COMPLETION_PLAN.md` | **current** · Plan to finish by 2026-12-04: every open task by pipeline step, with done-when, dependencies, priority, week; snapshot of the shared doc (link inside) |
 | `progress/Problems_and_Solutions.md` | Technical evidence for every problem and fix (P&S §x) |
 | `progress/Research_Notes_2026-10-24.md` | Literature behind v8/v9 |

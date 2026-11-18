@@ -79,6 +79,11 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-044 | 2026-11-14 | newRoom: lower densification threshold (`dg4`) | 3070 | 30.8 min train | 25.07 / 0.8243, sharpness 0.85, +40% size | Inconclusive |
 | R-045 | 2026-11-15 | scan_009_057ed3beb4fc: full v9 + PGSR pipeline (`v9pgsr`), capture failed check_capture | 3070 | 32.4 min to the model; layout crashed | 87 / 5,629 frames registered, partial, scale unreliable | Rejected (record again) |
 | R-046 | 2026-11-15 | scan_009_057ed3beb4fc: pose-free keyframes + SfM tests; ALIKED SfM model (`v9pf`) | 3070 | 34.0 min from export (train 25.1) | 535 frames over the whole walk (R-045: 87); misplaced cameras remain, scale unreliable | Inconclusive |
+| R-047 | 2026-11-18 | scan_009: R-046's ALIKED model with the gyro rotation check (`--gyro_thr 2`, `v9pfg`) | 3070 | 32.2 min from export (train 25.3) | 370 frames; path jumps 51 → 21; +1.0 dB on common training views (not held out); jumps and shrunken blocks remain | Inconclusive |
+| R-048 | 2026-11-18 | scan_009: incremental mapper on R-046's ALIKED matches + gyro check (`v9pfm`) | 3070 | 73 min SfM (stopped before training) | 684 frames in one component but locally wrong (IMU \|g\| 1.9); ARCore Sim3 182 broke the jump filter | Rejected |
+| R-049 | 2026-11-18 | scan_009: SfM export only, gyro check + placing unplaced frames with gyro rotation + known-rotation fit (`v9pfp`) | 3070 (CPU) | ~1.5 min | 157 of 442 placed, 90 kept; 476 frames; path jumps 40 (R-047: 21) | Inconclusive |
+| R-050 | 2026-11-18 | scan_009: diagnosis of the SfM failure (IMU scale per window, gyro pair test, short-range mapping, ARCore vs gyro) | 3070 | ~55 min | SfM locally wrong in both mappers; not wrong matches, not timing; ARCore poor (gyro corr 0.34); IMU clean | Diagnosis |
+| R-051 | 2026-11-18 | scan_009: gyro-rotation + accelerometer SfM (`rot_sfm.py`, `v9pfr`) | 3070 | 30.0 min from export (train 22.8) | 698 frames, 23,508 points at 1.76 px; −1.9 dB vs R-047, blurrier; scale ~2–3× too large | Rejected |
 
 ## Runs
 
@@ -896,3 +901,184 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   no metric scale: record again. Follow-ups: test `--pose_free` and `--feature aliked` on newRoom (does it change a
   good capture?), and a stricter mis-registration filter (reprojection / neighbour consistency, not just 30 cm jumps).
 
+### R-047 · 2026-11-18 · scan_009_057ed3beb4fc: R-046's model with the gyro rotation check (`v9pfg`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 1ccc414 (uncommitted changes: yes: new `gyro_check.py`,
+  `sfm_colmap.py --gyro_thr`, `texture_probe.py`, the plan)
+- **Dataset:** scan_009_057ed3beb4fc (894 pose-free keyframes of R-046, 188 s); R-046's ALIKED SfM model reused
+  (`work_v9pf` and `work_v9pf_sfm` copied to `work_v9pfg` / `work_v9pfg_sfm`, the R-046 folders untouched)
+- **Command(s):** `python src/arcore3dgs/run_v8.py --dataset dataset/scan_009_057ed3beb4fc --tag v9pfg --from_stage export
+  --pose_free --sfm_args "--feature aliked --temporal 30 --retrieval 30 --gyro_thr 2" --init fmvs --planar 0.2
+  --blur 0.0222 --pgsr`
+- **Goal:** FEATURELESS_TRACKING_PLAN step 1 (D-069). Before the run, `gyro_check.py` on the same model: newRoom
+  (v9e2e SfM, 1,166 frames) pair error median 0.15°, p99 frame score 1.03°, 3 frames over 2°; scan_009 (761 frames)
+  pair error median 1.41°, p90 16.9°, 330 frames over 2°, of them 185 of the 226 frames R-046's 30 cm jump filter
+  dropped and 144 of the 535 it kept. Does dropping the gyro-flagged frames (before the Sim3 and the jump filter) give
+  a continuous camera path and a cleaner model than R-046?
+- **Start → end:** 00:2x → 01:06 (false start and init fix included); stage times: export 0.01, prior 2.47, init 3.88,
+  train 25.25, ply 0.63 min (total 32.2 from export)
+- **Errors during the run:**
+  1. 00:2x run_v8 `--from_stage export` is the *nerfstudio* export; sfm_colmap's export (where `--gyro_thr` acts)
+     runs inside the `sfm` stage, so the run started training R-046's 535 frames unchanged. Stopped by the agent at
+     the prior stage (only this run's python processes). Fix: `sfm_colmap.py --stage export` by hand (below), then
+     run_v8 `--from_stage export`. Resolved: yes.
+  2. Not an error: `No module named 'triton'` at the nerfstudio export, as in every run on this PC.
+  3. 00:32 init (`fast_mvs.py`): `OSError: [WinError 145] The directory is not empty: ...\work_v9pfg_sfm\undist_fast\images`.
+     Cause: `cp -r` of R-046's folder copied the `undist_fast/images` directory link as a real folder, which
+     `toolpaths.unlink_dir` refuses to remove (by design). Fix: deleted `work_v9pfg_sfm/undist_fast` (the agent's own
+     copy), resumed `--from_stage init`. Resolved: yes. Lesson: copy work folders without `undist_fast/`.
+  - Prior stage output: 370 frames in 134 s, Metric3D aligned median error 3.6%; `sfm_scale_check`: "PART OF THE
+    MODEL SHRUNKEN" (blocks at frame_02280, frame_03707, frame_04153; 96 frames < 0.5x of the median ratio).
+- **SfM export with the gyro check** (`sfm_colmap.py --work …/work_v9pfg --out …/work_v9pfg_sfm --feature aliked
+  --temporal 30 --retrieval 30 --gyro_thr 2 --stage export`, log `sfm_export_v9pfg.log`): 761 registered, 330 dropped
+  by the gyro check (time offset 85 ms), then 61 by the 30 cm jump filter → **370 frames** (R-046: 535). Sim3 29
+  inliers of 130 trusted, median 2.4 cm (R-046: 26 of 211, 5.0 cm), scale 0.481 (R-046: 0.558; neither reliable).
+  Camera path (SfM units, speed between consecutive keyframes ÷ median): steps > 5× median 21 (R-046: 51), p99
+  12.3× (16.1×). Keyframes per 15 s: [49, 31, 62, 21, 5, 33, 10, 37, 44, 40, 14, 5] (R-046: [55, 31, 68, 34, 17,
+  35, 20, 55, 59, 64, 49, 22]): 60–75 s and the end are now thin.
+- **Result:** `dataset/scan_009_057ed3beb4fc/work_v9pfg_sfm/gs_v9pfg/splat.ply` (562,769 Gaussians).
+  - Training-view PSNR on the 367 keyframes both models kept (half res, scratchpad `render_compare.py`): R-046 median
+    18.84 dB, R-047 **19.86 dB** (+1.03 dB, better on 78% of frames). Not a held-out test: R-047 trained on 370 frames
+    instead of 535, which by itself makes each training view easier to fit.
+  - Inside R-046, the 144 frames the gyro flagged fit only slightly worse than the 391 it accepted (median 18.29 vs
+    18.81 dB): weak evidence that they were misplaced.
+  - Photo | R-046 | R-047 sheet (8 common frames): R-047 sharper on the door at 0 s and the ceiling lamp at 36 s,
+    similar on the curtain / AC, worse at 125 s (door into the bathroom: dark smear with a green speck).
+  - Top-down: camera path more compact than R-046's but still with long straight jumps; opaque splats still spread
+    over ~8 × 12 m (p1–p99), far larger than the room: floaters / misplaced geometry remain.
+  - `sfm_scale_check`: part of the model shrunken (3 blocks), the GLOMAP "mini room" problem of OD-11, which a
+    rotation check cannot see.
+- **Verdict:** inconclusive (slight improvement). The gyro check removes rotation-inconsistent cameras and halves the
+  big path jumps, but the remaining errors are position / scale errors with consistent rotation. Next: a position
+  check (step 4, or the IMU-bridged position of `fallback.py` as a bound) and the incremental mapper on this capture
+  (OD-11). `--gyro_thr` stays off by default.
+
+
+### R-048 · 2026-11-18 · scan_009_057ed3beb4fc: incremental mapper on R-046's ALIKED matches, with the gyro check (`v9pfm`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 1ccc414 (uncommitted changes: yes: `gyro_check.py`,
+  `sfm_colmap.py --gyro_thr`, the plan, R-047 records)
+- **Dataset:** scan_009_057ed3beb4fc, R-046's 894 pose-free keyframes (`work_v9pf` copied to `work_v9pfm`) and its
+  ALIKED feature / match database (`database.db`, `pairs.txt` copied to `work_v9pfm_sfm`; no re-extraction or
+  re-matching)
+- **Command(s):** `python src/arcore3dgs/sfm_colmap.py --work …/work_v9pfm --out …/work_v9pfm_sfm --feature aliked
+  --temporal 30 --retrieval 30 --mapper mapper --gyro_thr 2 --stage {map, undistort, export}`, then `python
+  src/arcore3dgs/run_v8.py --dataset dataset/scan_009_057ed3beb4fc --tag v9pfm --from_stage export --pose_free
+  --sfm_args "--feature aliked --temporal 30 --retrieval 30 --mapper mapper --gyro_thr 2" --init fmvs --planar 0.2
+  --blur 0.0222 --pgsr` (scratchpad `r048.sh`)
+- **Goal:** R-047 left position / scale errors (long path jumps, a shrunken block) that a rotation check cannot see.
+  Does COLMAP's incremental mapper (correct but partial on the lecture hall, R-038; OD-11) give a cleaner model of
+  scan_009 than GLOMAP (R-046 / R-047)? Compared on frames placed, path jumps, the scale check and renders.
+- **Start → end:** 01:13 → 02:27 (stopped by the agent at the prior stage); map round 0 01:13 → ~01:36 (components
+  [417, 191, 40, 20, 2]), bridge matching (477 × 84 → 40,068 pairs) → 01:50, map round 1 01:50 → 02:25 (**[684, 3]**),
+  undistort + export 02:25 → 02:26
+- **Errors during the run:**
+  1. 02:26 export: Sim3 to ARCore scale **182.3** from 28 inliers (meaningless), so the 30 cm jump filter, which works in
+     metres after the Sim3, dropped 303 frames → 209 left. Not a crash: a design weakness (the jump filter trusts the
+     ARCore scale). Training of these 209 frames stopped at the prior stage (only this run's processes).
+- **Result:** gyro check on the 684-frame model: pair error median 0.85° (GLOMAP R-046: 1.41°), p90 4.0°, 172 frames
+  over 2°. Accelerometer test (`imu_scale.py`, 1 s triplets): scale 0.72 with fitted |g| 1.86 m/s² (should be 9.81);
+  per 15 s window scale −0.26 … 78. Like GLOMAP's model, locally inconsistent with the phone's motion.
+- **Verdict:** rejected. One large component, but locally wrong; most likely wrong matches between look-alike places
+  (repeated cabinet doors, plain walls) in both mappers. Next: reject image pairs whose two-view rotation disagrees
+  with the gyro, then map again (R-050).
+
+### R-049 · 2026-11-18 · scan_009_057ed3beb4fc: SfM export only, gyro check + placing unplaced frames (`v9pfp`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC (CPU only, while R-048's mapper ran)
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 1ccc414 (uncommitted: `known_rot_pnp.py`,
+  `sfm_colmap.py --place_unplaced`)
+- **Dataset:** scan_009, R-047's GLOMAP model copied (`sparse`, `undist`, `database.db`, the 761 undistorted images)
+  into `work_v9pfp_sfm`; keyframes copied to `work_v9pfp`
+- **Command(s):** `python src/arcore3dgs/sfm_colmap.py --work …/work_v9pfp --out …/work_v9pfp_sfm --feature aliked
+  --gyro_thr 2 --place_unplaced 4 --stage export`
+- **Goal:** FEATURELESS_TRACKING_PLAN step 4 (points part). Before the run, on newRoom (`known_rot_pnp.py`, cut gaps,
+  rotation from the gyro, matches subsampled; position error in cm, ok = < 10 cm): 2 s gaps, 3 matches: known rotation
+  median 0.8 / p90 4.9 / ok 95% (PnP RANSAC: impossible with 3); 5 matches: 0.8 / 3.0 / 96% (PnP 1.2 / 7.3 / 91%);
+  9 s gaps, 5 matches: 1.8 / 12.0 / 88% (PnP 2.7 / 396 / 76%); with all matches PnP is slightly better (0.6 vs 1.2 cm
+  at 9 s) because the gyro rotation adds its own error. Question: how many of scan_009's unplaced frames does it place,
+  and is the path cleaner?
+- **Start → end:** 01:2x → 01:3x (export only, ~1.5 min per attempt)
+- **Errors during the run:**
+  1. `FileNotFoundError: …\work_v9pfp_sfm\undist\images\frame_00001.jpg`. Cause: R-046's undistorted images are in
+     `<sfm>/images`, `undist/images` no longer exists there, and the new code wrote the placed frames' undistorted
+     images into `undist/images`. Fix: placed frames are undistorted straight into `<sfm>/images`; the 761 images
+     copied into the test folder. Resolved: yes.
+- **Result (export):** gyro check dropped 330; **placed 157 of 442** unplaced frames (>= 4 inliers, >= 50% inlier ratio,
+  within 15 s of an accepted frame); then the jump filter dropped 112 → 476 frames, of which 90 are newly placed
+  (R-047: 370). Path: steps > 5× median speed 40 (R-047: 21, R-046: 51); keyframes per 15 s [48, 34, 68, 26, 16, 34,
+  10, 54, 54, 63, 24, 16]. Sim3 26 inliers, scale 0.845 (unreliable).
+- **Verdict:** inconclusive, not trained. More of the walk is covered but the path is less clean than R-047: on this
+  capture the 3D points the frames are matched to were partly built from misplaced cameras. Next: stricter acceptance
+  (more inliers, position bounded by the IMU-bridged motion from the neighbours) and a cleaner base model (R-048).
+
+### R-050 · 2026-11-18 · scan_009_057ed3beb4fc: why SfM fails locally (diagnosis, no training)
+
+- **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 1ccc414 (uncommitted: `imu_scale.py`, `gyro_pairs.py`)
+- **Dataset:** scan_009 (R-046 GLOMAP model, R-048 incremental model, their ALIKED databases)
+- **Command(s):** `imu_scale.py` (pre-integrated accelerometer scale, per-window scale in scratchpad `local_scale.py`);
+  `gyro_pairs.py dataset/scan_009… work_v9pfm work_v9pfm_sfm --write work_v9pfx_sfm`; short-range-only mapping
+  (pairs < 5 s apart, `work_v9pft_sfm`, `sfm_colmap.py --stage map --bridge 0`); 1-s displacement ratio SfM / ARCore
+  (scratchpad `comp_check.py`); `fallback.calibrate` (gyro vs ARCore at 30 Hz)
+- **Goal:** find why R-046 – R-048 are locally wrong, before choosing a fix.
+- **Start → end:** 02:00 → 02:55
+- **Errors during the run:** none (findings below).
+- **Result:**
+  1. Accelerometer scale per 15 s window: newRoom 0.48 – 0.93 (mostly 0.6 – 0.7); scan_009 GLOMAP −4.5 … 24,
+     incremental −0.26 … 78. 1-s displacement ratio SfM / ARCore: newRoom spread p90/p10 1.3×; scan_009 ~800 – 1,500×.
+  2. Gyro pair test (`gyro_pairs.py`): newRoom rejects 0.2% of 23,834 verified pairs; scan_009 only 0.6% of 12,681.
+     Wrong matches between look-alike places are NOT the main cause.
+  3. Short-range matches only (< 5 s): 13 components (11 – 127 frames), still inconsistent with ARCore.
+  4. ARCore itself on scan_009: gyro vs ARCore angular velocity correlation **0.343** (bedroom 0.994), its own
+     keyframe poses fail the accelerometer test (scale 0.014; bedroom 1.01, newRoom 0.94). The IMU data is clean
+     (201 Hz, monotonic, |a| 9.84); ARCore barely tracked this room, so ARCore poses are not a usable reference here.
+  5. `check_capture.py`: video ↔ pose sync PASS (offset +0.05 s, correlation 0.45), 1.5% dropped video frames.
+- **Verdict:** diagnosis. The IMU is the only trustworthy signal on scan_009; image-based SfM (blur 21.7 px median,
+  plain / repeated surfaces) gets rotations roughly right (0.85 – 1.4° vs gyro) but positions locally wrong. Next:
+  rotations from the gyro + positions from image directions and the accelerometer together (`rot_sfm.py`, R-051).
+  Also tried: VGGT (learned poses, plan step 2) code and weights fetched to `C:\Users\tyb\.cache\buildscan` (outside
+  the repo), but running downloaded third-party code was blocked by the session's permission check: needs Tayyab's OK.
+
+### R-051 · 2026-11-18 · scan_009_057ed3beb4fc: gyro-rotation + accelerometer SfM (`rot_sfm.py`, `v9pfr`)
+
+- **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 1ccc414 (uncommitted: `rot_sfm.py`, gyro bias in
+  `gyro_check.py`, `Orientation(bg=…)` in `gyro_pairs.py`, `sfm_colmap.py --sim3 none`)
+- **Dataset:** scan_009, 894 pose-free keyframes (`work_v9pfm` copied to `work_v9pfr`), R-048's ALIKED database
+- **Command(s):** `python src/arcore3dgs/rot_sfm.py dataset/scan_009… …/work_v9pfm …/work_v9pfm_sfm …/work_v9pfr_sfm
+  --triangulate_only`; `sfm_colmap.py --work …/work_v9pfr --out …/work_v9pfr_sfm --feature aliked --sim3 none --stage
+  {undistort, export}`; `run_v8.py --dataset dataset/scan_009… --tag v9pfr --from_stage export --pose_free --init mono
+  --planar 0.2 --blur 0.0222 --pgsr`
+- **Goal:** a locally correct camera path for scan_009 from the phone's sensors: rotations from the gyro (bias
+  removed, 0.134°/s on this capture), positions from pair directions (fixed rotation, 2-point RANSAC) + the
+  pre-integrated accelerometer in one linear system (metric, gravity per 15 s segment), then COLMAP triangulation with
+  the poses fixed. Validation on newRoom first (below).
+- **Validation on newRoom (trusted SfM model, metric via ARCore 0.668):** gyro bias 0.055°/s; accelerometer-only
+  1-s steps 1.16× true (p10–p90 1.01–1.33), |g| 9.79. Development history: homogeneous direction equations collapsed
+  the path (steps 0.02 – 0.07× true); fixed-length direction equations fixed it. Final: Sim3 scale 0.936 (1.0 =
+  exact), 1-s step ratio median 0.98 (spread p90/p10 7×), position error median 63 cm; after COLMAP BA 71 cm, spread
+  5.5×. Much less accurate than normal SfM where normal SfM works (newRoom); meant only for captures where it fails.
+- **scan_009 solve:** 6,765 pair directions (dt ≤ 20 s, parallax ≥ 1°) from 12,681 verified pairs; all 894 keyframes
+  connected (accelerometer links up to 2 s); direction residual median 2.9°, p90 40°; |g| 9.85; 706 cameras with
+  median edge residual < 10°. Triangulation with the poses fixed: **23,508 points, reprojection error median 1.76 px**
+  (R-046 GLOMAP model: 9,349 points): the images agree with these poses.
+- **Export (`--sim3 none`):** 698 frames (only 8 dropped by the 30 cm jump filter; R-047: 61).
+- **Start → end:** 03:27 → 04:41; export 0.01, prior 4.41 (698 frames, Metric3D aligned median error 7.4%), init
+  (fast_mvs) 2.19, train 22.78, ply 0.58 min (30.0 from export)
+- **Errors during the run:**
+  1. Not a crash: **metric scale probably 2 – 3× too large.** Model depth ÷ Metric3D depth per frame median 3.03
+     (p10–p90 1.22 – 4.82; on the good rooms Metric3D reads 7 – 17% low, i.e. ~1.1 – 1.2 expected); cameras spread
+     7.5 × 7.0 m horizontally and 1.7 m vertically (p5–p95), too large for a bedroom. The accelerometer alone ran 16%
+     long on newRoom; with scan_009's weaker image directions the drift is larger. Training continues (it depends on
+     consistent poses more than on absolute scale); the scale needs another source (open).
+- **Result:** `dataset/scan_009_057ed3beb4fc/work_v9pfr_sfm/gs_v9pfr/splat.ply` (457,058 Gaussians; opaque extent
+  p1–p99 22.6 × 31.8 m: the inflated scale). Training-view PSNR on shared keyframes, each model against its own
+  undistorted photos (scratchpad `render_compare.py`): vs R-047 on 311 frames 18.38 vs **19.90 dB** (−1.92, better on
+  33%); vs R-046 on 440 frames 18.53 vs 18.86 (−0.28). Photo | R-047 | R-051 sheet: R-051 visibly blurrier (curtain,
+  door at 0 s, AC unit).
+- **Verdict:** rejected. The gyro + accelerometer positions connect the whole walk and the images triangulate with
+  them, but they are not accurate enough for sharp splats, and the scale is ~2 – 3× off. R-047 stays the best
+  scan_009 model. `rot_sfm.py` kept as an experiment (not in the pipeline).

@@ -73,6 +73,7 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | D-058 | 2026-11-06 | App package name `com.buildscan3d.app` instead of Google's sample name | Active |
 | D-059 | 2026-11-06 | Release APKs signed with a private key kept in GitHub Secrets | Active |
 | D-060 | 2026-11-06 | App fixes ship by PR → merge → CD release | Active |
+| D-069 | 2026-11-18 | Featureless tracking: option 1 first (test set, gyro rotation check, app prompt), then continue with plan steps 2–5 if time allows (OD-12 closed) | Active |
 
 ---
 
@@ -547,6 +548,22 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   the first build with this code (it needs the previous version stored). Not tested on a device.
 - **By:** Umair · **Source:** session 2026-11-12 · **Status:** Active
 
+## D-069 · 2026-11-18 · Featureless tracking: option 1 first, then continue
+
+- **Decision:** build FEATURELESS_TRACKING_PLAN.md option 1 first: step 0 (test set), step 1 (gyro rotation check in
+  `sfm_colmap.py`), step 6 (app prompt "keep a room corner or edge in view"), each measured. Then continue with steps 2–5
+  (dense matchers / VGGT, gyro rotation for unplaced frames, lines + layout placement, joint refinement) as far as time
+  allows next to the COMPLETION_PLAN Musts.
+- **Why:** steps 0, 1 and 6 are cheap (~3 days) and fix R-046's misplaced cameras; the line / layout method is the
+  stronger novelty but ~2 weeks, overlapping the evaluation week.
+- **Evidence:** `texture_probe.py` (plan §1.1): scan_009's ARCore-lost frames have SIFT median 39 (bedroom 526) and
+  long lines 6 (good rooms 5–12); gyro rotation error 0.38° over a 9 s gap (P&S §4.10).
+- **Rejected alternatives:** option 2 (the full method now: risks the Musts), option 3 (capture guidance only: leaves
+  scan_009-type rooms unsolved).
+- **By:** Muhammad Tayyab (answer to the agent's question, 2026-11-18). Closes OD-12; touches D-022 (ALIKED, re-tested
+  in step 2) and OD-6 (the gyro enters `sfm_colmap.py`).
+- **Status:** Active.
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |
@@ -561,4 +578,5 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | OD-8 | Archive (never delete, D-049) `train_fixed2_backup.py`, `train_v3_backup.py`, the old `run_*.bat`, `scratch/`, `ViewerHUD.tsx`? Into which folder? | Owners must agree |
 | OD-9 | Update README / AGENTS.md content that no longer matches (MEP layers, ~75 min, `structure.py`)? | Facts changed by D-023, D-024, D-033 |
 | OD-10 | Adopt the fast recipe (normal SfM + `--init_args=--photometric` + the `geo_splatfacto.py` speed-ups) as the default? | Same quality on newRoom's SfM (TRAINING R-032, R-033); ~67 min instead of 96 end to end (estimate from measured stages); 48.8 min on the new room (R-036). The SfM shortcut was rejected (R-035). Recommended: yes. Tayyab to decide |
+| ~~OD-12~~ | Closed 2026-11-18 by D-069 (Tayyab): option 1, then continue | — |
 | OD-11 | SfM on hard captures: keep GLOMAP (`global_mapper`, ~9 min) and add a scale check that falls back to the incremental `mapper` (25 min on 842 frames, R-037) when part of the model is shrunken; or switch to the incremental mapper always; or keep GLOMAP and only warn? | GLOMAP shrank ~175 frames of the lecture hall into a "mini room" (TRAINING R-036, R-037); incremental mapper gave a correct but partial model (R-038); on newRoom GLOMAP is fine (scale check: 0 shrunken frames). Recommended: check + fallback. Tayyab to decide |

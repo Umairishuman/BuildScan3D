@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-15 by Tayyab (agent, on `exp/overnight-2026-11-14`): scan_009 runs R-045 / R-046, `--pose_free` keyframes, layout no-floor fix, app feature-point map + coverage dots per frame + depth/pose pairing, 7 real models in the web viewer. Before that: 2026-11-14 by Tayyab (agent, overnight session on `exp/overnight-2026-11-14`): roomAttemptSadness2 v9 run (R-039), newRoom technique tests (R-040 – R-043), layout ceiling fix, server v9 option, tape script, capture checks in the app and on the PC, coverage 45%. Before that: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-032 – R-038 (renumbered from R-029 – R-035 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
+Last updated: 2026-11-18 by Tayyab (agent, night on `docs/featureless-tracking-plan`): scan_009 runs R-048 – R-051, IMU scale / gyro tools, `scan-009-gyro` in the viewer. Earlier: featureless tracking plan, D-069 (option 1 then continue), `gyro_check.py` / `--gyro_thr`, `gap_test.py`, R-047, app low-texture prompts. Before that: 2026-11-15 by Tayyab (agent, on `exp/overnight-2026-11-14`): scan_009 runs R-045 / R-046, `--pose_free` keyframes, layout no-floor fix, app feature-point map + coverage dots per frame + depth/pose pairing, 7 real models in the web viewer. Before that: 2026-11-14 by Tayyab (agent, overnight session on `exp/overnight-2026-11-14`): roomAttemptSadness2 v9 run (R-039), newRoom technique tests (R-040 – R-043), layout ceiling fix, server v9 option, tape script, capture checks in the app and on the PC, coverage 45%. Before that: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-032 – R-038 (renumbered from R-029 – R-035 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -558,6 +558,25 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       turning (168/592 keyframes had no stereo neighbours); closer passes (≤ 3 m) in large rooms; all lights on. *(from TODO)*
 
 ### 7.9 IMU fallback (novelty)
+
+- [ ] **[new 2026-11-18] Featureless tracking plan** ([FEATURELESS_TRACKING_PLAN.md](FEATURELESS_TRACKING_PLAN.md), draft):
+      gyro rotation check and gap filling in `sfm_colmap.py`, lines / junctions and the `layout.py` room as a map for
+      frames without corners, dense matchers / VGGT as quick tests, app guidance. Measured: scan_009's ARCore-lost
+      frames have SIFT median 39 (bedroom 526) but as many long lines (6 vs 7) (`texture_probe.py`). **OD-12 open**
+      (recommended: steps 0, 1, 6 first). Would answer OD-6.
+  - **2026-11-18: option 1 chosen, then continue (D-069).** Built: `gyro_check.py` + `sfm_colmap.py --gyro_thr`
+    (newRoom: 0.15° median, 3 of 1,166 frames flagged; scan_009: 330 of 761), `gap_test.py` (gyro rotation through
+    cut gaps: 0.30° median at 15 s), app prompts. R-047 (scan_009 with the check): inconclusive, path jumps 51 → 21,
+    remaining errors are position / scale. Next: step 4 (position from lines + layout) or the incremental mapper
+    on scan_009 (OD-11); the app prompts are not tested on a phone. Progress table: plan §8.
+  - **Night 2026-11-18 (scan_009, R-048 – R-051):** incremental mapper (R-048, rejected: locally wrong);
+    diagnosis (R-050): SfM positions locally wrong in both mappers, not from wrong matches or timing; ARCore barely
+    tracked (gyro correlation 0.34); the IMU is clean. New: `imu_scale.py` (accelerometer scale, VINS-style: newRoom
+    −2.8%, bedroom +2.5%, hall −18.7% vs ARCore), `known_rot_pnp.py` + `--place_unplaced` (R-049, inconclusive),
+    `gyro_pairs.py`, gyro bias estimate, `rot_sfm.py` (gyro rotation + accelerometer positions, R-051: rejected,
+    blurrier, scale 2–3× off). **Best scan_009 model: R-047**, now in the viewer as `scan-009-gyro`. Open for Tayyab:
+    allow VGGT (learned poses; code + weights in `C:\Users\tyb\.cache\buildscan`, running it needs his OK) or
+    re-record the room (slower, more light, floor in view). Scale of scan_009 remains unknown.
 
 - [ ] Tune BA pass 2 so it keeps PnP accuracy (8.2 px → 15.1 px after BA): weaker within-segment ARCore priors after a gap. *(from TODO 2026-10-10)*
 - [ ] Use bridged fallback frames in training with per-frame pose refinement (only re-aligned segments are used now). *(from TODO)*

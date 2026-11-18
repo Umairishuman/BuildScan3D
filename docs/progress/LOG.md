@@ -400,3 +400,33 @@ issues, use the existing datasets, try new techniques. Branch from `exp/fast-pip
 - Problems: 16 GB RAM, so PLY→SPZ conversions waited for training to finish; disk ~98% full.
 - Next: install the debug APK and check the dots + `depth/timestamps.csv`; `--pose_free` + ALIKED on newRoom; re-record
   scan_009's room; OD-7 / OD-10 / OD-11.
+
+## 2026-11-18 · Tayyab (agent) · `docs/featureless-tracking-plan`
+- Did: drafted [FEATURELESS_TRACKING_PLAN.md](FEATURELESS_TRACKING_PLAN.md) at Tayyab's request (track featureless rooms
+  with wall junction lines, faint contrast and phone sensors). New tool `src/arcore3dgs/texture_probe.py`; measured
+  newRoom, the bedroom, the lecture hall and scan_009 (table in the plan §1.1): lost frames have few corners but keep
+  their long lines. Plan steps 0–7 with effort, checks and three options.
+- Runs: none (texture_probe is a read-only measurement, no TRAINING entry). Decisions: none; OD-12 added (open).
+- Problems: scan_009's blur (21.7 px median) confounds "featureless"; a sharp re-recording of that room is needed.
+- Next: Tayyab and the team decide OD-12; then step 0 (test set) and step 1 (gyro rotation check).
+- Later the same session (00:00–01:15): Tayyab chose option 1, then continue (D-069, OD-12 closed). Built
+  `gyro_check.py` (IMU→camera rotation estimated from the SfM model; per-frame rotation disagreement with the gyro),
+  `sfm_colmap.py --gyro_thr` (default off), `gap_test.py` (cut-gap rotation test), `gyro_check.fill_rotations`; app
+  prompts "keep a room corner or edge in view" (compiled with JDK 21, not on a phone). Run R-047 (scan_009 with the
+  gyro check): inconclusive; two run errors logged (wrong resume stage; a copied directory link). Next: step 4 or
+  the incremental mapper on scan_009; MAP entries added for the new tools.
+
+## 2026-11-18 (night, 01:13 – 05:00) · Tayyab (agent) · `docs/featureless-tracking-plan`
+Asked by Tayyab: "work throughout the night, I need scan_009 to be working properly soon".
+- Did: R-048 incremental mapper (rejected); R-049 placing unplaced frames with gyro rotation + known-rotation fit
+  (`known_rot_pnp.py`, `sfm_colmap.py --place_unplaced`; inconclusive); `imu_scale.py` (accelerometer scale, validated
+  on three rooms); R-050 diagnosis (SfM locally wrong; not wrong matches (`gyro_pairs.py`), not timing; ARCore poor;
+  IMU clean); gyro bias estimate (`gyro_check.py`); `rot_sfm.py` (gyro rotation + accelerometer positions) validated on
+  newRoom, R-051 on scan_009 (rejected); `sfm_colmap.py --sim3 none`; R-047 added to the viewer (`scan-009-gyro`).
+  VGGT code + weights fetched outside the repo (`C:\Users\tyb\.cache\buildscan`); running them was blocked by the
+  permission check; `vggt_poses.py` written but never run.
+- Runs: R-048, R-049, R-050, R-051. Decisions: none.
+- Problems: scan_009 is not "working properly": the best model is still R-047 (rough, scale unknown). Disk 19 GB free;
+  the experiment folders under scan_009 (`work_v9pf{g,m,p,t,x,r}*`, whole capture folder 11 GB) were not deleted.
+- Next: Tayyab decides on VGGT (or re-recording); a scale source for scan_009; clean up the experiment folders (ask).
+
