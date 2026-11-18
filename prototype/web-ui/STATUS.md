@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-11-12 (fixture size card in Scan Layers, clickable fixture markers: FR10, COMPLETION_PLAN 4.3)
+Last updated: 2026-11-18 (scan #8 added as its own project, `scan-008`)
 
 ---
 
@@ -131,6 +131,20 @@ real path.** Currently only `/dashboard` has a href.
 ---
 
 ## 4. Completed
+
+### Scan #8 as its own project (`scan-008`) ✅ (2026-11-18, Umair's ask)
+- **Why:** the portal only knew the living room (`newroom-scan`); scan #8 (R-039, tag `r1116w9`) had a bundle in
+  `public/scans/` but nothing pointed at it.
+- **Modified** `src/lib/mockData.ts`: new `scan-008` entry (`scanUrl: "/scans/scan_008_7b486c855ed6_r1116w9/"`). Numbers come
+  from the bundle's `scan.json` (2,506,236 splats, floor 21.26 m², ceiling 3.194 m, 11 fixtures) and the run's
+  `layout/layout.json` (6.03 × 4.40 m between opposite walls). Start camera: middle of the detected fixtures, 1.5 m above
+  `floor_y` −3.12, looking at `door_1`. `newroom-scan` is unchanged (still `/scans/newroom/`).
+- **New** `public/thumbnails/scan_008_plan.png`: a copy of the run's own top-down plan (`gs_r1116w9/layout/plan.png`),
+  not a photo.
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` gives 0 errors and 1 known warning
+  (ExportModal.tsx:29); `npx next build` compiled and prerendered all 8 routes (through `micromamba run -n bs-ns`);
+  the dev server returns 200 for `/projects`, `/viewer/scan-008`, `/viewer/newroom-scan` and the thumbnail.
+  **Not checked in a browser** (start pose untested). Room not named yet; no tape check.
 
 ### Fixture size card (FR10) and clickable fixture markers ✅ (2026-11-12, COMPLETION_PLAN 4.3, Umair's session)
 - **Why:** FR10 asks for per-element dimensions; the list showed width × height and the centre height in one grey line,
@@ -727,6 +741,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | ~~Mock-scene controls on real scans~~ | `viewer/[id]/page.tsx` | Resolved 2026-10-24: hidden for splat projects. Bring back once real semantic layers exist. |
 | ~~148 MB PLY over HTTP~~ | `public/splats/` | Resolved 2026-10-24: served as 12.5 MB `.spz`. |
 | Small fixture markers | `Viewer3D/SplatCanvas.tsx` | Markers are 4.5 cm spheres, so clicking one in 3D needs a close view; the list in Scan Layers is the reliable way. |
+| Scan #8 bundle exists only on the Ubuntu PC | `mockData.ts` (`scan-008`) | `public/scans/scan_008_7b486c855ed6_r1116w9/` is gitignored (D-061), so on any other machine `/viewer/scan-008` cannot load the scan. The scan #8 layout also covers two small rooms next to the main one (see `plan.png`). |
 | Missing project thumbnails | `public/thumbnails/` | All pre-existing fixtures point at `/thumbnails/card*.jpg`, which do not exist (folder was absent until this step added `newroom_v6.jpg`). |
 
 ---
@@ -750,6 +765,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-11-18** — Scan #8 (R-039) added as its own project `scan-008`; the plan image is its thumbnail.
 - **2026-11-12** — Fixture size card in Scan Layers (width, height, area, heights above floor, wall) and clickable fixture markers (FR10).
 - **2026-11-06** — `newroom-scan` no longer points at the unused `/splats/newroom_v6.spz`; the file is out of git (CI 10 MB limit).
 - **2026-11-03** — `public/scans/newroom/` regenerated with v10 labels (15 fixtures: 6 doors, tube light class); `FIXTURE_COLORS` gains "tube light".
