@@ -34,6 +34,15 @@ ap.add_argument("--pairs", default="exhaustive", choices=["exhaustive", "arcore"
                 help="arcore = match only temporal + ARCore-pose neighbours (much faster than exhaustive)")
 ap.add_argument("--temporal", type=int, default=10)
 ap.add_argument("--spatial", type=int, default=20)
+ap.add_argument("--gyro_thr", type=float, default=0.0,
+                help="export: drop frames whose SfM rotation disagrees with the gyroscope by more than this many degrees "
+                     "(median over keyframe pairs within 1 s; gyro_check.py, FEATURELESS_TRACKING_PLAN step 1). 0 = off")
+ap.add_argument("--place_unplaced", type=int, default=0,
+                help="export, needs --gyro_thr: place frames SfM did not register (or the gyro check dropped) with the gyro "
+                     "rotation + a known-rotation fit to their matched 3D points (known_rot_pnp.py), if >= this many "
+                     "inlier matches (e.g. 4). 0 = off")
+ap.add_argument("--sim3", default="arcore", choices=["arcore", "none"],
+                help="export: 'none' keeps the model's own world (rot_sfm.py with the accelerometer: already metric, +Y up)")
 ap.add_argument("--stage", default="all", choices=["all", "extract", "match", "map", "undistort", "export"])
 ap.add_argument("--feature", default="sift", choices=["sift", "aliked"],
                 help="aliked = learned ALIKED-N16rot keypoints + LightGlue matching (COLMAP 4.2 ONNX models)")
@@ -218,6 +227,60 @@ def umeyama(src, dst):
 if run("export"):
     cams0, imgs0, _ = read_model(os.path.join(OUT, "sparse", "0"))
     cams, imgs, pts = read_model(os.path.join(OUT, "undist", "sparse"))
+    gyro_rep = None
+    if args.gyro_thr > 0:
+        # frames SfM placed with a rotation the gyroscope contradicts are misplaced: drop them before the Sim3
+        # fit and the jump filter, so they distort neither
+        from gyro_check import check as gyro_check
+        from common import Capture
+        gyro_rep = gyro_check(meta["dataset"], fr, {n: v[0][:3, :3] for n, v in imgs.items()},
+                              Capture(meta["dataset"]).t0_ns, meta.get("pose_offset", 0.0), thr_deg=args.gyro_thr)
+        for n in gyro_rep["flagged"]:
+            imgs.pop(n, None)
+        print(f"gyro check: dropped {len(gyro_rep['flagged'])} frames over {args.gyro_thr} deg")
+    placed = []
+    if args.place_unplaced > 0 and gyro_rep is not None:
+        # FEATURELESS_TRACKING_PLAN step 4 (points): rotation from the gyro (chained from the nearest accepted
+        # frames), position from >= 2 matched 3D points with that rotation fixed. The jump filter below still applies.
+        from gyro_check import fill_rotations
+        import known_rot_pnp as krp
+        mimgs, mX, mcam = krp.load_model(os.path.join(OUT, "sparse", "0"))
+        kps, mts = krp.load_db(db)
+        acc = [x for x in fr if x["name"] in imgs]
+        t_acc = np.array([x["pts"] + meta.get("pose_offset", 0.0) for x in acc])
+        anchors = {x["name"] for x in acc}
+        cnt = {}
+        for n in anchors:
+            if n in mimgs:
+                for pid in mimgs[n][2][mimgs[n][2] >= 0]:
+                    cnt[pid] = cnt.get(pid, 0) + 1
+        valid = {q for q, c in cnt.items() if c >= 2}
+        todo = [x for x in fr if x["name"] not in imgs and x["name"] in kps]
+        t_todo = np.array([x["pts"] + meta.get("pose_offset", 0.0) for x in todo])
+        near = np.array([np.min(np.abs(t_acc - tq)) for tq in t_todo]) if len(t_todo) else np.zeros(0)
+        Rq = fill_rotations(gyro_rep["imu"], gyro_rep["Rci"], gyro_rep["off"], t_acc,
+                            [imgs[x["name"]][0][:3, :3] for x in acc], t_todo)
+        cu = cams[list(cams)[0]]; c0 = cams0[list(cams0)[0]]
+        K0 = np.array([[c0[3][0], 0, c0[3][2]], [0, c0[3][1], c0[3][3]], [0, 0, 1]])
+        Ku = np.array([[cu[3][0], 0, cu[3][2]], [0, cu[3][1], cu[3][3]], [0, 0, 1]])
+        umap = cv2.initUndistortRectifyMap(K0, np.array(c0[3][4:8]), None, Ku, (cu[1], cu[2]), cv2.CV_32FC1)
+        for x, Rk, dn in zip(todo, Rq, near):
+            if dn > 15.0:
+                continue
+            uv, Xs = krp.correspondences(x["name"], kps, mts, mimgs, mX, anchors, valid)
+            C, m = krp.place_known_rotation(Rk, krp.bearings(uv, mcam), Xs)
+            if C is None or m.sum() < args.place_unplaced or m.mean() < 0.5:
+                continue
+            c2w = np.eye(4); c2w[:3, :3] = Rk; c2w[:3, 3] = C
+            imgs[x["name"]] = (c2w, None)
+            placed.append(x["name"])
+            dst = os.path.join(OUT, "images", x["name"] + ".jpg")      # where the export loop looks first
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            if not os.path.exists(dst):
+                im = cv2.imread(os.path.join(WK, "images", x["name"] + ".jpg"))
+                cv2.imwrite(dst, cv2.remap(im, umap[0], umap[1], cv2.INTER_LINEAR), [cv2.IMWRITE_JPEG_QUALITY, 95])
+        print(f"placed {len(placed)} of {len(todo)} unplaced frames with gyro rotation + known-rotation fit "
+              f"(>= {args.place_unplaced} inliers)")
     names = [x["name"] for x in fr if x["name"] in imgs]
     # Sim3 COLMAP -> ARCore metric world: RANSAC on camera centres against the RAW ARCore poses. ARCore
     # re-anchors silently (here ~1 m / 28 deg at 60 s), so only its largest self-consistent segment is used;
@@ -234,6 +297,9 @@ if run("export"):
             best = inl
     s, Rm, t = umeyama(A[best], B[best])
     res = np.linalg.norm((s * (Rm @ A.T)).T + t - B, axis=1)
+    if args.sim3 == "none":                                   # metric, gravity-aligned model (rot_sfm.py --imu 1)
+        s, Rm, t = 1.0, np.eye(3), np.zeros(3)
+        print("sim3: none (the model is already metric and +Y up)")
     T = np.eye(4); T[:3, :3] = s * Rm; T[:3, 3] = t
     cam = cams[list(cams)[0]]; fx, fy, cx, cy = cam[3][:4]
     out_frames = []
@@ -245,6 +311,8 @@ if run("export"):
         c2w_m = np.eye(4); c2w_m[:3, :3] = Rm @ c2w[:3, :3]; c2w_m[:3, 3] = s * Rm @ c2w[:3, 3] + t
         y = dict(x); y["c2w"] = (c2w_m @ G).tolist(); y["c2w_arcore"] = x.get("c2w_arcore", x.get("c2w"))
         y.pop("fallback_unverified", None)                  # registered by SfM from the images = verified
+        if x["name"] in placed:
+            y["placed_by"] = "gyro_rotation+known_rotation_pnp"
         out_frames.append(y)
         dst = os.path.join(OUT, "images", x["name"] + ".jpg")
         if not os.path.exists(dst):
@@ -261,6 +329,12 @@ if run("export"):
                                sfm=dict(source="colmap " + args.mapper, registered=len(out_frames), total=len(fr),
                                         sim3_scale=float(s), align_inliers=int(best.sum()), align_trusted=len(trust),
                                         align_median_cm=float(np.median(res[best]) * 100), dropped_jumps=jumps,
+                                        gyro_check=None if gyro_rep is None else dict(
+                                            thr_deg=args.gyro_thr, dropped=gyro_rep["flagged"],
+                                            time_offset_ms=gyro_rep["time_offset_ms"],
+                                            pair_err_deg_median=gyro_rep["pair_err_deg_median"],
+                                            pair_err_deg_p90=gyro_rep["pair_err_deg_p90"]),
+                                        placed_unplaced=placed,
                                         distorted_camera=dict(model=cams0[list(cams0)[0]][0], params=cams0[list(cams0)[0]][3])))
     m2.pop("ba", None); m2.pop("fusion_dropped", None)
     json.dump(m2, open(os.path.join(OUT, "frames.json"), "w"), indent=1)
