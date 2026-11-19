@@ -76,7 +76,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-053 | 2026-11-19 | Layout re-runs on six rooms, no-roof check (#8), scratch output | this PC (Ubuntu, RTX 4000 Ada) | 8.8 min | scan #7: no roof, walls 3.12 m (was ceiling 3.435 m); 5 other rooms unchanged | Kept (#8) |
 | R-054 | 2026-11-19 | scans #7 / #3: layout (#8 #9 #10) → semantics → mesh labels → web, tag `r1119a` | this PC (Ubuntu, RTX 4000 Ada) | 8.1 min | #7 no roof, 1 doorway + 3 window openings, open outline; #3 open outline flagged, triangle area gone, 4 false openings | Superseded (#9 fixed after it) |
 | R-055 | 2026-11-19 | Layout on six rooms, `--debug`, default vs `--raised_max 1.5 --infer_gap 6` | this PC (Ubuntu, RTX 4000 Ada) | 16.9 min | scan #3 no false openings; `--raised_max` closes #7 and #8 (4 walls, 88–90°), drops nothing real | Kept (findings) |
-| R-056 | 2026-11-19 | Four rooms, layout → web → plan with the 2026-11-19 defaults, tag `r1119b` | this PC (Ubuntu, RTX 4000 Ada) | running | pending | Running |
+| R-056 | 2026-11-19 | Four rooms, layout → web → plan with the 2026-11-19 defaults, tag `r1119b` | this PC (Ubuntu, RTX 4000 Ada) | 15.6 min | #7 no roof + 2 openings; #3 no false openings; newRoom closed, 29.41 m²; #8 open, 2 doorways | Kept (for Umair's checks) |
 
 ## Runs
 
@@ -835,8 +835,16 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   plan, then `fixture_checklist.py --rejected`; bundles in `prototype/web-ui/public/scans/<scan>_r1119b/`.
 - **Goal:** final outputs for Umair to check (sheets, plans, web bundles); newRoom's outline closed again (`8b7f7f2`)
   with its floor area; no regressions in the semantics chain.
-- **Start → end:** (running)
-- **Errors during the run:** none so far.
-- **Result:** pending.
-- **Verdict:** pending.
+- **Start → end:** 09:25:07 → 09:40:45 (15.6 min; per room layout 1.8–2.9 min, sem3d / verify / sem3d2 ~0.2 min each,
+  meshlabels ~0.9 min, web 0.1 min, plan < 0.1 min; `gs_r1119b/stages.tsv`)
+- **Errors during the run:** none (exit 0).
+- **Result:** scan #7: no roof, walls 3.12 m, outline open, openings doorway 0.80 m + window opening 2.10 m, 2
+  fixtures (both openings). Scan #3: ceiling 2.504 m, outline open (floor area null, was the 32.27 m² triangle),
+  **no wall-gap openings**, 18 fixtures (as R-035). Scan #8: ceiling 3.194 m, outline open (21° / 2.31 m gap; floor
+  area null, was 21.26 m² from 4 of 5 corners), wall-gap doorways 1.0 m and 1.3 m, 13 fixtures (11 + 2). newRoom:
+  **outline closed (step join), floor 29.41 m² (unchanged)**, ceiling 2.822 m, one wall-gap window opening 0.4 m,
+  19 fixtures (18 + 1). Each room: `gs_r1119b/layout/plan.svg|dxf|json`, `semantic_v10/fixture_check.md`
+  (`--rejected`), web bundle `public/scans/<scan>_r1119b/`.
+- **Verdict:** kept as the current outputs for Umair's checks (#21, #24); whether the 5 wall-gap openings are real
+  is not known yet.
 
