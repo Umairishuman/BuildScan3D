@@ -73,7 +73,8 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-038 | 2026-11-16 | scan_008_7b486c855ed6, R-023 recipe, full pipeline (`r1116`), first Infinix X6833B capture | this PC (Ubuntu, RTX 4000 Ada) | 49.7 min, did not finish | 1639 of 10255 frames; COLMAP `global_mapper` killed by OOM (26.1 GB) at 13:16 | Failed (OOM in SfM) |
 | R-039 | 2026-11-16 | scan_008 re-run with `--window 9` (`r1116w9`, D-073), R-023 recipe otherwise | this PC (Ubuntu, RTX 4000 Ada) | 166.7 min (run_v8 145.4) | 1118/1118 frames; gravity 0.00°; 5 walls, floor 21.26 m², ceiling 3.19 m; 11 fixtures (unchecked) | Kept for now (in the web UI) |
 | R-040 | 2026-11-18 | scan #7 `scan_007_e6d4f090f88e` (269 s), R-023 recipe, default window 6 (`r1118`) | this PC (Ubuntu, RTX 4000 Ada) | 200.6 min (run_v8 175.4) | 1159/1160 frames; gravity 0.00°; 6 walls, floor 19.66 m², ceiling 3.40 m; **0 fixtures (29 rejected)** | Inconclusive (fixtures) |
-| R-053 | 2026-11-19 | Layout re-runs on six rooms, no-roof check (#8), scratch output | this PC (Ubuntu, RTX 4000 Ada) | running | pending | Running |
+| R-053 | 2026-11-19 | Layout re-runs on six rooms, no-roof check (#8), scratch output | this PC (Ubuntu, RTX 4000 Ada) | 8.8 min | scan #7: no roof, walls 3.12 m (was ceiling 3.435 m); 5 other rooms unchanged | Kept (#8) |
+| R-054 | 2026-11-19 | scans #7 / #3: layout (#8 #9 #10) → semantics → mesh labels → web, tag `r1119a` | this PC (Ubuntu, RTX 4000 Ada) | running | pending | Running |
 
 ## Runs
 
@@ -755,6 +756,30 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   floor outline, colour, Gaussian count).
 - **Goal:** scan #7 (no roof) reports no ceiling and the wall-top height; the five rooms with ceilings keep the
   height, walls and corners of their last layout run.
+- **Start → end:** 08:47:39 → 08:56:27 (8.8 min; scan #7 2.4 min, #3 1.3, #8 3.1, newRoom 1.8, #2 and #1 a few s each)
+- **Errors during the run:** none (all six exit 0).
+- **Result:** ceiling evidence (share of the floor outline under the ceiling plane / colour blue − red / opaque
+  Gaussians at the plane): scan #7 **19.6 % / +0.253 / 2,919** → no roof, height = wall top **3.120 m** (was a 3.435 m
+  "ceiling"); scan #3 95.6 % / −0.002 / 114,862; scan #8 51.3 % / −0.144 / 243,198; newRoom 63.1 % / −0.031 / 6,254;
+  scan #2 47.0 % / −0.051 / 13,498; scan #1 15.8 % / −0.130 / 11,878 (low cover but not sky-coloured, so unchanged).
+  The five rooms with a ceiling keep exactly their earlier height, walls, corners and wall lengths (2.525 / 3.161 /
+  2.808 / 2.408 / 4.193 m). Outputs `<scratchpad>/r053/<room>/layout/` (not kept).
+- **Verdict:** kept: the no-roof rule (#8) changes only the roofless room. Rule defaults (35 % cover, blue − red 0.15)
+  are the agent's, from these six rooms; confirm or change (COMPLETION_PLAN Step 4, open for Umair).
+
+### R-054 · 2026-11-19 · scans #7 and #3: layout with #8 / #9 / #10 → semantics → mesh labels → web (tag `r1119a`)
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada).
+- **Branch / commit:** `feature/9-wall-openings` @ `0a45f89` (stacked on `fix/10-room-closed`, `fix/8-open-ceiling`); no
+  uncommitted changes in the pipeline.
+- **Dataset:** trained models of scan #7 (`r1118`, R-040) and scan #3 (`r1112lev`, R-035), not retrained. New tag
+  `r1119a` inside each run's work folder: `gs_r1119a/splat.ply` and `gs_r1119a/mesh/mesh.ply` are links to the
+  originals; the 2D masks `semantic2d_v10` and the mesh are reused. R-040 / R-035 outputs are not touched.
+- **Command(s):** the `run_full.sh` stages layout, sem3d, verify, sem3d2, meshlabels (`--clean 0.01 --glb 400000`),
+  web, with the same arguments, through `<scratchpad>/r054.sh`; web bundles go to
+  `prototype/web-ui/public/scans/<scan>_r1119a/` (gitignored, listed in the Projects tab by D-074).
+- **Goal:** scan #7: no roof (#8), its empty doorways / window openings found from the wall gaps (#9), outline
+  closed or a warning (#10); scan #3: the 4-walls-3-corners outline is flagged and the triangle floor area
+  (32.27 m²) is no longer reported (#10); no false openings in a finished room (#9).
 - **Start → end:** (running)
 - **Errors during the run:** none so far.
 - **Result:** pending.
