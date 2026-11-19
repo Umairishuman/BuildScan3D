@@ -77,7 +77,8 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-054 | 2026-11-19 | scans #7 / #3: layout (#8 #9 #10) → semantics → mesh labels → web, tag `r1119a` | this PC (Ubuntu, RTX 4000 Ada) | 8.1 min | #7 no roof, 1 doorway + 3 window openings, open outline; #3 open outline flagged, triangle area gone, 4 false openings | Superseded (#9 fixed after it) |
 | R-055 | 2026-11-19 | Layout on six rooms, `--debug`, default vs `--raised_max 1.5 --infer_gap 6` | this PC (Ubuntu, RTX 4000 Ada) | 16.9 min | scan #3 no false openings; `--raised_max` closes #7 and #8 (4 walls, 88–90°), drops nothing real | Kept (findings) |
 | R-056 | 2026-11-19 | Four rooms, layout → web → plan with the 2026-11-19 defaults, tag `r1119b` | this PC (Ubuntu, RTX 4000 Ada) | 15.6 min | #7 no roof + 2 openings; #3 no false openings; newRoom closed, 29.41 m²; #8 open, 2 doorways | Kept (for Umair's checks) |
-| R-057 | 2026-11-19 | Four rooms, layout → web → plan with the D-075 defaults, tag `r1119c` | this PC (Ubuntu, RTX 4000 Ada) | 16.7 min | #7 / #8 closed rectangles (17.99 / 26.44 m²); #3 tilt 0.29°; ceilings 4.3 → 0.04 cm; #8 lost a switch + socket | Kept except scan #8 (Umair) |
+| R-057 | 2026-11-19 | Four rooms, layout → web → plan with the D-075 defaults, tag `r1119c` | this PC (Ubuntu, RTX 4000 Ada) | 16.7 min | #7 / #8 closed rectangles (17.99 / 26.44 m²); #3 tilt 0.29°; ceilings 4.3 → 0.04 cm; #8 lost a switch + socket | Kept (scan #8 corner = furniture, Umair) |
+| R-058 | 2026-11-19 | scan #6 `scan_006_1e457a214ce1` (259.8 s), full pipeline, R-023 recipe + D-075 (`r1119`) | this PC (Ubuntu, RTX 4000 Ada) | running | — | running |
 
 ## Runs
 
@@ -891,4 +892,20 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   `gs_r1119c/semantic_v10/fixture_check.md` (`--rejected`); bundles `public/scans/<scan>_r1119c/`.
 - **Verdict:** kept for scans #7, #3 and newRoom; **scan #8 waits for Umair**: closed rectangle and smooth ceiling,
   but a switch + socket plate lost. Is the diagonal surface in that corner a wall (then `--raised_max` is wrong here)
-  or furniture with a plate on it? `r1119b` bundles not archived until then.
+  or furniture with a plate on it? → **Umair (2026-11-19): furniture / a low board in that corner**, so
+  `--raised_max 1.5` is right there and the lost plate was not on a wall; `r1119c` is current for all four rooms and
+  the `r1119b` bundles moved to `scans_archive/`.
+
+### R-058 · 2026-11-19 · scan #6 full pipeline, R-023 recipe, D-075 defaults (tag `r1119`)
+- **Who / machine:** agent for Umair (Umair's command and go-ahead) · this PC (Ubuntu, RTX 4000 Ada), `screen`
+  session `run-r1119`; the `viewer` session (~2.3 GB GPU) stays open.
+- **Branch / commit:** `feature/step4-layout` @ `2e7bbb8` (no uncommitted changes in the pipeline)
+- **Dataset:** `dataset/scan_006_1e457a214ce1` (Umair, Infinix X6833B, 259.8 s, 7,274 video frames; room not named yet)
+- **Command(s):** `scripts/buildscan run 6 r1119 -- --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222
+  --pgsr` (default window 6, like scan #7 at 269 s, R-040)
+- **Goal:** first model of scan #6 (#19), with the post-training stages on the D-075 defaults; then gravity tilt,
+  layout walls / height / closed outline, fixtures and the check sheet. SfM has to fit in RAM (R-040: 1,160 frames
+  ran in 96 min).
+- **Start → end:** (running)
+- **Errors during the run:** none so far.
+
