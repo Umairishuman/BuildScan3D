@@ -77,6 +77,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-054 | 2026-11-19 | scans #7 / #3: layout (#8 #9 #10) → semantics → mesh labels → web, tag `r1119a` | this PC (Ubuntu, RTX 4000 Ada) | 8.1 min | #7 no roof, 1 doorway + 3 window openings, open outline; #3 open outline flagged, triangle area gone, 4 false openings | Superseded (#9 fixed after it) |
 | R-055 | 2026-11-19 | Layout on six rooms, `--debug`, default vs `--raised_max 1.5 --infer_gap 6` | this PC (Ubuntu, RTX 4000 Ada) | 16.9 min | scan #3 no false openings; `--raised_max` closes #7 and #8 (4 walls, 88–90°), drops nothing real | Kept (findings) |
 | R-056 | 2026-11-19 | Four rooms, layout → web → plan with the 2026-11-19 defaults, tag `r1119b` | this PC (Ubuntu, RTX 4000 Ada) | 15.6 min | #7 no roof + 2 openings; #3 no false openings; newRoom closed, 29.41 m²; #8 open, 2 doorways | Kept (for Umair's checks) |
+| R-057 | 2026-11-19 | Four rooms, layout → web → plan with the D-075 defaults, tag `r1119c` | this PC (Ubuntu, RTX 4000 Ada) | running | — | running |
 
 ## Runs
 
@@ -848,3 +849,19 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Verdict:** kept as the current outputs for Umair's checks (#21, #24); whether the 5 wall-gap openings are real
   is not known yet.
 
+### R-057 · 2026-11-19 · Four rooms: layout → semantics → mesh labels → web → plan with the D-075 defaults (tag `r1119c`)
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada); the `viewer` screen session (~2.3 GB GPU)
+  stays open, `run-r1118` is closed.
+- **Branch / commit:** `feature/step4-layout` @ `8022277` (no uncommitted changes).
+- **Dataset:** trained models of scans #7 (`r1118`), #3 (`r1112lev`), #8 (`r1116w9`), newRoom (`r1112nr`), not
+  retrained; new tag `r1119c` as in R-056 (links to the model and mesh, 2D masks reused).
+- **Command(s):** `<scratchpad>/r057.sh`: R-056's stages layout, sem3d, verify, sem3d2, meshlabels, web, plan, then
+  `fixture_checklist.py --rejected`, with the flags `run_full.sh` passes since D-075: `layout.py --raised_max 1.5
+  --infer_gap 6`, `semantic3d.py --floor_win 0.06` (both passes), `mesh_labels.py --clean_ceiling 0.04`,
+  `plan_export.py --square`; bundles in `prototype/web-ui/public/scans/<scan>_r1119c/`.
+- **Goal:** the five D-075 options together on four rooms, against R-056 (`r1119b`): walls, corners, closed outline,
+  floor area, floor tilt, ceiling roughness, plan.svg. Expected from R-055 / #17 / #18: scans #7 and #8 closed with
+  4 walls, scan #3 floor tilt ~0.3°, ceilings ~0 cm rough. Any room that gets worse goes to Umair before anything
+  else.
+- **Start → end:** (running)
+- **Errors during the run:** none so far.
