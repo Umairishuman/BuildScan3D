@@ -38,8 +38,10 @@ export interface ScanFixture {
   along_wall: number | null;
   width: number;
   height: number;
-  /** Number of video frames the detection was confirmed in. */
+  /** Number of video frames the detection was confirmed in (0 for openings found from wall gaps). */
   views: number;
+  /** "wall gap (layout)" for doorways / window openings found from gaps in the wall (#9). */
+  source?: string;
 }
 
 export interface ScanInfo {
@@ -69,4 +71,7 @@ export const FIXTURE_COLORS: Record<string, string> = {
   lamp: "#ffb84d",
   "air conditioner": "#00dc78",
   "ceiling fan": "#a050ff",
+  // openings without a leaf / frame, found from gaps in the wall (layout.py, #9)
+  doorway: "#285aff",
+  "window opening": "#00c8ff",
 };

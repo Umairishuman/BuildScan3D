@@ -20,10 +20,12 @@ Works for any number of walls and non-Manhattan angles.
 Outputs: layout.json (floor/ceiling heights, walls with lengths, corners), plan.png (top view), corners.jpg
 (corner edges projected into frames).
 """
-import os, json, argparse
+import os, sys, json, argparse
 import numpy as np, cv2, torch, torch.nn.functional as F
 from plyfile import PlyData
 from gsplat import rasterization
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from openings import find_openings                            # noqa: E402  (#9: doorways / window openings)
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--ply", required=True); ap.add_argument("--work", required=True); ap.add_argument("--out", required=True)
@@ -33,6 +35,7 @@ ap.add_argument("--min_len", type=float, default=0.5)
 ap.add_argument("--max_rms", type=float, default=0.05, help="m: a region is used if the rendered surface fits a plane this well")
 ap.add_argument("--infer_gap", type=float, default=0.0, help="m, > 0: a missing corner between neighbouring walls is "
                 "inferred (marked) when both walls stop at most this far short of it and it lies over the floor (#10); 0 = off")
+ap.add_argument("--openings", type=int, default=1, help="1: find doorways / window openings from wall gaps (#9); 0: off")
 ap.add_argument("--open_cover", type=float, default=0.35, help="open to the sky if the ceiling plane covers less of the floor than this ...")
 ap.add_argument("--open_blue", type=float, default=0.15, help="... and its colour is this much bluer than red (sky); see 3c")
 args = ap.parse_args()
@@ -294,6 +297,13 @@ for w in final:
             w["t0"] = e[0]
         else:
             w["t1"] = e[0]
+# #9: doorways and window openings without a leaf: gaps in each wall's surface with the model seen through them
+_o = opac.cpu().numpy(); _top = ceil_y if np.isfinite(ceil_y) else wall_top
+for w in final:
+    w["openings"] = find_openings(_P, _o, w["cen"], w["dir"], w["nrm"], w["t0"], w["t1"], floor_y, _top) \
+        if args.openings else []
+    for op in w["openings"]:
+        print(f"  {op['kind']} on a wall: {op['width']:.2f} m wide, {op['bottom']:.2f}-{op['top']:.2f} m above the floor")
 # #10: is this a closed room? Each wall meets its neighbour in a corner (measured or inferred), >= 3 walls.
 n_inf = sum(1 for cn in corners if cn.get("inferred"))
 room_closed = len(final) >= 3 and len(corners) == len(final)
@@ -322,7 +332,8 @@ res = dict(floor_y=floor_y, ceiling_y=ceil_y, height=height, ceiling_source=ceil
            ceiling_evidence=sky,
            ceiling_first_y=ceil_first, wall_top_y=wall_top, warnings=warnings, dimensions=dims,
            walls=[dict(id=k, p0=(w["cen"] + w["dir"] * w["t0"]).tolist(), p1=(w["cen"] + w["dir"] * w["t1"]).tolist(),
-                       length=float(w["t1"] - w["t0"]), normal=w["nrm"].tolist(), corners=len(w.get("ends", [])))
+                       length=float(w["t1"] - w["t0"]), normal=w["nrm"].tolist(), corners=len(w.get("ends", [])),
+                       openings=w.get("openings", []))
                   for k, w in enumerate(final)],
            corners=corners)
 json.dump(res, open(os.path.join(args.out, "layout.json"), "w"), indent=1)
@@ -349,6 +360,11 @@ for w in res["walls"]:
     cv2.line(img, pt_(w["p0"]), pt_(w["p1"]), (40, 160, 40), 3)
     mid = (np.array(w["p0"]) + np.array(w["p1"])) / 2
     cv2.putText(img, f"{w['length']:.2f} m", pt_(mid), 0, 0.6, (0, 90, 0), 2)
+for w in res["walls"]:                                       # openings: blue (doorway) / cyan (window) over the wall
+    p0_, p1_ = np.array(w["p0"]), np.array(w["p1"]); dd_ = (p1_ - p0_) / max(np.linalg.norm(p1_ - p0_), 1e-9)
+    for op in w["openings"]:
+        a_, b_ = p0_ + dd_ * (op["along"] - op["width"] / 2), p0_ + dd_ * (op["along"] + op["width"] / 2)
+        cv2.line(img, pt_(a_), pt_(b_), (220, 90, 40) if op["kind"] == "doorway" else (230, 200, 0), 6)
 for cn in corners:
     cv2.circle(img, pt_(cn["xz"]), 7, (0, 0, 220), 2 if cn.get("inferred") else -1)   # hollow = inferred
 for k_, w_ in enumerate(warnings[:3]):

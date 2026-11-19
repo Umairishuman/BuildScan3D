@@ -310,7 +310,23 @@ for i_, a_ in enumerate(lights):
         if b_ not in drop and a_ not in drop and np.linalg.norm(np.array(a_["position"]) - np.array(b_["position"])) < 0.4:
             drop.append(b_)
 fixtures = [f for f in fixtures if not any(f is d_ for d_ in drop)]
-fixtures.sort(key=lambda f: FIX.index(f["cls"]))
+# #9: doorways / window openings from wall gaps (layout.py), unless a detected door / window already covers that
+# stretch of the same wall; no Gaussians belong to them (a hole has none), so they carry no label
+for k, w in enumerate(walls):
+    p0, p1 = np.array(w["p0"]), np.array(w["p1"]); d = (p1 - p0) / np.linalg.norm(p1 - p0)
+    for op in w.get("openings", []):
+        a0, a1 = op["along"] - op["width"] / 2, op["along"] + op["width"] / 2
+        if any(f["wall"] == k and f["cls"] in ("door", "window") and f["along_wall"] is not None and
+               a0 < f["along_wall"] + f["width"] / 2 and a1 > f["along_wall"] - f["width"] / 2 for f in fixtures):
+            continue
+        xz = p0 + d * op["along"]; fl_ = float(fcoef @ [xz[0], xz[1], 1])
+        fixtures.append(dict(cls=op["kind"], position=[round(float(xz[0]), 3), round(fl_ + (op["bottom"] + op["top"]) / 2, 3),
+                                                       round(float(xz[1]), 3)],
+                             height_above_floor=round((op["bottom"] + op["top"]) / 2, 3), bottom=op["bottom"], top=op["top"],
+                             width=op["width"], height=round(op["top"] - op["bottom"], 3), wall=k, dist_to_wall=0.0,
+                             into_room=0.0, along_wall=op["along"], views=0, gaussians=0, source="wall gap (layout)"))
+ORDER = FIX + ["doorway", "window opening"]
+fixtures.sort(key=lambda f: ORDER.index(f["cls"]) if f["cls"] in ORDER else len(ORDER))
 cnt_ = {}
 for f in fixtures:                                            # ids after merging and de-duplicating
     cnt_[f["cls"]] = cnt_.get(f["cls"], 0) + 1; f["id"] = f"{f['cls'].replace(' ', '_')}_{cnt_[f['cls']]}"
@@ -319,6 +335,7 @@ label = np.where(is_fix & ~accepted, label_struct, label)
 print(f"{len(fixtures)} fixtures accepted, {len(rejected)} rejected")
 
 # ---------------- areas ----------------
+OPENING_CLS = ("door", "window", "doorway", "window opening")
 def poly_area(pts):
     x, y = np.array(pts).T; return float(0.5 * abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1))))
 
@@ -330,12 +347,12 @@ crn = sorted([cn["xz"] for cn in lay.get("corners", [])], key=lambda p: np.arcta
 wall_rep = []
 for k, w in enumerate(walls):
     gross = w["length"] * H_room
-    op = [f for f in fixtures if f["wall"] == k and f["cls"] in ("door", "window") and f["into_room"] is not None
+    op = [f for f in fixtures if f["wall"] == k and f["cls"] in OPENING_CLS and f["into_room"] is not None
           and -0.35 < f["into_room"] < 0.15]
     op_area = sum(f["width"] * f["height"] for f in op)
     wall_rep.append(dict(id=k, length=round(w["length"], 3), height=round(H_room, 3), gross_area=round(gross, 2),
                          openings=[f["id"] for f in op], openings_area=round(op_area, 2), net_area=round(gross - op_area, 2),
-                         fixtures=[f["id"] for f in fixtures if f["wall"] == k and f["cls"] not in ("door", "window")
+                         fixtures=[f["id"] for f in fixtures if f["wall"] == k and f["cls"] not in OPENING_CLS
                                    and f["dist_to_wall"] is not None and f["dist_to_wall"] < 0.3]))
 counts = {nm: int((label == i).sum()) for i, nm in enumerate(NAMES)}
 res = dict(model=os.path.abspath(args.ply), classes=NAMES, decoys=sorted(DECOY), gaussian_counts=counts,
@@ -343,7 +360,7 @@ res = dict(model=os.path.abspath(args.ply), classes=NAMES, decoys=sorted(DECOY),
            floor_area=round(poly_area(crn), 2) if len(crn) >= 3 and lay.get("room_closed", True) else None, ceiling_height=round(H_room, 3) if has_ceil else None,
            open_top=bool(lay.get("open_top", False)), wall_height=round(H_room, 3),
            room_closed=lay.get("room_closed"), layout_warnings=lay.get("warnings", []),
-           walls=wall_rep, free_standing=[f["id"] for f in fixtures if f["cls"] not in ("door", "window")
+           walls=wall_rep, free_standing=[f["id"] for f in fixtures if f["cls"] not in OPENING_CLS
                                           and (f["dist_to_wall"] is None or f["dist_to_wall"] >= 0.3)],
            fixtures=fixtures, rejected=rejected, params=vars(args))
 json.dump(res, open(os.path.join(args.out, "semantic.json"), "w"), indent=1)
@@ -357,7 +374,8 @@ for f_ in fixtures:
 # ---------------- coloured model + sheets ----------------
 PAL = {"other": (150, 150, 150), "floor": (140, 90, 50), "ceiling": (235, 235, 235), "door": (40, 90, 255),
        "window": (0, 200, 255), "light switch": (255, 0, 200), "power socket": (255, 120, 0), "ceiling light": (255, 255, 0),
-       "tube light": (255, 255, 0), "lamp": (255, 220, 120), "air conditioner": (0, 220, 120), "ceiling fan": (160, 80, 255)}
+       "tube light": (255, 255, 0), "lamp": (255, 220, 120), "air conditioner": (0, 220, 120), "ceiling fan": (160, 80, 255),
+       "doorway": (40, 90, 255), "window opening": (0, 200, 255)}
 WALLC = [(120, 200, 120), (120, 160, 220), (220, 170, 120), (190, 120, 200), (120, 210, 210), (210, 210, 120)]
 col = np.array([PAL.get(nm, WALLC[int(nm.split("_")[1]) % len(WALLC)] if nm.startswith("wall_") else (150, 150, 150))
                 for nm in NAMES], np.float32) / 255

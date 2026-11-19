@@ -56,7 +56,7 @@ const FixtureCard: React.FC<{ f: ScanFixture }> = ({ f }) => {
     rows.push(["Bottom above floor", m(f.bottom)], ["Top above floor", m(f.top)]);
   }
   if (f.wall !== null) rows.push(["Wall", `Wall ${f.wall}${f.along_wall !== null ? ` · ${m(f.along_wall)} along` : ""}`]);
-  rows.push(["Confirmed in", `${f.views} frames`]);
+  rows.push(f.source ? ["Found from", f.source] : ["Confirmed in", `${f.views} frames`]);
   return (
     <dl className="grid grid-cols-2 gap-x-3 gap-y-1 px-2 pb-2 pt-1">
       {rows.map(([k, v]) => (
@@ -183,7 +183,7 @@ export const ScanLayersPanel: React.FC<ScanLayersPanelProps> = ({
                       <div className="text-[11px] font-bold text-[#0f172a] truncate">{pretty(f.id)}</div>
                       <div className="text-[10px] text-[#64748b] truncate">
                         {f.wall !== null ? `Wall ${f.wall} · ` : ""}
-                        {f.height_above_floor.toFixed(2)} m up · {f.width.toFixed(2)} × {f.height.toFixed(2)} m · {f.views} views
+                        {f.height_above_floor.toFixed(2)} m up · {f.width.toFixed(2)} × {f.height.toFixed(2)} m · {f.source ? "wall gap" : `${f.views} views`}
                       </div>
                     </div>
                   </div>
