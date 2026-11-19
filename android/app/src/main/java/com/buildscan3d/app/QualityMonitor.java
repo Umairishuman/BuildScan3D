@@ -60,6 +60,9 @@ public class QualityMonitor {
   private static final int STEP = 8;
   private static final float CEIL_PITCH = 35f, FLOOR_PITCH = -35f;// deg
   private static final int COVER_FRAMES = 45;                     // ~1.5 s of looking counts as covered
+  // A whole recording with a median predicted blur above this is rejected by the PC's check_capture.py
+  // (scan_3028a4de8fa0: 24.9 px, the lecture hall whose model had a shrunken "mini room", TRAINING R-066/R-067).
+  private static final float MEDIAN_BLUR_FAIL = 15f;
 
   private Pose lastPose = null;
   private float exposureS = 1f / 30f;                             // last reported sensor exposure
@@ -73,10 +76,14 @@ public class QualityMonitor {
   // session stats (only while recording)
   private int nGood, nWarn, nBad, ceilingFrames, floorFrames;
   private final int[] yawFrames = new int[8];
+  private final int[] blurHist = new int[61];                     // predicted blur per frame, 1 px bins (60 = 60+)
+  private int blurN;
 
   public void resetSession() {
     nGood = nWarn = nBad = ceilingFrames = floorFrames = 0;
     Arrays.fill(yawFrames, 0);
+    Arrays.fill(blurHist, 0);
+    blurN = 0;
   }
 
   public Result update(Frame frame, Camera camera, boolean recording) {
@@ -164,6 +171,10 @@ public class QualityMonitor {
 
     if (recording) {
       if (r.level == Level.GOOD) nGood++; else if (r.level == Level.WARN) nWarn++; else nBad++;
+      if (r.blurPx >= 0) {
+        blurHist[Math.min(60, Math.round(r.blurPx))]++;
+        blurN++;
+      }
     }
     return r;
   }
@@ -233,6 +244,32 @@ public class QualityMonitor {
     return String.format(Locale.US, "Ceiling %s  ·  Floor %s  ·  Directions %d/8",
         ceilingFrames >= COVER_FRAMES ? "✓" : "✗", floorFrames >= COVER_FRAMES ? "✓" : "✗",
         directionsCovered());
+  }
+
+  /** Median predicted motion blur of this recording in px (-1 = no tracked frames). */
+  public float medianBlurPx() {
+    if (blurN == 0) return -1;
+    int c = 0;
+    for (int i = 0; i < blurHist.length; i++) {
+      c += blurHist[i];
+      if (2 * c >= blurN) return i;
+    }
+    return blurHist.length - 1;
+  }
+
+  /** A warning for the end-of-recording dialog when the recording is probably not worth processing, else null. */
+  public String verdict() {
+    int total = nGood + nWarn + nBad;
+    float med = medianBlurPx();
+    if (blurN >= 30 && med > MEDIAN_BLUR_FAIL) {
+      return String.format(Locale.US, "Probably too blurry to process: median motion blur %.0f px (the PC rejects "
+          + "more than %.0f px). Record again, walking and turning slower.", med, MEDIAN_BLUR_FAIL);
+    }
+    if (total >= 30 && 2 * nBad > total) {
+      return String.format(Locale.US, "%d%% of the recording was marked bad. Record again if you can: slower, "
+          + "more light, keep some detail in view.", 100 * nBad / total);
+    }
+    return null;
   }
 
   public String summary() {

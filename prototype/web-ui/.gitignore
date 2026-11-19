@@ -47,3 +47,5 @@ next-env.d.ts
 
 # older scan bundles moved out of the Projects tab (not served, not listed), D-075
 /scans_archive/
+# local model copies for the viewer: over CI's 10 MB file limit (D-055), copied from saved_models/ or a run on each machine
+/public/splats/*.spz

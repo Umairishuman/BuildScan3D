@@ -523,6 +523,84 @@ needs a tape height or a look at the model); 18 fixtures vs 15 (door 7, switch 3
 sheet `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/semantic_v10/fixture_check.md`. Open for Umair:
 `saved_models/` or not, fill the sheet. Details: TRAINING.md R-037.
 
+## 2026-11-12 · Tayyab (agent) · `exp/fast-pipeline`
+- Did: profiled training (torch.profiler) and sped up the pipeline. `geo_splatfacto.py`: exact replacement of splatfacto's
+  bilateral-grid total-variation loss (was ~30 ms of every step) and colour affine; with the blur model, the colour grid
+  is applied once to the averaged render. `mono_prior.py`: image reading and saving in threads (identical output).
+  `fast_mvs.py`: `--photometric`, `--iters`, `--suffix`. `sfm_colmap.py`: `--skip_retriangulation`. `run_v8.py`:
+  `--init_args`. `semantic2d.py`: tile pass batched (not yet run). `select_sharp.py`: extracts `imu.npz` itself.
+- Runs: R-062 (training 42.5 → 28.2 min, equal quality), R-063 (dense init 20.1 → 7.5 min, equal quality), R-064 (mapper
+  settings; the default mapper is not deterministic), R-065 (everything incl. the SfM shortcut: 61.6 min but worse,
+  rejected), R-066 (new room `scan_3028a4de8fa0`, a tiered lecture hall: 48.8 min end to end with normal SfM).
+- Tried and dropped: parallel `plane_seg.py` (no gain on Windows: allocation-heavy numpy serialises across processes).
+- Problems: two background runs stopped with exit code 4 (agent shell ended); `--init_args "--photometric"` parsed as an
+  option; missing `imu.npz` on a fresh capture; port 8000 of the upload server reachable from the internet (STATUS 7.1).
+- Shared the raw newRoomAttemptSadness capture with a friend as a zip (first version without `imu.npz`: run
+  `python src/arcore3dgs/imu.py dataset/newRoomAttemptSadness` once, or use this branch's `select_sharp.py`).
+- Later the same day: Tayyab saw a "mini room inside the room" in the lecture-hall model (R-066). Diagnosis: GLOMAP placed
+  ~175 frames (after ARCore lost tracking) at ~0.38× scale; ARCore-guided matching had linked them weakly. Found with a
+  per-frame SfM-vs-Metric3D depth ratio (`src/arcore3dgs/sfm_scale_check.py`; newRoom control: 0 bad frames). Tayyab measured a
+  table in the outer room: real length, so the main scale is right. R-067: incremental mapper, 581/842 frames, correct
+  scale, front/right-side walk split off. R-068 (Tayyab chose: train on the main part): 35.8 min, no mini room
+  (`gs_v10inc/topdown_vs_R-036.jpg`). New open decision OD-11 (scale check + mapper fallback).
+- Next: Tayyab decides on the fast recipe (DECISIONS OD-10) and the SfM fallback (OD-11); semantics speed (batched tiles) check; tape-measure the
+  lecture hall; a second normal-SfM run of newRoom would show how much SfM randomness alone moves quality.
+
+## 2026-11-13 · Tayyab (agent) · `exp/fast-pipeline`
+- Did: committed the speed-up work in parts (training, init, prior, SfM option, semantics batching, scale check, records)
+  and merged `origin/master` (48 commits: numbered scans D-065/D-066, USB upload, app v0.3.5–v0.3.7, R-028–R-031) into
+  `exp/fast-pipeline`. Conflicts: `select_sharp.py` (Umair had fixed the same missing-`imu.npz` bug: master's version
+  kept), `run_v8.py` (both sides added flags: `--init_args` and `--pgsr` / `--save_every` all kept), TRAINING.md and
+  LOG.md (both added entries: master's first). My runs renumbered R-029–R-065 → **R-062–R-068**. New tool
+  `src/arcore3dgs/sfm_scale_check.py` (MAP.md).
+- Runs: none. Decisions: none (OD-10, OD-11 open for Tayyab).
+- Problems: Tayyab is not sure the lecture-hall model (R-068) beats v9e2e; no baseline on that room.
+- Next: OD-10 / OD-11; test the speed-ups with `--pgsr` and on Linux; run the batched semantics once; compare R-068
+  with Umair's R-031 (probably the same hall); clean up experiment folders (ask first). Not pushed.
+
+## 2026-11-14 · Tayyab (agent, overnight session) · `exp/overnight-2026-11-14`
+Asked by Tayyab on 2026-11-13: work overnight on the Must tasks, improve the current output, check the app for capture
+issues, use the existing datasets, try new techniques. Branch from `exp/fast-pipeline` (d936e66); nothing pushed.
+- Did (code, each committed):
+  - `scripts/run_full.sh` runs on Windows Git Bash too (repo venvs), so the 3070 PC runs the same full pipeline.
+  - `layout.py`: ceiling = strongest horizontal candidate above the cameras with < 3% of the model above it (COMPLETION_PLAN
+    4.1, R-030's 1.50 m); newRoom unchanged (2.72 m). R-030 itself is on the Linux PC: rerun its layout there.
+  - `check_capture.py`: FAIL above a 15 px median predicted blur (scan_3028a4de8fa0 had 24.9 px and passed).
+  - App (`android/`): the stop dialog says "Record again?" for such recordings, and the bad-quality buzz repeats every 3 s.
+    Compiled locally with JDK 21; not tested on a phone.
+  - `server/pipeline.py`: portable nerfstudio paths (2.2) and an optional v9 recipe `BUILDSCAN_PIPELINE=v9` running
+    `run_full.sh` with stage progress (2.3); default still v3 (OD-7 open). Tests added.
+  - `tape_check.py` (E2): model vs tape table; newRoom room length −10 cm / −1.49% from the v9 layout.
+  - `sfm_scale_check.py` runs after the priors in `run_v8.py` (warning only, OD-11 open); flags shrunken blocks.
+  - `semantic2d.py --tile_batch` (default 1): the batched tiles of `exp/fast-pipeline` were ~3× slower on the 8 GB GPU.
+    Default output checked identical to the original code on 39 newRoom frames (detections.json equal).
+  - `geo_splatfacto.py`: `--mcmc_cap` (gsplat MCMCStrategy) and `--revised_opacity` options.
+  - Test coverage 45% locally (was 37.4%; gate 35%, D-054).
+- Runs: R-069 roomAttemptSadness2 full v9 + PGSR (3.2: SfM 1,000 / 1,042 frames, 777 ARCore inliers; height 2.78 m;
+  semantics resumed after the sem2d slowdown), R-070 MCMC 620k (rejected), R-041 speed-ups + PGSR (33 vs 46 min,
+  25.02 / 0.8232), R-042 MCMC 1M (rejected), R-043 revised opacity (inconclusive), R-044 lower densify threshold.
+- Decisions: none (agents do not decide). Open for Tayyab: OD-10, OD-11; for the team: OD-7; for Umair: the coverage gate.
+- Problems: the PC has 16 GB RAM with ~9 GB free; a parallel test exhausted it and crashed COLMAP's matcher (R-069
+  error 1): run one GPU job at a time. Disk 28 GB free at the start of the night.
+- Next: see the end-of-night summary in the R-069 / R-044 entries and STATUS; rerun R-030's layout on Linux; tape sheets
+  for the other rooms; test the app warning on a phone; OD-7 / OD-10 / OD-11.
+
+## 2026-11-15 · Tayyab (agent) · `exp/overnight-2026-11-14`
+- Did:
+  - New recording `scan_009_057ed3beb4fc` uploaded over Wi-Fi (server on port 8010, dry_run, stopped after the upload);
+    `check_capture.py`: FAIL (tracking lost 63.7%, median blur 21.7 px).
+  - `select_sharp.py` / `run_v8.py --pose_free`: keep sharp frames without an ARCore pose; `sfm_colmap.py` handles
+    them (temporal + retrieval pairs, left out of the Sim3); `layout.py` no longer crashes when no floor is found.
+  - Web viewer (`prototype/web-ui`): 7 real models in the project list, local-only files (web-ui STATUS §4).
+  - App (`android/`): persistent feature-point map (`FeatureMap.java`), coverage dots drawn every frame, raw depth paired
+    with its own frame's pose, larger dots; debug APK built locally (JDK: Android Studio's JBR), not tested on a phone.
+  - Corrected my own wrong claim in R-045 ("scale ~7× off": the ratio is against arbitrary COLMAP units).
+- Runs: R-045 (v9 + PGSR on scan_009: 87 frames, rejected), R-046 (pose-free + ALIKED: 535 frames, inconclusive).
+- Decisions: none. R-046 re-opens D-022 (ALIKED rejected) with new evidence: Tayyab's call, after a newRoom test.
+- Problems: 16 GB RAM, so PLY→SPZ conversions waited for training to finish; disk ~98% full.
+- Next: install the debug APK and check the dots + `depth/timestamps.csv`; `--pose_free` + ALIKED on newRoom; re-record
+  scan_009's room; OD-7 / OD-10 / OD-11.
+
 ## 2026-11-16 · Umair · feature/step4-layout
 - Did: Umair copied four new recordings onto this PC (scans #5–#8, all Infinix X6833B, 259.8–366.5 s; rooms not
   written down yet, STATUS "Which recording is which"). `prototype/web-ui/.gitignore` now ignores every per-run bundle

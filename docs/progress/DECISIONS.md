@@ -711,6 +711,24 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **Rejected:** a cap exactly at 10 GB (no headroom); counting only the live scans (archive is billed too).
 - **By:** Umair · **Source:** session 2026-11-19 · **Status:** Active
 
+## D-079 · 2026-11-19 · Run IDs that clashed between the two PCs: Tayyab's R-032 – R-040 become R-062 – R-070
+- **Decision:** when `master` (Tayyab's PR #7, runs on the RTX 3070 PC) and `feature/vercel-deploy` / `feature/step4-layout`
+  (Umair's runs on the Ubuntu PC) were merged, both had used R-032 – R-040 for different runs. Tayyab's nine got the next
+  free numbers R-062 – R-070 (R-060 = scan #5, R-061 = the cuDSS test on `exp/colmap-cudss`); every reference in the
+  records and code comments was changed (branch `docs/renumber-3070-runs`), with an old → new table at the top of
+  TRAINING.md's run index. Umair's R-032 – R-040 and Tayyab's R-041 – R-046 keep their numbers. Next free run: R-071.
+- **Why:** Umair's numbers are cited by D-071, D-073, STATUS, LOG and the R-061 plan; Tayyab's by fewer places. One
+  numbering for the whole team; a table keeps old commit messages and file names (`topdown_vs_R-036.jpg`) readable.
+- **Evidence:** merge of `origin/master` into `feature/vercel-deploy` (PR #39), 2026-11-19: TRAINING.md conflicts with two
+  R-032 … R-040 sets; no decision IDs clash.
+- **Rejected:** renumbering Umair's runs (more references); suffixes like R-032T (breaks the R-NNN rule); not merging yet
+  (the deployed site would stay behind).
+- **Limits:** commit messages, GitHub issues and Tayyab's local folders keep the old numbers. Tayyab has to be told
+  (his branches made before 2026-11-19 still say R-032 – R-040). To avoid it again: check `origin/master`'s TRAINING.md
+  for the next free number before starting a run (OD-12).
+- **By:** Umair (option chosen from the agent's three, renumber Tayyab's recommended) · **Source:** session 2026-11-19 ·
+  **Status:** Active
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |
@@ -724,5 +742,7 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | OD-7 | Server / RunPod: wire in the v9/v10 pipeline? | The image's torch / CUDA base is settled by D-047 / D-048 (same versions, same script) |
 | OD-8 | Archive (never delete, D-049) `train_fixed2_backup.py`, `train_v3_backup.py`, the old `run_*.bat`, `scratch/`, `ViewerHUD.tsx`? Into which folder? | Owners must agree |
 | OD-9 | Update README / AGENTS.md content that no longer matches (MEP layers, ~75 min, `structure.py`)? | Facts changed by D-023, D-024, D-033 |
-| OD-12 | How to merge `origin/master` (Tayyab's PR #7, 43 commits) with Umair's Step 4 branches: run IDs R-032 … R-040 and decision ID D-069 were given to different runs / decisions on both sides | Agent's suggestion 2026-11-19: Tayyab's numbers stay (they are on `master`), Umair's clashing entries get the next free numbers with a "was R-0xx on `feature/step4-layout`" note; `layout.py` has two ceiling rules (D-072 and Tayyab's `d052301`) to reconcile |
+| OD-10 | Adopt the fast recipe (normal SfM + `--init_args=--photometric` + the `geo_splatfacto.py` speed-ups) as the default? | Same quality on newRoom's SfM (TRAINING R-062, R-063); ~67 min instead of 96 end to end (estimate from measured stages); 48.8 min on the new room (R-066). The SfM shortcut was rejected (R-065). Recommended: yes. Tayyab to decide |
+| OD-11 | SfM on hard captures: keep GLOMAP (`global_mapper`, ~9 min) and add a scale check that falls back to the incremental `mapper` (25 min on 842 frames, R-067) when part of the model is shrunken; or switch to the incremental mapper always; or keep GLOMAP and only warn? | GLOMAP shrank ~175 frames of the lecture hall into a "mini room" (TRAINING R-066, R-067); incremental mapper gave a correct but partial model (R-068); on newRoom GLOMAP is fine (scale check: 0 shrunken frames). Recommended: check + fallback. Tayyab to decide |
+| ~~OD-12~~ | ~~How to merge `origin/master` (Tayyab's PR #7) with Umair's Step 4 branches: run IDs R-032 … R-040 given to different runs on both sides~~ | IDs settled by **D-079** (2026-11-19, Umair: Tayyab's nine renumbered R-062 – R-070; D-069 did not clash after all: master has no D-069). Still open: `layout.py` now runs Tayyab's ceiling candidates (`d052301`, `--above_frac`) first and the D-072 wall-top rule after them; re-run the four R-057 rooms to check the heights (not done, GPU busy with R-061) |
 | ~~OD-13~~ | ~~Step 4 defaults from 2026-11-19 (issues #8 – #18)~~ | Settled by D-075 (2026-11-19, Umair: all options on) |

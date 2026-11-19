@@ -172,6 +172,8 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `eval_offpath.py` | Off-path split metrics (PSNR, SSIM, sharpness, flatness) + sheets | [eval] current |
 | `fixture_checklist.py` | Fixture check sheet for one room from `semantic.json` (+ layout): every accepted fixture with height, size, wall, a real / wrong class / false column, a missed table and per-class summary; `--rejected` also lists the rule-rejected candidates (plan 4.2, E3) | [eval] current |
 | `make_split.py` | Writes the held-out list for `run_v8.py --split` / `eval_offpath.py`: 6 × 3 s stretches of the walk (D-070) | [eval] current |
+| `sfm_scale_check.py` | Finds parts of an SfM model rebuilt at the wrong scale ("mini room"): per-frame SfM depth / Metric3D depth from `mono_prior` (TRAINING R-066, R-067) | [eval] diagnostic |
+| `tape_check.py` | Model vs tape table for a room (`<dataset>/tape.csv`: layout room length / width / height or values measured in the viewer), mean / max error, NFR6 (≤ 5%) check (COMPLETION_PLAN E2) | [eval] current |
 | `fair_compare.py` | Compares models from different SfM runs (trimmed Sim3 + test-pose refinement) | [eval] current |
 | `compare_models.py` | Photometric + geometric metrics and sheets on held-out frames | [eval] |
 | `compare.py` | Older held-out comparison | [eval] [legacy] |
@@ -230,7 +232,8 @@ from the logo with bottom navigation Capture / Scans / Server (D-064). Code in
 | `BottomNav.java` | The bottom navigation bar (`res/layout/view_bottom_nav.xml`) |
 | `CaptureLogger.java` | Writes poses, tracking, points, depth, `camera.csv`, `anchors.csv`, lens metadata on a background thread |
 | `QualityMonitor.java` | Live IQA: predicted blur, dark / overexposed, low texture, tracking; `quality.csv` |
-| `CoverageMap.java`, `CoverageOverlayView.java` | Live coverage map (red / yellow / green dots) |
+| `CoverageMap.java`, `CoverageOverlayView.java` | Live coverage map (red / yellow / green dots). Since 2026-11-15 the dots are drawn by the GL renderer every frame (`CaptureActivity.drawCoverage`, shader `assets/shaders/coverage_point.frag`); `CoverageOverlayView` only gets cleared |
+| `FeatureMap.java` | Persistent, smoothed map of ARCore feature points for the camera preview (by point id, shown after 3 observations, reset on a > 15 cm jump); replaces drawing ARCore's per-update point set (2026-11-15) |
 | `UpdateChecker.java` | Update check against GitHub Releases at start and on return to the app (at most every 6 h, not while recording) and from the Server tab / menu; the dialog shows the release notes ("What's new"), after an update the installed version's notes are shown once; downloads the APK and opens Android's installer (FileProvider `res/xml/update_paths.xml`), continuing by itself after the "install unknown apps" permission |
 | `common/` | Google's helpers (rendering, camera permission, display rotation, ...), sample code, only the package renamed |
 
@@ -353,7 +356,7 @@ tell what is current. **Nothing is ever deleted: retired files are archived** (`
      train/      run_v8.py geo_splatfacto.py export_nerfstudio.py
      scene/      layout.py semantic2d.py semantic3d.py verify_fixtures.py mesh.py mesh_labels.py
      export/     export_web.py to_spz.mjs
-     eval/       eval_offpath.py make_split.py fair_compare.py compare_models.py fit_diag.py diagnose.py view.py ...
+     eval/       eval_offpath.py make_split.py sfm_scale_check.py tape_check.py fair_compare.py compare_models.py fit_diag.py diagnose.py view.py ...
      legacy/     ba.py mvs.py align_fuse.py pocket_prior.py make_init.py colmap_mvs.py train.py prepare.py ...
    ```
 

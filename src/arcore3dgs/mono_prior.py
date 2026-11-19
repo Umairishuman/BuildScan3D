@@ -14,6 +14,7 @@ frame), valid (bool), plus <work>/mono_prior/stats.json (alignment residuals per
   speed: --model small (ViT-S) and/or --fp16; --out / --limit for benchmarking without touching the priors
 """
 import sys, types, os, json, argparse, time
+from concurrent.futures import ThreadPoolExecutor
 import numpy as np, cv2, torch
 
 mm = types.ModuleType("mmcv"); mu = types.ModuleType("mmcv.utils"); mu.collect_env = lambda: {"OS": "Windows"}
@@ -71,10 +72,8 @@ def normals_from_depth(D):
     return n
 
 
-stats = {}; t0 = time.time()
-for i, f in enumerate(fr[:args.limit] if args.limit else fr):
-    img = cv2.imread(os.path.join(args.work, "images", f["name"] + ".jpg"))
-    m = metric_depth(img)
+def post(i, f, m):
+    """align one frame's Metric3D depth to its SfM points, derive normals, save (runs in a worker thread)"""
     o = cam == i
     c2w = np.array(f["c2w"]) @ G
     z = ((X[pt[o]] - c2w[:3, 3]) @ c2w[:3, :3])[:, 2]
@@ -106,6 +105,22 @@ for i, f in enumerate(fr[:args.limit] if args.limit else fr):
     if i % 100 == 0:
         print(f"{i}/{len(fr)}  aligned median err {100 * np.median(rel):.1f}% (raw Metric3D "
               f"{100 * stats[f['name']]['raw_median_rel_err'] if len(z) else -1:.1f}%), scale {a:.3f}", flush=True)
+
+
+# the GPU only runs the network: the next JPEG is read and the previous frame aligned / saved in threads
+stats = {}; t0 = time.time()
+todo = list(enumerate(fr[:args.limit] if args.limit else fr))
+read = lambda f: cv2.imread(os.path.join(args.work, "images", f["name"] + ".jpg"))
+with ThreadPoolExecutor(1) as reader, ThreadPoolExecutor(3) as writer:
+    nxt = reader.submit(read, todo[0][1]) if todo else None
+    jobs = []
+    for k, (i, f) in enumerate(todo):
+        img = nxt.result()
+        if k + 1 < len(todo):
+            nxt = reader.submit(read, todo[k + 1][1])
+        jobs.append(writer.submit(post, i, f, metric_depth(img)))
+    for j in jobs:
+        j.result()                                                      # re-raise any worker error
 json.dump(stats, open(os.path.join(out_dir, "stats.json"), "w"), indent=1)
 e = np.array([s["median_rel_err"] for s in stats.values()]); r = np.array([s["raw_median_rel_err"] for s in stats.values() if s["raw_median_rel_err"] is not None])
 print(f"done: {len(stats)} frames in {time.time() - t0:.0f} s, aligned median error {100 * np.median(e):.1f}% (raw Metric3D {100 * np.median(r):.1f}%)")

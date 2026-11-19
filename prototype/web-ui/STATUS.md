@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-11-19 (published scans from the R2 bucket listed for the Vercel site, D-076; earlier: wall-gap openings and no-roof / open-outline flags shown; earlier the same day: every scan bundle listed in the Projects tab)
+Last updated: 2026-11-19 (published scans from the R2 bucket listed for the Vercel site, D-076; earlier: wall-gap openings and no-roof / open-outline flags shown; earlier the same day: every scan bundle listed in the Projects tab); merged with `master`: 2026-11-15 (real models in the project list: bedroom, lecture hall, scan 009 + its pose-free model, newRoom v9e2e / v6 / v3; local-only files)
 
 ---
 
@@ -219,6 +219,29 @@ real path.** Currently only `/dashboard` has a href.
 - **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` → 0 errors, 1 known warning
   (ExportModal.tsx:29); `npx next build` compiled + prerendered all routes (run through `micromamba run -n bs-ns`,
   where Node lives on the Ubuntu PC). **Not checked in a browser**, and no size checked against tape yet.
+
+### More real models in the project list ✅ (partly, 2026-11-15, user ask: "add other splats as an option to be viewed too which exist")
+- **Modified** `src/lib/mockData.ts`: `bedroom-scan` (labelled bundle `/scans/roomAttemptSadness2_v9pgsr8/`, R-069,
+  1,445,529 splats, floor 11.9 m², ceiling 2.82 m from its scan.json; fixtures not checked by a person) and
+  `newroom-v9e2e` (single file `/splats/newroom_v9e2e.spz`, copy of `saved_models/2026-10-26_v9_e2e`, R-020).
+  `saved_models/2026-10-24_v8_geofast15` left out on purpose (R-015: do not use, D-028).
+- **New asset** `public/thumbnails/room2_v9.jpg`: a real keyframe of the capture (`frame_01388`, rotated upright, 1200x675).
+- **Modified** `.gitignore`: `/public/splats/*.spz` and `/public/scans/roomAttemptSadness2_v9pgsr8/` (files over the
+  CI 10 MB limit, D-055); they live only on the machine that made / copied them, like the old PLY.
+- **Added after R-045's training (RAM free again):** `lecture-hall-scan` (`/splats/hall_v10inc.spz`, R-068,
+  scan_3028a4de8fa0, 637,318 splats), `newroom-v6` (R-012) and `newroom-v3` (R-009) as "older version" cards, and
+  `scan-009` (`/splats/scan009_v9pgsr.spz`, R-045, a partial model of a capture that failed check_capture, status
+  draft). PLYs converted with `src/arcore3dgs/to_spz.mjs` (1.5–2.8 s each). New thumbnails `hall_v10inc.jpg`,
+  `scan009_v9pgsr.jpg`: real keyframes, rotated upright. `room2_v9.jpg` re-made upright from `frame_01388`.
+- **Added later the same day:** `scan-009-posefree` (`/splats/scan009_v9pf.spz`, R-046, 534,096 splats, 10.1 MB,
+  status draft, start pose [2.1, 0.19, 0.04] → [2.89, 0.37, 0.63]); `scan-009` accuracy text corrected to "Scale
+  unreliable (23 ARCore inliers; ARCore and Metric3D scales ~30% apart)" (the earlier "~7× off" was wrong).
+  Verification: `npx tsc --noEmit` silent; eslint and `next build` not re-run for this entry.
+- **Not done:** roomAttemptSadness2 v3 (`saved_models/2026-10-11_sfm_v3/roomAttemptSadness2`, 359 MB PLY) not added.
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` → 0 errors, 1 known warning
+  (ExportModal.tsx:29); `npx next build` compiled all routes; `next start` smoke test: `/projects` and all 7 real-scan
+  `/viewer/<id>` routes 200, the .spz / scan.json / thumbnail assets 200. Not looked at in a browser (start poses of
+  the hall and the older models not checked).
 
 ### Unused single-file splat removed from the repo ✅ (2026-11-06, user decision D-055)
 - **Why:** CI's repo-hygiene check rejects files over 10 MB; `public/splats/newroom_v6.spz` (12.5 MB) was the only one,
@@ -830,6 +853,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 - **2026-11-19** — Wall-gap openings (`doorway`, `window opening`) and no-roof / open-outline flags shown in cards and Scan Layers.
 - **2026-11-19** — Projects tab lists every processed scan bundle in `public/scans/` (`/api/scans`, `/viewer/run-<folder>`).
 - **2026-11-18** — Scan #8 (R-039) added as its own project `scan-008`; the plan image is its thumbnail.
+- **2026-11-15** — Real models added to the project list: `bedroom-scan` (labelled), `lecture-hall-scan`, `scan-009` (partial), `scan-009-posefree` (R-046), `newroom-v9e2e`, `newroom-v6`, `newroom-v3`; local model files git-ignored.
 - **2026-11-12** — Fixture size card in Scan Layers (width, height, area, heights above floor, wall) and clickable fixture markers (FR10).
 - **2026-11-06** — `newroom-scan` no longer points at the unused `/splats/newroom_v6.spz`; the file is out of git (CI 10 MB limit).
 - **2026-11-03** — `public/scans/newroom/` regenerated with v10 labels (15 fixtures: 6 doors, tube light class); `FIXTURE_COLORS` gains "tube light".
