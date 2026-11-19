@@ -45,7 +45,8 @@ for g, members in GROUPS.items():
     print(f"{g}: {int(sel.sum())} splats")
 if args.glb:
     shutil.copy(args.glb, os.path.join(args.out, "mesh.glb"))
-keep = ("id", "cls", "position", "height_above_floor", "bottom", "top", "wall", "along_wall", "width", "height", "views")
+keep = ("id", "cls", "position", "height_above_floor", "bottom", "top", "wall", "along_wall", "width", "height", "views",
+        "source")                                             # source: "wall gap (layout)" for #9 openings
 scan = dict(floor_area=sem["floor_area"], ceiling_height=sem["ceiling_height"],
             walls=[{k: w[k] for k in ("id", "length", "height", "gross_area", "openings_area", "net_area", "openings", "fixtures")}
                    for w in sem["walls"]],
