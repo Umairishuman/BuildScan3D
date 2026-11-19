@@ -5,7 +5,8 @@
  * A bundle is a folder public/scans/<capture>_<tag>/ with scan.json (written by export_web.py). The card's
  * numbers come from scan.json; the scan number from dataset/.scan_numbers.tsv (D-065); the run ID and date
  * from the matching TRAINING.md heading ("... (tag `<tag>`)") when there is one. Bundles are gitignored
- * (D-061), so this lists what exists on the machine that serves the web UI.
+ * (D-061), so this lists what exists on the machine that serves the web UI. Published copies in the R2 bucket
+ * (D-076) are listed by remoteBundles.ts with the same card (bundleToProject).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -140,22 +141,31 @@ function cameraStart(scan: ScanInfo): Project["splatStart"] {
   return { position: eye, target };
 }
 
-function bundleToProject(ref: BundleRef, runs: Map<string, RunInfo>): Project | null {
-  const file = path.join(SCANS_DIR, ref.folder, "scan.json");
-  let scan: ScanInfo;
-  try {
-    scan = JSON.parse(fs.readFileSync(file, "utf8")) as ScanInfo;
-  } catch {
-    return null; // half-written or broken bundle: skip it rather than break the page
-  }
-  const run = runs.get(ref.tag);
-  const processed = run ? new Date(`${run.date}T12:00:00`) : fs.statSync(file).mtime;
+/** Where a bundle lives and what its card says about its origin (local disk or a published copy, D-076). */
+export interface BundleSource {
+  id: string;
+  /** Folder URL of the bundle, ending in "/": "/scans/<folder>/" locally, absolute for a published copy. */
+  scanUrl: string;
+  thumbnail: string | null;
+  processed: Date;
+  runId?: string;
+  /** Who made the scan, e.g. "Umair" (published copies only; scan numbers are per person). */
+  ownerName?: string;
+  /** Room name, if the scan's owner gave one. */
+  roomName?: string;
+  /** One sentence on where the bundle comes from, shown in the description. */
+  origin: string;
+}
+
+/** The project card of one bundle; shared by local bundles and published ones (remoteBundles.ts). */
+export function bundleToProject(ref: BundleRef, scan: ScanInfo, src: BundleSource): Project {
   const splats = (scan.groups ?? []).reduce((s, g) => s + (g.splats ?? 0), 0);
   const nFix = (scan.fixtures ?? []).length;
   const nWalls = (scan.walls ?? []).length;
   const area = scan.floor_area != null ? `≈ ${Math.round(scan.floor_area)} m²` : "area not measured";
-  const title = ref.scanNumber != null ? `Scan #${ref.scanNumber}` : ref.capture;
-  const runLabel = [run?.runId, ref.tag ? `tag ${ref.tag}` : ""].filter(Boolean).join(" · ");
+  const scanName = ref.scanNumber != null ? `Scan #${ref.scanNumber}` : ref.capture;
+  const title = src.ownerName ? `${src.ownerName} · ${scanName}` : scanName;
+  const runLabel = [src.runId, ref.tag ? `tag ${ref.tag}` : ""].filter(Boolean).join(" · ");
 
   const facts = [
     `${nWalls} wall${nWalls === 1 ? "" : "s"}`,
@@ -166,20 +176,18 @@ function bundleToProject(ref: BundleRef, runs: Map<string, RunInfo>): Project | 
   ].filter(Boolean);
 
   return {
-    id: `${BUNDLE_ID_PREFIX}${ref.folder}`,
-    name: `${title} · ${ref.tag || "run"}`,
+    id: src.id,
+    name: `${title} · ${src.roomName || ref.tag || "run"}`,
     floor: runLabel || "Processed run",
     block: ref.capture,
     area,
-    location: [title, run?.runId ?? ref.tag, area].filter(Boolean).join(" • "),
-    dateCaptured: formatDate(processed),
+    location: [title, src.runId ?? ref.tag, area].filter(Boolean).join(" • "),
+    dateCaptured: formatDate(src.processed),
     status: "ready",
     statusLabel:
       `3DGS Ready · ${(splats / 1e6).toFixed(2)}M splats${nFix ? " · labelled" : ""}` +
       (scan.open_top ? " · no roof" : scan.room_closed === false ? " · open outline" : ""),
-    thumbnail: planImagePath(ref)
-      ? `/api/scans/${encodeURIComponent(ref.folder)}/plan`
-      : "/images/logo-new.png", // no plan.png on this machine: the official logo, not a made-up image
+    thumbnail: src.thumbnail ?? "/images/logo-new.png", // no plan.png: the official logo, not a made-up image
     scansCount: 1,
     gaussianCount: splats.toLocaleString("en-US"),
     accuracy:
@@ -189,20 +197,45 @@ function bundleToProject(ref: BundleRef, runs: Map<string, RunInfo>): Project | 
           ? "No roof: wall height only (no tape check)"
           : "Not checked against tape",
     description:
-      `Processed bundle public/scans/${ref.folder}/ (listed automatically). ` +
+      `${src.origin} ` +
       `${facts.join(", ")}. ` +
       (nFix ? `Fixtures: ${fixtureSummary(scan)}.` : "No fixtures labelled.") +
       (scan.warnings?.length ? ` Layout warnings: ${scan.warnings.join("; ")}.` : ""),
-    scanUrl: `/scans/${ref.folder}/`,
+    scanUrl: src.scanUrl,
     splatStart: cameraStart(scan),
   };
+}
+
+function localBundleToProject(ref: BundleRef, runs: Map<string, RunInfo>): Project | null {
+  const file = path.join(SCANS_DIR, ref.folder, "scan.json");
+  let scan: ScanInfo;
+  try {
+    scan = JSON.parse(fs.readFileSync(file, "utf8")) as ScanInfo;
+  } catch {
+    return null; // half-written or broken bundle: skip it rather than break the page
+  }
+  const run = runs.get(ref.tag);
+  return bundleToProject(ref, scan, {
+    id: `${BUNDLE_ID_PREFIX}${ref.folder}`,
+    scanUrl: `/scans/${ref.folder}/`,
+    thumbnail: planImagePath(ref) ? `/api/scans/${encodeURIComponent(ref.folder)}/plan` : null,
+    processed: run ? new Date(`${run.date}T12:00:00`) : fs.statSync(file).mtime,
+    runId: run?.runId,
+    origin: `Processed bundle public/scans/${ref.folder}/ (listed automatically).`,
+  });
+}
+
+/** Newest first, then by id. */
+export function sortProjects(list: Project[]): Project[] {
+  return list.sort((a, b) => Date.parse(b.dateCaptured) - Date.parse(a.dateCaptured) || b.id.localeCompare(a.id));
 }
 
 /** Every bundle in public/scans/ as a Project, newest first. */
 export function listBundleProjects(): Project[] {
   const runs = readRuns();
-  return listBundleRefs()
-    .map((ref) => bundleToProject(ref, runs))
-    .filter((p): p is Project => p !== null)
-    .sort((a, b) => Date.parse(b.dateCaptured) - Date.parse(a.dateCaptured) || b.id.localeCompare(a.id));
+  return sortProjects(
+    listBundleRefs()
+      .map((ref) => localBundleToProject(ref, runs))
+      .filter((p): p is Project => p !== null),
+  );
 }

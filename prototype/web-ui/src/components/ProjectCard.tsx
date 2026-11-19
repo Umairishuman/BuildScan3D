@@ -28,6 +28,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           <Image
             src={project.thumbnail}
             alt={project.name}
+            unoptimized={/^https?:/.test(project.thumbnail)} // published plan.png in R2 (D-076): no remote image config
             fill
             className="object-cover group-hover/img:scale-105 transition-transform duration-300"
           />

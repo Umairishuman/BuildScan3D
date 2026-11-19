@@ -43,7 +43,7 @@ interface ViewerPageProps {
 
 type PanelKey = "layers" | "measurements" | null;
 
-/** Ids of scan bundles listed automatically from public/scans/ (src/lib/scanBundles.ts BUNDLE_ID_PREFIX). */
+/** Ids of scan bundles listed automatically from public/scans/ or the R2 bucket (src/lib/scanBundles.ts BUNDLE_ID_PREFIX). */
 const BUNDLE_ID_PREFIX = "run-";
 
 export default function ViewerPage({ params }: ViewerPageProps) {
