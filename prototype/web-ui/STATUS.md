@@ -133,14 +133,14 @@ real path.** Currently only `/dashboard` has a href.
 ## 4. Completed
 
 ### More real models in the project list ✅ (partly, 2026-11-15, user ask: "add other splats as an option to be viewed too which exist")
-- **Modified** `src/lib/mockData.ts`: `bedroom-scan` (labelled bundle `/scans/roomAttemptSadness2_v9pgsr8/`, R-039,
+- **Modified** `src/lib/mockData.ts`: `bedroom-scan` (labelled bundle `/scans/roomAttemptSadness2_v9pgsr8/`, R-069,
   1,445,529 splats, floor 11.9 m², ceiling 2.82 m from its scan.json; fixtures not checked by a person) and
   `newroom-v9e2e` (single file `/splats/newroom_v9e2e.spz`, copy of `saved_models/2026-10-26_v9_e2e`, R-020).
   `saved_models/2026-10-24_v8_geofast15` left out on purpose (R-015: do not use, D-028).
 - **New asset** `public/thumbnails/room2_v9.jpg`: a real keyframe of the capture (`frame_01388`, rotated upright, 1200x675).
 - **Modified** `.gitignore`: `/public/splats/*.spz` and `/public/scans/roomAttemptSadness2_v9pgsr8/` (files over the
   CI 10 MB limit, D-055); they live only on the machine that made / copied them, like the old PLY.
-- **Added after R-045's training (RAM free again):** `lecture-hall-scan` (`/splats/hall_v10inc.spz`, R-038,
+- **Added after R-045's training (RAM free again):** `lecture-hall-scan` (`/splats/hall_v10inc.spz`, R-068,
   scan_3028a4de8fa0, 637,318 splats), `newroom-v6` (R-012) and `newroom-v3` (R-009) as "older version" cards, and
   `scan-009` (`/splats/scan009_v9pgsr.spz`, R-045, a partial model of a capture that failed check_capture, status
   draft). PLYs converted with `src/arcore3dgs/to_spz.mjs` (1.5–2.8 s each). New thumbnails `hall_v10inc.jpg`,

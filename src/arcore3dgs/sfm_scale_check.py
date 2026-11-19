@@ -3,7 +3,7 @@
 For every frame: median of (SfM point depth / raw Metric3D depth) at the frame's observed SfM points, using the
 Metric3D maps that mono_prior.py saved (<work>/mono_prior/*.npz + stats.json; raw = (depth - shift) / scale).
 A consistent model has a roughly constant ratio; a block of frames far below the median is a shrunken sub-model.
-Found on scan_3028a4de8fa0 (lecture hall, TRAINING R-036/R-037): GLOMAP put 175 frames at ~0.38x; newRoom: 0 frames.
+Found on scan_3028a4de8fa0 (lecture hall, TRAINING R-066/R-067): GLOMAP put 175 frames at ~0.38x; newRoom: 0 frames.
 
   python src/arcore3dgs/sfm_scale_check.py <COLMAP TXT model dir> <work>/mono_prior [--width 1920]
 (binary model -> TXT: colmap model_converter --input_path sparse/0 --output_path <dir> --output_type TXT)
@@ -45,13 +45,13 @@ for i in range(0, len(k), 40):
 print(f"frames at < 0.5x of the median: {(a/g < 0.5).sum()}, > 2x: {(a/g > 2).sum()}")
 # a shrunken (or blown-up) part shows as a run of consecutive frames, not as single outliers
 # Only shrunken blocks are flagged: a block > 2x was a close-up of a curtain filling the view in roomAttemptSadness2
-# (Metric3D reads such close-ups too near; SfM agreed with ARCore there to 8 cm, TRAINING R-039).
+# (Metric3D reads such close-ups too near; SfM agreed with ARCore there to 8 cm, TRAINING R-069).
 bm = [(k[i], float(np.median(a[i:i + 40] / g))) for i in range(0, len(k), 40) if len(a[i:i + 40]) >= 10]
 blocks = [n for n, m in bm if m < 0.5]
 high = [n for n, m in bm if m > 2]
 verdict = "ok" if not blocks else "PART OF THE MODEL SHRUNKEN"
 print(f"verdict: {verdict}" + (f" (blocks of 40 frames starting at {', '.join(blocks)}; try --mapper mapper, "
-                                "TRAINING R-037)" if blocks else "")
+                                "TRAINING R-067)" if blocks else "")
       + (f"; blocks > 2x (often Metric3D on close-ups, not SfM): {', '.join(high)}" if high else ""))
 if args.json:
     json.dump(dict(frames=len(k), ratio_median=float(g), n_below_half=int((a / g < 0.5).sum()),

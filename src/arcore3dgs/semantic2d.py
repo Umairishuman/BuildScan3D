@@ -38,7 +38,7 @@ ap.add_argument("--out", default="semantic2d", help="output folder inside --work
 ap.add_argument("--tiles", type=int, default=0, help="> 0: tile size (px) of the second pass for small objects, e.g. 640")
 ap.add_argument("--tile_batch", type=int, default=1,
                 help="tiles per detector call; 1 = one at a time. Batching all tiles of a frame filled the 8 GB RTX 3070, "
-                     "Windows spilled GPU memory to RAM and sem2d ran ~3x slower (TRAINING R-039)")
+                     "Windows spilled GPU memory to RAM and sem2d ran ~3x slower (TRAINING R-069)")
 ap.add_argument("--debug", type=int, default=0, help="write N overlay images to semantic2d/_debug")
 args = ap.parse_args()
 classes = args.classes.split(",")

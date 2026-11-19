@@ -47,7 +47,7 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [-0.98, -0.06, -0.2], target: [-1.98, -0.36, -0.2] },
   },
   {
-    // R-039 (2026-11-14). Bundle is local only (git-ignored, other.spz > CI's 10 MB limit): rebuild with run_full.sh.
+    // R-069 (2026-11-14). Bundle is local only (git-ignored, other.spz > CI's 10 MB limit): rebuild with run_full.sh.
     id: "bedroom-scan",
     name: "Bedroom Scan (Real Capture)",
     floor: "Ground Floor",
@@ -88,7 +88,7 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [-0.98, -0.06, -0.2], target: [-1.98, -0.36, -0.2] },
   },
   {
-    // R-038 (2026-11-12), dataset/scan_3028a4de8fa0 gs_v10inc. File is local only (git-ignored, > 10 MB).
+    // R-068 (2026-11-12), dataset/scan_3028a4de8fa0 gs_v10inc. File is local only (git-ignored, > 10 MB).
     id: "lecture-hall-scan",
     name: "Lecture Hall Scan (Real Capture)",
     floor: "—",
@@ -104,7 +104,7 @@ export const MOCK_PROJECTS: Project[] = [
     accuracy: "Scaled by ARCore (100 frames, median 6.6 cm); table length not re-measured",
     captureDevice: "realme RMX5111 (ARCore)",
     description:
-      "Lecture hall (scan_3028a4de8fa0) with the fast recipe on the incremental-mapper SfM (R-038): 572 of 842 frames, no shrunken 'mini room'. The right-hand part of the walk did not register, so that side is built only from the opposite side. Unlabelled.",
+      "Lecture hall (scan_3028a4de8fa0) with the fast recipe on the incremental-mapper SfM (R-068): 572 of 842 frames, no shrunken 'mini room'. The right-hand part of the walk did not register, so that side is built only from the opposite side. Unlabelled.",
     splatUrl: "/splats/hall_v10inc.spz",
   },
   {

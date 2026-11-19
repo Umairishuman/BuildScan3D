@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-15 by Tayyab (agent, on `exp/overnight-2026-11-14`): scan_009 runs R-045 / R-046, `--pose_free` keyframes, layout no-floor fix, app feature-point map + coverage dots per frame + depth/pose pairing, 7 real models in the web viewer. Before that: 2026-11-14 by Tayyab (agent, overnight session on `exp/overnight-2026-11-14`): roomAttemptSadness2 v9 run (R-039), newRoom technique tests (R-040 – R-043), layout ceiling fix, server v9 option, tape script, capture checks in the app and on the PC, coverage 45%. Before that: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-032 – R-038 (renumbered from R-029 – R-035 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
+Last updated: 2026-11-15 by Tayyab (agent, on `exp/overnight-2026-11-14`): scan_009 runs R-045 / R-046, `--pose_free` keyframes, layout no-floor fix, app feature-point map + coverage dots per frame + depth/pose pairing, 7 real models in the web viewer. Before that: 2026-11-14 by Tayyab (agent, overnight session on `exp/overnight-2026-11-14`): roomAttemptSadness2 v9 run (R-069), newRoom technique tests (R-070 – R-043), layout ceiling fix, server v9 option, tape script, capture checks in the app and on the PC, coverage 45%. Before that: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-062 – R-068 (renumbered from R-029 – R-065 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -362,27 +362,27 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 - [ ] **[new] Optimise the processing pipeline** end to end; measure each change with `run_v8.py`'s stage times and log it.
   - **2026-11-12 (Tayyab's session, branch `exp/fast-pipeline`):** training 42.5 → 28.2 min and dense init 20.1 → 7.5 min
-    at equal quality on newRoom (TRAINING R-032, R-033); Metric3D 8.1 → 6.8 min (identical output). Normal SfM + these:
-    ~67 min end to end on newRoom (estimate from the measured stages), 48.8 min on the new lecture hall (R-036). The SfM
-    shortcut `--skip_retriangulation` lost quality (R-035, rejected). Adoption: DECISIONS OD-10.
-  - **[new 2026-11-12] SfM can shrink part of a room (GLOMAP).** R-036's lecture-hall model had a "mini room": ~175
+    at equal quality on newRoom (TRAINING R-062, R-063); Metric3D 8.1 → 6.8 min (identical output). Normal SfM + these:
+    ~67 min end to end on newRoom (estimate from the measured stages), 48.8 min on the new lecture hall (R-066). The SfM
+    shortcut `--skip_retriangulation` lost quality (R-065, rejected). Adoption: DECISIONS OD-10.
+  - **[new 2026-11-12] SfM can shrink part of a room (GLOMAP).** R-066's lecture-hall model had a "mini room": ~175
     frames (ARCore lost after frame ~2200, so `--pairs arcore` matched the wrong neighbours) were placed by GLOMAP at
-    ~0.38× scale. The incremental mapper (`--mapper mapper`, R-037) keeps the main part correct (581/842 frames) and
-    splits off the rest; R-038 trained on it (no mini room, right-side walk missing). To do: a per-frame scale check
+    ~0.38× scale. The incremental mapper (`--mapper mapper`, R-067) keeps the main part correct (581/842 frames) and
+    splits off the rest; R-068 trained on it (no mini room, right-side walk missing). To do: a per-frame scale check
     after SfM (SfM depth / Metric3D depth, a block of frames < 0.5× = shrunken part) that warns or falls back to the
     incremental mapper; and do not trust ARCore neighbours after tracking loss. Adoption: DECISIONS OD-11.
 - [ ] **[new 2026-11-13] Speed-ups not tested with `--pgsr`** (the best model's recipe, R-023, now a `run_v8.py` flag
       from master) **nor on Linux**: one run of each before adopting OD-10.
   - **2026-11-14:** tested on newRoom (R-041): training 33.0 min vs R-021's 46 min, PSNR 25.02 / SSIM 0.8232 /
     sharpness 0.87 vs 25.09 / 0.8254 / 0.88 (one run each); off-path flatness of R-021 still to measure. Also used in
-    R-039 (roomAttemptSadness2, 36.2 min). Linux still not tested.
+    R-069 (roomAttemptSadness2, 36.2 min). Linux still not tested.
 - [ ] **[new 2026-11-13] Batched Grounding DINO tiles in `semantic2d.py`** are committed but have never run: compare the
       2D labels with the unbatched output on newRoom and time it (the 38-min semantics stage is the next big cost).
-  - **2026-11-14:** first real run (R-039, roomAttemptSadness2) was ~3× slower (~12 s per frame): batching all tiles
+  - **2026-11-14:** first real run (R-069, roomAttemptSadness2) was ~3× slower (~12 s per frame): batching all tiles
     filled the 8 GB GPU and Windows spilled GPU memory to RAM. Now `--tile_batch` (default 1 = the old per-tile calls).
     Batching only helps on a larger GPU; not measured there.
-- [ ] **[new 2026-11-13] Fast recipe vs v9e2e on the lecture hall is not known** (R-036/R-038 have no baseline; Tayyab
-      is not sure R-038 is better than v9e2e). Umair's R-031 (scan #3, Ubuntu PC, old recipe + PGSR) looks like the
+- [ ] **[new 2026-11-13] Fast recipe vs v9e2e on the lecture hall is not known** (R-066/R-068 have no baseline; Tayyab
+      is not sure R-068 is better than v9e2e). Umair's R-031 (scan #3, Ubuntu PC, old recipe + PGSR) looks like the
       same hall with a steadier capture (6.7 px vs 25 px blur): compare the two models side by side once R-031 has a result
       (not checked that it is the same room).
 - [ ] **[new 2026-11-13] Clean up the speed-up experiment folders on the 3070 PC** (`work_v9e2e_sfm/_mapper_exp`,
@@ -407,7 +407,7 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       (R-045); `select_sharp.py --pose_free` keeps frames without a pose (894 vs 238), and `--feature aliked` joined 761 of
       them in one SfM component (SIFT: largest 234 / 409). After the jump filter 535 frames trained (R-046, inconclusive):
       misplaced cameras remain, scale unreliable (26 ARCore inliers). **Re-opens D-022 (ALIKED rejected 2026-10-26) with
-      new evidence on another capture: Tayyab's call.** To do: run `--pose_free` + ALIKED on newRoom against R-032 before
+      new evidence on another capture: Tayyab's call.** To do: run `--pose_free` + ALIKED on newRoom against R-062 before
       any default change; a stricter mis-registration filter (only jumps > 30 cm are dropped now).
 - [ ] **[new 2026-11-15] Scale fallback when ARCore poses are poor:** Metric3D ÷ ARCore scale measured 0.83 (newRoom),
       0.93 (room2), 0.52 (lecture hall), so Metric3D is not a usable fallback; ARCore depth on scan_009: 17 maps, mutually
@@ -415,8 +415,8 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 - [ ] **[new 2026-11-15] Re-record scan_009's room** (bedroom with cabinets / AC / curtains): `check_capture.py` FAIL on
       tracking lost 63.7% and median blur 21.7 px; the walk looked mostly at upper walls, the floor is barely in view.
 
-- [ ] **[new 2026-11-14] Techniques tried on newRoom** (one run each, off-path 79 frames, baseline R-032 25.14 / 0.8251):
-      MCMC densification 620k / 1M (R-040, R-042: 24.65 / 24.74, visibly softer, **rejected**), revised opacity (R-043:
+- [ ] **[new 2026-11-14] Techniques tried on newRoom** (one run each, off-path 79 frames, baseline R-062 25.14 / 0.8251):
+      MCMC densification 620k / 1M (R-070, R-042: 24.65 / 24.74, visibly softer, **rejected**), revised opacity (R-043:
       25.02, −10% size, inconclusive), lower densify threshold 0.0004 (R-044: 25.07, sharper score, +40% size,
       inconclusive). None beats the current recipe; the off-path softness is more likely the capture (motion blur,
       coverage) than densification. Untried: residual camera-pose refinement and exposure correction (LighthouseGS,
@@ -426,7 +426,7 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       check which plane the layout took as the ceiling and whether the scale is off; measure one length with a tape.
   - **2026-11-14:** `layout.py` fix (`exp/overnight-2026-11-14`): the ceiling is now the strongest horizontal cluster
     above the cameras with < 3% of the opaque splats above it, not just the strongest one (an AC unit or cabinet
-    underside can win). newRoom unchanged (2.72 m); roomAttemptSadness2 2.78 m (R-039). **To do (Umair, Linux PC):**
+    underside can win). newRoom unchanged (2.72 m); roomAttemptSadness2 2.78 m (R-069). **To do (Umair, Linux PC):**
     rerun `layout` on R-030 (`buildscan`, `--from layout`) and check the height against the tape.
 
 - [ ] **Second room** (roomAttemptSadness2): full v9 pipeline + semantics (~2 h GPU), then a room check by the user. The

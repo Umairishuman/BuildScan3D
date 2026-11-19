@@ -30,7 +30,7 @@ ap.add_argument("--init", default="fmvs", choices=["mono", "fmvs", "fmvs_mono"],
                 help="dense init: mono depth (12 s), fast PatchMatch on every 7th frame (fast_mvs.py), or both")
 ap.add_argument("--planar", type=float, default=0.0, help="> 0: planar prior weight (plane_seg.py runs on the CPU during init)")
 ap.add_argument("--blur", type=float, default=0.0, help="> 0: motion-blur model with this exposure (s)")
-ap.add_argument("--init_args", default="", help='extra fast_mvs.py args, e.g. "--photometric" (7.5 vs 20 min, TRAINING R-033)')
+ap.add_argument("--init_args", default="", help='extra fast_mvs.py args, e.g. "--photometric" (7.5 vs 20 min, TRAINING R-063)')
 ap.add_argument("--pgsr", action="store_true", help="PGSR-lite in the same training (the best model's recipe, R-023)")
 ap.add_argument("--save_every", type=int, default=2500, help="checkpoint interval for --resume after a crash")
 args = ap.parse_args()
@@ -85,7 +85,7 @@ if args.split and STAGES.index(args.from_stage) <= STAGES.index("export"):
     print(f"   split: {len(tj['train_filenames'])} train / {len(tj['test_filenames'])} held out")
 mono = [py, os.path.join(HERE, "mono_prior.py"), "--work", S, "--model", args.mono_model] + ([] if args.no_fp16 else ["--fp16"])
 run("prior", mono)
-# warn when SfM placed part of the room at a different scale ("mini room", TRAINING R-036 / R-037); warning only
+# warn when SfM placed part of the room at a different scale ("mini room", TRAINING R-066 / R-067); warning only
 if STAGES.index(args.from_stage) <= STAGES.index("prior") and os.path.exists(os.path.join(S, "sparse", "0", "points3D.txt")):
     subprocess.run([py, os.path.join(HERE, "sfm_scale_check.py"), os.path.join(S, "sparse", "0"),
                     os.path.join(S, "mono_prior"), "--json", os.path.join(OUT, "sfm_scale_check.json")], cwd=ROOT, env=env)

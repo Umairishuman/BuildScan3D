@@ -329,19 +329,19 @@ Template:
   is applied once to the averaged render. `mono_prior.py`: image reading and saving in threads (identical output).
   `fast_mvs.py`: `--photometric`, `--iters`, `--suffix`. `sfm_colmap.py`: `--skip_retriangulation`. `run_v8.py`:
   `--init_args`. `semantic2d.py`: tile pass batched (not yet run). `select_sharp.py`: extracts `imu.npz` itself.
-- Runs: R-032 (training 42.5 → 28.2 min, equal quality), R-033 (dense init 20.1 → 7.5 min, equal quality), R-034 (mapper
-  settings; the default mapper is not deterministic), R-035 (everything incl. the SfM shortcut: 61.6 min but worse,
-  rejected), R-036 (new room `scan_3028a4de8fa0`, a tiered lecture hall: 48.8 min end to end with normal SfM).
+- Runs: R-062 (training 42.5 → 28.2 min, equal quality), R-063 (dense init 20.1 → 7.5 min, equal quality), R-064 (mapper
+  settings; the default mapper is not deterministic), R-065 (everything incl. the SfM shortcut: 61.6 min but worse,
+  rejected), R-066 (new room `scan_3028a4de8fa0`, a tiered lecture hall: 48.8 min end to end with normal SfM).
 - Tried and dropped: parallel `plane_seg.py` (no gain on Windows: allocation-heavy numpy serialises across processes).
 - Problems: two background runs stopped with exit code 4 (agent shell ended); `--init_args "--photometric"` parsed as an
   option; missing `imu.npz` on a fresh capture; port 8000 of the upload server reachable from the internet (STATUS 7.1).
 - Shared the raw newRoomAttemptSadness capture with a friend as a zip (first version without `imu.npz`: run
   `python src/arcore3dgs/imu.py dataset/newRoomAttemptSadness` once, or use this branch's `select_sharp.py`).
-- Later the same day: Tayyab saw a "mini room inside the room" in the lecture-hall model (R-036). Diagnosis: GLOMAP placed
+- Later the same day: Tayyab saw a "mini room inside the room" in the lecture-hall model (R-066). Diagnosis: GLOMAP placed
   ~175 frames (after ARCore lost tracking) at ~0.38× scale; ARCore-guided matching had linked them weakly. Found with a
   per-frame SfM-vs-Metric3D depth ratio (`src/arcore3dgs/sfm_scale_check.py`; newRoom control: 0 bad frames). Tayyab measured a
-  table in the outer room: real length, so the main scale is right. R-037: incremental mapper, 581/842 frames, correct
-  scale, front/right-side walk split off. R-038 (Tayyab chose: train on the main part): 35.8 min, no mini room
+  table in the outer room: real length, so the main scale is right. R-067: incremental mapper, 581/842 frames, correct
+  scale, front/right-side walk split off. R-068 (Tayyab chose: train on the main part): 35.8 min, no mini room
   (`gs_v10inc/topdown_vs_R-036.jpg`). New open decision OD-11 (scale check + mapper fallback).
 - Next: Tayyab decides on the fast recipe (DECISIONS OD-10) and the SfM fallback (OD-11); semantics speed (batched tiles) check; tape-measure the
   lecture hall; a second normal-SfM run of newRoom would show how much SfM randomness alone moves quality.
@@ -351,11 +351,11 @@ Template:
   and merged `origin/master` (48 commits: numbered scans D-065/D-066, USB upload, app v0.3.5–v0.3.7, R-028–R-031) into
   `exp/fast-pipeline`. Conflicts: `select_sharp.py` (Umair had fixed the same missing-`imu.npz` bug: master's version
   kept), `run_v8.py` (both sides added flags: `--init_args` and `--pgsr` / `--save_every` all kept), TRAINING.md and
-  LOG.md (both added entries: master's first). My runs renumbered R-029–R-035 → **R-032–R-038**. New tool
+  LOG.md (both added entries: master's first). My runs renumbered R-029–R-065 → **R-062–R-068**. New tool
   `src/arcore3dgs/sfm_scale_check.py` (MAP.md).
 - Runs: none. Decisions: none (OD-10, OD-11 open for Tayyab).
-- Problems: Tayyab is not sure the lecture-hall model (R-038) beats v9e2e; no baseline on that room.
-- Next: OD-10 / OD-11; test the speed-ups with `--pgsr` and on Linux; run the batched semantics once; compare R-038
+- Problems: Tayyab is not sure the lecture-hall model (R-068) beats v9e2e; no baseline on that room.
+- Next: OD-10 / OD-11; test the speed-ups with `--pgsr` and on Linux; run the batched semantics once; compare R-068
   with Umair's R-031 (probably the same hall); clean up experiment folders (ask first). Not pushed.
 
 ## 2026-11-14 · Tayyab (agent, overnight session) · `exp/overnight-2026-11-14`
@@ -376,13 +376,13 @@ issues, use the existing datasets, try new techniques. Branch from `exp/fast-pip
     Default output checked identical to the original code on 39 newRoom frames (detections.json equal).
   - `geo_splatfacto.py`: `--mcmc_cap` (gsplat MCMCStrategy) and `--revised_opacity` options.
   - Test coverage 45% locally (was 37.4%; gate 35%, D-054).
-- Runs: R-039 roomAttemptSadness2 full v9 + PGSR (3.2: SfM 1,000 / 1,042 frames, 777 ARCore inliers; height 2.78 m;
-  semantics resumed after the sem2d slowdown), R-040 MCMC 620k (rejected), R-041 speed-ups + PGSR (33 vs 46 min,
+- Runs: R-069 roomAttemptSadness2 full v9 + PGSR (3.2: SfM 1,000 / 1,042 frames, 777 ARCore inliers; height 2.78 m;
+  semantics resumed after the sem2d slowdown), R-070 MCMC 620k (rejected), R-041 speed-ups + PGSR (33 vs 46 min,
   25.02 / 0.8232), R-042 MCMC 1M (rejected), R-043 revised opacity (inconclusive), R-044 lower densify threshold.
 - Decisions: none (agents do not decide). Open for Tayyab: OD-10, OD-11; for the team: OD-7; for Umair: the coverage gate.
-- Problems: the PC has 16 GB RAM with ~9 GB free; a parallel test exhausted it and crashed COLMAP's matcher (R-039
+- Problems: the PC has 16 GB RAM with ~9 GB free; a parallel test exhausted it and crashed COLMAP's matcher (R-069
   error 1): run one GPU job at a time. Disk 28 GB free at the start of the night.
-- Next: see the end-of-night summary in the R-039 / R-044 entries and STATUS; rerun R-030's layout on Linux; tape sheets
+- Next: see the end-of-night summary in the R-069 / R-044 entries and STATUS; rerun R-030's layout on Linux; tape sheets
   for the other rooms; test the app warning on a phone; OD-7 / OD-10 / OD-11.
 
 ## 2026-11-15 · Tayyab (agent) · `exp/overnight-2026-11-14`
