@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-11-19 (every scan bundle in `public/scans/` listed in the Projects tab, `/api/scans`)
+Last updated: 2026-11-19 (wall-gap openings and no-roof / open-outline flags shown; earlier the same day: every scan bundle listed in the Projects tab)
 
 ---
 
@@ -131,6 +131,19 @@ real path.** Currently only `/dashboard` has a href.
 ---
 
 ## 4. Completed
+
+### Wall-gap openings, no-roof and open-outline flags in the viewer ✅ (2026-11-19, Step 4 issues #8 / #9 / #10)
+- **Why:** the pipeline now finds doorways / window openings without a leaf from gaps in the walls, knows when a space
+  has no roof, and when its outline is not a closed room; the viewer should show it.
+- **Modified** `src/components/Viewer3D/scanTypes.ts`: `ScanInfo.open_top?`, `room_closed?`, `warnings?`;
+  `ScanFixture.source?` ("wall gap (layout)"); `FIXTURE_COLORS` for `doorway` / `window opening`.
+  `src/components/ProjectDetail/ScanLayersPanel.tsx`: a wall-gap opening shows "Found from: wall gap (layout)" in the
+  size card and "wall gap" in the list instead of a frame count. `src/lib/scanBundles.ts`: cards say "no roof" /
+  "open outline" in the status label, the facts and layout warnings in the description, "No roof: wall height only"
+  as accuracy. Older bundles without these fields are unchanged.
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` 0 errors, 1 known warning. Bundles
+  with the new fields: `public/scans/scan_007_e6d4f090f88e_r1119a/`, `scan_003_6de634cbb8b2_r1119a/` (R-054).
+  **Not checked in a browser.**
 
 ### Every processed scan bundle in the Projects tab ✅ (2026-11-19, Umair's ask, repo D-074)
 - **Why:** each new run needed a hand-written `mockData.ts` entry before it could be opened; Umair wants every scan
@@ -787,6 +800,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-11-19** — Wall-gap openings (`doorway`, `window opening`) and no-roof / open-outline flags shown in cards and Scan Layers.
 - **2026-11-19** — Projects tab lists every processed scan bundle in `public/scans/` (`/api/scans`, `/viewer/run-<folder>`).
 - **2026-11-18** — Scan #8 (R-039) added as its own project `scan-008`; the plan image is its thumbnail.
 - **2026-11-12** — Fixture size card in Scan Layers (width, height, area, heights above floor, wall) and clickable fixture markers (FR10).
