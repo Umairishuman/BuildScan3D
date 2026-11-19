@@ -667,6 +667,27 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   `--clean_ceiling` and keeping `--infer_gap` / `--square` off); deleting the old bundles (D-049).
 - **By:** Umair · **Source:** session 2026-11-19 · **Status:** Active
 
+## D-076 · 2026-11-19 · Online site: web UI on Vercel, scan bundles on Cloudflare R2
+- **Decision:** the team shares processed scans through a deployed website, not by copying datasets. The web UI
+  (`prototype/web-ui`) is deployed on Vercel (Hobby plan); each run's web bundle (`.spz` groups, `scan.json`,
+  `mesh.glb`, plus `plan.png` as its thumbnail) is uploaded to a public Cloudflare R2 bucket, with an `index.json` that
+  lists them for the Projects tab. Recordings (`dataset/`) and `splat.ply` stay on the machine that made them. Work:
+  issues #26 (accounts, Umair) and #27 – #30 (code), branch `feature/vercel-deploy`.
+- **Why:** Umair wants Tayyab (and evaluators) to see the scans in the browser without sharing datasets (2026-11-19).
+- **Evidence:** sizes measured on this PC 2026-11-19: scan #7 recording 16 GB, `splat.ply` 457 MB, web bundle 43 MB;
+  the eight bundles in `public/scans/` are 18 – 53 MB. Free tiers from third-party pricing pages (not Cloudflare's /
+  Vercel's own, to be checked at sign-up): R2 10 GB storage, egress free without a cap; Vercel Blob (Hobby) 1 GB
+  storage, 10 GB transfer a month, blocked for 30 days when exceeded; Backblaze B2 10 GB, egress up to 3× storage.
+- **Rejected:** opening this PC's dev server over Tailscale (agent's first recommendation; works only while this PC
+  runs); sending bundle folders by hand; Vercel Blob (too small); Backblaze B2 (egress capped; kept as the fallback if
+  R2's payment method is a problem); committing bundles to git (D-061, CI rejects binaries); bundles inside the Vercel
+  deployment (a redeploy per scan); a public tunnel (the login is a mock).
+- **Limits / not verified:** the bucket is public, so every published scan can be downloaded by anyone with the URL;
+  which scans may be published is Umair's choice (#26). R2's `r2.dev` URL is rate-limited (fine for a demo). Nothing
+  built or deployed yet.
+- **By:** Umair (storage: R2, over the agent's B2 / Vercel Blob alternatives) · **Source:** session 2026-11-19 ·
+  **Status:** Active
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |
