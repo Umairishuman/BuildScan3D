@@ -656,3 +656,8 @@ sheet `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/semantic_v10/fi
 - Next (agent): finish R-059 (close `run-r1119b6` once "all done", stage times, layout, fixtures, check sheet, publish
   within the cap), then R-060 scan #5 (`--window 9`, quiet PC); #30 Vercel preview check → PR to `master` only when
   Umair asks; #31 options for OD-7. Next free IDs: R-061, D-078. Umair: his items #16, #20 – #25 wait.
+- Later (evening): R-059 (scan #6, `r1119b6`) finished, "all done" 19:37:41 (run_v8 162.5 min, SfM 86.1 of it; layout
+  1.4, sem2d 17.6 min; `stages.tsv`); its write-up is still open. Umair asked to publish it and to merge everything
+  except the cuDSS / COLMAP work into `master` so the deployed site shows it: scan #6 published (8 bundles, bucket
+  0.28 GB of the 9.5 GB cap, D-077); `feature/step4-layout` up to `e74ee55` merged into `feature/vercel-deploy`
+  (leaves out `e724252`, the cuDSS to-do), PR to `master`. The cuDSS work (D-078, R-061) stays on `exp/colmap-cudss`.
