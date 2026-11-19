@@ -78,7 +78,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-055 | 2026-11-19 | Layout on six rooms, `--debug`, default vs `--raised_max 1.5 --infer_gap 6` | this PC (Ubuntu, RTX 4000 Ada) | 16.9 min | scan #3 no false openings; `--raised_max` closes #7 and #8 (4 walls, 88–90°), drops nothing real | Kept (findings) |
 | R-056 | 2026-11-19 | Four rooms, layout → web → plan with the 2026-11-19 defaults, tag `r1119b` | this PC (Ubuntu, RTX 4000 Ada) | 15.6 min | #7 no roof + 2 openings; #3 no false openings; newRoom closed, 29.41 m²; #8 open, 2 doorways | Kept (for Umair's checks) |
 | R-057 | 2026-11-19 | Four rooms, layout → web → plan with the D-075 defaults, tag `r1119c` | this PC (Ubuntu, RTX 4000 Ada) | 16.7 min | #7 / #8 closed rectangles (17.99 / 26.44 m²); #3 tilt 0.29°; ceilings 4.3 → 0.04 cm; #8 lost a switch + socket | Kept (scan #8 corner = furniture, Umair) |
-| R-058 | 2026-11-19 | scan #6 `scan_006_1e457a214ce1` (259.8 s), full pipeline, R-023 recipe + D-075 (`r1119`) | this PC (Ubuntu, RTX 4000 Ada) | running | — | running |
+| R-058 | 2026-11-19 | scan #6 `scan_006_1e457a214ce1` (259.8 s), full pipeline, R-023 recipe + D-075 (`r1119`) | this PC (Ubuntu, RTX 4000 Ada) | 45.5 min, did not finish | 1159 frames, 12.56 M observations; COLMAP `global_mapper` killed by OOM (26.4 GB) at 16:14:39 while the agent ran web work | Failed (OOM in SfM) |
 
 ## Runs
 
@@ -906,6 +906,18 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Goal:** first model of scan #6 (#19), with the post-training stages on the D-075 defaults; then gravity tilt,
   layout walls / height / closed outline, fixtures and the check sheet. SfM has to fit in RAM (R-040: 1,160 frames
   ran in 96 min).
-- **Start → end:** (running)
-- **Errors during the run:** none so far.
-
+- **Start → end:** 15:29:08 → killed 16:14:39 (45.5 min); select 0.6 min (**1159 frames** of 7,274, predicted blur
+  median 3.9 px vs 5.0 px over all), SfM: feature extraction, 26,147 ARCore-guided pairs, vocabulary-tree matching,
+  `global_mapper` from ~15:40 (12,557,723 observations; global positioning on the CPU, Ceres without CUDA).
+- **Errors during the run:**
+  1. 16:14:39 sfm (`global_mapper`) — kernel OOM killer: "Out of memory: Killed process 688507 (colmap)
+     total-vm:43322560kB, anon-rss:26405116kB" (`journalctl -k`); the allocation that triggered it came from the
+     agent's Claude process; VS Code helper processes and every `screen` session of the VS Code scope (`run-r1119`,
+     `viewer`) were killed with it; no reboot. `run_full.log` just stops (no "all done", no `stages.tsv`). → cause:
+     COLMAP needed ~26.4 GB of the 30 GB; scan #7 passed with 12,684,881 observations (R-040), so this recording is
+     not too big by itself: during global positioning the agent ran web-UI work on the same PC (`next dev` servers,
+     a `next build`, pytest, uploads to R2; `feature/vercel-deploy`), the `viewer` session was open, and swap was
+     3 of 7 GB used. → fix: not resolved; rerun with nothing else heavy on the PC (agent does no builds / dev servers
+     during SfM), or fewer frames (`--window 9`, D-073), or more swap (sudo, Umair). Choice is Umair's.
+- **Result:** none (stopped in SfM). Work folder `dataset/scan_006_1e457a214ce1/work_r1119_sfm/` (database, partial).
+- **Verdict:** failed (OOM in SfM, R-038's failure; the agent's parallel work is the likely tipping point).
