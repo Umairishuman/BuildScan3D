@@ -10,7 +10,8 @@ structure.py assumes a box room (the outermost wall on each side of two Manhatta
      each cluster is refit (robust PCA line on all its points) with its extent along the line and its height.
      A cluster is a WALL if it is tall (>= half the room height) and nothing parallel lies behind it
      (furniture fronts, doors in their frames and pictures sit in front of a wall).
-     The ceiling may not lie below the top of the walls (D-072): lower candidates are ignored.
+     The ceiling may not lie below the top of the walls (D-072): lower candidates are ignored. A sky-coloured
+     "ceiling" over a small part of the room means no roof (open_top; height = top of the walls).
   4. corners = intersections of non-parallel walls whose segments end near each other.
 Needs a levelled model (+Y = gravity): sfm_colmap.py does it since D-071; older models: level_model.py.
 Works for any number of walls and non-Manhattan angles.
@@ -30,6 +31,8 @@ ap.add_argument("--every", type=int, default=6); ap.add_argument("--down", type=
 ap.add_argument("--ang", type=float, default=6.0); ap.add_argument("--off", type=float, default=0.08)
 ap.add_argument("--min_len", type=float, default=0.5)
 ap.add_argument("--max_rms", type=float, default=0.05, help="m: a region is used if the rendered surface fits a plane this well")
+ap.add_argument("--open_cover", type=float, default=0.35, help="open to the sky if the ceiling plane covers less of the floor than this ...")
+ap.add_argument("--open_blue", type=float, default=0.15, help="... and its colour is this much bluer than red (sky); see 3c")
 args = ap.parse_args()
 os.makedirs(args.out, exist_ok=True)
 dev = "cuda"; G = np.diag([1, -1, -1, 1.0]); UP = np.array([0.0, 1.0, 0.0])
@@ -219,6 +222,33 @@ if np.isfinite(wall_top) and not (np.isfinite(ceil_y) and ceil_y >= wall_top):
         ceil_y, ceil_source = wall_top, "top of the highest wall (no horizontal plane above it)"
     print(f"ceiling {ceil_first - floor_y:.3f} m was below the wall top ({wall_top - floor_y:.3f} m) -> {ceil_y - floor_y:.3f} m ({ceil_source})")
 height = ceil_y - floor_y
+
+# ---------------- 3c. open to the sky: no roof (#8, scan #7 R-040: a building under construction) ----------------
+# With no roof, the "ceiling" plane is a few sky-coloured splats over a small part of the room. A real ceiling covers
+# most of the floor outline (scans #2 / #3 / #8 / newRoom: 47-96 %) in a grey / white / wall colour (blue - red
+# <= 0); scan #7's covered 20 % and was sky blue (blue - red 0.25). Both must hold, so a dim or patchy ceiling alone
+# never counts as open. Then there is no ceiling and the room height is the top of the walls.
+open_top, sky = False, {}
+if np.isfinite(ceil_y):
+    P_ = means.cpu().numpy(); o_ = opac.cpu().numpy()
+    rgb_ = np.stack([np.asarray(v[f"f_dc_{i}"]) for i in range(3)], 1) * 0.28209479177387814 + 0.5
+    cell_ = lambda Q: set(map(tuple, np.floor(Q / 0.25).astype(int)))
+    on_floor = cell_(P_[(np.abs(P_[:, 1] - floor_y) < 0.06) & (o_ > 0.5)][:, [0, 2]])
+    at_ceil = (np.abs(P_[:, 1] - ceil_y) < 0.10) & (o_ > 0.5)
+    cover = len(on_floor & cell_(P_[at_ceil][:, [0, 2]])) / max(len(on_floor), 1)
+    c_rgb = np.clip(rgb_[at_ceil], 0, 1).mean(0) if at_ceil.any() else np.full(3, np.nan)
+    sky = dict(floor_cover=round(float(cover), 3), blue_minus_red=round(float(c_rgb[2] - c_rgb[0]), 3),
+               gaussians=int(at_ceil.sum()))
+    print(f"ceiling evidence: covers {cover:.0%} of the floor outline, colour blue - red {c_rgb[2] - c_rgb[0]:+.3f}, "
+          f"{int(at_ceil.sum())} opaque Gaussians")
+    if cover < args.open_cover and c_rgb[2] - c_rgb[0] > args.open_blue and np.isfinite(wall_top):
+        open_top = True
+        warnings.append(f"open to the sky: the plane at {ceil_y - floor_y:.2f} m is sky-coloured and covers only "
+                        f"{cover:.0%} of the floor; no ceiling, height = top of the walls")
+        ceil_first_open = ceil_y
+        ceil_y, ceil_source = float("nan"), "none: open to the sky (no roof)"
+        height = wall_top - floor_y
+        print(f"no roof: plane at {ceil_first_open - floor_y:.3f} m is sky -> no ceiling, walls reach {height:.3f} m")
 if np.isfinite(height) and height < 2.2:
     warnings.append(f"room height {height:.2f} m is below 2.2 m: check the ceiling")
 if np.isfinite(ceil_y) and ceil_y - cy_.max() < 0.3:
@@ -265,7 +295,8 @@ for i in range(len(final)):
         Qb = b["Q"][:, [0, 2]]; sep = float(np.median((Qb - a["cen"]) @ a["nrm"]))
         dims.append(dict(walls=[i, j], distance=abs(sep)))
         print(f"walls {i} <-> {j}: {abs(sep):.3f} m apart")
-res = dict(floor_y=floor_y, ceiling_y=ceil_y, height=height, ceiling_source=ceil_source,
+res = dict(floor_y=floor_y, ceiling_y=ceil_y, height=height, ceiling_source=ceil_source, open_top=open_top,
+           ceiling_evidence=sky,
            ceiling_first_y=ceil_first, wall_top_y=wall_top, warnings=warnings, dimensions=dims,
            walls=[dict(id=k, p0=(w["cen"] + w["dir"] * w["t0"]).tolist(), p1=(w["cen"] + w["dir"] * w["t1"]).tolist(),
                        length=float(w["t1"] - w["t0"]), normal=w["nrm"].tolist(), corners=len(w.get("ends", [])))
@@ -279,7 +310,8 @@ for cn in corners:
 
 # ---------------- plan.png ----------------
 P = means.cpu().numpy(); o = opac.cpu().numpy()
-m = (o > 0.5) & (P[:, 1] > floor_y + 0.1) & (P[:, 1] < (ceil_y if np.isfinite(ceil_y) else floor_y + 2.4) - 0.1)
+top_ = ceil_y if np.isfinite(ceil_y) else (wall_top if np.isfinite(wall_top) else floor_y + 2.4)
+m = (o > 0.5) & (P[:, 1] > floor_y + 0.1) & (P[:, 1] < top_ - 0.1)
 xz = P[m][:, [0, 2]]; lo = np.percentile(xz, 0.5, 0) - 0.5; hi = np.percentile(xz, 99.5, 0) + 0.5
 sc = 150; Wp, Hp = ((hi - lo) * sc).astype(int)
 img = np.full((Hp, Wp, 3), 255, np.uint8)
@@ -296,7 +328,8 @@ for w in res["walls"]:
     cv2.putText(img, f"{w['length']:.2f} m", pt_(mid), 0, 0.6, (0, 90, 0), 2)
 for cn in corners:
     cv2.circle(img, pt_(cn["xz"]), 7, (0, 0, 220), -1)
-cv2.putText(img, f"height {height:.2f} m, {len(final)} walls, {len(corners)} corners", (10, 25), 0, 0.7, (0, 0, 0), 2)
+cv2.putText(img, f"{'walls ' if open_top else ''}height {height:.2f} m{' (no roof)' if open_top else ''}, {len(final)} walls, "
+            f"{len(corners)} corners", (10, 25), 0, 0.7, (0, 0, 0), 2)
 cv2.imwrite(os.path.join(args.out, "plan.png"), img)
 
 # ---------------- corners.jpg: vertical corner edges in a few frames ----------------
@@ -306,7 +339,7 @@ for f in meta["frames"][:: max(1, len(meta["frames"]) // 60)]:
     vis = []
     for cn in corners:
         seg = []
-        for y in np.linspace(floor_y, ceil_y if np.isfinite(ceil_y) else floor_y + 2.4, 20):
+        for y in np.linspace(floor_y, top_, 20):
             X = w2c @ np.array([cn["xz"][0], y, cn["xz"][1], 1.0])
             if X[2] > 0.2:
                 u_, v_ = K[0, 0] * d * X[0] / X[2] + K[0, 2] * d, K[1, 1] * d * X[1] / X[2] + K[1, 2] * d

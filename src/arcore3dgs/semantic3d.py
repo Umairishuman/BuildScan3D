@@ -152,7 +152,9 @@ def wall_of(xz):
 
 
 ctr0 = P[o > 0.5][:, [0, 2]].mean(0)
-H_room = (float(ccoef @ [ctr0[0], ctr0[1], 1]) - float(fcoef @ [ctr0[0], ctr0[1], 1])) if has_ceil else 2.7
+# no ceiling: the layout's height (top of the walls when the room is open to the sky, #8), else 2.7 m
+H_room = (float(ccoef @ [ctr0[0], ctr0[1], 1]) - float(fcoef @ [ctr0[0], ctr0[1], 1])) if has_ceil else \
+    (float(lay["height"]) if lay.get("height") is not None and np.isfinite(lay["height"]) else 2.7)
 RULES = {   # (check, reason) on: h0/h1 = bottom/top above the floor, w = width, wd = distance to the nearest wall
     # a room door / window sits IN the wall: from the wall face to ~a brick wall's depth behind it
     # (sd -0.35..+0.15 m); a wardrobe front stands ~0.5 m in front of the wall
@@ -337,6 +339,7 @@ counts = {nm: int((label == i).sum()) for i, nm in enumerate(NAMES)}
 res = dict(model=os.path.abspath(args.ply), classes=NAMES, decoys=sorted(DECOY), gaussian_counts=counts,
            floor_tilt_deg=round(ftilt, 2), ceiling_tilt_deg=round(ctilt, 2) if has_ceil else None,
            floor_area=round(poly_area(crn), 2) if len(crn) >= 3 else None, ceiling_height=round(H_room, 3) if has_ceil else None,
+           open_top=bool(lay.get("open_top", False)), wall_height=round(H_room, 3),
            walls=wall_rep, free_standing=[f["id"] for f in fixtures if f["cls"] not in ("door", "window")
                                           and (f["dist_to_wall"] is None or f["dist_to_wall"] >= 0.3)],
            fixtures=fixtures, rejected=rejected, params=vars(args))
