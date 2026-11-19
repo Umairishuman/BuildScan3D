@@ -171,6 +171,28 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [0.22, -0.04, 1.82], target: [-0.33, -0.07, 0.99] },
   },
   {
+    // R-053 (2026-11-19): gyro + accelerometer camera path, gyro bias fitted on far-apart image pairs (loop closed),
+    // refined by bundle adjustment with sensor priors. File is local only (git-ignored).
+    id: "scan-009-loop",
+    name: "Scan 009 · sensor camera path, loop closed",
+    floor: "—",
+    block: "Residence",
+    area: "Not measured",
+    location: "scan_009_057ed3beb4fc • gyro + accelerometer path",
+    dateCaptured: "Nov 15, 2026",
+    status: "draft",
+    statusLabel: "Experimental · 680 of 894 keyframes · scale ~2× too large",
+    thumbnail: "/thumbnails/scan009_v9pgsr.jpg",
+    scansCount: 1,
+    gaussianCount: "454,442",
+    accuracy: "Scale unknown (estimates say the model is about 2× too large)",
+    captureDevice: "realme RMX5111 (ARCore)",
+    description:
+      "Same recording as Scan 009, with the camera path built from the phone's gyroscope and accelerometer and refined with the images (R-053). The start and end of the walk now line up, and 680 keyframes are used instead of 370. Quality on the training views is about the same as the gyro-checked model: cleaner on some walls and doors, smeared in others. Sizes are not reliable.",
+    splatUrl: "/splats/scan009_v9pfl.spz",
+    splatStart: { position: [0.09, -0.02, -0.11], target: [0.0, -0.19, 0.87] },
+  },
+  {
     // R-012 (2026-10-12), saved_models/2026-10-12_sharp_mvs_v6. File is local only (git-ignored, > 10 MB).
     id: "newroom-v6",
     name: "Living Room · v6 sharp frames + MVS (older)",

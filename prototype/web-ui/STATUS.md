@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-11-18 (`scan-009-gyro`: R-047, the best scan_009 model so far, added to the project list)
+Last updated: 2026-11-19 (`scan-009-loop`: R-053, the loop-closed scan_009 model, added to the project list)
 
 ---
 
@@ -131,6 +131,14 @@ real path.** Currently only `/dashboard` has a href.
 ---
 
 ## 4. Completed
+
+### Loop-closed scan_009 model in the project list ✅ (2026-11-19, night session for Tayyab)
+- **Modified** `src/lib/mockData.ts`: `scan-009-loop` (`/splats/scan009_v9pfl.spz`, R-053: gyro + accelerometer camera
+  path with the loop closed, 680 keyframes, 454,442 splats, 8.6 MB, status draft, start pose frame_00001
+  [0.09, -0.02, -0.11] → [0.0, -0.19, 0.87], thumbnail reused from `scan009_v9pgsr.jpg`). File local only (git-ignored
+  like the other `.spz`), converted with `src/arcore3dgs/to_spz.mjs` (1.7 s).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src` → 0 errors, 1 known warning (ExportModal.tsx:29).
+  `next build` not re-run; not looked at in a browser (start pose not checked).
 
 ### Best scan_009 model in the project list ✅ (2026-11-18, night session for Tayyab)
 - **Modified** `src/lib/mockData.ts`: `scan-009-gyro` (`/splats/scan009_v9pfg.spz`, R-047: R-046's model with the gyro
@@ -765,6 +773,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-11-19** — `scan-009-loop` (R-053, loop-closed sensor camera path) added to the project list.
 - **2026-11-18** — `scan-009-gyro` (R-047, gyro-checked cameras) added to the project list.
 - **2026-11-15** — Real models added to the project list: `bedroom-scan` (labelled), `lecture-hall-scan`, `scan-009` (partial), `scan-009-posefree` (R-046), `newroom-v9e2e`, `newroom-v6`, `newroom-v3`; local model files git-ignored.
 - **2026-11-06** — `newroom-scan` no longer points at the unused `/splats/newroom_v6.spz`; the file is out of git (CI 10 MB limit).
