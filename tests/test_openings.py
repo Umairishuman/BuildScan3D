@@ -56,3 +56,11 @@ def test_small_gap_ignored():
 def test_full_wall_has_no_openings():
     P, o = wall_points([])
     assert run(P, o) == []
+
+
+def test_few_stray_points_behind_are_not_an_opening():
+    """a gap with only a sprinkle of the model behind it (stray splats, R-054 scan #3) is not an opening"""
+    P, o = wall_points([(1.0, 1.9, 0.0, 2.1)], behind=False)
+    stray = np.c_[np.random.default_rng(0).uniform(1.0, 1.9, 40), np.random.default_rng(1).uniform(0, 2.1, 40), np.full(40, -1.0)]
+    P = np.vstack([P, stray])
+    assert run(P, np.ones(len(P))) == []
