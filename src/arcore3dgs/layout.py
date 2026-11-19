@@ -35,6 +35,9 @@ ap.add_argument("--min_len", type=float, default=0.5)
 ap.add_argument("--max_rms", type=float, default=0.05, help="m: a region is used if the rendered surface fits a plane this well")
 ap.add_argument("--infer_gap", type=float, default=0.0, help="m, > 0: a missing corner between neighbouring walls is "
                 "inferred (marked) when both walls stop at most this far short of it and it lies over the floor (#10); 0 = off")
+ap.add_argument("--raised_max", type=float, default=0.0, help="m, > 0: a wall shorter than this whose visible bottom is "
+                "more than 0.5 m above the floor is dropped (boards / material leaning on a wall, #11); 0 = off")
+ap.add_argument("--debug", action="store_true", help="print every wall candidate and the step that dropped it")
 ap.add_argument("--openings", type=int, default=1, help="1: find doorways / window openings from wall gaps (#9); 0: off")
 ap.add_argument("--open_cover", type=float, default=0.35, help="open to the sky if the ceiling plane covers less of the floor than this ...")
 ap.add_argument("--open_blue", type=float, default=0.15, help="... and its colour is this much bluer than red (sky); see 3c")
@@ -210,6 +213,21 @@ for w in inner:
             outside = True; break
     if not outside:
         final.append(w)
+# #11 (optional): short surfaces that do not come down to the floor are boards or stacked material in front of a
+# wall (scan #7: plank faces 1.06 / 0.57 m long starting 1.21 / 0.60 m up; real walls start at 0.07-0.30 m)
+raised = [w for w in final if args.raised_max > 0 and w["t1"] - w["t0"] < args.raised_max and w["y0"] - floor_y > 0.5]
+if raised:
+    final = [w for w in final if not any(w is x for x in raised)]
+    print(f"{len(raised)} short raised surface(s) dropped (not down to the floor): "
+          + ", ".join(f"{w['t1'] - w['t0']:.2f} m from {w['y0'] - floor_y:.2f} m up" for w in raised))
+if args.debug:
+    _mid = lambda w: w["cen"] + w["dir"] * (w["t0"] + w["t1"]) / 2
+    for w in sorted(walls, key=lambda w: -(w["t1"] - w["t0"])):
+        st_ = ("WALL" if any(w is x for x in final) else "raised" if any(w is x for x in raised) else
+               "outside" if any(w is x for x in inner) else
+               "front" if any(w is x for x in cand) else "short, low or merged")
+        print(f"  cand mid=({_mid(w)[0]:.2f},{_mid(w)[1]:.2f}) len {w['t1'] - w['t0']:.2f} h {w['y0'] - floor_y:.2f}-{w['y1'] - floor_y:.2f} "
+              f"nrm ({w['nrm'][0]:.2f},{w['nrm'][1]:.2f}) area {w['area']} -> {st_}")
 print(f"{len(clusters)} vertical plane clusters -> {len(walls) and len(cand)} tall + long after merging -> "
       f"{len(inner)} without furniture fronts -> {len(final)} walls")
 
