@@ -152,7 +152,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 |---|---|---|
 | `layout.py` | Room layout: any number of walls, floor, ceiling, corners, dimensions, `plan.png`; since 2026-11-19 also no-roof detection (`open_top`, #8), wall-gap openings (`openings.py`, #9), `room_closed` + warnings (#10); options `--debug`, `--raised_max`, `--infer_gap` (off) | **[v9]** |
 | `openings.py` | Doorways and window openings without a leaf / frame from gaps in each wall's surface with the model seen through them; used by `layout.py` (#9) | **[v9]** shared |
-| `plan_export.py` | As-built floor plan from `layout.json` (+ `semantic.json`): `plan.json`, `plan.svg`, `plan.dxf` (R12, layers WALLS / OPENINGS / FIXTURES / TEXT); `--square` turns near-right-angle walls (drawing aid, off by default) (#12, plan 4.9) | **[v9]** stage `plan` of `run_full.sh` |
+| `plan_export.py` | As-built floor plan from `layout.json` (+ `semantic.json`): `plan.json`, `plan.svg`, `plan.dxf` (R12, layers WALLS / OPENINGS / FIXTURES / TEXT); `--square` turns near-right-angle walls and writes `plan_square.json|svg|dxf` instead (on in `run_full.sh` since D-075) (#12, plan 4.9) | **[v9]** stage `plan` of `run_full.sh` |
 | `level_model.py` | Levels an already trained model with ARCore gravity (rotates splats incl. colour coefficients and poses) into a new tag, for models exported before D-071 (2026-11-12) | **[v9]** one-off tool |
 | `semantic2d.py` | Grounding DINO + SAM fixture masks on upright frames, decoy classes, tile pass | **[v9]** semantic-env |
 | `semantic3d.py` | Votes 2D labels onto Gaussians, structure from layout, fixture instances + geometry rules | **[v9]** |

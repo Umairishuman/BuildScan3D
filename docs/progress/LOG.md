@@ -607,3 +607,27 @@ sheet `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/semantic_v10/fi
   finished `run-r1118` screen session was refused to the agent a second time: Umair closes it.
 - Next: R-057 = the four rooms (scans #7, #3, #8, newRoom) layout → plan with the D-075 defaults (new tag), check the
   ceiling mesh and floor fits, then scans #6 and #5 (#19) once `run-r1118` is closed.
+
+## 2026-11-19 (R-057, online site) · Umair · `feature/step4-layout`, `feature/vercel-deploy`
+- Did: R-057 (the D-075 defaults on scans #7, #3, #8, newRoom, tag `r1119c`) compared with R-056 by a read-only script
+  (layout / semantic JSON + `mesh.py`'s shell flatness on `mesh_clean.ply`). The `r1119b` bundles moved to
+  `prototype/web-ui/scans_archive/` (README row). Closed #11 and #18 on GitHub; #17 stays open for the tape. Umair had
+  closed `run-r1118`, so scan #6 started (R-058). Online site: Umair chose Vercel + Cloudflare R2 (D-076), deployed
+  the Vercel project himself (`https://build-scan-3d.vercel.app/`, from `master`) and decided every scan so far may be
+  public and that Tayyab may publish his too (D-076 addendum). Issues #26 (Umair: accounts) – #30. Code on the new
+  branch `feature/vercel-deploy` (a git worktree at `../BuildScan3D-vercel`, so the running pipeline is not touched):
+  `src/lib/remoteBundles.ts`, `mergeProjects.ts`, `scripts/publish_scan.py`, `buildscan publish|unpublish|published`,
+  `tests/test_publish_scan.py`, `.env.example` keys; MAP and web-ui STATUS there.
+- Runs: R-057 (16.7 min, no errors): scans #7 / #8 closed 4-wall rooms (17.99 / 26.44 m²), scan #3 tilt 1.95° → 0.29°,
+  ceilings 4.3 → 0.04 cm; scan #8 lost a switch + socket plate on the dropped corner surface → asked Umair: furniture,
+  so the option stays. R-058 scan #6 started 15:29:08 (`run-r1119`); R-059 scan #5 after it.
+- Decisions: D-076 + addendum (Umair). Not a decision: scan #8's corner is furniture (Umair's answer, in R-057).
+- Problems: with `--square`, `plan_export.py` writes `plan_square.*` and no `plan.svg` (by design; first read as missing
+  output). The plan thumbnail of re-run tags (`work_r1118_sfm/gs_r1119c/`) was not found by `scanBundles.ts` (cards
+  showed the logo) nor at first by `publish_scan.py`: both fixed on `feature/vercel-deploy`. `gh` from the scratch
+  folder failed ("not a git repository"), rerun with `-R`. Turbopack refused a `node_modules` symlink in the worktree
+  (hard-linked copy instead). No pytest / ruff in the project envs: the earlier session's scratch venv ran them (95
+  passed on the relevant tests; 5 test files need `cv2` / `fastapi` / `requests` that venv lacks, as on the main checkout).
+- Next: R-058 / R-059 write-ups and their check sheets; Umair: #26 (bucket, keys, `SCANS_BASE_URL` on Vercel, OK to
+  push), then #30 (deploy, CORS, browser check); `pip install boto3` in `bs-server` before the first upload; ask
+  Tayyab about publishing from the 3070 PC.

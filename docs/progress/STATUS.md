@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-19 by Umair (D-075: Step 4 options on in run_full.sh, older web bundles moved to prototype/web-ui/scans_archive/; before that Step 4 issues #8 – #25, runs R-053 – R-056)
+Last updated: 2026-11-19 by Umair (R-057: D-075 defaults on four rooms; R-058 scan #6 running; D-076 online site on Vercel + R2, issues #26 – #30, code on `feature/vercel-deploy`; earlier D-075: Step 4 options on in run_full.sh, older web bundles moved to prototype/web-ui/scans_archive/; before that Step 4 issues #8 – #25, runs R-053 – R-056)
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -85,10 +85,10 @@ Older recordings (before numbering) are on the RTX 3070 PC and keep their names.
 | **scan #2** | `dataset/scan_002_646070948603` | 2026-11-06 | Umair, Infinix X6833B, app ≤ v0.3.4 | Computer lab: desks, red chairs, glass partition; room number to fill in | 97 s | R-030 (ceiling 1.50 m, wrong) |
 | **scan #3** | `dataset/scan_003_6de634cbb8b2` | 2026-11-12 (uploaded 14:53 over USB) | Umair, Infinix X6833B, **v0.3.6** | Classroom: rows of wooden desks with red seats, projector screen, wooden door, blue curtains, ceiling AC units; room number to fill in | 185 s | R-031 (2.74 m, kept; `saved_models/2026-11-12_r1112_scan003/`) |
 | scan #4 | (number 4 = `newRoomAttemptSadness`, registered when it was copied here, `dataset/.scan_numbers.tsv`) | | | | | |
-| **scan #5** | `dataset/scan_005_4aadb16181d9` | on this PC 2026-11-16 (folder 12:05) | Umair, Infinix X6833B | room to fill in | 352.5 s | none yet |
-| **scan #6** | `dataset/scan_006_1e457a214ce1` | on this PC 2026-11-16 (folder 12:06) | Umair, Infinix X6833B | room to fill in | 259.8 s | none yet |
-| **scan #7** | `dataset/scan_007_e6d4f090f88e` | on this PC 2026-11-16 (folder 12:06) | Umair, Infinix X6833B | room to fill in | 269.2 s | R-040 (finished 2026-11-18; 0 fixtures) |
-| **scan #8** | `dataset/scan_008_7b486c855ed6` | on this PC 2026-11-16 (folder 12:27) | Umair, Infinix X6833B | room to fill in | 366.5 s | R-038 (OOM in SfM), R-039 (window 9, finished, 11 fixtures) |
+| **scan #5** | `dataset/scan_005_4aadb16181d9` | on this PC 2026-11-16 (folder 12:05) | Umair, Infinix X6833B | room to fill in | 352.5 s | R-059 (window 9) after R-058 |
+| **scan #6** | `dataset/scan_006_1e457a214ce1` | on this PC 2026-11-16 (folder 12:06) | Umair, Infinix X6833B | room to fill in | 259.8 s | R-058 (tag `r1119`, started 2026-11-19 15:29) |
+| **scan #7** | `dataset/scan_007_e6d4f090f88e` | on this PC 2026-11-16 (folder 12:06) | Umair, Infinix X6833B | room to fill in | 269.2 s | R-040 (finished 2026-11-18; 0 fixtures); a building under construction (no roof); R-057 `r1119c`: 4 walls, closed, 17.99 m² |
+| **scan #8** | `dataset/scan_008_7b486c855ed6` | on this PC 2026-11-16 (folder 12:27) | Umair, Infinix X6833B | room to fill in | 366.5 s | R-038 (OOM in SfM), R-039 (window 9, finished, 11 fixtures); R-057 `r1119c`: 4 walls, closed, 26.44 m² (corner furniture dropped, Umair) |
 | newRoomAttemptSadness | 3070 PC; **this PC since 2026-11-12** (raw recording only): `dataset/newRoomAttemptSadness` | by 2026-10-10 (first run R-007) | realme RMX5111; who recorded it not written down | Room of the best model (R-023) and semantics v10 | 240 s | R-007 … R-025; here R-037 |
 | roomAttemptSadness2 | 3070 PC | by 2026-10-09 (first run R-002) | realme RMX5111; who recorded it not written down | Second room of the mid report | not recorded here | R-002, R-004, R-010 |
 
@@ -462,10 +462,11 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 - [ ] `structure.py` ceiling height (2.555 m was probably cupboard tops); `layout.py` supersedes it. *(from TODO, Parked)*
       **2026-11-19 (#18): obsolete** — `layout.py` supersedes `structure.py` (MAP §3 marks it [exp]); its ceiling height is not used anywhere.
 - [ ] Wall 3 and the ceiling stay rough in the mesh (> 2.5 cm, untouched by shell denoising). [P&S §4.17]
-      **2026-11-19 (#18):** measured (`mesh.py --eval_only`): ceilings 4.28–4.34 cm (newRoom, scan #8), walls 2.86–4.98 cm (newRoom wall 3, scan #8 wall 4, scan #3 wall 2). `mesh_labels.py --clean_ceiling 0.04` (off by default) brings the ceilings to 0.04 cm; Umair to look and decide. Rough walls not addressed.
+      **2026-11-19 (#18):** measured (`mesh.py --eval_only`): ceilings 4.28–4.34 cm (newRoom, scan #8), walls 2.86–4.98 cm (newRoom wall 3, scan #8 wall 4, scan #3 wall 2). `mesh_labels.py --clean_ceiling 0.04` brings the ceilings to 0.04 cm; on in `run_full.sh` (D-075). **Ceiling part done 2026-11-19 (R-057, #18 closed):** scan #8 4.35 → 0.04 cm, newRoom 4.31 → 0.04 cm. Rough walls not addressed (may be real relief): stays open for the walls.
 - [ ] **[new 2026-11-12] Floor still fits 1.95° tilted on levelled scan #3** (1.57° on scan #2), while the ceiling fits
       0.05°: not explained (glossy floor reflection, or a bend in the model). Look at the floor residual map. (R-035)
       **2026-11-19 (#17): cause found:** not a tilt but a step: one half fits 0.30°, the far end is 8–14 cm higher over ~2 m (a raised platform?); 29 % as many Gaussians below the floor as on it (glossy floor). Umair to confirm the platform (#20).
+      **2026-11-19 (R-057):** with `--floor_win 0.06` (on, D-075) scan #3 fits 0.29°, but `semantic.json` ceiling height goes 2.504 → 2.582 m while `layout.json` stays 2.525 m (5.7 cm apart): tape decides which floor level is the room's (#17, #20).
 - [ ] **[new 2026-11-12] scan #3's fourth corner is missing:** walls 2 and 3 stop > 2.5 m short of each other (door /
       cupboards on that side?). Check in the model; then 4.5 (doorways from wall gaps). (R-035)
 - [ ] **[new 2026-11-12] Merge note for Tayyab:** `sfm_colmap.py` export now levels with ARCore gravity (D-071,
@@ -543,8 +544,16 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 - [ ] **[new 2026-11-19] Check an auto-listed scan in a real browser** (`/viewer/run-<folder>`): splats, Scan Layers,
       camera start (middle of the fixtures, 1.5 m above the floor; ARCore origin when there are no fixtures). Headless
       software rendering was still loading after 60 s.
+- [ ] **[new 2026-11-19] Online site (D-076): web UI on Vercel (`https://build-scan-3d.vercel.app/`), bundles on Cloudflare R2**,
+      one prefix and index per person so Tayyab can publish too. #26 Umair: bucket, public URL, keys in `.env`, Vercel
+      env `SCANS_BASE_URL`, OK to push. #27 / #28 / #29 code done on `feature/vercel-deploy` (not pushed; tested with
+      a local folder bucket only). #30: bucket CORS, first deploy, browser check on a second machine. Then: `pip install
+      boto3` in `bs-server`; Tayyab's own token and `PUBLISH_OWNER=tayyab` on the 3070 PC (needs Tayyab).
+- [ ] **[new 2026-11-19] Hand-written `scan-008` card on Vercel** opens only once `scan_008_…_r1116w9` is published
+      (or the card is retired for the auto-listed one): Umair's choice.
 - [ ] **[new 2026-11-19] Room names on the auto-listed cards** (they say "Scan #N · tag"): e.g. a small names file next
-      to the scan register, once the rooms are written down in "Which recording is which".
+      to the scan register, once the rooms are written down in "Which recording is which". Published cards take a room
+      name already (`scripts/buildscan publish <scan> <tag> --room "<name>"`).
 - [ ] Adaptive splat budget / level of detail (FR9, NFR5). [proposal v4]
 - [ ] Web-UI step 8 (S9 empty and error states) and the known issues in `prototype/web-ui/STATUS.md` §6 (list view toggle,
       `globals.css` conflicts, stub buttons, every floor-plan room opens the same model, inert measurement types, missing thumbnails).
@@ -630,6 +639,12 @@ Dated milestones; details in [LOG.md](LOG.md), reasons in [DECISIONS.md](DECISIO
   from wall gaps (#9), closed-room check and floor area only for a closed outline (#10), floor plan .svg / .dxf /
   .json as stage 16 (#12), check sheets with rejected candidates (#13); optional `--raised_max`, `--clean_ceiling`,
   `--floor_win`, `--infer_gap`, `--square`: **on in `run_full.sh` since 2026-11-19 (D-075, Umair)**; first full run with them: R-057 (next session).
+
+- **2026-11-19: R-057, the D-075 defaults on four rooms** (agent for Umair, tag `r1119c`, 16.7 min, no errors):
+  scans #7 and #8 become closed 4-wall rooms (17.99 / 26.44 m², corners 87.7–89.7°), scan #3 floor tilt 1.95° → 0.29°,
+  ceilings 4.3 → 0.04 cm rough; newRoom unchanged. Scan #8 lost a switch + socket plate that sat on corner furniture
+  (Umair: furniture, so right). `r1119b` bundles archived; #11 and #18 closed. With `--square` the plan files are
+  `layout/plan_square.*`.
 ## 9. Known limits
 
 - **One room.** Every v9/v10 result is on newRoomAttemptSadness; the semantics rules were tuned on it.

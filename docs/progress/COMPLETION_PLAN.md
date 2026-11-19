@@ -106,8 +106,8 @@ layout picked a wrong ceiling in R-030 (1.50 m in a room ~3.1 m tall).
 | 4.8 | Small switch plates need ~30 confirming frames: lower the need or add capture guidance | A fast walk past a switch still finds it | 4.2 | Should | W3 |  |  2026-11-19 measured (#15): accepted plates have 19–82 frames, only 2 dropped for < 6; blocked on #21 |
 | 4.9 | Right-angle priors and an as-built floor-plan export (format agreed) | Plan exported for each room | 4.1 | Should | W2 |  |  2026-11-19 built (#12): `plan_export.py`, plan.json / .svg / .dxf per run (stage 16), `--square` optional; format to agree |
 | 4.10 | Layout for spaces that are not rooms (R-029 corridor end: 1 wall, 0 corners) | Corridor gives sensible walls or a clear warning | 4.1 | Could | W3 |  |  2026-11-19 built (#10): `room_closed` + warnings; floor area only for a closed outline (scan #3's was a triangle); `--infer_gap` optional |
-| 4.11 | Edge-based corner and blank-wall detection (gravity-aware lines, wall–floor boundary) | Plain walls found on one room | 4.1 | Could | W3 |  |  2026-11-19 (#11): scan #7's plank faces analysed; `--raised_max` optional (R-055) |
-| 4.12 | Mesh: wall 3 and the ceiling stay rough (> 2.5 cm); mark `structure.py` superseded by `layout.py` | Roughness reduced and measured; STATUS updated | — | Could | W3 |  |  2026-11-19 (#18): roughness measured; `--clean_ceiling 0.04` optional (ceilings 4.3 → 0.04 cm); `structure.py` marked obsolete |
+| 4.11 | Edge-based corner and blank-wall detection (gravity-aware lines, wall–floor boundary) | Plain walls found on one room | 4.1 | Could | W3 |  |  2026-11-19 (#11): scan #7's plank faces analysed; `--raised_max 1.5` on in `run_full.sh` (D-075); R-057: scans #7 / #8 closed 4-wall rooms; #11 closed |
+| 4.12 | Mesh: wall 3 and the ceiling stay rough (> 2.5 cm); mark `structure.py` superseded by `layout.py` | Roughness reduced and measured; STATUS updated | — | Could | W3 |  |  2026-11-19 (#18): roughness measured; `--clean_ceiling 0.04` on (D-075), R-057 ceilings 4.35 / 4.31 → 0.04 cm; `structure.py` marked obsolete; #18 closed; rough walls left |
 
 ### Step 4: what is blocked, and on whom (2026-11-19)
 
@@ -123,9 +123,9 @@ Code changes that alter results are on, only where they fix a plain bug; new heu
 | Room names on the web cards | Umair | #23 |
 | Splats / start view / size card in a real browser | Umair | #24 |
 | Merge `origin/master` (Tayyab's ceiling rule `d052301` next to D-072 / #8) | Umair + Tayyab: numbering (OD-12) | #25 |
-| Scans #5 / #6 processed | Umair: close the finished `run-r1118` screen session (`scripts/buildscan stop run-r1118`) | #19 |
-| ~~Defaults to confirm~~ (no-roof thresholds, view-through minimum, `--infer_gap`, `--raised_max`, `--clean_ceiling 0.04`, `--square`, plan format) | **Settled 2026-11-19 by D-075 (Umair: all on).** Left: R-057 checks them together on four rooms | OD-13 |
-| Floor platform on scan #3 (fit the dominant floor level only?) | Umair: is there a raised platform, how high | #17 (`--floor_win 0.06` now on by D-075; the tape check still open) |
+| ~~Scans #5 / #6 processed~~ | Unblocked 2026-11-19 (`run-r1118` closed by Umair): scan #6 R-058 running, scan #5 R-059 next | #19 |
+| ~~Defaults to confirm~~ (no-roof thresholds, view-through minimum, `--infer_gap`, `--raised_max`, `--clean_ceiling 0.04`, `--square`, plan format) | **Settled 2026-11-19 by D-075 (Umair: all on).** Checked together in R-057 (four rooms; scan #8's lost plate was on furniture, Umair) | OD-13 |
+| Floor platform on scan #3 (fit the dominant floor level only?) | Umair: is there a raised platform, how high | #17 (`--floor_win 0.06` now on by D-075; R-057: semantic ceiling 2.582 m vs layout 2.525 m on scan #3; the tape check still open) |
 
 ## Step 5 · Compression and web delivery
 
@@ -137,7 +137,7 @@ visually lossless); the `.ksplat` converter itself is not in the repo.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 5.1 | Decide `.spz` (in use) or `.ksplat` (proposal) for delivery (OD-1) | Decision in DECISIONS.md with sizes and quality of both | 5.4 | Must | W1 |  |  |
 | 5.2 | Merge or close `feat/splat-compress` and `exp/trainer-arkitscenes` (OD-4); if kept, add the `.ksplat` converter or its install step | Branches merged through a PR or closed with a note | 5.1 | Must | W1 |  |  |
-| 5.3 | Every processed scan appears in the dashboard without hand-editing `mockData.ts` | A new run's bundle shows up and opens | 2.3 | Must | W2 | Umair | Done on this PC 2026-11-19 (D-074): Projects tab lists every bundle in `public/scans/` (`/api/scans`), opens at `/viewer/run-<folder>`; splats not yet seen in a real browser. Bundles from server jobs follow once 2.3 runs `run_full.sh` |
+| 5.3 | Every processed scan appears in the dashboard without hand-editing `mockData.ts` | A new run's bundle shows up and opens | 2.3 | Must | W2 | Umair | Done on this PC 2026-11-19 (D-074): Projects tab lists every bundle in `public/scans/` (`/api/scans`), opens at `/viewer/run-<folder>`; splats not yet seen in a real browser. Bundles from server jobs follow once 2.3 runs `run_full.sh`. 2026-11-19: online site decided (D-076: Vercel `https://build-scan-3d.vercel.app/` + Cloudflare R2, one prefix per person); code for #27 – #29 on `feature/vercel-deploy`; waits for Umair's bucket and keys (#26), then deploy + browser check (#30) |
 | 5.4 | Measure compression quality: render original and compressed at the same views (PSNR / SSIM) on a real GPU, for `.spz` and `.ksplat` | Table of size and quality for both formats on 2 scans | — | Must | W1 |  |  |
 | 5.5 | Web UI step 8: empty and error states (S9) | All pages handle no data and failed loads | — | Must | W2 |  |  |
 | 5.6 | Fix the web UI known issues: list view toggle, `globals.css` conflicts, stub buttons, every floor-plan room opens the same model, inert measurement types, missing thumbnails | Each issue closed in `prototype/web-ui/STATUS.md` §6 | — | Should | W2 |  |  |
