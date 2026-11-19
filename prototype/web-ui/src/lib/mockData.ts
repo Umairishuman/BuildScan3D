@@ -171,7 +171,7 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [0.22, -0.04, 1.82], target: [-0.33, -0.07, 0.99] },
   },
   {
-    // R-053 (2026-11-19): gyro + accelerometer camera path, gyro bias fitted on far-apart image pairs (loop closed),
+    // R-071 (2026-11-19): gyro + accelerometer camera path, gyro bias fitted on far-apart image pairs (loop closed),
     // refined by bundle adjustment with sensor priors. File is local only (git-ignored).
     id: "scan-009-loop",
     name: "Scan 009 · sensor camera path, loop closed",
@@ -188,7 +188,7 @@ export const MOCK_PROJECTS: Project[] = [
     accuracy: "Scale unknown (estimates say the model is about 2× too large)",
     captureDevice: "realme RMX5111 (ARCore)",
     description:
-      "Same recording as Scan 009, with the camera path built from the phone's gyroscope and accelerometer and refined with the images (R-053). The start and end of the walk now line up, and 680 keyframes are used instead of 370. Quality on the training views is about the same as the gyro-checked model: cleaner on some walls and doors, smeared in others. Sizes are not reliable.",
+      "Same recording as Scan 009, with the camera path built from the phone's gyroscope and accelerometer and refined with the images (R-071). The start and end of the walk now line up, and 680 keyframes are used instead of 370. Quality on the training views is about the same as the gyro-checked model: cleaner on some walls and doors, smeared in others. Sizes are not reliable.",
     splatUrl: "/splats/scan009_v9pfl.spz",
     splatStart: { position: [0.09, -0.02, -0.11], target: [0.0, -0.19, 0.87] },
   },

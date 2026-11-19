@@ -2,7 +2,7 @@
 
 gyro_check.py estimates the gyro bias against the SfM model's rotations over 1 s windows; when the model is locally
 wrong (scan_009) that estimate is off by a few hundredths of a degree per second, which adds up to a heading drift of
-~14 deg over a 3-minute walk (R-053). Here every verified image pair in the COLMAP database gives its own relative
+~14 deg over a 3-minute walk (R-071). Here every verified image pair in the COLMAP database gives its own relative
 rotation (5-point essential matrix, RANSAC); each one is noisy (scan_009: 3.3 deg median even for pairs < 5 s apart)
 but they are independent of each other and of the SfM model, and pairs minutes apart see the accumulated drift.
 The bias correction (3 numbers, IMU frame) that makes the integrated gyro agree with all pairs is fitted with a robust

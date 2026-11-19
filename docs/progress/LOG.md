@@ -406,10 +406,10 @@ issues, use the existing datasets, try new techniques. Branch from `exp/fast-pip
   with wall junction lines, faint contrast and phone sensors). New tool `src/arcore3dgs/texture_probe.py`; measured
   newRoom, the bedroom, the lecture hall and scan_009 (table in the plan §1.1): lost frames have few corners but keep
   their long lines. Plan steps 0–7 with effort, checks and three options.
-- Runs: none (texture_probe is a read-only measurement, no TRAINING entry). Decisions: none; OD-12 added (open).
+- Runs: none (texture_probe is a read-only measurement, no TRAINING entry). Decisions: none; OD-14 added (open).
 - Problems: scan_009's blur (21.7 px median) confounds "featureless"; a sharp re-recording of that room is needed.
-- Next: Tayyab and the team decide OD-12; then step 0 (test set) and step 1 (gyro rotation check).
-- Later the same session (00:00–01:15): Tayyab chose option 1, then continue (D-069, OD-12 closed). Built
+- Next: Tayyab and the team decide OD-14; then step 0 (test set) and step 1 (gyro rotation check).
+- Later the same session (00:00–01:15): Tayyab chose option 1, then continue (D-080, OD-14 closed). Built
   `gyro_check.py` (IMU→camera rotation estimated from the SfM model; per-frame rotation disagreement with the gyro),
   `sfm_colmap.py --gyro_thr` (default off), `gap_test.py` (cut-gap rotation test), `gyro_check.fill_rotations`; app
   prompts "keep a room corner or edge in view" (compiled with JDK 21, not on a phone). Run R-047 (scan_009 with the
@@ -434,14 +434,14 @@ Asked by Tayyab: "work throughout the night, I need scan_009 to be working prope
 Asked by Tayyab: "work on featureless overnight".
 - Did: `prior_ba.py` (BA with sensor priors) → R-052 on scan_009; loop check showed a 14° gyro heading drift between
   the start and end of the walk; `gyro_loop_bias.py` (gyro bias from far-apart image pairs) and `rot_sfm.py
-  --bg_json` → R-053 (loop closed, scale check ok, PSNR ≈ R-047, 680 frames); R-054 validation on newRoom (position
-  error of the sensor path 72 → 31 cm median); `layout.py` / IMU / Metric3D scale estimates for R-053 (~2× too large,
+  --bg_json` → R-071 (loop closed, scale check ok, PSNR ≈ R-047, 680 frames); R-072 validation on newRoom (position
+  error of the sensor path 72 → 31 cm median); `layout.py` / IMU / Metric3D scale estimates for R-071 (~2× too large,
   not applied); `scan-009-loop` in the web viewer (tsc ok, eslint 1 known warning, not opened in a browser). Records:
-  TRAINING R-052 – R-054, FEATURELESS_TRACKING_PLAN §8.2, STATUS, MAP, web-ui STATUS. Nothing committed (not asked
+  TRAINING R-052, R-071, R-072, FEATURELESS_TRACKING_PLAN §8.2, STATUS, MAP, web-ui STATUS. Nothing committed (not asked
   this session).
-- Runs: R-052, R-053, R-054. Decisions: none.
+- Runs: R-052, R-071, R-072. Decisions: none.
 - Problems: R-051's TRAINING entry says `--init mono` but its log shows `fast_mvs` (noted in R-052). Disk 9 GB free
   (new folders `work_v9pfb*`, `work_v9pfl*` ~4 GB; nothing deleted).
 - Next: Tayyab looks at `scan-009-loop` vs `scan-009-gyro` in the viewer and decides which to keep; whether the
-  R-053 recipe becomes a pipeline option for captures where SfM fails (open decision); a scale source; VGGT or
+  R-071 recipe becomes a pipeline option for captures where SfM fails (open decision); a scale source; VGGT or
   re-recording; folder cleanup (ask).

@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-19 by Tayyab (agent, night on `docs/featureless-tracking-plan`): scan_009 runs R-052 – R-054, `prior_ba.py`, `gyro_loop_bias.py`, loop-closed `scan-009-loop` in the viewer. Before that: 2026-11-18 by Tayyab (agent, night on `docs/featureless-tracking-plan`): scan_009 runs R-048 – R-051, IMU scale / gyro tools, `scan-009-gyro` in the viewer. Earlier: featureless tracking plan, D-069 (option 1 then continue), `gyro_check.py` / `--gyro_thr`, `gap_test.py`, R-047, app low-texture prompts. Before that: 2026-11-15 by Tayyab (agent, on `exp/overnight-2026-11-14`): scan_009 runs R-045 / R-046, `--pose_free` keyframes, layout no-floor fix, app feature-point map + coverage dots per frame + depth/pose pairing, 7 real models in the web viewer. Before that: 2026-11-14 by Tayyab (agent, overnight session on `exp/overnight-2026-11-14`): roomAttemptSadness2 v9 run (R-039), newRoom technique tests (R-040 – R-043), layout ceiling fix, server v9 option, tape script, capture checks in the app and on the PC, coverage 45%. Before that: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-032 – R-038 (renumbered from R-029 – R-035 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
+Last updated: 2026-11-19 by Tayyab (agent, night on `docs/featureless-tracking-plan`): scan_009 runs R-052, R-071, R-072, `prior_ba.py`, `gyro_loop_bias.py`, loop-closed `scan-009-loop` in the viewer. Before that: 2026-11-18 by Tayyab (agent, night on `docs/featureless-tracking-plan`): scan_009 runs R-048 – R-051, IMU scale / gyro tools, `scan-009-gyro` in the viewer. Earlier: featureless tracking plan, D-080 (option 1 then continue), `gyro_check.py` / `--gyro_thr`, `gap_test.py`, R-047, app low-texture prompts. Before that: 2026-11-15 by Tayyab (agent, on `exp/overnight-2026-11-14`): scan_009 runs R-045 / R-046, `--pose_free` keyframes, layout no-floor fix, app feature-point map + coverage dots per frame + depth/pose pairing, 7 real models in the web viewer. Before that: 2026-11-14 by Tayyab (agent, overnight session on `exp/overnight-2026-11-14`): roomAttemptSadness2 v9 run (R-039), newRoom technique tests (R-040 – R-043), layout ceiling fix, server v9 option, tape script, capture checks in the app and on the PC, coverage 45%. Before that: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-032 – R-038 (renumbered from R-029 – R-035 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -562,9 +562,9 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 - [ ] **[new 2026-11-18] Featureless tracking plan** ([FEATURELESS_TRACKING_PLAN.md](FEATURELESS_TRACKING_PLAN.md), draft):
       gyro rotation check and gap filling in `sfm_colmap.py`, lines / junctions and the `layout.py` room as a map for
       frames without corners, dense matchers / VGGT as quick tests, app guidance. Measured: scan_009's ARCore-lost
-      frames have SIFT median 39 (bedroom 526) but as many long lines (6 vs 7) (`texture_probe.py`). **OD-12 open**
+      frames have SIFT median 39 (bedroom 526) but as many long lines (6 vs 7) (`texture_probe.py`). **OD-14 open**
       (recommended: steps 0, 1, 6 first). Would answer OD-6.
-  - **2026-11-18: option 1 chosen, then continue (D-069).** Built: `gyro_check.py` + `sfm_colmap.py --gyro_thr`
+  - **2026-11-18: option 1 chosen, then continue (D-080).** Built: `gyro_check.py` + `sfm_colmap.py --gyro_thr`
     (newRoom: 0.15° median, 3 of 1,166 frames flagged; scan_009: 330 of 761), `gap_test.py` (gyro rotation through
     cut gaps: 0.30° median at 15 s), app prompts. R-047 (scan_009 with the check): inconclusive, path jumps 51 → 21,
     remaining errors are position / scale. Next: step 4 (position from lines + layout) or the incremental mapper
@@ -577,14 +577,14 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
     blurrier, scale 2–3× off). **Best scan_009 model: R-047**, now in the viewer as `scan-009-gyro`. Open for Tayyab:
     allow VGGT (learned poses; code + weights in `C:\Users\tyb\.cache\buildscan`, running it needs his OK) or
     re-record the room (slower, more light, floor in view). Scale of scan_009 remains unknown.
-  - **Night 2026-11-19 (scan_009, R-052 – R-054):** `prior_ba.py` (BA of a sensor-based path with gyro /
+  - **Night 2026-11-19 (scan_009, R-052, R-071, R-072):** `prior_ba.py` (BA of a sensor-based path with gyro /
     accelerometer relative priors; a free BA undid the gyro: 106 of 706 frames > 2°) → R-052 (698 frames, +0.5 dB vs
     R-051, ≈ R-047, loop not closed). Loop check: pairs > 120 s apart disagreed with the gyro by a consistent 14° yaw
     (gyro bias error). `gyro_loop_bias.py` (bias from all image pairs' 5-point rotations: 14.6 → 3.5°) +
-    `rot_sfm.py --bg_json --max_dt 300` + `prior_ba.py` → **R-053: 680 frames, loop closed (3,625 of 5,603 end points
+    `rot_sfm.py --bg_json --max_dt 300` + `prior_ba.py` → **R-071: 680 frames, loop closed (3,625 of 5,603 end points
     shared with the start), first scan_009 model whose scale check says "ok"**; training-view PSNR ≈ R-047; in the viewer
     as `scan-009-loop`. Scale still unknown (estimates 0.37 – 0.64 m per unit: ~2× too large; not applied); layout not
-    a clean rectangle. R-054 validation on newRoom: the recipe cuts the position error of the sensor path from 72 to
+    a clean rectangle. R-072 validation on newRoom: the recipe cuts the position error of the sensor path from 72 to
     31 cm median (normal SfM is far better where it works). Open: VGGT (needs Tayyab's OK), re-recording, a scale
     source, lines / layout for the IMU-only stretches (45 – 60 s, 90 – 105 s have ~0 matched points), cleanup of the
     scan_009 experiment folders (disk 9 GB free; ask).

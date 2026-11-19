@@ -85,8 +85,8 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-050 | 2026-11-18 | scan_009: diagnosis of the SfM failure (IMU scale per window, gyro pair test, short-range mapping, ARCore vs gyro) | 3070 | ~55 min | SfM locally wrong in both mappers; not wrong matches, not timing; ARCore poor (gyro corr 0.34); IMU clean | Diagnosis |
 | R-051 | 2026-11-18 | scan_009: gyro-rotation + accelerometer SfM (`rot_sfm.py`, `v9pfr`) | 3070 | 30.0 min from export (train 22.8) | 698 frames, 23,508 points at 1.76 px; −1.9 dB vs R-047, blurrier; scale ~2–3× too large | Rejected |
 | R-052 | 2026-11-19 | scan_009: R-051's poses refined by BA with gyro / accelerometer priors (`prior_ba.py`, `v9pfb`) | 3070 | ~78 min (two trainings) | 698 frames, reprojection 1.77 → 1.22 px, gyro kept (2 frames > 2°); +0.49 dB vs R-051; ≈ R-047 (mean 19.30 vs 19.31), loop not closed | Kept (coverage) |
-| R-053 | 2026-11-19 | scan_009: loop closure (gyro bias from far-apart pairs, rot_sfm with all pairs, prior BA; `v9pfl`) | 3070 | 55 min | 680 frames, loop closed (> 120 s pairs 15.6° → 3.5°), scale check ok; PSNR ≈ R-047 / R-052; scale ~2× too large (not applied) | Kept (most complete) |
-| R-054 | 2026-11-19 | newRoom: validation of the R-053 recipe against the trusted SfM path | 3070 | 34 min | position error median 72 → 31 cm (p90 166 → 68 cm), scale 0.89; still far worse than normal SfM | Validation |
+| R-071 | 2026-11-19 | scan_009: loop closure (gyro bias from far-apart pairs, rot_sfm with all pairs, prior BA; `v9pfl`) | 3070 | 55 min | 680 frames, loop closed (> 120 s pairs 15.6° → 3.5°), scale check ok; PSNR ≈ R-047 / R-052; scale ~2× too large (not applied) | Kept (most complete) |
+| R-072 | 2026-11-19 | newRoom: validation of the R-071 recipe against the trusted SfM path | 3070 | 34 min | position error median 72 → 31 cm (p90 166 → 68 cm), scale 0.89; still far worse than normal SfM | Validation |
 
 ## Runs
 
@@ -914,7 +914,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Command(s):** `python src/arcore3dgs/run_v8.py --dataset dataset/scan_009_057ed3beb4fc --tag v9pfg --from_stage export
   --pose_free --sfm_args "--feature aliked --temporal 30 --retrieval 30 --gyro_thr 2" --init fmvs --planar 0.2
   --blur 0.0222 --pgsr`
-- **Goal:** FEATURELESS_TRACKING_PLAN step 1 (D-069). Before the run, `gyro_check.py` on the same model: newRoom
+- **Goal:** FEATURELESS_TRACKING_PLAN step 1 (D-080). Before the run, `gyro_check.py` on the same model: newRoom
   (v9e2e SfM, 1,166 frames) pair error median 0.15°, p99 frame score 1.03°, 3 frames over 2°; scan_009 (761 frames)
   pair error median 1.41°, p90 16.9°, 330 frames over 2°, of them 185 of the 226 frames R-046's 30 cm jump filter
   dropped and 144 of the 535 it kept. Does dropping the gyro-flagged frames (before the Sim3 and the jump filter) give
@@ -1137,10 +1137,10 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
     does not close (rot_sfm only uses pairs < 20 s apart, so drift accumulates over the 3-min walk).
 - **End:** 02:51
 - **Verdict:** kept as the scan_009 model with the most coverage (698 frames vs 370); quality about equal to R-047
-  (better in the middle of the walk, worse where the loop meets). `prior_ba.py` kept. Next: close the loop (R-053).
+  (better in the middle of the walk, worse where the loop meets). `prior_ba.py` kept. Next: close the loop (R-071).
 
 
-### R-053 · 2026-11-19 · scan_009_057ed3beb4fc: loop closure: gyro bias from far-apart image pairs, rot_sfm with all pairs, prior BA (`v9pfl`)
+### R-071 · 2026-11-19 · scan_009_057ed3beb4fc: loop closure: gyro bias from far-apart image pairs, rot_sfm with all pairs, prior BA (`v9pfl`)
 
 - **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
 - **Branch / commit:** `docs/featureless-tracking-plan` @ 57db57a (uncommitted: `prior_ba.py`, `gyro_loop_bias.py`,
@@ -1174,7 +1174,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
     tracks), reprojection median 1.88 → **1.27 px** (p90 2.81); relative rotation vs the gyro prior median 0.10°,
     p95 0.33°. `gyro_check`: pair error median 0.19°, p90 0.47°, 1 frame over 2°.
   - **Loop check** (5-point rotation of each verified pair vs the model, scratchpad `loop_rot2.py`), median error,
-    R-052 → R-053: pairs > 120 s apart **15.6° → 3.5°** (world error vector [0.4, −15.2, 1.4]° → [−0.2, −0.9, 0.3]°:
+    R-052 → R-071: pairs > 120 s apart **15.6° → 3.5°** (world error vector [0.4, −15.2, 1.4]° → [−0.2, −0.9, 0.3]°:
     the heading drift is gone); 60–120 s 8.6 → 7.4°; 20–60 s 11.8 → 9.5°; 0–5 s 3.2 → 3.2° (noise floor);
     5–20 s 7.8 → 13.6° on 53 pairs (worse; not explained yet).
   - Export: 680 frames (jump filter dropped 18). `sfm_scale_check`: ratio median 2.25 model units per Metric3D metre,
@@ -1186,7 +1186,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
     accelerometer only.
   - `→ work_v9pfl_sfm/gs_v9pfl/splat.ply`. Training-view PSNR (half res, scratchpad `render_compare.py`): vs R-047 on
     the 303 frames both kept: median 19.95 vs 19.08, mean 19.49 vs 19.32, better on 45%; vs R-052 on 625 frames:
-    19.71 vs 19.70 (equal). Photo | R-047 | R-053 sheet: the start (0 s: wall lamp and door) now as sharp as R-047 (R-052
+    19.71 vs 19.70 (equal). Photo | R-047 | R-071 sheet: the start (0 s: wall lamp and door) now as sharp as R-047 (R-052
     lost the lamp); 45 s (wardrobe door) and 125 s (bathroom door) cleaner than R-047; 32 s, 95 s (door), 140 s and 187 s
     (curtain / AC) smeared. Not held out.
   - Scale (metres per model unit, none reliable): accelerometer (`imu_scale.py`) 0.368 at 1 s (bootstrap 0.16 – 0.48),
@@ -1200,7 +1200,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   `rot_sfm.py --bg_json --max_dt 300` + `prior_ba.py` is the recipe for captures where SfM fails.
 
 
-### R-054 · 2026-11-19 · newRoomAttemptSadness: validation of the R-053 recipe against a trusted SfM path (no training)
+### R-072 · 2026-11-19 · newRoomAttemptSadness: validation of the R-071 recipe against a trusted SfM path (no training)
 
 - **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
 - **Branch / commit:** `docs/featureless-tracking-plan` @ 57db57a (uncommitted: `prior_ba.py`, `gyro_loop_bias.py`,
@@ -1211,7 +1211,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   --triangulate_only` (dt ≤ 20 s, R-051 setting; pair directions from the cache in `work_rotsfm_vio`) →
   `work_rotsfm_tri`; `rot_sfm.py --max_dt 300 --bg_json … --triangulate_only` → `work_rotsfm_loop`; `prior_ba.py` on
   both (`sparse_pba`); evaluation scratchpad `eval_rot.py` (Sim3 to the trusted path, position error in metres)
-- **Goal:** how much do the R-053 steps (bias from far-apart pairs, far-apart pairs in rot_sfm, BA with sensor priors)
+- **Goal:** how much do the R-071 steps (bias from far-apart pairs, far-apart pairs in rot_sfm, BA with sensor priors)
   improve the camera path where the truth is known?
 - **Start → end:** 03:50 → 04:24 (bias fit 5.0 min, rot_sfm 3.3 + 9.4 min, prior BA 7.7 + 7.0 min)
 - **Errors during the run:** none.
@@ -1227,10 +1227,10 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
     | rot_sfm, pairs ≤ 20 s, poses fixed (R-051 setting) | 1,075 | 72.2 cm | 166.0 cm | 5.16× | 0.684 |
     | same + `prior_ba.py` | 1,075 | 62.3 cm | 153.8 cm | 3.00× | 0.679 |
     | rot_sfm, all pairs + loop bias, poses fixed | 1,022 | 55.2 cm | 101.9 cm | 5.02× | 0.918 |
-    | **same + `prior_ba.py` (R-053 recipe)** | 1,022 | **31.1 cm** | **68.4 cm** | **1.89×** | 0.893 |
+    | **same + `prior_ba.py` (R-071 recipe)** | 1,022 | **31.1 cm** | **68.4 cm** | **1.89×** | 0.893 |
 
     `prior_ba.py` reprojection median 0.67 / 0.66 px. R-051's validation recorded Sim3 scale 0.936 and 63 cm for the
     first row; today's re-run gives 0.684 and 72 cm (same code path except the bias / cache; not explained).
-- **Verdict:** the R-053 recipe more than halves the position error of the sensor-based path (72 → 31 cm median) and
+- **Verdict:** the R-071 recipe more than halves the position error of the sensor-based path (72 → 31 cm median) and
   makes the steps far more regular, but it is still much worse than normal SfM where normal SfM works (the trusted
   path). Use only for captures where SfM fails. One capture only; tuned settings are the defaults.

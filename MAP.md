@@ -173,9 +173,9 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `known_rot_pnp.py` | Places a camera from >= 2 matched 3D points with its rotation fixed (gyro); cut-gap test vs PnP. Used by `sfm_colmap.py --place_unplaced` (R-049) | [experiment] option, default off |
 | `imu_scale.py` | Metric scale of an SfM model from the accelerometer (pre-integrated over keyframe triplets, VINS-style), gravity and bias; `--gyro_orient` | [eval] diagnostic |
 | `gyro_pairs.py` | Rejects image pairs whose matches contradict the gyro rotation; `Orientation` (gyro integrated once over a capture, bias removable) | [experiment] |
-| `rot_sfm.py` | SfM with gyro rotations + positions from pair directions and the accelerometer (one linear system), then COLMAP triangulation / BA (R-051: rejected on scan_009); `--bg_json` (bias from `gyro_loop_bias.py`), `--max_dt 300` for loop pairs (R-053) | [experiment] |
-| `prior_ba.py` | Bundle adjustment of a COLMAP text model with soft gyro / accelerometer priors on consecutive keyframes (rotation 0.1° + 0.1°/s, position 0.02 + 30% of the step); same LM / Schur solver as `ba.py` (R-052 – R-054) | [experiment] |
-| `gyro_loop_bias.py` | Gyro bias from the 5-point rotations of all verified image pairs (far-apart pairs see the drift); writes the bias for `rot_sfm.py --bg_json` (R-053, R-054) | [experiment] |
+| `rot_sfm.py` | SfM with gyro rotations + positions from pair directions and the accelerometer (one linear system), then COLMAP triangulation / BA (R-051: rejected on scan_009); `--bg_json` (bias from `gyro_loop_bias.py`), `--max_dt 300` for loop pairs (R-071) | [experiment] |
+| `prior_ba.py` | Bundle adjustment of a COLMAP text model with soft gyro / accelerometer priors on consecutive keyframes (rotation 0.1° + 0.1°/s, position 0.02 + 30% of the step); same LM / Schur solver as `ba.py` (R-052, R-071, R-072) | [experiment] |
+| `gyro_loop_bias.py` | Gyro bias from the 5-point rotations of all verified image pairs (far-apart pairs see the drift); writes the bias for `rot_sfm.py --bg_json` (R-071, R-072) | [experiment] |
 | `vggt_poses.py` | VGGT (learned poses) on chunks of keyframes, chained, checked against gyro / accelerometer / ARCore, written in the export layout. Needs VGGT outside the repo; **never run** (needs Tayyab's OK) | [experiment] not run |
 | `gap_test.py` | Cut-gap test: removes windows of keyframes from a trusted model and predicts their rotation from the gyro (plan step 0 / 3) | [eval] |
 | `tape_check.py` | Model vs tape table for a room (`<dataset>/tape.csv`: layout room length / width / height or values measured in the viewer), mean / max error, NFR6 (≤ 5%) check (COMPLETION_PLAN E2) | [eval] current |
@@ -287,7 +287,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | Path | What |
 |---|---|
 | `progress/STATUS.md`, `DECISIONS.md`, `LOG.md`, `TRAINING.md` | The four live project records (CLAUDE.md §1) |
-| `progress/FEATURELESS_TRACKING_PLAN.md` | **current** · Draft plan (2026-11-18) for placing cameras in featureless stretches: gyro rotation, lines / junctions, the room layout as a map, dense matchers; measurements, steps, options (OD-12) |
+| `progress/FEATURELESS_TRACKING_PLAN.md` | **current** · Draft plan (2026-11-18) for placing cameras in featureless stretches: gyro rotation, lines / junctions, the room layout as a map, dense matchers; measurements, steps, options (OD-14) |
 | `progress/COMPLETION_PLAN.md` | **current** · Plan to finish by 2026-12-04: every open task by pipeline step, with done-when, dependencies, priority, week; snapshot of the shared doc (link inside) |
 | `progress/Problems_and_Solutions.md` | Technical evidence for every problem and fix (P&S §x) |
 | `progress/Research_Notes_2026-10-24.md` | Literature behind v8/v9 |
