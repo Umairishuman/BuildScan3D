@@ -644,3 +644,15 @@ sheet `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/semantic_v10/fi
   `r1119c` and `r1116w9` (with #7: 7 bundles, 0.24 GB). Umair: deployed site lists only published scans, a local run
   lists local + published (`b7d3c86`); `prototype/web-ui/.env.local` holds `SCANS_BASE_URL` on this PC (gitignored).
   Umair allowed the agent to close `run-r1119` once its log says "all done", then start scan #5.
+- Later still: **R-058 (scan #6) failed**: COLMAP `global_mapper` killed by the OOM killer at 16:14:39 (26.4 GB,
+  12.56 M observations, the same size as scan #7 which passed alone); the agent's web work in parallel (dev servers,
+  `next build`, tests, uploads) most likely tipped it; the OOM also killed VS Code helpers (ending that agent session)
+  and the `run-r1119` / `viewer` screen sessions. Umair chose "same recipe, PC kept quiet": **R-059** (`r1119b6`)
+  started 16:33:50; the agent logs free RAM each minute (`mem_r1119b6.log` in its scratch folder) and runs nothing
+  heavy during SfM. Scan #5 becomes R-060. Umair added `SCANS_BASE_URL` in Vercel and allowed the push:
+  `feature/vercel-deploy` pushed (86 commits ahead of `master`, CI passed); #26 closed. Umair keeps the R2 token for
+  now. New issues **#31 – #38** for the next steps (STATUS §7.10, COMPLETION_PLAN rows 2.1 – 5.6); labels `step-2`,
+  `step-3`.
+- Next (agent): finish R-059 (close `run-r1119b6` once "all done", stage times, layout, fixtures, check sheet, publish
+  within the cap), then R-060 scan #5 (`--window 9`, quiet PC); #30 Vercel preview check → PR to `master` only when
+  Umair asks; #31 options for OD-7. Next free IDs: R-061, D-078. Umair: his items #16, #20 – #25 wait.

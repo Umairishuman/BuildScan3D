@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-19 by Umair (R-057: D-075 defaults on four rooms; R-058 scan #6 running; D-076 online site on Vercel + R2, issues #26 – #30, code on `feature/vercel-deploy`; earlier D-075: Step 4 options on in run_full.sh, older web bundles moved to prototype/web-ui/scans_archive/; before that Step 4 issues #8 – #25, runs R-053 – R-056)
+Last updated: 2026-11-19 by Umair (R-058 scan #6 OOM in SfM, R-059 rerun running; issues #31 – #38 for the next steps; feature/vercel-deploy pushed; R-057: D-075 defaults on four rooms; R-058 scan #6 running; D-076 online site on Vercel + R2, issues #26 – #30, code on `feature/vercel-deploy`; earlier D-075: Step 4 options on in run_full.sh, older web bundles moved to prototype/web-ui/scans_archive/; before that Step 4 issues #8 – #25, runs R-053 – R-056)
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -549,6 +549,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       env `SCANS_BASE_URL`, OK to push. #27 / #28 / #29 code done on `feature/vercel-deploy` (not pushed; tested with
       a local folder bucket only). #30: bucket CORS, first deploy, browser check on a second machine. Then: `pip install
       boto3` in `bs-server`; Tayyab's own token and `PUBLISH_OWNER=tayyab` on the 3070 PC (needs Tayyab).
+- [ ] **[new 2026-11-19] Next steps as issues** (#31 – #38): server runs `run_full.sh` (#31, OD-7 for Umair), auto-publish
+      finished jobs within the 10 GB cap (#32), job progress to app / dashboard (#33), signing key backup (#34, Umair),
+      SfM memory on long recordings (#35, R-038 / R-058), processing-time table and repeat runs (#36), `.spz` vs
+      `.ksplat` + unmerged branches (#37, team), web UI empty / error states and known issues (#38).
 - [ ] **[new 2026-11-19] Hand-written `scan-008` card on Vercel** opens only once `scan_008_…_r1116w9` is published
       (or the card is retired for the auto-listed one): Umair's choice.
 - [ ] **[new 2026-11-19] Room names on the auto-listed cards** (they say "Scan #N · tag"): e.g. a small names file next
