@@ -34,6 +34,7 @@ import { SemanticLayersState, RenderMode } from "@/components/Viewer3D/SceneBuil
 import { MeasurementRecord } from "@/components/Viewer3D/MeasurementTool";
 import { ExportModal } from "@/components/ExportModal";
 import { MOCK_PROJECTS } from "@/lib/mockData";
+import { useAllProjects } from "@/lib/useAllProjects";
 import { Eye, EyeOff } from "lucide-react";
 
 interface ViewerPageProps {
@@ -42,11 +43,39 @@ interface ViewerPageProps {
 
 type PanelKey = "layers" | "measurements" | null;
 
+/** Ids of scan bundles listed automatically from public/scans/ (src/lib/scanBundles.ts BUNDLE_ID_PREFIX). */
+const BUNDLE_ID_PREFIX = "run-";
+
 export default function ViewerPage({ params }: ViewerPageProps) {
   const { id: projectId } = use(params);
   const project = MOCK_PROJECTS.find((p) => p.id === projectId);
-  if (!project) notFound();
-  return <ViewerWorkspace project={project} />;
+  if (project) return <ViewerWorkspace project={project} />;
+  // Not hand-written: only an auto-listed bundle can still match; anything else is a 404 straight away.
+  if (!projectId.startsWith(BUNDLE_ID_PREFIX)) notFound();
+  return <BundleViewer projectId={projectId} />;
+}
+
+function BundleViewer({ projectId }: { projectId: string }) {
+  const { projects, loading, error } = useAllProjects();
+  const project = projects.find((p) => p.id === projectId);
+  if (project) return <ViewerWorkspace project={project} />;
+  if (loading) {
+    return (
+      <AppShell variant="contained" activeNav="projects">
+        <p className="py-16 text-center text-sm text-[#64748b]">Loading scan…</p>
+      </AppShell>
+    );
+  }
+  if (error) {
+    return (
+      <AppShell variant="contained" activeNav="projects">
+        <p className="py-16 text-center text-sm text-[#64748b]">
+          Could not list the processed scans ({error}).
+        </p>
+      </AppShell>
+    );
+  }
+  notFound();
 }
 
 /* --------------------------- Semantic Layers config --------------------------- */
