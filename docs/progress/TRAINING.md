@@ -74,7 +74,8 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-039 | 2026-11-16 | scan_008 re-run with `--window 9` (`r1116w9`, D-073), R-023 recipe otherwise | this PC (Ubuntu, RTX 4000 Ada) | 166.7 min (run_v8 145.4) | 1118/1118 frames; gravity 0.00°; 5 walls, floor 21.26 m², ceiling 3.19 m; 11 fixtures (unchecked) | Kept for now (in the web UI) |
 | R-040 | 2026-11-18 | scan #7 `scan_007_e6d4f090f88e` (269 s), R-023 recipe, default window 6 (`r1118`) | this PC (Ubuntu, RTX 4000 Ada) | 200.6 min (run_v8 175.4) | 1159/1160 frames; gravity 0.00°; 6 walls, floor 19.66 m², ceiling 3.40 m; **0 fixtures (29 rejected)** | Inconclusive (fixtures) |
 | R-053 | 2026-11-19 | Layout re-runs on six rooms, no-roof check (#8), scratch output | this PC (Ubuntu, RTX 4000 Ada) | 8.8 min | scan #7: no roof, walls 3.12 m (was ceiling 3.435 m); 5 other rooms unchanged | Kept (#8) |
-| R-054 | 2026-11-19 | scans #7 / #3: layout (#8 #9 #10) → semantics → mesh labels → web, tag `r1119a` | this PC (Ubuntu, RTX 4000 Ada) | running | pending | Running |
+| R-054 | 2026-11-19 | scans #7 / #3: layout (#8 #9 #10) → semantics → mesh labels → web, tag `r1119a` | this PC (Ubuntu, RTX 4000 Ada) | 8.1 min | #7 no roof, 1 doorway + 3 window openings, open outline; #3 open outline flagged, triangle area gone, 4 false openings | Superseded (#9 fixed after it) |
+| R-055 | 2026-11-19 | Layout on six rooms, `--debug`, default vs `--raised_max 1.5 --infer_gap 6` | this PC (Ubuntu, RTX 4000 Ada) | running | pending | Running |
 
 ## Runs
 
@@ -780,6 +781,30 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Goal:** scan #7: no roof (#8), its empty doorways / window openings found from the wall gaps (#9), outline
   closed or a warning (#10); scan #3: the 4-walls-3-corners outline is flagged and the triangle floor area
   (32.27 m²) is no longer reported (#10); no false openings in a finished room (#9).
+- **Start → end:** 08:57:17 → 09:05:25 (8.1 min; scan #7 08:57:17 → 09:01:06: layout 2.3, sem3d 0.2, verify 0.2, sem3d2 0.2,
+  meshlabels 0.9, web 0.1 min; scan #3 09:01:06 → 09:05:25, `gs_r1119a/stages.tsv`)
+- **Errors during the run:** none (exit 0).
+- **Result:** scan #7: no roof, walls 3.12 m; outline flagged not closed (6 walls, 4 corners), floor area null;
+  wall-gap openings: doorway 0.80 m (wall 1, 0.10–2.40 m), window openings 2.10 m (wall 4, 0.40–2.30 m), 0.50 m
+  (wall 2, 2.30–3.20 m), 0.30 m (wall 0, 1.90–2.40 m); 4 fixtures, 29 rejected; net wall areas reduced by them;
+  check sheet `gs_r1119a/semantic_v10/fixture_check.md`, plan `gs_r1119a/layout/plan.svg|dxf`. Scan #3: outline
+  flagged not closed (4 walls, 3 corners), floor area null (was the 32.27 m² triangle), ceiling 2.504 m; **4 false
+  "window openings"** in the finished classroom (0.3–0.6 m wide, 1–2 Gaussians seen behind per open cell, against 41 /
+  19 for scan #7's doorway / big opening; scan #7's two small ones 1 and 4). Web bundles
+  `public/scans/scan_007_e6d4f090f88e_r1119a/`, `scan_003_6de634cbb8b2_r1119a/`.
+- **Verdict:** #8 and #10 behave as intended; #9 gave false openings on a finished room → fixed by a view-through
+  minimum of 10 Gaussians per open cell (`f0e8bd7`); the `r1119a` bundles predate that fix and are superseded by
+  the re-run after R-055.
+
+### R-055 · 2026-11-19 · Layout on six rooms with `--debug`: default vs `--raised_max 1.5 --infer_gap 6` (#9, #10, #11)
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada).
+- **Branch / commit:** `fix/11-wall-behind-boards` @ `30315b9`; a frozen copy of `layout.py` runs from the scratch folder.
+- **Dataset:** trained models of scans #1, #2, #3, #7, #8, newRoom (as R-053); nothing in `dataset/` written.
+- **Command(s):** per room `layout.py --ply ... --work ... --out <scratch>/r055/<cfg>/<room>/layout --debug`, with
+  cfg `default` and cfg `opts` = `--raised_max 1.5 --infer_gap 6`. Before it: one `--debug` run on scan #7 alone.
+- **Goal:** (a) the view-through minimum leaves no openings on finished rooms and keeps scan #7's doorway / big
+  window opening; (b) which real walls start > 0.5 m above the floor (would `--raised_max` drop them?); (c) what
+  `--infer_gap 6` closes; (d) scan #7's plank faces gone with the options.
 - **Start → end:** (running)
 - **Errors during the run:** none so far.
 - **Result:** pending.
