@@ -34,12 +34,13 @@ NS_EXPORT = toolpaths.ns_cmd("ns-export")
 #   BUILDSCAN_PIPELINE=v9  scripts/run_full.sh: v9 3DGS -> layout -> semantics -> mesh -> web bundle
 # BUILDSCAN_V9_ARGS overrides the run_v8.py arguments, BUILDSCAN_BASH the bash used for run_full.sh.
 V9_STAGES = ["select", "sfm", "export", "prior", "init", "train", "ply", "layout", "sem2d", "sem3d", "verify",
-             "sem3d2", "mesh", "meshlabels", "web"]
+             "sem3d2", "mesh", "meshlabels", "web", "plan"]
 V9_LABELS = {"select": "Choosing sharp keyframes", "sfm": "COLMAP camera poses", "export": "Exporting cameras",
              "prior": "Depth / normal priors", "init": "Dense starting points", "train": "Training 3D Gaussian Splatting",
              "ply": "Exporting the model", "layout": "Room layout", "sem2d": "Finding fixtures in the images",
              "sem3d": "Labelling the model", "verify": "Checking fixtures", "sem3d2": "Final labels",
-             "mesh": "Building the mesh", "meshlabels": "Labelling the mesh", "web": "Web viewer bundle"}
+             "mesh": "Building the mesh", "meshlabels": "Labelling the mesh", "web": "Web viewer bundle",
+             "plan": "Floor plan"}
 V9_DEFAULT_ARGS = '--sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr'   # R-023 / R-031 recipe
 V9_TAG = "srv"
 V9_TIMEOUT_SEC = 6 * 3600
