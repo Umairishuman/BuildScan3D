@@ -10,6 +10,12 @@ to it once). Unpublishing moves the files to archive/scans/<owner>/... in the bu
 Runs on Linux and Windows (Python 3.9+; `pip install boto3` for the R2 target). Settings from the repo's .env:
   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET   the bucket and an Object Read & Write token
   PUBLISH_OWNER (e.g. umair), PUBLISH_OWNER_NAME (e.g. Umair)        whose scans these are
+  R2_MAX_BYTES (optional)    lower storage cap; it can never be set above the 10 GB free tier
+
+STORAGE CAP (Umair, 2026-11-19, D-077): the bucket must never pass 10 GB, the free tier (no money for more).
+Before any upload the whole bucket is measured (every owner and archive/, since archived files are still stored);
+if what would be stored afterwards is above the cap (9.5 GB by default, leaving room for the indexes and for two
+people publishing at once), nothing is uploaded and the script stops with the numbers.
 
   python scripts/publish_scan.py publish 7 r1119c [--room "Site office"] [--dry-run]
   python scripts/publish_scan.py unpublish 7 r1119c
@@ -38,6 +44,9 @@ TYPES = {".spz": "application/octet-stream", ".glb": "model/gltf-binary", ".json
          ".png": "image/png", ".jpg": "image/jpeg"}
 FILE_CACHE = "public, max-age=300"       # bundle files: a re-publish of the same run shows within minutes
 INDEX_CACHE = "no-cache"                 # indexes: always revalidated
+FREE_TIER_BYTES = 10_000_000_000         # 10 GB: R2 free storage; the cap can never be above this (D-077)
+DEFAULT_CAP_BYTES = 9_500_000_000        # default cap: 0.5 GB headroom below the free tier
+INDEX_HEADROOM = 1_000_000               # room for the index / owners files a publish rewrites
 
 
 def die(msg):
@@ -89,6 +98,9 @@ class DirStore:
         self._p(dst).parent.mkdir(parents=True, exist_ok=True)
         shutil.move(self._p(src), self._p(dst))
 
+    def sizes(self):
+        return {k: self.size(k) for k in self.keys("")}
+
 
 class R2Store:
     def __init__(self, env):
@@ -117,15 +129,18 @@ class R2Store:
         except self.s3.exceptions.NoSuchKey:
             return None
 
-    def keys(self, prefix):
-        out, tok = [], None
+    def sizes(self, prefix=""):
+        out, tok = {}, None
         while True:
             kw = {"Bucket": self.bucket, "Prefix": prefix, **({"ContinuationToken": tok} if tok else {})}
             r = self.s3.list_objects_v2(**kw)
-            out += [o["Key"] for o in r.get("Contents", [])]
+            out.update({o["Key"]: o["Size"] for o in r.get("Contents", [])})
             if not r.get("IsTruncated"):
                 return out
             tok = r["NextContinuationToken"]
+
+    def keys(self, prefix):
+        return sorted(self.sizes(prefix))
 
     def size(self, key):
         try:
@@ -174,6 +189,20 @@ def run_info(tag):
     return None, None
 
 
+def storage_cap(env):
+    cap = DEFAULT_CAP_BYTES
+    if env.get("R2_MAX_BYTES"):
+        try:
+            cap = int(float(env["R2_MAX_BYTES"]))
+        except ValueError:
+            die(f"R2_MAX_BYTES={env['R2_MAX_BYTES']!r} is not a number")
+    return min(cap, FREE_TIER_BYTES)  # never above the free tier, whatever .env says
+
+
+def gb(n):
+    return f"{n / 1e9:.2f} GB"
+
+
 def owner_of(env, args):
     owner = (args.owner or env.get("PUBLISH_OWNER", "")).strip().lower()
     if not SAFE_OWNER.match(owner):
@@ -216,6 +245,16 @@ def publish(store, env, args):
     total = sum(p.stat().st_size for p in files)
     print(f"{name} ({owner}): {folder} -> {prefix}  {len(files)} files, {total / 1e6:.1f} MB"
           f"{'' if run_id else '  (no TRAINING.md run for this tag)'}")
+    # storage cap (D-077): measure the whole bucket, count what this publish replaces, refuse if over the cap
+    cap = storage_cap(env)
+    sizes = store.sizes()
+    used = sum(v or 0 for v in sizes.values())
+    replaced = sum(v or 0 for k, v in sizes.items() if k.startswith(prefix))
+    after = used - replaced + total + INDEX_HEADROOM
+    print(f"bucket: {gb(used)} stored now, {gb(after)} after this publish, cap {gb(cap)} (free tier {gb(FREE_TIER_BYTES)})")
+    if after > cap:
+        die(f"NOT published: {folder} would bring the bucket to {gb(after)}, above the {gb(cap)} cap (D-077). "
+            "Free space first (unpublished scans stay in archive/ and still count) or ask Umair.")
     if args.dry_run:
         for p in files:
             print(f"  would upload {p.name} ({p.stat().st_size / 1e6:.1f} MB)")
@@ -235,7 +274,8 @@ def publish(store, env, args):
     if not any(o.get("id") == owner for o in owners["owners"]):
         owners["owners"].append({"id": owner, "name": name})
         store.put_json("owners.json", owners)
-    print(f"published: {len(idx['bundles'])} bundle(s) in scans/{owner}/index.json")
+    print(f"published: {len(idx['bundles'])} bundle(s) in scans/{owner}/index.json; "
+          f"bucket now {gb(sum(v or 0 for v in store.sizes().values()))} of the {gb(cap)} cap")
 
 
 def unpublish(store, env, args):
@@ -249,10 +289,15 @@ def unpublish(store, env, args):
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     for key in store.keys(f"scans/{owner}/{folder}/"):
         store.move(key, f"archive/{key[:-len(key.split('/')[-1])]}{stamp}/{key.split('/')[-1]}")
-    print(f"unpublished {folder}: files moved to archive/scans/{owner}/{folder}/{stamp}/ (not deleted)")
+    print(f"unpublished {folder}: files moved to archive/scans/{owner}/{folder}/{stamp}/ (not deleted, so they still "
+          "count towards the storage cap)")
 
 
 def list_published(store, env, args):
+    sizes = store.sizes()
+    arch = sum(v or 0 for k, v in sizes.items() if k.startswith("archive/"))
+    print(f"bucket: {gb(sum(v or 0 for v in sizes.values()))} stored ({gb(arch)} of it in archive/), "
+          f"cap {gb(storage_cap(env))}")
     owners = (store.get_json("owners.json") or {}).get("owners", [])
     if not owners:
         print("nothing published yet")

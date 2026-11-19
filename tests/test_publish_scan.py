@@ -64,3 +64,23 @@ def test_refuses_bad_owner_and_missing_bundle(tmp_path):
     assert run(root, bucket, "publish", "7", "nope", "--owner", "umair").returncode != 0
     assert run(root, bucket, "publish", "9", "t2", "--owner", "umair").returncode != 0
     assert not (bucket / "owners.json").exists()
+
+
+def test_storage_cap(tmp_path):
+    """D-077: nothing is uploaded when the bucket would pass the cap; the cap never goes above 10 GB."""
+    root, bucket = tmp_path / "repo", tmp_path / "bucket"
+    make_repo(root)
+    env = {**os.environ, "BUILDSCAN_ROOT": str(root), "R2_MAX_BYTES": "1002000"}  # one ~1.1 KB bundle + indexes + 1 MB headroom fit, two do not
+    cmd = [sys.executable, str(SCRIPT), "publish", "7", "t2", "--owner", "umair", "--target", f"dir:{bucket}"]
+    assert subprocess.run(cmd, env=env, capture_output=True, text=True).returncode == 0
+    # republishing the same run replaces its files, so it still fits
+    assert subprocess.run(cmd, env=env, capture_output=True, text=True).returncode == 0
+    # a second copy under another owner would not fit: refused, nothing written for it
+    r = subprocess.run(cmd[:6] + ["tayyab", "--target", f"dir:{bucket}"], env=env, capture_output=True, text=True)
+    assert r.returncode != 0 and "NOT published" in r.stderr
+    assert not (bucket / "scans" / "tayyab").exists()
+    # a cap above the free tier is clamped to 10 GB
+    sys.path.insert(0, str(SCRIPT.parent))
+    import publish_scan
+    assert publish_scan.storage_cap({"R2_MAX_BYTES": "5e10"}) == 10_000_000_000
+    assert publish_scan.storage_cap({}) == 9_500_000_000
