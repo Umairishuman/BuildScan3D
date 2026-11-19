@@ -73,6 +73,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-038 | 2026-11-16 | scan_008_7b486c855ed6, R-023 recipe, full pipeline (`r1116`), first Infinix X6833B capture | this PC (Ubuntu, RTX 4000 Ada) | 49.7 min, did not finish | 1639 of 10255 frames; COLMAP `global_mapper` killed by OOM (26.1 GB) at 13:16 | Failed (OOM in SfM) |
 | R-039 | 2026-11-16 | scan_008 re-run with `--window 9` (`r1116w9`, D-073), R-023 recipe otherwise | this PC (Ubuntu, RTX 4000 Ada) | 166.7 min (run_v8 145.4) | 1118/1118 frames; gravity 0.00°; 5 walls, floor 21.26 m², ceiling 3.19 m; 11 fixtures (unchecked) | Kept for now (in the web UI) |
 | R-040 | 2026-11-18 | scan #7 `scan_007_e6d4f090f88e` (269 s), R-023 recipe, default window 6 (`r1118`) | this PC (Ubuntu, RTX 4000 Ada) | 200.6 min (run_v8 175.4) | 1159/1160 frames; gravity 0.00°; 6 walls, floor 19.66 m², ceiling 3.40 m; **0 fixtures (29 rejected)** | Inconclusive (fixtures) |
+| R-053 | 2026-11-19 | Layout re-runs on six rooms, no-roof check (#8), scratch output | this PC (Ubuntu, RTX 4000 Ada) | running | pending | Running |
 
 ## Runs
 
@@ -741,3 +742,21 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   mesh; no electrical / openings groups). No tape, room not named.
 - **Verdict:** inconclusive until Umair has looked at the model and the rejected fixtures (the reconstruction itself
   finished without errors). Output `dataset/scan_007_e6d4f090f88e/work_r1118_sfm/gs_r1118/`.
+
+### R-053 · 2026-11-19 · Layout re-runs on six rooms for the no-roof check (#8), into scratch folders
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada). Numbered R-053, not R-041: R-041 … R-051 are
+  taken on `origin/master` / Tayyab's branches (OD-12).
+- **Branch / commit:** `fix/8-open-ceiling` @ `fc816fb` (no uncommitted changes); a frozen copy of `layout.py` in the agent's
+  scratch folder runs, so later edits do not leak in.
+- **Dataset:** trained models of scan #1 (`umair`), #2 (`r1106lev`), #3 (`r1112lev`), #7 (`r1118`), #8 (`r1116w9`),
+  newRoom (`r1112nr`); nothing in `dataset/` is written.
+- **Command(s):** per room `micromamba run -n bs-ns python layout.py --ply <gs>/splat.ply --work <work_sfm> --out
+  <scratch>/r053/<room>/layout`; before it, a read-only ceiling-evidence script on the same models (coverage of the
+  floor outline, colour, Gaussian count).
+- **Goal:** scan #7 (no roof) reports no ceiling and the wall-top height; the five rooms with ceilings keep the
+  height, walls and corners of their last layout run.
+- **Start → end:** (running)
+- **Errors during the run:** none so far.
+- **Result:** pending.
+- **Verdict:** pending.
+
