@@ -191,6 +191,7 @@ if __name__ == "__main__":
     ap.add_argument("--iters", type=int, default=15)
     ap.add_argument("--triangulate_only", action="store_true", help="poses stay as solved (metric, from the IMU)")
     ap.add_argument("--no_ba", action="store_true", help="stop after the initial model (rot_init), no triangulation / BA")
+    ap.add_argument("--bg_json", default=None, help="gyro bias from gyro_loop_bias.py (replaces gyro_check's estimate)")
     ap.add_argument("--imu_max_gap", type=float, default=2.0, help="s; longer keyframe gaps get no accelerometer link")
     a = ap.parse_args()
     OUT = os.path.abspath(a.out); os.makedirs(OUT, exist_ok=True)
@@ -200,6 +201,10 @@ if __name__ == "__main__":
     # IMU->camera calibration from the calibration model (Kabsch on its rotations, trimmed: robust to bad frames)
     rep = check(a.dataset, meta["frames"], {n: v[0] for n, v in imgs0.items()}, Capture(a.dataset).t0_ns,
                 meta.get("pose_offset", 0.0))
+    if a.bg_json:
+        rep["bg"] = np.array(json.load(open(a.bg_json))["bg"])
+        rep["gyro_bias_deg_s"] = float(np.degrees(np.linalg.norm(rep["bg"])))
+        print(f"gyro bias from {a.bg_json}")
     orient = Orientation(rep["imu"], rep["off"], min(pts.values()) - 1, max(pts.values()) + 1, bg=rep["bg"])
     print(f"gyro bias {rep['gyro_bias_deg_s']:.3f} deg/s removed")
     Rci = rep["Rci"]
@@ -216,7 +221,7 @@ if __name__ == "__main__":
     rng = np.random.default_rng(0)
     edges_raw = []
     rows = list(c.execute("select pair_id, rows, data from two_view_geometries where rows > 0"))
-    cache = os.path.join(OUT, f"pair_directions_dt{a.max_dt:g}_par{a.min_parallax:g}.json")
+    cache = os.path.join(OUT, f"pair_directions_dt{a.max_dt:g}_par{a.min_parallax:g}{'_bg' if a.bg_json else ''}.json")
     if os.path.exists(cache):
         edges_raw = [(x[0], x[1], np.array(x[2]), x[3]) for x in json.load(open(cache))]
         rows_todo = []

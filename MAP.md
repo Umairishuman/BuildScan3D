@@ -173,7 +173,9 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `known_rot_pnp.py` | Places a camera from >= 2 matched 3D points with its rotation fixed (gyro); cut-gap test vs PnP. Used by `sfm_colmap.py --place_unplaced` (R-049) | [experiment] option, default off |
 | `imu_scale.py` | Metric scale of an SfM model from the accelerometer (pre-integrated over keyframe triplets, VINS-style), gravity and bias; `--gyro_orient` | [eval] diagnostic |
 | `gyro_pairs.py` | Rejects image pairs whose matches contradict the gyro rotation; `Orientation` (gyro integrated once over a capture, bias removable) | [experiment] |
-| `rot_sfm.py` | SfM with gyro rotations + positions from pair directions and the accelerometer (one linear system), then COLMAP triangulation / BA (R-051: rejected on scan_009) | [experiment] |
+| `rot_sfm.py` | SfM with gyro rotations + positions from pair directions and the accelerometer (one linear system), then COLMAP triangulation / BA (R-051: rejected on scan_009); `--bg_json` (bias from `gyro_loop_bias.py`), `--max_dt 300` for loop pairs (R-053) | [experiment] |
+| `prior_ba.py` | Bundle adjustment of a COLMAP text model with soft gyro / accelerometer priors on consecutive keyframes (rotation 0.1° + 0.1°/s, position 0.02 + 30% of the step); same LM / Schur solver as `ba.py` (R-052 – R-054) | [experiment] |
+| `gyro_loop_bias.py` | Gyro bias from the 5-point rotations of all verified image pairs (far-apart pairs see the drift); writes the bias for `rot_sfm.py --bg_json` (R-053, R-054) | [experiment] |
 | `vggt_poses.py` | VGGT (learned poses) on chunks of keyframes, chained, checked against gyro / accelerometer / ARCore, written in the export layout. Needs VGGT outside the repo; **never run** (needs Tayyab's OK) | [experiment] not run |
 | `gap_test.py` | Cut-gap test: removes windows of keyframes from a trusted model and predicts their rotation from the gyro (plan step 0 / 3) | [eval] |
 | `tape_check.py` | Model vs tape table for a room (`<dataset>/tape.csv`: layout room length / width / height or values measured in the viewer), mean / max error, NFR6 (≤ 5%) check (COMPLETION_PLAN E2) | [eval] current |
