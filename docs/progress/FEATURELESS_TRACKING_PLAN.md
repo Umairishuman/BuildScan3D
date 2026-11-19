@@ -300,3 +300,56 @@ Options, in order of cost:
   where SfM fails, not a replacement.
 - **Scale of scan_009:** accelerometer 0.37 – 0.48, Metric3D ~0.44 – 0.53, room height (if 2.6 – 3.0 m) 0.56 – 0.64 m
   per model unit: about 2× too large, but no source is reliable enough to apply.
+
+---
+
+## 9. Plan from 2026-11-20 (after merging `master`, 2026-11-19)
+
+Written for Tayyab after `master` (Umair's Step 4 work, the online site, app v0.3.9) was merged into this branch.
+**A proposal, not a decision:** the rows marked "decision" are Tayyab's or the team's.
+
+### 9.1 What changed on `master` that matters here
+
+- **Week 2 (2026-11-20 → 11-26) is the evaluation week**; gate G2 on 11-26 wants every evaluation number measured
+  ([COMPLETION_PLAN.md](COMPLETION_PLAN.md)). **E1** ("COLMAP with vs without ARCore priors on low-texture captures:
+  ATE, track completion", Must, no owner yet) is the evaluation this work answers. So the featureless work should go
+  into E1 first and into new methods second.
+- **Step 4 layout** (`layout.py` with D-075 defaults, openings, `--square`, `plan_export.py`): it was never run on a
+  sensor-path model. It may give scan_009 a cleaner outline and a room height, which is scale option 3 in §5.
+  COMPLETION_PLAN **4.11** ("edge-based corners, gravity-aware lines, wall–floor boundary", Could, W3) needs the same
+  line detector as step 4 here. Build it once, with Umair.
+- **Gravity (D-071):** `sfm_colmap.py` export now levels the world with ARCore gravity. `--sim3 none` (sensor-path
+  models, already +Y up) skips both the Sim3 and the levelling. That is correct for `rot_sfm.py --imu 1` output; it is
+  checked only by `py_compile`, not by a run after the merge.
+- **Online site (D-076, D-077):** the deployed site shows only scans published to R2 (cap 10 GB). `scan-009-gyro` /
+  `scan-009-loop` exist only in `mockData.ts` on this PC. Showing scan_009 online needs a web bundle (`export_web.py`)
+  and `publish_scan.py`, and a clear "scale not reliable" label. Part of OD-15.
+- **Run IDs (D-079):** check `origin/master`'s TRAINING.md before every run. The next free numbers after this merge
+  are **R-073** and **D-081** (R-060 / R-061 and D-078 are Umair's).
+
+### 9.2 Steps, in order
+
+| # | Step | Effort | Done when | Needs | When |
+|---|---|---|---|---|---|
+| 9.a | **E1 table.** Cut-gap captures (newRoom, bedroom, roomAttemptSadness2: windows of 2 / 9 / 15 / 30 s removed) placed by (1) normal SfM, (2) SfM + gyro check / placement, (3) the sensor-path recipe (R-071). Report ATE (median / p90) and frames placed. Add scan_009's frames placed (R-046 370 → R-071 680) and loop error. Move `eval_rot.py` and `render_compare.py` from the agent's scratch folder into `src/arcore3dgs/` as eval tools | 1.5 days | table in TRAINING + report draft | E1 owner (decision) | 11-20 → 11-22 |
+| 9.b | **Scale for scan_009.** (1) Run `layout.py` (D-075 defaults) on R-071 and record the room height. (2) Ask who recorded scan_009 and tape the room: one length and the height. (3) Apply the scale, check it against the accelerometer / Metric3D estimates (§8.2), and run `tape_check.py` (E2) | 0.5 day + a tape visit | scale applied with its error stated, or "not measured" | access to the room | 11-21 → 11-23 |
+| 9.c | **Sharp re-recording of scan_009's room** with the capture protocol (COMPLETION_PLAN 1.4). This separates blur (21.7 px median) from missing texture. Process with the normal pipeline first, then with 9.d if SfM fails | 1 h recording + 1 run | logged run; frames placed and scale check vs R-071 | the app with the corner prompt (9.g) helps but is not required | 11-21 → 11-24 |
+| 9.d | **Pipeline option (if OD-15 = a).** `run_full.sh` / `run_v8.py` option that runs `gyro_loop_bias.py` → `rot_sfm.py --bg_json --max_dt 300` → `prior_ba.py` → export `--sim3 none`, **only** when `sfm_scale_check.py` fails, with "scale unknown" in the web bundle. Tested on scan_009 (must reproduce R-071) and newRoom (must not trigger) | 1 day | two logged runs; default off until tested | OD-15 (decision) | 11-23 → 11-25 |
+| 9.e | **Step 4, lines and layout, for the IMU-only stretches** (45 – 60 s, 90 – 105 s of scan_009): wall–floor / wall–wall junction lines (LSD, gravity-aware) matched to the R-071 layout, position solved with the gyro rotation fixed (like `known_rot_pnp.py`). Shared with COMPLETION_PLAN 4.11 | 3 – 4 days | cut-gap position error better than R-072's 31 cm median; scan_009 stretches with points | 9.a, 9.b; agree the split with Umair | W3 (11-27 →), only if G2 is met |
+| 9.f | **VGGT (step 2)** on the two IMU-only stretches, as a quick comparison | 0.5 day | frames placed, gyro agreement | **Tayyab's OK to run downloaded code** (decision) | any time once approved |
+| 9.g | **App:** the corner / edge prompt is under "Unreleased" in `android/CHANGELOG.md` (not in v0.3.9). It ships with the next release once this branch is merged. Add the long-line count to `quality.csv` | 0.5 day + device test | prompt seen on a phone | merge to `master` | with the merge |
+| 9.h | **Report section** for the final report: method (gyro check, loop bias, prior BA), E1 numbers, scan_009 before / after renders, limits (scale, IMU-only stretches) | 1 day | section drafted | 9.a, 9.b | W3 |
+
+**Not planned before 2026-12-04:** step 5's line BA, step 7 (planes from depth, full fusion back end, direct odometry).
+
+### 9.3 Decisions needed (none taken here)
+
+- **OD-15** (Tayyab): sensor-path recipe as an opt-in pipeline fallback, and which scan_009 model to show. Now also:
+  whether to publish scan_009 to the online site before its scale is known.
+- **E1 owner** (team): proposed Tayyab, since 9.a reuses this branch's tools.
+- **VGGT** (Tayyab): run the downloaded code, or drop step 2.
+- **Merge this branch to `master`** (Tayyab, through a PR with CI green). It carries the app prompt, the tools and the
+  records Umair's side does not have yet. One test fails on `master` and here alike (`test_changelog`, v0.3.9 released
+  with an empty "Unreleased"), so CI may be red for a reason that is not this branch's.
+- **Disk on the 3070 PC** (Tayyab): ~9 GB free; scan_009's `work_v9pfb*` / `work_v9pfl*` hold ~4 GB. Keep R-071's
+  folders, and ask before removing the rest.

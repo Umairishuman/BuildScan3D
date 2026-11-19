@@ -784,3 +784,22 @@ Asked by Tayyab: "work on featureless overnight".
 - Next: Tayyab looks at `scan-009-loop` vs `scan-009-gyro` in the viewer and decides which to keep; whether the
   R-071 recipe becomes a pipeline option for captures where SfM fails (open decision); a scale source; VGGT or
   re-recording; folder cleanup (ask).
+
+## 2026-11-19 (day) · Tayyab (agent) · `docs/featureless-tracking-plan`
+Asked by Tayyab: "commit these stuff, also pull the latest stuff ... also plan future progress on featureless tracking".
+- Did: committed the night's work in three commits (`c1b2b8f` tools, `5ef259c` viewer entry, `113e7a5` records).
+  Fetched `origin/master` (Umair's Step 4, online site D-076 / D-077, v0.3.9, renumbering D-079): Umair's R-053 /
+  R-054, D-069 and OD-12 / OD-13 clashed with this branch's, so this branch's were renumbered by D-079's rule before
+  the merge (`8f45391`): R-053 → R-071, R-054 → R-072, D-069 → D-080, OD-12 → OD-14, OD-13 → OD-15 (table at the
+  top of TRAINING.md). Lines this branch added after PR #7 that still used Tayyab's old R-032 – R-040 were changed to
+  R-062 – R-070. Merge `fa356e7`: records keep both sides, runs in number order; `sfm_colmap.py` keeps D-071 levelling,
+  then `--sim3 none`; the app's corner / edge prompt stays under "Unreleased" (not in v0.3.9). Local `master`
+  fast-forwarded to `8338680`. Plan for the next steps: [FEATURELESS_TRACKING_PLAN.md §9](FEATURELESS_TRACKING_PLAN.md)
+  (E1 table first, then scale, re-recording, the pipeline option if OD-15 = a, lines / layout in W3).
+- Checks after the merge: `npx tsc --noEmit` ok, eslint 0 errors (1 known warning), `py_compile` ok, pytest 280 passed,
+  1 failed (`test_changelog`: v0.3.9's entry is "No changes listed"; fails on `master` alike).
+- Runs: none. Decisions: none (the renumbering applies D-079).
+- Problems: the commit messages `c1b2b8f` / `113e7a5` and the dataset scripts `r053.sh` / `r054.sh` keep the old
+  numbers. Nothing pushed.
+- Next: Tayyab decides OD-15, the E1 owner, VGGT, and the PR of this branch to `master`; Umair should hear about the
+  renumbering and the changelog test; then plan §9.a (E1 table).
