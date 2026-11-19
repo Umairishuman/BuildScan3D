@@ -639,3 +639,8 @@ sheet `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/semantic_v10/fi
   `remoteBundles.ts` (`663f5d3`). Problem: `pkill -f "next dev -p 3006"` again matched the agent's own shell (as earlier
   on 2026-11-19); stopped by the port's PID afterwards. The keys were pasted into the chat: rolling the token later is
   Umair's choice.
+- Later (Umair): "publish all always", never past 10 GB (**D-077**; cap 9.5 GB enforced in `publish_scan.py` `f948495`,
+  rule in CLAUDE.md §6 Umair). Published: scans #4 (newRoom) `r1119c`, #1 `umair`, #2 `r1106lev`, #3 `r1119c`, #8
+  `r1119c` and `r1116w9` (with #7: 7 bundles, 0.24 GB). Umair: deployed site lists only published scans, a local run
+  lists local + published (`b7d3c86`); `prototype/web-ui/.env.local` holds `SCANS_BASE_URL` on this PC (gitignored).
+  Umair allowed the agent to close `run-r1119` once its log says "all done", then start scan #5.
