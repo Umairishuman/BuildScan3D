@@ -52,11 +52,17 @@ export function scansBaseUrl(): string | null {
   }
 }
 
-async function getJson<T>(url: string): Promise<T> {
+async function getJson<T>(url: string, tries = 2): Promise<T> {
   // no-store: a scan published a minute ago shows up without a redeploy
-  const r = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(8000) });
-  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
-  return (await r.json()) as T;
+  try {
+    const r = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
+    return (await r.json()) as T;
+  } catch (e) {
+    // one retry: the r2.dev URL is rate-limited and a single request can fail (seen 2026-11-19: "fetch failed")
+    if (tries > 1) return getJson<T>(url, tries - 1);
+    throw e;
+  }
 }
 
 /** Project id of a published bundle; includes the owner so two people's folders can never clash. */
