@@ -588,3 +588,15 @@ sheet `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/semantic_v10/fi
   start; twice wrote a guessed number into TRAINING (a splat count, an end time), both replaced by measured values
   before committing; `pkill -f` once matched its own shell; switched to an older stacked branch to commit and moved
   back (no rebase, per CLAUDE.md).
+- Later the same day: R-055 (`--debug`, options) and R-056 (final defaults on scans #7, #3, #8, newRoom, tag
+  `r1119b`: layout → semantics → mesh labels → web → plan, 15.6 min, no errors). #9 and #10 closed after R-056;
+  newRoom's outline was wrongly flagged open in R-055 (a near-parallel step) and fixed (`8b7f7f2`). #17: the floor
+  "tilt" is a step; `semantic3d.py --floor_win 0.06` fits scan #3 at 0.29° (default unchanged). New tests (openings,
+  plan export) pass under pytest (92 passed with the compile check); ruff clean. Umair said "yes keep going":
+  `feature/step4-layout` fast-forwarded to the tip.
+- Issues: closed #8 #9 #10 #12 #13; open with a recommendation for Umair: #11 (`--raised_max 1.5`), #17
+  (`--floor_win 0.06`, platform?), #18 (`--clean_ceiling 0.04`); blocked: #14 #15 (#21), #16 (3070 PC file), #19
+  (`run-r1118` session). OD-13 lists the defaults to confirm.
+- Next: Umair: close `run-r1118` and start scans #5 / #6 (#19), tape (#20), sheets (#21), browser check (#24), OD-13,
+  OD-12 with Tayyab (#25). Agent, after that: the R-NNN for scans #5 / #6, per-room found / missed / false tables
+  from the filled sheets, then the threshold work in #14 / #15.
