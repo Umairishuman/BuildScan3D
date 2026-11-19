@@ -84,6 +84,9 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-049 | 2026-11-18 | scan_009: SfM export only, gyro check + placing unplaced frames with gyro rotation + known-rotation fit (`v9pfp`) | 3070 (CPU) | ~1.5 min | 157 of 442 placed, 90 kept; 476 frames; path jumps 40 (R-047: 21) | Inconclusive |
 | R-050 | 2026-11-18 | scan_009: diagnosis of the SfM failure (IMU scale per window, gyro pair test, short-range mapping, ARCore vs gyro) | 3070 | ~55 min | SfM locally wrong in both mappers; not wrong matches, not timing; ARCore poor (gyro corr 0.34); IMU clean | Diagnosis |
 | R-051 | 2026-11-18 | scan_009: gyro-rotation + accelerometer SfM (`rot_sfm.py`, `v9pfr`) | 3070 | 30.0 min from export (train 22.8) | 698 frames, 23,508 points at 1.76 px; −1.9 dB vs R-047, blurrier; scale ~2–3× too large | Rejected |
+| R-052 | 2026-11-19 | scan_009: R-051's poses refined by BA with gyro / accelerometer priors (`prior_ba.py`, `v9pfb`) | 3070 | ~78 min (two trainings) | 698 frames, reprojection 1.77 → 1.22 px, gyro kept (2 frames > 2°); +0.49 dB vs R-051; ≈ R-047 (mean 19.30 vs 19.31), loop not closed | Kept (coverage) |
+| R-053 | 2026-11-19 | scan_009: loop closure (gyro bias from far-apart pairs, rot_sfm with all pairs, prior BA; `v9pfl`) | 3070 | 55 min | 680 frames, loop closed (> 120 s pairs 15.6° → 3.5°), scale check ok; PSNR ≈ R-047 / R-052; scale ~2× too large (not applied) | Kept (most complete) |
+| R-054 | 2026-11-19 | newRoom: validation of the R-053 recipe against the trusted SfM path | 3070 | 34 min | position error median 72 → 31 cm (p90 166 → 68 cm), scale 0.89; still far worse than normal SfM | Validation |
 
 ## Runs
 
@@ -1082,3 +1085,152 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Verdict:** rejected. The gyro + accelerometer positions connect the whole walk and the images triangulate with
   them, but they are not accurate enough for sharp splats, and the scale is ~2 – 3× off. R-047 stays the best
   scan_009 model. `rot_sfm.py` kept as an experiment (not in the pipeline).
+
+### R-052 · 2026-11-19 · scan_009_057ed3beb4fc: R-051's gyro + accelerometer poses refined by bundle adjustment (`v9pfb`)
+
+- **Who / machine:** Tayyab (agent, night session, asked: "work on featureless overnight") · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 57db57a
+- **Dataset:** scan_009, R-051's triangulated model (`work_v9pfr_sfm/sparse/0`, 706 cameras, 23,508 points) and its
+  ALIKED database, copied to `work_v9pfb_sfm`; keyframes `work_v9pfr` copied to `work_v9pfb`
+- **Command(s):** (1) `COLMAP bundle_adjuster` on the copy (free BA; kept as `work_v9pfb_sfm/sparse_freeba`, log
+  `ba_v9pfb.log`); (2) new `python src/arcore3dgs/prior_ba.py work_v9pfr_sfm/sparse/0 work_v9pfb work_v9pfb_sfm/sparse/0
+  --colmap …COLMAP.bat` (defaults: relative rotation sigma 0.1° + 0.1°/s, relative position sigma 0.02 + 30% of the
+  step, Huber 2 px; log `prior_ba_v9pfb.log`); checks `gyro_check.py`, `imu_scale.py`; then
+  `dataset/scan_009…/r052.sh`: `sfm_colmap.py --work …/work_v9pfb --out …/work_v9pfb_sfm --feature aliked --sim3 none
+  --stage {undistort, export}` and `run_v8.py --dataset … --tag v9pfb --from_stage export --pose_free --init mono
+  --planar 0.2 --blur 0.0222 --pgsr` (log `run_v9pfb.log`)
+- **Goal:** R-051's poses connect the whole walk and the images triangulate with them (1.76 px), but the splats were
+  blurrier than R-047: the poses were kept fixed. Does letting the images refine them (starting from the sensor
+  solution instead of SfM's own) give sharper splats without falling back into R-046 – R-048's locally wrong path?
+  Checked by the gyro agreement, the accelerometer test and training-view PSNR against R-047.
+- **Start → end:** 01:33 →
+- **Errors during the run:**
+  1. 01:33 first free BA: `NO_CONVERGENCE` after 100 iterations (cost 1.03 → 0.886 px); a retry with
+     `--BundleAdjustment.max_num_iterations` failed: `unrecognised option` (COLMAP 4.2 calls it
+     `--BundleAdjustmentCeres.max_num_iterations`). Redone from R-051 with 1,000 iterations and intrinsics fixed: same
+     0.886 px, still NO_CONVERGENCE (flat). Not a failure of the run, see the result.
+- **Result so far (01:45):**
+  - Free COLMAP BA pulls the rotations away from the gyro: `gyro_check` pair error median 0.27°, p90 3.08°, **106 of 706
+    frames over 2°** (R-051 as solved: 0.07° / 0.13°, 2 frames). The images alone drag the path back toward the locally
+    wrong SfM solution, so a free BA is not usable here.
+  - **`prior_ba.py`** (BA with the gyro / accelerometer solution as soft relative priors): reprojection median
+    1.77 → **1.22 px** (p90 2.76 px), 2,945 of 125,228 observations > 4 px dropped after round 1; the relative
+    rotations stay within 0.11° (median, p95 0.38°) of the gyro; positions moved median 0.18, p95 0.33 model units;
+    path length ×0.968. `gyro_check`: pair error median 0.22°, p90 0.50°, **2 frames over 2°**. 111 s on the 3070.
+  - Accelerometer test (`imu_scale.py`, 1 s, frames passing the gyro check), metres per model unit (1.0 = metric, as
+    R-051 claims): R-051 0.548 (bootstrap p5–p95 0.21–0.50), prior BA 0.405 (0.05–0.49), free BA 0.111 (0.06–0.36,
+    |g| 9.40). All say the model is larger than metric (agrees with R-051's Metric3D ratio 3.0), but the bootstrap
+    ranges are wide: no reliable scale.
+  - Looser priors change nothing: position sigma 0.05 + 100% or 0.1 + 300% of the step, rotation sigma 0.3 or 1.0°
+    (+ same per s): reprojection median 1.21 – 1.22 px every time; the rotation-loose ones drift from the gyro (1.0°:
+    p90 1.11°, 5 frames over 2°). The floor is the keypoints (blur), not the priors. Defaults kept.
+  - Training 1 (`--init mono`, as R-051's TRAINING entry says; but R-051's log shows `fast_mvs`, so that entry's
+    command line is wrong): export 698 frames (8 dropped by the jump filter), prior 4.1, init 0.1, train 22.0, ply 0.7
+    min. Kept as `gs_v9pfb_mono`. PSNR (scratchpad `render_compare.py`, training views, half res): vs R-051 on 698
+    frames 18.89 → 19.36 (+0.20 median diff); vs R-047 on its 311 frames 19.90 vs 19.36 (−0.73).
+  - **Training 2 (`--from_stage init --init fmvs`, same as R-047 / R-051 in practice):** init 2.0 (22,491 points), train
+    22.7, ply 0.8 min → `work_v9pfb_sfm/gs_v9pfb/splat.ply`. vs R-051 on 698 frames: median 18.89 → **19.54** (better
+    on 65%, +0.49 dB median diff); vs R-047 on the 311 frames R-047 kept: median 19.90 vs 19.25, **mean 19.31 vs 19.30**
+    (better on 37%). Not held out; R-047 fits fewer frames. Photo | R-047 | R-052 sheet: R-052 cleaner on the plain
+    walls (34 s, 57 s, 109 s) and the bathroom door (125 s, no green / black smear); worse at 0 s (wall lamp missing)
+    and 187 s (curtain and AC blurred). 0 s and 187 s show the same wall at the start and end of the walk: the loop
+    does not close (rot_sfm only uses pairs < 20 s apart, so drift accumulates over the 3-min walk).
+- **End:** 02:51
+- **Verdict:** kept as the scan_009 model with the most coverage (698 frames vs 370); quality about equal to R-047
+  (better in the middle of the walk, worse where the loop meets). `prior_ba.py` kept. Next: close the loop (R-053).
+
+
+### R-053 · 2026-11-19 · scan_009_057ed3beb4fc: loop closure: gyro bias from far-apart image pairs, rot_sfm with all pairs, prior BA (`v9pfl`)
+
+- **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 57db57a (uncommitted: `prior_ba.py`, `gyro_loop_bias.py`,
+  `rot_sfm.py --bg_json`)
+- **Dataset:** scan_009, 894 pose-free keyframes (`work_v9pfm` copied to `work_v9pfl`), R-048's ALIKED database and
+  calibration model (`work_v9pfm_sfm`)
+- **Command(s):** `python src/arcore3dgs/gyro_loop_bias.py dataset/scan_009… …/work_v9pfm …/work_v9pfm_sfm --out
+  …/gyro_loop_bias.json` (also `--linear`); `python src/arcore3dgs/rot_sfm.py dataset/scan_009… …/work_v9pfl
+  …/work_v9pfm_sfm …/work_v9pfl_sfm --max_dt 300 --bg_json …/gyro_loop_bias.json --triangulate_only`; `prior_ba.py`
+  (defaults); `sfm_colmap.py --sim3 none --stage {undistort, export}`; `run_v8.py --tag v9pfl --from_stage export
+  --pose_free --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
+- **Goal:** R-052 does not close the loop: the start (0 s) and end (187 s) views of the same wall disagree. Check
+  (scratchpad `loop_rot2.py`): each verified image pair's own rotation (5-point, essential matrix) against the gyro
+  chain. Pairs < 5 s apart: 3.3° median (the noise of 5-point on these blurred images); pairs > 120 s apart: 14.7°
+  median, all with nearly the same world error vector (yaw −14.2°, MAD under 2°): a **heading drift of the gyro**, i.e.
+  the bias from `gyro_check` (fitted against the locally wrong SfM model) is off by ~0.08°/s. Fit the bias from all
+  pairs, then let rot_sfm use far-apart pairs too (it used dt ≤ 20 s), so the walk closes on itself.
+- **Start → end:** 02:55 → 03:50 (rot_sfm ~17 min, prior BA 1.7 min, export 03:16, prior 4.0, init 3.2, train 22.5,
+  ply 0.5 min, done 03:47)
+- **Errors during the run:** none.
+- **Result:** `gyro_loop_bias.py`: 6,036 pairs with a 5-point rotation (4.6 min, cached in
+  `work_v9pfm_sfm/five_point_pairs.npz`). Median residual per time gap, before → after (constant bias, Cauchy loss
+  3°): 0–5 s 2.97 → 2.96°; 5–20 s 5.94 → 5.92°; 20–60 s 11.17 → 9.86°; 60–120 s 8.85 → 6.64°; **> 120 s 14.64 →
+  3.52°**. Bias (deg/s, IMU frame) [−0.009, 0.088, −0.101] → [−0.032, 0.006, −0.090]. A bias linear in time gives the
+  same (> 120 s: 3.54°), so the constant one is used. The 20–60 s pairs that still disagree (316, median 9.9°) are
+  likely look-alike matches (not checked).
+  - `rot_sfm.py --max_dt 300 --bg_json` (log `rot_sfm_v9pfl.log`): bias 0.095°/s removed; **9,015 pair directions**
+    (R-051: 6,765 with dt ≤ 20 s); all 894 keyframes connected; direction residual median 3.47°, p90 39.2° after 15
+    iterations; 698 cameras with median edge residual < 10°; triangulation (poses fixed) 23,490 points.
+  - `prior_ba.py` (log `prior_ba_v9pfl.log`): 138,270 observations (R-052: 125,228: the far-apart pairs now share
+    tracks), reprojection median 1.88 → **1.27 px** (p90 2.81); relative rotation vs the gyro prior median 0.10°,
+    p95 0.33°. `gyro_check`: pair error median 0.19°, p90 0.47°, 1 frame over 2°.
+  - **Loop check** (5-point rotation of each verified pair vs the model, scratchpad `loop_rot2.py`), median error,
+    R-052 → R-053: pairs > 120 s apart **15.6° → 3.5°** (world error vector [0.4, −15.2, 1.4]° → [−0.2, −0.9, 0.3]°:
+    the heading drift is gone); 60–120 s 8.6 → 7.4°; 20–60 s 11.8 → 9.5°; 0–5 s 3.2 → 3.2° (noise floor);
+    5–20 s 7.8 → 13.6° on 53 pairs (worse; not explained yet).
+  - Export: 680 frames (jump filter dropped 18). `sfm_scale_check`: ratio median 2.25 model units per Metric3D metre,
+    **verdict "ok"**: the first scan_009 model without a shrunken block (R-046 – R-052 all "PART OF THE MODEL
+    SHRUNKEN").
+  - Points seen after 165 s that are also seen before 40 s (same wall at the start and end of the walk): **3,625 of
+    5,603** (R-052: 115 of 2,268). Per 15-s window, every stretch reprojects at 0.75 – 1.33 px median per camera, but
+    45 – 60 s and 90 – 105 s have a median of 0 and 3 3D points per camera: those cameras rest on the gyro +
+    accelerometer only.
+  - `→ work_v9pfl_sfm/gs_v9pfl/splat.ply`. Training-view PSNR (half res, scratchpad `render_compare.py`): vs R-047 on
+    the 303 frames both kept: median 19.95 vs 19.08, mean 19.49 vs 19.32, better on 45%; vs R-052 on 625 frames:
+    19.71 vs 19.70 (equal). Photo | R-047 | R-053 sheet: the start (0 s: wall lamp and door) now as sharp as R-047 (R-052
+    lost the lamp); 45 s (wardrobe door) and 125 s (bathroom door) cleaner than R-047; 32 s, 95 s (door), 140 s and 187 s
+    (curtain / AC) smeared. Not held out.
+  - Scale (metres per model unit, none reliable): accelerometer (`imu_scale.py`) 0.368 at 1 s (bootstrap 0.16 – 0.48),
+    0.477 at 2 s (0.25 – 0.61); Metric3D 1 / 2.25 = 0.44 (Metric3D read 7 – 17% low on the good rooms, so ~0.47 –
+    0.53); `layout.py` room height 4.67 units → 0.56 – 0.64 if the ceiling is 2.6 – 3.0 m (not measured). The
+    model is about 2× too large; no scale applied.
+  - `layout.py` (`work_v9pfl_sfm/layout/`): 6 walls, corners at 40°, 73° and 45°: the room is not recovered as a
+    clean rectangle (floaters and the partly IMU-only stretches), so the layout is not usable for measurements yet.
+- **Verdict:** kept: **the most complete and consistent scan_009 model so far** (680 frames, loop closed, scale check
+  ok), training-view quality about equal to R-047 (370 frames). Scale still unknown. `gyro_loop_bias.py` +
+  `rot_sfm.py --bg_json --max_dt 300` + `prior_ba.py` is the recipe for captures where SfM fails.
+
+
+### R-054 · 2026-11-19 · newRoomAttemptSadness: validation of the R-053 recipe against a trusted SfM path (no training)
+
+- **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 57db57a (uncommitted: `prior_ba.py`, `gyro_loop_bias.py`,
+  `rot_sfm.py --bg_json`)
+- **Dataset:** newRoomAttemptSadness, keyframes `work_v9e2e`, trusted model `work_v9e2e_sfm/sparse/0` (normal SfM,
+  metric via the ARCore Sim3 0.668 m per unit)
+- **Command(s):** `dataset/newRoomAttemptSadness/r054.sh` (log `r054.log`): `gyro_loop_bias.py`; `rot_sfm.py
+  --triangulate_only` (dt ≤ 20 s, R-051 setting; pair directions from the cache in `work_rotsfm_vio`) →
+  `work_rotsfm_tri`; `rot_sfm.py --max_dt 300 --bg_json … --triangulate_only` → `work_rotsfm_loop`; `prior_ba.py` on
+  both (`sparse_pba`); evaluation scratchpad `eval_rot.py` (Sim3 to the trusted path, position error in metres)
+- **Goal:** how much do the R-053 steps (bias from far-apart pairs, far-apart pairs in rot_sfm, BA with sensor priors)
+  improve the camera path where the truth is known?
+- **Start → end:** 03:50 → 04:24 (bias fit 5.0 min, rot_sfm 3.3 + 9.4 min, prior BA 7.7 + 7.0 min)
+- **Errors during the run:** none.
+- **Result:**
+  - Bias fit: 15,242 pairs; correction small on this capture ([−0.033, 0.021, −0.038] → [−0.026, 0.017, −0.035]
+    deg/s); pairs > 120 s apart 1.49 → 1.19° median (scan_009: 14.6 → 3.5°). The 5-point noise is much lower here
+    (0–5 s pairs 0.61°; scan_009 2.97°).
+  - Position error vs the trusted path (Sim3 fitted, median / p90), 1-s step ratio spread p90/p10, Sim3 scale (1.0 =
+    exactly metric):
+
+    | Camera path | Frames | Median | p90 | Step spread | Scale |
+    |---|---|---|---|---|---|
+    | rot_sfm, pairs ≤ 20 s, poses fixed (R-051 setting) | 1,075 | 72.2 cm | 166.0 cm | 5.16× | 0.684 |
+    | same + `prior_ba.py` | 1,075 | 62.3 cm | 153.8 cm | 3.00× | 0.679 |
+    | rot_sfm, all pairs + loop bias, poses fixed | 1,022 | 55.2 cm | 101.9 cm | 5.02× | 0.918 |
+    | **same + `prior_ba.py` (R-053 recipe)** | 1,022 | **31.1 cm** | **68.4 cm** | **1.89×** | 0.893 |
+
+    `prior_ba.py` reprojection median 0.67 / 0.66 px. R-051's validation recorded Sim3 scale 0.936 and 63 cm for the
+    first row; today's re-run gives 0.684 and 72 cm (same code path except the bias / cache; not explained).
+- **Verdict:** the R-053 recipe more than halves the position error of the sensor-based path (72 → 31 cm median) and
+  makes the steps far more regular, but it is still much worse than normal SfM where normal SfM works (the trusted
+  path). Use only for captures where SfM fails. One capture only; tuned settings are the defaults.

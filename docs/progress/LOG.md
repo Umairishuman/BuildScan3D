@@ -430,3 +430,18 @@ Asked by Tayyab: "work throughout the night, I need scan_009 to be working prope
   the experiment folders under scan_009 (`work_v9pf{g,m,p,t,x,r}*`, whole capture folder 11 GB) were not deleted.
 - Next: Tayyab decides on VGGT (or re-recording); a scale source for scan_009; clean up the experiment folders (ask).
 
+## 2026-11-19 (night, 01:31 – 04:30) · Tayyab (agent) · `docs/featureless-tracking-plan`
+Asked by Tayyab: "work on featureless overnight".
+- Did: `prior_ba.py` (BA with sensor priors) → R-052 on scan_009; loop check showed a 14° gyro heading drift between
+  the start and end of the walk; `gyro_loop_bias.py` (gyro bias from far-apart image pairs) and `rot_sfm.py
+  --bg_json` → R-053 (loop closed, scale check ok, PSNR ≈ R-047, 680 frames); R-054 validation on newRoom (position
+  error of the sensor path 72 → 31 cm median); `layout.py` / IMU / Metric3D scale estimates for R-053 (~2× too large,
+  not applied); `scan-009-loop` in the web viewer (tsc ok, eslint 1 known warning, not opened in a browser). Records:
+  TRAINING R-052 – R-054, FEATURELESS_TRACKING_PLAN §8.2, STATUS, MAP, web-ui STATUS. Nothing committed (not asked
+  this session).
+- Runs: R-052, R-053, R-054. Decisions: none.
+- Problems: R-051's TRAINING entry says `--init mono` but its log shows `fast_mvs` (noted in R-052). Disk 9 GB free
+  (new folders `work_v9pfb*`, `work_v9pfl*` ~4 GB; nothing deleted).
+- Next: Tayyab looks at `scan-009-loop` vs `scan-009-gyro` in the viewer and decides which to keep; whether the
+  R-053 recipe becomes a pipeline option for captures where SfM fails (open decision); a scale source; VGGT or
+  re-recording; folder cleanup (ask).

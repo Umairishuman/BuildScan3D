@@ -232,7 +232,8 @@ Options, in order of cost:
 | 1 · gyro rotation check | Built: `gyro_check.py`, `sfm_colmap.py --gyro_thr` (default 0 = off). IMU→camera rotation and time offset estimated from the SfM model, no ARCore tracking needed | newRoom: pair error median 0.15°, frame score p99 1.03°, 3 of 1,166 frames over 2°. scan_009: 330 of 761 over 2°, of them 185 of the 226 the 30 cm jump filter dropped and 144 it kept; after both filters 370 frames, steps > 5× median speed 21 (R-046: 51). R-047 (trained): +1.0 dB on common training views (not held out), sharper in some views, worse in one; long path jumps and a shrunken block remain: the rest are **position / scale** errors, which need step 4 or the incremental mapper (OD-11). Inconclusive, `--gyro_thr` off by default |
 | 3 · gyro rotation for unplaced frames | Rotation part built (`gyro_check.fill_rotations`); position (step 4) not started | cut gaps on newRoom, rotation error median / p90 / max: 2 s 0.15 / 0.48 / 1.15°; 9 s 0.28 / 0.91 / 1.76°; 15 s 0.30 / 0.83 / 2.10°; 30 s 0.47 / 0.91 / 5.83° (one end only, 15 s: 0.59 / 1.19 / 1.89°). Calibration estimated on the same model (a per-phone constant), one capture only |
 | 6 · app prompt | Compiled locally (JDK 21: Android Studio's JBR is now Java 25, which this Gradle cannot run). Messages changed: "Low texture - keep a room corner or edge in view", "Tracking lost (plain surface) - aim at a corner or edge". Long-line count in `quality.csv`: not done | not tested on a phone |
-| 2, 4, 5 | Not started | — |
+| 5 · refinement | `prior_ba.py`: BA with gyro / accelerometer priors (R-052 – R-054) | §8.2 |
+| 2, 4 | Not started (VGGT blocked, needs Tayyab's OK) | — |
 
 ### 8.1 Night of 2026-11-18 (Tayyab: "work throughout the night, I need scan_009 to be working properly soon")
 
@@ -280,3 +281,22 @@ Options, in order of cost:
   2 – 3× too large (Metric3D ratio 3.0, cameras spread 7.5 × 7 m).
 - **VGGT (step 2):** code and weights fetched outside the repo (`C:\Users\tyb\.cache\buildscan`); running them was
   blocked by the session's permission check (third-party code downloaded from the internet). Needs Tayyab's OK.
+
+### 8.2 Night of 2026-11-19 (Tayyab: "work on featureless overnight")
+
+- **Refining the sensor path with the images** (`prior_ba.py`, R-052): a free COLMAP BA of R-051's model pulled the
+  rotations off the gyro again (106 of 706 frames > 2°). With the gyro / accelerometer solution as soft relative
+  priors: reprojection 1.77 → 1.22 px, rotations stay within 0.1° of the gyro. Trained: +0.5 dB vs R-051, about equal
+  to R-047 on training views, with 698 instead of 370 frames.
+- **Loop closure** (R-053): each verified image pair's own rotation (5-point) against the gyro chain showed that pairs
+  > 2 min apart disagree by a consistent 14° yaw: the gyro bias from `gyro_check` (fitted against the wrong SfM model)
+  was off by ~0.08°/s. `gyro_loop_bias.py` fits the bias from all pairs (> 120 s pairs: 14.6 → 3.5°, the noise floor
+  of these images is ~3°); `rot_sfm.py --bg_json --max_dt 300` then uses far-apart pairs too, and `prior_ba.py`
+  refines. Result: the start and end of the walk share 3,625 of 5,603 points (R-052: 115), the scale check says "ok"
+  for the first time on scan_009, training-view PSNR ≈ R-047. Two stretches (45 – 60 s, 90 – 105 s) have almost no
+  matched points and rest on the IMU alone: this is where step 4 (lines, layout) would help.
+- **Validation on newRoom** (R-054): position error of the sensor path against normal SfM, median (p90): 72 (166) cm →
+  31 (68) cm with the full recipe; scale 0.89. Still far worse than normal SfM: the recipe is a fallback for captures
+  where SfM fails, not a replacement.
+- **Scale of scan_009:** accelerometer 0.37 – 0.48, Metric3D ~0.44 – 0.53, room height (if 2.6 – 3.0 m) 0.56 – 0.64 m
+  per model unit: about 2× too large, but no source is reliable enough to apply.
