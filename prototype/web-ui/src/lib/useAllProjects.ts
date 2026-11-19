@@ -33,5 +33,5 @@ export function useAllProjects(): { projects: Project[]; loading: boolean; error
     };
   }, []);
 
-  return { projects: mergeProjects(MOCK_PROJECTS, bundles), loading, error };
+  return { projects: mergeProjects(MOCK_PROJECTS, bundles, !loading && !error), loading, error };
 }
