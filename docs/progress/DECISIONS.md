@@ -687,6 +687,13 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   built or deployed yet.
 - **By:** Umair (storage: R2, over the agent's B2 / Vercel Blob alternatives) · **Source:** session 2026-11-19 ·
   **Status:** Active
+- **Addendum (2026-11-19, Umair):** every scan so far (scans #1 – #8 on this PC) may be public. Tayyab may publish
+  his scans to the same site, and names must not clash. Scan numbers and run IDs are per machine (OD-12), so the
+  bucket is split by person: `scans/<owner>/<capture>_<tag>/`, one `index.json` per owner (`scans/<owner>/index.json`)
+  and `owners.json` at the top, so two people publishing at once never overwrite each other's list. Cards name the
+  owner ("Umair · scan #7"). The publish tool is a Python script so it also runs on Tayyab's Windows PC (#29). The
+  Vercel project is `https://build-scan-3d.vercel.app/` (deployed by Umair from `master`). Tayyab has not been asked
+  yet: his part (own R2 token, publishing from the 3070 PC) needs his agreement.
 
 ## Open decisions (need the team; agents must not decide these)
 
