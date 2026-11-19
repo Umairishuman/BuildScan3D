@@ -323,6 +323,8 @@ def poly_area(pts):
     x, y = np.array(pts).T; return float(0.5 * abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1))))
 
 
+# floor area from the corner outline; only for a closed outline (#10: scan #3 had 3 corners for 4 walls and its
+# "floor area" was a triangle, about half the room). Layouts from before #10 have no room_closed: as before.
 ctr = np.array([np.array(f["c2w"])[:3, 3] for f in meta["frames"]])[:, [0, 2]].mean(0)
 crn = sorted([cn["xz"] for cn in lay.get("corners", [])], key=lambda p: np.arctan2(p[1] - ctr[1], p[0] - ctr[0]))
 wall_rep = []
@@ -338,8 +340,9 @@ for k, w in enumerate(walls):
 counts = {nm: int((label == i).sum()) for i, nm in enumerate(NAMES)}
 res = dict(model=os.path.abspath(args.ply), classes=NAMES, decoys=sorted(DECOY), gaussian_counts=counts,
            floor_tilt_deg=round(ftilt, 2), ceiling_tilt_deg=round(ctilt, 2) if has_ceil else None,
-           floor_area=round(poly_area(crn), 2) if len(crn) >= 3 else None, ceiling_height=round(H_room, 3) if has_ceil else None,
+           floor_area=round(poly_area(crn), 2) if len(crn) >= 3 and lay.get("room_closed", True) else None, ceiling_height=round(H_room, 3) if has_ceil else None,
            open_top=bool(lay.get("open_top", False)), wall_height=round(H_room, 3),
+           room_closed=lay.get("room_closed"), layout_warnings=lay.get("warnings", []),
            walls=wall_rep, free_standing=[f["id"] for f in fixtures if f["cls"] not in ("door", "window")
                                           and (f["dist_to_wall"] is None or f["dist_to_wall"] >= 0.3)],
            fixtures=fixtures, rejected=rejected, params=vars(args))

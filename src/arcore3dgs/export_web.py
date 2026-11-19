@@ -50,7 +50,9 @@ scan = dict(floor_area=sem["floor_area"], ceiling_height=sem["ceiling_height"],
             walls=[{k: w[k] for k in ("id", "length", "height", "gross_area", "openings_area", "net_area", "openings", "fixtures")}
                    for w in sem["walls"]],
             fixtures=[{k: f[k] for k in keep if k in f} for f in sem["fixtures"]],
-            groups=groups, mesh="mesh.glb" if args.glb else None)
+            groups=groups, mesh="mesh.glb" if args.glb else None,
+            # #8 / #10: no roof, not a closed room, layout warnings (absent in older bundles)
+            open_top=sem.get("open_top", False), room_closed=sem.get("room_closed"), warnings=sem.get("layout_warnings", []))
 json.dump(scan, open(os.path.join(args.out, "scan.json"), "w"), indent=1)
 total = sum(os.path.getsize(os.path.join(args.out, f)) for f in os.listdir(args.out)) / 1e6
 print(f"-> {args.out} ({total:.1f} MB)")

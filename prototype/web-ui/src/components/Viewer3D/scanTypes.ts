@@ -50,6 +50,12 @@ export interface ScanInfo {
   groups: ScanGroup[];
   /** File name of the surface mesh (.glb), or null. */
   mesh: string | null;
+  /** No roof: open to the sky (bundles since 2026-11-19, #8). */
+  open_top?: boolean;
+  /** The layout found a closed outline (a corner between every pair of neighbouring walls); null / absent = unknown. */
+  room_closed?: boolean | null;
+  /** Layout warnings in plain words (e.g. "only 1 wall(s) found: not a closed room ..."). */
+  warnings?: string[];
 }
 
 /** Marker / list colour per fixture class. */

@@ -159,6 +159,8 @@ function bundleToProject(ref: BundleRef, runs: Map<string, RunInfo>): Project | 
 
   const facts = [
     `${nWalls} wall${nWalls === 1 ? "" : "s"}`,
+    scan.open_top ? "no roof (open to the sky)" : null,
+    scan.room_closed === false ? "not a closed room" : null,
     scan.floor_area != null ? `floor ${scan.floor_area.toFixed(1)} m²` : null,
     scan.ceiling_height != null ? `ceiling ${scan.ceiling_height.toFixed(2)} m` : null,
   ].filter(Boolean);
@@ -172,7 +174,9 @@ function bundleToProject(ref: BundleRef, runs: Map<string, RunInfo>): Project | 
     location: [title, run?.runId ?? ref.tag, area].filter(Boolean).join(" • "),
     dateCaptured: formatDate(processed),
     status: "ready",
-    statusLabel: `3DGS Ready · ${(splats / 1e6).toFixed(2)}M splats${nFix ? " · labelled" : ""}`,
+    statusLabel:
+      `3DGS Ready · ${(splats / 1e6).toFixed(2)}M splats${nFix ? " · labelled" : ""}` +
+      (scan.open_top ? " · no roof" : scan.room_closed === false ? " · open outline" : ""),
     thumbnail: planImagePath(ref)
       ? `/api/scans/${encodeURIComponent(ref.folder)}/plan`
       : "/images/logo-new.png", // no plan.png on this machine: the official logo, not a made-up image
@@ -181,11 +185,14 @@ function bundleToProject(ref: BundleRef, runs: Map<string, RunInfo>): Project | 
     accuracy:
       scan.ceiling_height != null
         ? `Ceiling ${scan.ceiling_height.toFixed(2)} m auto-measured (no tape check)`
-        : "Not checked against tape",
+        : scan.open_top
+          ? "No roof: wall height only (no tape check)"
+          : "Not checked against tape",
     description:
       `Processed bundle public/scans/${ref.folder}/ (listed automatically). ` +
       `${facts.join(", ")}. ` +
-      (nFix ? `Fixtures: ${fixtureSummary(scan)}.` : "No fixtures labelled."),
+      (nFix ? `Fixtures: ${fixtureSummary(scan)}.` : "No fixtures labelled.") +
+      (scan.warnings?.length ? ` Layout warnings: ${scan.warnings.join("; ")}.` : ""),
     scanUrl: `/scans/${ref.folder}/`,
     splatStart: cameraStart(scan),
   };

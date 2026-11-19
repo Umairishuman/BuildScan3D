@@ -31,6 +31,8 @@ ap.add_argument("--every", type=int, default=6); ap.add_argument("--down", type=
 ap.add_argument("--ang", type=float, default=6.0); ap.add_argument("--off", type=float, default=0.08)
 ap.add_argument("--min_len", type=float, default=0.5)
 ap.add_argument("--max_rms", type=float, default=0.05, help="m: a region is used if the rendered surface fits a plane this well")
+ap.add_argument("--infer_gap", type=float, default=0.0, help="m, > 0: a missing corner between neighbouring walls is "
+                "inferred (marked) when both walls stop at most this far short of it and it lies over the floor (#10); 0 = off")
 ap.add_argument("--open_cover", type=float, default=0.35, help="open to the sky if the ceiling plane covers less of the floor than this ...")
 ap.add_argument("--open_blue", type=float, default=0.15, help="... and its colour is this much bluer than red (sky); see 3c")
 args = ap.parse_args()
@@ -263,6 +265,8 @@ def ang_of(w):
     return np.arctan2(m_[1], m_[0])
 order = sorted(final, key=ang_of)
 corners = []
+_P = means.cpu().numpy(); _fl = _P[(np.abs(_P[:, 1] - floor_y) < 0.06) & (opac.cpu().numpy() > 0.5)][:, [0, 2]]
+floor_box = (np.percentile(_fl, 1, 0), np.percentile(_fl, 99, 0)) if len(_fl) > 100 else None
 for k in range(len(order)):
     a, b = order[k], order[(k + 1) % len(order)]
     if abs(a["dir"] @ b["dir"]) > np.cos(np.radians(30)):   # parallel neighbours (a step in the wall): no corner
@@ -270,10 +274,15 @@ for k in range(len(order)):
     Am = np.stack([a["dir"], -b["dir"]], 1); s_ = np.linalg.solve(Am, b["cen"] - a["cen"])
     X = a["cen"] + s_[0] * a["dir"]
     ga = max(a["t0"] - s_[0], s_[0] - a["t1"], 0); gb = max(b["t0"] - s_[1], s_[1] - b["t1"], 0)
-    if ga > 2.5 or gb > 2.5:                                 # the walls do not meet near here (furniture hides corners)
-        continue
     ia, ib = next(i for i, w in enumerate(final) if w is a), next(i for i, w in enumerate(final) if w is b)
-    corners.append(dict(xz=X.tolist(), walls=[ia, ib], angle=float(np.degrees(np.arccos(abs(a["dir"] @ b["dir"]))))))
+    ang_ = float(np.degrees(np.arccos(abs(a["dir"] @ b["dir"]))))
+    if ga > 2.5 or gb > 2.5:                                 # the walls do not meet near here (furniture hides corners)
+        # #10: optionally infer it (the outline then closes) if it lies over the floor; the walls keep their extent
+        if args.infer_gap > 0 and max(ga, gb) <= args.infer_gap and floor_box is not None and \
+                np.all(X >= floor_box[0] - 0.3) and np.all(X <= floor_box[1] + 0.3):
+            corners.append(dict(xz=X.tolist(), walls=[ia, ib], angle=ang_, inferred=True, gap=round(float(max(ga, gb)), 2)))
+        continue
+    corners.append(dict(xz=X.tolist(), walls=[ia, ib], angle=ang_))
     for w, s in ((a, s_[0]), (b, s_[1])):                    # extend / trim the wall to the corner
         w.setdefault("ends", []).append(s)
 for w in final:
@@ -285,6 +294,19 @@ for w in final:
             w["t0"] = e[0]
         else:
             w["t1"] = e[0]
+# #10: is this a closed room? Each wall meets its neighbour in a corner (measured or inferred), >= 3 walls.
+n_inf = sum(1 for cn in corners if cn.get("inferred"))
+room_closed = len(final) >= 3 and len(corners) == len(final)
+n_warn = len(warnings)
+if len(final) < 3:
+    warnings.append(f"only {len(final)} wall(s) found: not a closed room (corridor end, open space or a partial "
+                    f"recording); floor area and room size are not known")
+elif not room_closed:
+    warnings.append(f"outline not closed: {len(corners)} corners for {len(final)} walls; floor area is not computed")
+if n_inf:
+    warnings.append(f"{n_inf} corner(s) inferred where the walls stop short (not seen)")
+for w_ in warnings[n_warn:]:
+    print("WARNING:", w_)
 # room dimensions wall-to-wall: opposite (anti-parallel) walls, mean separation over their common extent
 dims = []
 for i in range(len(final)):
@@ -296,6 +318,7 @@ for i in range(len(final)):
         dims.append(dict(walls=[i, j], distance=abs(sep)))
         print(f"walls {i} <-> {j}: {abs(sep):.3f} m apart")
 res = dict(floor_y=floor_y, ceiling_y=ceil_y, height=height, ceiling_source=ceil_source, open_top=open_top,
+           room_closed=room_closed,
            ceiling_evidence=sky,
            ceiling_first_y=ceil_first, wall_top_y=wall_top, warnings=warnings, dimensions=dims,
            walls=[dict(id=k, p0=(w["cen"] + w["dir"] * w["t0"]).tolist(), p1=(w["cen"] + w["dir"] * w["t1"]).tolist(),
@@ -327,7 +350,9 @@ for w in res["walls"]:
     mid = (np.array(w["p0"]) + np.array(w["p1"])) / 2
     cv2.putText(img, f"{w['length']:.2f} m", pt_(mid), 0, 0.6, (0, 90, 0), 2)
 for cn in corners:
-    cv2.circle(img, pt_(cn["xz"]), 7, (0, 0, 220), -1)
+    cv2.circle(img, pt_(cn["xz"]), 7, (0, 0, 220), 2 if cn.get("inferred") else -1)   # hollow = inferred
+for k_, w_ in enumerate(warnings[:3]):
+    cv2.putText(img, "! " + w_[:110], (10, 55 + 25 * k_), 0, 0.55, (0, 0, 200), 2)
 cv2.putText(img, f"{'walls ' if open_top else ''}height {height:.2f} m{' (no roof)' if open_top else ''}, {len(final)} walls, "
             f"{len(corners)} corners", (10, 25), 0, 0.7, (0, 0, 0), 2)
 cv2.imwrite(os.path.join(args.out, "plan.png"), img)
