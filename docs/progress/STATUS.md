@@ -436,13 +436,18 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       (14 sockets "small, on a wall", 6 doors, 6 windows, 3 ceiling lights), while the layout found 6 walls and a
       3.40 m ceiling. Not investigated: look at the model and `semantic_v10/semantic.json` `rejected` (wrong walls?
       scale? a real room without fixtures?). Needs Umair to say what is in the room.
+      2026-11-19: scan #7 is a building under construction (bare brick, no roof, empty openings, planks): 0 fixtures is most likely right; candidates listed in `gs_r1118/semantic_v10/fixture_check.md` (`--rejected`, #13) for Umair to confirm (#21). The layout bugs it showed: #8 (no roof, fixed), #9 (openings), #11 (plank faces).
 - [ ] Test v10 semantics on a second room (the real test); the user confirms the 3 new detections (`door_1`, `door_6`, `tube_light_1`). *(from TODO 2026-11-03)*
 - [ ] Open doorways (no door leaf) from gaps in the layout walls; windows on room 2. *(from TODO 2026-10-27)*
+      **2026-11-19 (#9):** `openings.py` + `layout.py`: gaps in a wall's surface with ≥ 10 Gaussians seen behind per open cell → doorway / window opening; in `semantic.json`, net wall area, viewer, plan export. R-054 / R-055; not checked against the real rooms (#21).
 - [ ] Still missed on newRoom: the socket under the ironing table (never a good candidate) and round light #14 (the
       "clock" decoy wins its votes). [P&S §4.18]
+      **2026-11-19 (#16):** blocked: their positions are in `audit_ground_truth.json` on the 3070 PC.
 - [ ] Thin margins: false sockets scored 0.45–0.47 in the CLIP check against a 0.5 threshold (real plates 0.69–0.88);
       the 25% switchboard rule rests on 3 plates. [P&S §4.18]
+      **2026-11-19 (#14):** 17 of 80 crop-check candidates on 5 rooms score within ±0.1 of 0.5; blocked on the filled check sheets (#21) to choose a threshold.
 - [ ] Switch plates (8–14 cm) need ~30 confirming frames, so a fast walk past a switch can miss it. [P&S §4.17]
+      **2026-11-19 (#15):** accepted switches / sockets have 19–82 confirming frames on 4 rooms; only 2 candidates (scan #8) were dropped for < 6 frames. The frame minimum is not the limit; blocked on #21 for `--min_views 4`.
 - [ ] Rules were tuned on the same room they are scored on: get an independent score (room 2, then precision / recall
       as in proposal contribution 3). [P&S §4.17–4.18]
 - [ ] Per-element dimensions for fixtures in the viewer (FR10). [proposal v4] **Built 2026-11-12:** a fixture row or marker opens a size card (width, height, area, centre / bottom / top above floor, wall); not checked in a browser or against tape yet (COMPLETION_PLAN 4.3).
@@ -453,10 +458,14 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       wall's position). *(from TODO 2026-10-23)*
 - [ ] Right-angle priors and an as-built floor plan export (layout.py has walls, corners, `plan.png`; no right-angle
       snapping or plan export format yet). *(from TODO, Novelty)*
+      **2026-11-19 (#12):** `plan_export.py` writes `plan.json` / `.svg` / `.dxf` (R12) per run (stage 16 `plan`); `--square` turns walls within 5° (off by default; moves wall ends 1–5 cm on newRoom). Format to be agreed by the team.
 - [ ] `structure.py` ceiling height (2.555 m was probably cupboard tops); `layout.py` supersedes it. *(from TODO, Parked)*
+      **2026-11-19 (#18): obsolete** — `layout.py` supersedes `structure.py` (MAP §3 marks it [exp]); its ceiling height is not used anywhere.
 - [ ] Wall 3 and the ceiling stay rough in the mesh (> 2.5 cm, untouched by shell denoising). [P&S §4.17]
+      **2026-11-19 (#18):** measured (`mesh.py --eval_only`): ceilings 4.28–4.34 cm (newRoom, scan #8), walls 2.86–4.98 cm (newRoom wall 3, scan #8 wall 4, scan #3 wall 2). `mesh_labels.py --clean_ceiling 0.04` (off by default) brings the ceilings to 0.04 cm; Umair to look and decide. Rough walls not addressed.
 - [ ] **[new 2026-11-12] Floor still fits 1.95° tilted on levelled scan #3** (1.57° on scan #2), while the ceiling fits
       0.05°: not explained (glossy floor reflection, or a bend in the model). Look at the floor residual map. (R-035)
+      **2026-11-19 (#17): cause found:** not a tilt but a step: one half fits 0.30°, the far end is 8–14 cm higher over ~2 m (a raised platform?); 29 % as many Gaussians below the floor as on it (glossy floor). Umair to confirm the platform (#20).
 - [ ] **[new 2026-11-12] scan #3's fourth corner is missing:** walls 2 and 3 stop > 2.5 m short of each other (door /
       cupboards on that side?). Check in the model; then 4.5 (doorways from wall gaps). (R-035)
 - [ ] **[new 2026-11-12] Merge note for Tayyab:** `sfm_colmap.py` export now levels with ARCore gravity (D-071,
