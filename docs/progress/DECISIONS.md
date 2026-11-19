@@ -695,6 +695,22 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   Vercel project is `https://build-scan-3d.vercel.app/` (deployed by Umair from `master`). Tayyab has not been asked
   yet: his part (own R2 token, publishing from the 3070 PC) needs his agreement.
 
+## D-077 · 2026-11-19 · Online storage never above the 10 GB free tier; publish every scan
+- **Decision:** the R2 bucket (D-076) must never pass 10 GB, Cloudflare's free storage, at any time. No upload may
+  happen if the bucket total afterwards would be above it. `scripts/publish_scan.py` measures the whole bucket (every
+  owner and `archive/`, since archived scans are still stored) before uploading and refuses above a cap of **9.5 GB**
+  (0.5 GB headroom for the index files and for two people publishing at once); `R2_MAX_BYTES` in `.env` may only lower
+  the cap, never above 10 GB. Every processed scan is published (Umair: "publish all always"), within the cap.
+- **Why:** Umair: "make sure that nothing crosses 10GB … I don't have money left to allow that to happen" (2026-11-19).
+- **Evidence:** bundles measured on this PC: 18 – 55 MB each with plan.png, so ~170 bundles fit; bucket 0.05 GB after
+  the first upload (scan #7 `r1119c`, 45.4 MB).
+- **Limits / not verified:** the check runs in the publish script only: an upload made another way (dashboard, another
+  tool) is not checked. Two people publishing at the very same moment could each pass the check (headroom 0.5 GB,
+  more than any bundle). Unpublishing archives and does not free space (D-049); deleting from `archive/` needs Umair.
+  Cloudflare's free tier also limits operations (reads by viewers); not capped by the script, not measured.
+- **Rejected:** a cap exactly at 10 GB (no headroom); counting only the live scans (archive is billed too).
+- **By:** Umair · **Source:** session 2026-11-19 · **Status:** Active
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |
