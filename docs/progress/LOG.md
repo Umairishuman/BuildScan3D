@@ -631,3 +631,11 @@ sheet `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/semantic_v10/fi
 - Next: R-058 / R-059 write-ups and their check sheets; Umair: #26 (bucket, keys, `SCANS_BASE_URL` on Vercel, OK to
   push), then #30 (deploy, CORS, browser check); `pip install boto3` in `bs-server` before the first upload; ask
   Tayyab about publishing from the 3070 PC.
+- Later (online site): Umair created the R2 bucket `build-scan-3d-scans` (public `https://pub-bb143f8a2567472b944c2c4f06f1f08c.r2.dev`) and an
+  API token (later with admin read/write, needed to set CORS). The agent wrote the S3 keys into `.env` (new file,
+  gitignored, mode 600; the Cloudflare API token value is not stored: not needed), installed boto3 in `bs-server`, set
+  the bucket CORS (GET/HEAD, any origin) and published scan #7 `r1119c` as the first real upload (45.4 MB); the
+  worktree site listed it from the bucket (3 of 3 requests). One `fetch failed` on the first try → one retry in
+  `remoteBundles.ts` (`663f5d3`). Problem: `pkill -f "next dev -p 3006"` again matched the agent's own shell (as earlier
+  on 2026-11-19); stopped by the port's PID afterwards. The keys were pasted into the chat: rolling the token later is
+  Umair's choice.
