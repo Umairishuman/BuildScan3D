@@ -168,7 +168,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | File | Does | Status |
 |---|---|---|
 | `eval_offpath.py` | Off-path split metrics (PSNR, SSIM, sharpness, flatness) + sheets | [eval] current |
-| `fixture_checklist.py` | Fixture check sheet for one room from `semantic.json` (+ layout): every accepted fixture with height, size, wall, a real / wrong class / false column, a missed table and per-class summary (plan 4.2, E3) | [eval] current |
+| `fixture_checklist.py` | Fixture check sheet for one room from `semantic.json` (+ layout): every accepted fixture with height, size, wall, a real / wrong class / false column, a missed table and per-class summary; `--rejected` also lists the rule-rejected candidates (plan 4.2, E3) | [eval] current |
 | `make_split.py` | Writes the held-out list for `run_v8.py --split` / `eval_offpath.py`: 6 × 3 s stretches of the walk (D-070) | [eval] current |
 | `fair_compare.py` | Compares models from different SfM runs (trimmed Sim3 + test-pose refinement) | [eval] current |
 | `compare_models.py` | Photometric + geometric metrics and sheets on held-out frames | [eval] |
