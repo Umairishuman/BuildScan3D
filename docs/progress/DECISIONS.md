@@ -646,6 +646,27 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   were not seen rendering in a real browser (headless software rendering was still loading after 60 s).
 - **By:** Umair (his ask; the auto-listing approach is the agent's) · **Source:** session 2026-11-19 · **Status:** Active
 
+## D-075 · 2026-11-19 · Step 4 options on by default; older web bundles out of the Projects tab
+- **Decision:** settles OD-13. The no-roof rule, wall-gap openings (≥ 10 Gaussians behind per open cell), floor area
+  only for a closed outline and the plan.json / .svg / .dxf export stay on. `scripts/run_full.sh` now also passes
+  `layout.py --raised_max 1.5 --infer_gap 6`, `semantic3d.py --floor_win 0.06` (both sem3d passes),
+  `mesh_labels.py --clean_ceiling 0.04` and `plan_export.py --square`. The scripts' own defaults are unchanged (off),
+  so a script called by hand behaves as before. Older web bundles (`newRoomAttemptSadness_r1112nr`,
+  `scan_002_…_r1106`, `scan_003_…_r1112`, `_r1112lev`, `_r1119a`, `scan_007_…_r1118`, `_r1119a`) moved (not deleted,
+  D-049) from `prototype/web-ui/public/scans/` to `prototype/web-ui/scans_archive/` (gitignored, not served), so the
+  Projects tab shows the newest bundle per scan. `newroom` and `scan_008_…_r1116w9` stay: hand-written projects in
+  `mockData.ts` use them.
+- **Why:** Umair: "turn the options on, lose the previous web sessions" (2026-11-19).
+- **Evidence:** R-055 (`--raised_max 1.5`: scans #7 / #8 closed, no real wall dropped on six rooms; `--infer_gap 6`
+  inferred nothing on these rooms), #17 (`--floor_win 0.06`: scan #3 tilt 1.95° → 0.29°, measured on scan #3 only),
+  #18 (`--clean_ceiling 0.04`: ceilings 4.3 cm → 0.04 cm roughness), #12 (`--square`: wall ends move 1–5 cm on newRoom).
+- **Limits / not verified:** the five options have not yet run together through the full pipeline; `--floor_win
+  0.06` only checked on scan #3 and the platform in scan #3 is not confirmed by tape; the cleaned ceiling mesh not
+  looked at by a person. First check: the next session reruns the four rooms (R-057) with these defaults.
+- **Rejected:** keeping them off until more rooms are checked (agent had recommended looking at the mesh before
+  `--clean_ceiling` and keeping `--infer_gap` / `--square` off); deleting the old bundles (D-049).
+- **By:** Umair · **Source:** session 2026-11-19 · **Status:** Active
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |
@@ -660,4 +681,4 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | OD-8 | Archive (never delete, D-049) `train_fixed2_backup.py`, `train_v3_backup.py`, the old `run_*.bat`, `scratch/`, `ViewerHUD.tsx`? Into which folder? | Owners must agree |
 | OD-9 | Update README / AGENTS.md content that no longer matches (MEP layers, ~75 min, `structure.py`)? | Facts changed by D-023, D-024, D-033 |
 | OD-12 | How to merge `origin/master` (Tayyab's PR #7, 43 commits) with Umair's Step 4 branches: run IDs R-032 … R-040 and decision ID D-069 were given to different runs / decisions on both sides | Agent's suggestion 2026-11-19: Tayyab's numbers stay (they are on `master`), Umair's clashing entries get the next free numbers with a "was R-0xx on `feature/step4-layout`" note; `layout.py` has two ceiling rules (D-072 and Tayyab's `d052301`) to reconcile |
-| OD-13 | Step 4 defaults from 2026-11-19 (issues #8 – #18): keep **on** (bug fixes): no-roof rule (ceiling plane < 35 % of the floor and blue − red > 0.15), wall-gap openings with ≥ 10 Gaussians behind per open cell, floor area only for a closed outline (step joins ≤ 0.5 m); switch **on**? `--raised_max 1.5` (agent recommends yes, R-055), `semantic3d.py --floor_win 0.06` (recommends yes after the platform is confirmed, #17); leave **off**? `--infer_gap`, `--clean_ceiling 0.04` (look at the mesh first), `--square`; floor-plan format plan.json / .svg / .dxf | Evidence R-053 – R-056, issues #8 #9 #10 #11 #12 #18; until Umair decides, the code runs with the "on" list and the options off |
+| ~~OD-13~~ | ~~Step 4 defaults from 2026-11-19 (issues #8 – #18)~~ | Settled by D-075 (2026-11-19, Umair: all options on) |

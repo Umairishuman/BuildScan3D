@@ -600,3 +600,10 @@ sheet `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/semantic_v10/fi
 - Next: Umair: close `run-r1118` and start scans #5 / #6 (#19), tape (#20), sheets (#21), browser check (#24), OD-13,
   OD-12 with Tayyab (#25). Agent, after that: the R-NNN for scans #5 / #6, per-room found / missed / false tables
   from the filled sheets, then the threshold work in #14 / #15.
+- Later still (2026-11-19): Umair decided OD-13 → **D-075**: `run_full.sh` passes `--raised_max 1.5 --infer_gap 6`
+  (layout), `--floor_win 0.06` (both sem3d passes), `--clean_ceiling 0.04` (mesh labels), `--square` (plan); script
+  defaults unchanged. Seven older web bundles moved to `prototype/web-ui/scans_archive/` (gitignored, not served), so
+  Projects shows the newest per scan (`newroom` and `scan_008_…_r1116w9` stay for the hand-written cards). Closing the
+  finished `run-r1118` screen session was refused to the agent a second time: Umair closes it.
+- Next: R-057 = the four rooms (scans #7, #3, #8, newRoom) layout → plan with the D-075 defaults (new tag), check the
+  ceiling mesh and floor fits, then scans #6 and #5 (#19) once `run-r1118` is closed.

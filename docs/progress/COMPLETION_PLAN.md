@@ -124,8 +124,8 @@ Code changes that alter results are on, only where they fix a plain bug; new heu
 | Splats / start view / size card in a real browser | Umair | #24 |
 | Merge `origin/master` (Tayyab's ceiling rule `d052301` next to D-072 / #8) | Umair + Tayyab: numbering (OD-12) | #25 |
 | Scans #5 / #6 processed | Umair: close the finished `run-r1118` screen session (`scripts/buildscan stop run-r1118`) | #19 |
-| Defaults to confirm: no-roof thresholds (35 % cover, blue − red 0.15), view-through minimum 10 per cell, `--infer_gap`, `--raised_max`, `--clean_ceiling 0.04`, `--square`, floor-plan format | Umair (decision, then DECISIONS.md) | #8 #9 #10 #11 #12 #18 |
-| Floor platform on scan #3 (fit the dominant floor level only?) | Umair: is there a raised platform, how high | #17 |
+| ~~Defaults to confirm~~ (no-roof thresholds, view-through minimum, `--infer_gap`, `--raised_max`, `--clean_ceiling 0.04`, `--square`, plan format) | **Settled 2026-11-19 by D-075 (Umair: all on).** Left: R-057 checks them together on four rooms | OD-13 |
+| Floor platform on scan #3 (fit the dominant floor level only?) | Umair: is there a raised platform, how high | #17 (`--floor_win 0.06` now on by D-075; the tape check still open) |
 
 ## Step 5 · Compression and web delivery
 

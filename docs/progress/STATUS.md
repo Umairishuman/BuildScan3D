@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-19 by Umair (Step 4 issues #8 – #25: no-roof rule, wall-gap openings, closed-room check, floor-plan export, options for planks / ceiling mesh / floor step; runs R-053 – R-056; blockers in COMPLETION_PLAN Step 4; OD-13)
+Last updated: 2026-11-19 by Umair (D-075: Step 4 options on in run_full.sh, older web bundles moved to prototype/web-ui/scans_archive/; before that Step 4 issues #8 – #25, runs R-053 – R-056)
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -629,7 +629,7 @@ Dated milestones; details in [LOG.md](LOG.md), reasons in [DECISIONS.md](DECISIO
 - **2026-11-19: Step 4 issues** (Umair, agent; R-053 – R-056): no-roof detection (#8), doorways / window openings
   from wall gaps (#9), closed-room check and floor area only for a closed outline (#10), floor plan .svg / .dxf /
   .json as stage 16 (#12), check sheets with rejected candidates (#13); optional `--raised_max`, `--clean_ceiling`,
-  `--floor_win`, `--infer_gap`, `--square` waiting for OD-13.
+  `--floor_win`, `--infer_gap`, `--square`: **on in `run_full.sh` since 2026-11-19 (D-075, Umair)**; first full run with them: R-057 (next session).
 ## 9. Known limits
 
 - **One room.** Every v9/v10 result is on newRoomAttemptSadness; the semantics rules were tuned on it.

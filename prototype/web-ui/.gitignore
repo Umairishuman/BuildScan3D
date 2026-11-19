@@ -44,3 +44,6 @@ next-env.d.ts
 # Every folder is ignored, not only scan_*/, so datasets with other names (newRoomAttemptSadness_r1112nr/) are covered.
 /public/scans/*/
 !/public/scans/newroom/
+
+# older scan bundles moved out of the Projects tab (not served, not listed), D-075
+/scans_archive/
