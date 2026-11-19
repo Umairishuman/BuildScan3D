@@ -29,6 +29,8 @@ ap.add_argument("--mesh", required=True); ap.add_argument("--ply", required=True
 ap.add_argument("--max_dist", type=float, default=0.05)
 ap.add_argument("--layout", default="")
 ap.add_argument("--clean", type=float, default=0.0, help="> 0 (m): also write mesh_clean.ply, see above (e.g. 0.01)")
+ap.add_argument("--clean_ceiling", type=float, default=0.0, help="> 0 (m): radius for the ceiling instead of --clean "
+                "(plain ceilings fuse ~4 cm rough, #18; ceiling lights / fans are fixtures, not ceiling, so they keep their shape)")
 ap.add_argument("--glb", type=int, default=0, help="> 0: also write decimated .glb meshes with about this many triangles")
 args = ap.parse_args()
 t0 = time.time()
@@ -82,7 +84,8 @@ if args.clean > 0 and args.layout:
         for _ in range(5):                                    # robust plane of this surface
             c = Q[kp].mean(0); _, _, Vt_ = np.linalg.svd(Q[kp] - c, full_matrices=False); n = Vt_[2]
             r = (Q - c) @ n; kp = np.abs(r) < max(0.005, 3 * np.median(np.abs(r[kp])))
-        w = np.clip((2.5 * args.clean - np.abs(r)) / (1.5 * args.clean), 0, 1)
+        rad = args.clean_ceiling if nm == "ceiling" and args.clean_ceiling > 0 else args.clean
+        w = np.clip((2.5 * rad - np.abs(r)) / (1.5 * rad), 0, 1)
         Vc[sel] -= (w * r)[:, None] * n; moved += int((w > 0).sum())
     cm = o3d.geometry.TriangleMesh(mesh); cm.vertices = o3d.utility.Vector3dVector(Vc); cm.compute_vertex_normals()
     o3d.io.write_triangle_mesh(os.path.join(os.path.dirname(args.mesh), "mesh_clean.ply"), cm)
