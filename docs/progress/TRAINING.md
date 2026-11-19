@@ -77,7 +77,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-054 | 2026-11-19 | scans #7 / #3: layout (#8 #9 #10) → semantics → mesh labels → web, tag `r1119a` | this PC (Ubuntu, RTX 4000 Ada) | 8.1 min | #7 no roof, 1 doorway + 3 window openings, open outline; #3 open outline flagged, triangle area gone, 4 false openings | Superseded (#9 fixed after it) |
 | R-055 | 2026-11-19 | Layout on six rooms, `--debug`, default vs `--raised_max 1.5 --infer_gap 6` | this PC (Ubuntu, RTX 4000 Ada) | 16.9 min | scan #3 no false openings; `--raised_max` closes #7 and #8 (4 walls, 88–90°), drops nothing real | Kept (findings) |
 | R-056 | 2026-11-19 | Four rooms, layout → web → plan with the 2026-11-19 defaults, tag `r1119b` | this PC (Ubuntu, RTX 4000 Ada) | 15.6 min | #7 no roof + 2 openings; #3 no false openings; newRoom closed, 29.41 m²; #8 open, 2 doorways | Kept (for Umair's checks) |
-| R-057 | 2026-11-19 | Four rooms, layout → web → plan with the D-075 defaults, tag `r1119c` | this PC (Ubuntu, RTX 4000 Ada) | running | — | running |
+| R-057 | 2026-11-19 | Four rooms, layout → web → plan with the D-075 defaults, tag `r1119c` | this PC (Ubuntu, RTX 4000 Ada) | 16.7 min | #7 / #8 closed rectangles (17.99 / 26.44 m²); #3 tilt 0.29°; ceilings 4.3 → 0.04 cm; #8 lost a switch + socket | Kept except scan #8 (Umair) |
 
 ## Runs
 
@@ -863,5 +863,32 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   floor area, floor tilt, ceiling roughness, plan.svg. Expected from R-055 / #17 / #18: scans #7 and #8 closed with
   4 walls, scan #3 floor tilt ~0.3°, ceilings ~0 cm rough. Any room that gets worse goes to Umair before anything
   else.
-- **Start → end:** (running)
-- **Errors during the run:** none so far.
+- **Start → end:** 15:09:11 → 15:25:53 (16.7 min; per room layout 1.2–2.9 min, sem3d / verify / sem3d2 ~0.2 min each,
+  meshlabels 0.9–3.5 min, web 0.1 min, plan < 0.1 min; `gs_r1119c/stages.tsv`)
+- **Errors during the run:** none (exit 0). Not an error: with `--square`, `plan_export.py` writes
+  `layout/plan_square.json|svg|dxf` and no `plan.svg`; `layout/plan.png` (thumbnail) is still written by `layout.py`.
+- **Comparison script:** `<scratchpad>/compare.py` (layout.json, semantic.json, and `mesh.py`'s `shell_flatness` on
+  `mesh_clean.ply`: median |deviation| cm, % within 1 cm). Run on `r1119b` first: it gives #18's numbers (scan #8
+  ceiling 4.35 cm, newRoom 4.31 cm), so the measure is the same.
+- **Result (R-056 `r1119b` → R-057 `r1119c`):**
+
+  | Room | Walls | Corners | Closed | Floor area | Floor tilt | Ceiling rough (cm, % ≤ 1 cm) | Fixtures (rejected) | Wall-gap openings |
+  |---|---|---|---|---|---|---|---|---|
+  | scan #7 | 6 → **4** | 4 (one 63.5°) → 4 (87.7–89.7°) | no → **yes** | null → **17.99 m²** | 0.98° → 0.18° | no roof | 2 (29) → 3 (29) | doorway 0.8 + window 2.1 → **+ doorway 1.0 m** (wall 2, 0.1–2.4 m, the wall the planks hid) |
+  | scan #3 | 4 → 4 | 3 → 3 | no → no | null → null | **1.95° → 0.29°** | 0.02 (89.4) → 0.00 (97.6) | 18 (30) → **20 (28)**: + socket at 0.59 m (45 views, no candidate before), + ceiling fan 3 (rejected before as "away from walls") | none → none |
+  | scan #8 | 5 → **4** | 4 (one 70.6°) → 4 (88.6–89.5°) | no → **yes** | null → **26.44 m²** | 0.22° → 0.21° | **4.35 (19.6) → 0.04 (66.6)** | 13 (56) → **10 (58)** | doorways 1.0 + 1.3, window 2.0 → **doorway 1.3 m gone** |
+  | newRoom | 5 → 5 | same | yes → yes | 29.41 → 29.41 | 0.25° → 0.24° | **4.31 (22.3) → 0.04 (61.2)** | 19 (49) → 19 (49) | same |
+
+  Scan #3's semantic ceiling height 2.504 → **2.582 m** (floor fit on the lower level, `--floor_win`); `layout.json`
+  height unchanged 2.525 m, so the two now differ by 5.7 cm; tape decides (#17, #20). Scan #8 lost **light switch 1
+  and power socket 1** (one plate at 1.27 / 1.28 m, 23 / 35 views): they sat on the 1.88 m diagonal surface
+  (0.58 m up, 0.67 m tall) that `--raised_max 1.5` dropped across the corner of walls 1 / 0; now 1.52 m from the
+  nearest wall, so rejected "small, on a wall". The 1.3 m "doorway" lost with it was on the same surface (0.1–3.2 m,
+  365 Gaussians seen through: the space behind the surface is open). Cutting the corner off would make the floor
+  about 2.0 m² smaller (triangle of the three points, agent's estimate). `--square` turned walls by 0.02–2.35°
+  (largest scan #7 wall 2: 2.35°, scan #8 wall 1: 1.91°). Wall flatness otherwise unchanged except where a wall got
+  longer (scan #8 wall 1 0.06 → 1.55 cm, scan #7 wall 2 2.58 → 0.26 cm). Check sheets
+  `gs_r1119c/semantic_v10/fixture_check.md` (`--rejected`); bundles `public/scans/<scan>_r1119c/`.
+- **Verdict:** kept for scans #7, #3 and newRoom; **scan #8 waits for Umair**: closed rectangle and smooth ceiling,
+  but a switch + socket plate lost. Is the diagonal surface in that corner a wall (then `--raised_max` is wrong here)
+  or furniture with a plate on it? `r1119b` bundles not archived until then.
