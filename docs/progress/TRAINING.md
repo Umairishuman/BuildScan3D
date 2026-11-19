@@ -79,6 +79,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-056 | 2026-11-19 | Four rooms, layout → web → plan with the 2026-11-19 defaults, tag `r1119b` | this PC (Ubuntu, RTX 4000 Ada) | 15.6 min | #7 no roof + 2 openings; #3 no false openings; newRoom closed, 29.41 m²; #8 open, 2 doorways | Kept (for Umair's checks) |
 | R-057 | 2026-11-19 | Four rooms, layout → web → plan with the D-075 defaults, tag `r1119c` | this PC (Ubuntu, RTX 4000 Ada) | 16.7 min | #7 / #8 closed rectangles (17.99 / 26.44 m²); #3 tilt 0.29°; ceilings 4.3 → 0.04 cm; #8 lost a switch + socket | Kept (scan #8 corner = furniture, Umair) |
 | R-058 | 2026-11-19 | scan #6 `scan_006_1e457a214ce1` (259.8 s), full pipeline, R-023 recipe + D-075 (`r1119`) | this PC (Ubuntu, RTX 4000 Ada) | 45.5 min, did not finish | 1159 frames, 12.56 M observations; COLMAP `global_mapper` killed by OOM (26.4 GB) at 16:14:39 while the agent ran web work | Failed (OOM in SfM) |
+| R-059 | 2026-11-19 | scan #6 rerun after R-058, same recipe, PC kept quiet (`r1119b6`) | this PC (Ubuntu, RTX 4000 Ada) | running | — | running |
 
 ## Runs
 
@@ -921,3 +922,16 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
      during SfM), or fewer frames (`--window 9`, D-073), or more swap (sudo, Umair). Choice is Umair's.
 - **Result:** none (stopped in SfM). Work folder `dataset/scan_006_1e457a214ce1/work_r1119_sfm/` (database, partial).
 - **Verdict:** failed (OOM in SfM, R-038's failure; the agent's parallel work is the likely tipping point).
+
+### R-059 · 2026-11-19 · scan #6 rerun after R-058's OOM, same recipe, PC kept quiet (tag `r1119b6`)
+- **Who / machine:** agent for Umair (Umair chose "same recipe, PC kept quiet" after R-058) · this PC (Ubuntu, RTX
+  4000 Ada), `screen` session `run-r1119b6`; no `viewer`, no dev servers; the agent runs nothing heavy (builds, dev
+  servers, tests, uploads) until SfM has finished, and logs free RAM every minute to its scratch folder.
+- **Branch / commit:** `feature/step4-layout` @ `d6bb0ee` (no uncommitted changes)
+- **Dataset:** `dataset/scan_006_1e457a214ce1` (259.8 s, 7,274 video frames)
+- **Command(s):** `scripts/buildscan run 6 r1119b6 -- --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
+- **Goal:** first model of scan #6 (#19); SfM must pass in RAM like scan #7 (12.68 M observations, R-040). Then
+  layout / fixtures / check sheet, publish within the 10 GB cap (D-077).
+- **Start → end:** (running)
+- **Errors during the run:** none so far.
+
