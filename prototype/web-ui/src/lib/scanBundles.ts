@@ -95,11 +95,24 @@ export function listBundleRefs(): BundleRef[] {
     .map((e) => splitFolder(e.name, numbers));
 }
 
-/** Layout plan image of a bundle's run (dataset/<capture>/work_<tag>_sfm/gs_<tag>/layout/plan.png), if on disk. */
+/**
+ * Layout plan image of a bundle's run, if on disk: dataset/<capture>/work_<tag>_sfm/gs_<tag>/layout/plan.png, or
+ * work_<model tag>_sfm/gs_<tag>/ for a re-run of the later stages on an already trained model (R-054 – R-057).
+ */
 export function planImagePath(ref: BundleRef): string | null {
   if (!ref.tag) return null;
-  const p = path.join(DATASET_DIR, ref.capture, `work_${ref.tag}_sfm`, `gs_${ref.tag}`, "layout", "plan.png");
-  return fs.existsSync(p) ? p : null;
+  const own = path.join(DATASET_DIR, ref.capture, `work_${ref.tag}_sfm`, `gs_${ref.tag}`, "layout", "plan.png");
+  if (fs.existsSync(own)) return own;
+  try {
+    for (const d of fs.readdirSync(path.join(DATASET_DIR, ref.capture)).sort()) {
+      if (!/^work_.+_sfm$/.test(d)) continue;
+      const p = path.join(DATASET_DIR, ref.capture, d, `gs_${ref.tag}`, "layout", "plan.png");
+      if (fs.existsSync(p)) return p;
+    }
+  } catch {
+    // capture folder not on this machine
+  }
+  return null;
 }
 
 const CLASS_PLURALS: Record<string, string> = {

@@ -49,16 +49,19 @@ const BUNDLE_ID_PREFIX = "run-";
 export default function ViewerPage({ params }: ViewerPageProps) {
   const { id: projectId } = use(params);
   const project = MOCK_PROJECTS.find((p) => p.id === projectId);
-  if (project) return <ViewerWorkspace project={project} />;
+  // Mock projects without a scan bundle open straight away. Hand-written projects with a bundle go through the
+  // listed projects too, so on a server without their local folder they open the published copy (D-076).
+  if (project && !project.scanUrl) return <ViewerWorkspace project={project} />;
   // Not hand-written: only an auto-listed bundle can still match; anything else is a 404 straight away.
-  if (!projectId.startsWith(BUNDLE_ID_PREFIX)) notFound();
+  if (!project && !projectId.startsWith(BUNDLE_ID_PREFIX)) notFound();
   return <BundleViewer projectId={projectId} />;
 }
 
 function BundleViewer({ projectId }: { projectId: string }) {
   const { projects, loading, error } = useAllProjects();
   const project = projects.find((p) => p.id === projectId);
-  if (project) return <ViewerWorkspace project={project} />;
+  // wait for the list even for a hand-written project: its scanUrl may still change to the published copy
+  if (project && !loading) return <ViewerWorkspace project={project} />;
   if (loading) {
     return (
       <AppShell variant="contained" activeNav="projects">
