@@ -29,6 +29,8 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--ply", required=True); ap.add_argument("--work", required=True)
 ap.add_argument("--layout", required=True); ap.add_argument("--out", required=True)
 ap.add_argument("--band", type=float, default=0.06, help="m: distance to a structural plane counted as on it")
+ap.add_argument("--floor_win", type=float, default=0.15, help="m: floor plane fitted on Gaussians within this of the "
+                "layout's floor height; 0.06 keeps a raised platform out of it (#17: scan #3 1.95 -> 0.29 deg, other rooms unchanged)")
 ap.add_argument("--min_votes", type=int, default=2); ap.add_argument("--min_frac", type=float, default=0.3)
 ap.add_argument("--min_views", type=int, default=6); ap.add_argument("--voxel", type=float, default=0.04)
 ap.add_argument("--min_gaussians", type=int, default=30)
@@ -111,7 +113,7 @@ def fit_level(y0, win):
 
 
 level = lambda coef, Q: Q[:, 1] - (coef[0] * Q[:, 0] + coef[1] * Q[:, 2] + coef[2])
-fcoef, ftilt, fres = fit_level(fy, 0.15)
+fcoef, ftilt, fres = fit_level(fy, args.floor_win)
 print(f"floor plane: tilt {ftilt:.2f} deg, median residual {fres * 100:.1f} cm")
 if has_ceil:
     ccoef, ctilt, cres = fit_level(cy_, 0.10)
