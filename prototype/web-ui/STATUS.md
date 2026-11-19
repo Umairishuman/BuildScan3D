@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-11-19 (wall-gap openings and no-roof / open-outline flags shown; earlier the same day: every scan bundle listed in the Projects tab)
+Last updated: 2026-11-19 (published scans from the R2 bucket listed for the Vercel site, D-076; earlier: wall-gap openings and no-roof / open-outline flags shown; earlier the same day: every scan bundle listed in the Projects tab)
 
 ---
 
@@ -131,6 +131,26 @@ real path.** Currently only `/dashboard` has a href.
 ---
 
 ## 4. Completed
+
+### Published scans from the R2 bucket (online site) ✅ code, not deployed yet (2026-11-19, repo D-076, issues #27 / #28 / #29)
+- **Why:** Umair wants Tayyab and evaluators to see the scans on `https://build-scan-3d.vercel.app/` without sharing
+  datasets; bundles live in a public Cloudflare R2 bucket, one prefix and one `index.json` per person.
+- **New** `src/lib/remoteBundles.ts` (server only): when `SCANS_BASE_URL` is set, reads `owners.json` and each
+  `scans/<owner>/index.json` (no-store, 8 s timeout; a broken index skips only that owner) and builds the same cards as
+  local bundles, id `run-<owner>-<folder>`, title "Umair · Scan #7 · <room or tag>", thumbnail the published
+  `plan.png`, `scanUrl` absolute in the bucket. **New** `src/lib/mergeProjects.ts` (pure, from `useAllProjects.ts`):
+  a hand-written project whose folder is not on the server (`scan-008` on Vercel) opens the published copy of that
+  folder; a local bundle always wins. **Modified** `src/lib/scanBundles.ts` (card builder `bundleToProject` shared;
+  `planImagePath` also finds `work_<model tag>_sfm/gs_<tag>/` for re-runs, so the R-054 – R-057 cards get their plan
+  instead of the logo), `src/app/api/scans/route.ts` (local + published, `force-dynamic`), `src/app/viewer/[id]/page.tsx`
+  (hand-written projects with a bundle wait for the list), `ProjectCard.tsx` / `DashboardHome/Overview.tsx`
+  (`unoptimized` for absolute thumbnails, no remote image config needed). Without `SCANS_BASE_URL` nothing changes.
+- **Verification:** `npx tsc --noEmit` silent; eslint on the changed files clean; `npx next build` ok. `next dev` on
+  :3006 with `SCANS_BASE_URL` pointing at a local folder bucket written by `scripts/publish_scan.py --target dir:`
+  (served with `Access-Control-Allow-Origin: *`): `/api/scans` lists Umair's scans #7 / #8 and a test "Tayyab" scan #3
+  with owner, room name and plan thumbnails; `/projects`, `/viewer/run-umair-…`, `/viewer/run-tayyab-…`,
+  `/viewer/scan-008` 200, unknown id 404. `mergeProjects` tested with Node (Vercel case, local-wins case, nothing
+  published). **Not checked in a browser, not deployed, not tried against R2.**
 
 ### Wall-gap openings, no-roof and open-outline flags in the viewer ✅ (2026-11-19, Step 4 issues #8 / #9 / #10)
 - **Why:** the pipeline now finds doorways / window openings without a leaf from gaps in the walls, knows when a space
@@ -764,6 +784,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | **Orphaned dead code** | `Viewer3D/ViewerHUD.tsx` | The retired dark HUD. Nothing imports it. User declined deletion once — **ask before removing.** |
 | **List view does nothing** | `dashboard/page.tsx` | `viewMode` state drives only button styling; the grid is always 3-col. Either implement the list layout or remove the toggle. |
 | **`globals.css` conflicts** | `src/app/globals.css` | Duplicate `--background` declaration, plus a `prefers-color-scheme: dark` block setting `#0a0a0a`. Currently inert because `layout.tsx` hardcodes `bg-[#f8fafc]` on `<body>` — but it is a live trap. |
+| Hand-written `scan-008` on Vercel | `src/lib/mockData.ts` | Its folder `scan_008_7b486c855ed6_r1116w9` is not on Vercel; the card opens it only once that run is published (`scripts/buildscan publish 8 r1116w9`). Same for any hand-written card added later. |
 | 1 pre-existing lint warning | `ExportModal.tsx:29` | Unused `filename` param. Harmless; clean up when touching the file. (FloorPlanView deleted — its 3 warnings gone with it.) |
 | Non-functional controls | dashboard date-range button, `View all activity →` footer link in the notifications panel, "Export as PDF" in `ReportTab.tsx` | Bell is now wired (Step 5); the rest stay stubs. `Generate Report` in ReportTab shows a spinner + updates the timestamp but doesn't produce a file. |
 | Search is shallow | `dashboard/page.tsx` | Filters name/block/floor only. |

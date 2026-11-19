@@ -2,7 +2,7 @@
 
 **What is where, and what each file does.** Read this first in a new session (human or agent), then
 [CLAUDE.md](CLAUDE.md) (how we work) and [docs/progress/STATUS.md](docs/progress/STATUS.md) (where the project stands).
-Last checked against the code: 2026-11-19 (web UI: `/api/scans` lists every scan bundle, D-074; earlier 2026-11-12: branch `feature/iqa-timing`: app changelog `android/CHANGELOG.md`, update checks on start and return, `iqa_ms`; earlier: app moved to `android/` §6, USB upload, light UI).
+Last checked against the code: 2026-11-19 (online site: `publish_scan.py`, `remoteBundles.ts`, D-076, branch `feature/vercel-deploy`; web UI: `/api/scans` lists every scan bundle, D-074; earlier 2026-11-12: branch `feature/iqa-timing`: app changelog `android/CHANGELOG.md`, update checks on start and return, `iqa_ms`; earlier: app moved to `android/` §6, USB upload, light UI).
 When you add, move, retire or repurpose a file, update this map in the same commit.
 
 Markers: **[v9]** = part of the current best pipeline (v9 processing + v10 semantics) · [eval] = evaluation /
@@ -197,7 +197,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does |
 |---|---|
-| `buildscan` | **Linux: one command for everything**: `status`, `server start/stop/log`, `datasets`, `check`, `run` (calls `run_full.sh` in screen `run-<tag>`), `watch`, `results`, `view` (port 7010), `web` (port 3000), `attach`, `stop`, `ip`, `gpu`. `latest` = newest recording |
+| `buildscan` | **Linux: one command for everything**: `status`, `server start/stop/log`, `datasets`, `check`, `run` (calls `run_full.sh` in screen `run-<tag>`), `watch`, `results`, `view` (port 7010), `web` (port 3000), `publish` / `unpublish` / `published` (online site, D-076), `attach`, `stop`, `ip`, `gpu`. `latest` = newest recording |
 | `watch_run.py` | Live view behind `buildscan watch`: stage n of 15 and what it does, time vs R-030, training step, GPU, last message without paths (reads `run_full.log` / `train.log`; standard library only) |
 | `run_full.sh` | **Linux: the whole pipeline in one command**, recording → 3DGS → layout → semantics → mesh → web bundle, each stage in its env; `--from <stage>` restarts; prints GPU use / temperature / training progress every 30 s (`gpu.csv`). Guide: [docs/RUN_PIPELINE.md](docs/RUN_PIPELINE.md) |
 | `setup_linux.sh` | **Linux setup** (no sudo): micromamba, envs `bs-colmap` / `bs-ns` / `bs-system`, `semantic-env`, vocabulary tree, web-ui packages, then checks (GPU, COLMAP, gsplat, Open3D). `--check` = checks only. Same script for the Docker image (D-048) |
@@ -206,6 +206,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `view_splat.bat` | Starts `view.py` (http://localhost:7010) |
 | `start_server.bat` | Loads `.env`, starts the FastAPI server on port 8000, prints the IP for the phone |
 | `start_server.sh` | Linux twin of `start_server.bat`: loads `.env`, mode defaults to `dry_run`, runs uvicorn on port 8000 in the small `bs-server` micromamba env (not the pipeline envs), prints the phone URLs. Detached: `screen -dmS bs-server scripts/start_server.sh` |
+| `publish_scan.py` | Puts a run's web bundle + plan.png on the online site: R2 bucket `scans/<owner>/<capture>_<tag>/` + that owner's `index.json`; `unpublish` archives in the bucket, `list`; Python + boto3 (Linux and Windows), keys from `.env`; `--target dir:` for tests (D-076). Linux: `scripts/buildscan publish / unpublish / published` |
 | `jobs.bat` / `jobs.py` | Job manager CLI (list, watch, logs, retry, reprocess, mode) |
 | `release.bat` | Bumps the app version and tags a release |
 | `run_train.bat`, `run_train_fast.bat`, `run_post.bat`, `run_post_fast.bat`, `run_viewer.bat` | [dead] first splatfacto runs on roomAttemptSadness (Sept/Oct 2026): ns-train / ns-eval / ns-export / ns-viewer with MSVC set up |
@@ -267,7 +268,8 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `src/app/` | Routes: `/` login, `/dashboard`, `/projects`, `/projects/new`, `/viewer/[id]`, `/floorplan/[id]`, `/workspace/boiler-room` |
 | `src/app/api/scans/route.ts`, `src/app/api/scans/[folder]/plan/route.ts` | Lists every bundle in `public/scans/` as a project (JSON) and serves each run's `layout/plan.png` as its thumbnail (D-074) |
 | `src/lib/scanBundles.ts` | Server side: reads the bundles' `scan.json`, `dataset/.scan_numbers.tsv` and the TRAINING.md headings (run ID, date) into project cards |
-| `src/lib/useAllProjects.ts` | Client hook: `mockData.ts` projects + the listed bundles (no duplicates); used by `/projects` and `/viewer/run-<folder>` |
+| `src/lib/useAllProjects.ts`, `src/lib/mergeProjects.ts` | Client hook: `mockData.ts` projects + the listed bundles (no duplicates; a hand-written card opens the published copy when its folder is not on the server); used by `/projects` and `/viewer/run-<folder>` |
+| `src/lib/remoteBundles.ts` | Server side: scans published to the R2 bucket (`SCANS_BASE_URL`: `owners.json`, `scans/<owner>/index.json`) as project cards, id `run-<owner>-<folder>` (D-076) |
 | `src/components/Viewer3D/SplatCanvas.tsx` | **Real scan viewer** (Spark, `.spz`, label groups, mesh mode, measuring) |
 | `src/components/Viewer3D/Canvas3D.tsx`, `SceneBuilder.ts`, `MeasurementTool.ts` | Mock 3D scene (procedural room) and measuring for mock projects |
 | `src/components/ProjectDetail/ScanLayersPanel.tsx` | Scan Layers panel for real scans |
@@ -319,6 +321,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `tests/test_server_api.py`, `test_server_pipeline.py`, `test_runpod_client.py`, `test_scan_numbers.py` | Upload server, local runner, RunPod client, scan numbers |
 | `tests/test_apk_checks.py` | APK / manifest checker and signing keys |
 | `tests/test_openings.py`, `tests/test_plan_export.py` | Wall-gap openings and the floor-plan export on synthetic rooms (#9, #12) |
+| `tests/test_publish_scan.py` | `publish_scan.py` against a folder bucket: index, owners, republish, unpublish to archive, refusals (D-076) |
 | `tests/test_changelog.py` | App changelog tool (`.github/android/changelog.py`) and that `android/CHANGELOG.md` has the current version |
 | `tests/test_sources_compile.py` | Every Python file compiles |
 | `tests/requirements.txt` | Light test dependencies (no GPU) |
