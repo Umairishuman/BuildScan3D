@@ -456,6 +456,10 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   `scan_646070948603_r1106/`); no single file passes CI's 10 MB limit, so one could be committed by mistake.
 - **Rejected:** `export_web.py` writing to `saved_models/web/` instead and copying demos by hand; committing every bundle
   (~20 MB of repo growth per scan). **By:** Umair.
+- **Addendum 2026-11-16:** the pattern `public/scans/scan_*/` missed bundles of datasets not named `scan_*`
+  (`newRoomAttemptSadness_r1112nr/` from R-037 showed as untracked). Now `public/scans/*/` is ignored with
+  `!public/scans/newroom/` as the exception; further demo bundles need their own `!` line. Rejected: adding only
+  `newRoomAttemptSadness_*/` (the next oddly named dataset would leak again). **By:** Umair.
 
 ## D-062 · 2026-11-12 · Uploads over a USB cable, preferred over Wi-Fi
 - **Decision:** the app uploads over a USB cable when one is connected: `scripts/usb_link.sh` (started by
@@ -548,6 +552,184 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   the first build with this code (it needs the previous version stored). Not tested on a device.
 - **By:** Umair · **Source:** session 2026-11-12 · **Status:** Active
 
+## D-069 · 2026-11-12 · Step 3 speed and noise runs on scan #3, not scan #2
+- **Decision:** the run-to-run noise repeats (COMPLETION_PLAN 3.6) and every speed change (3.3 / 3.4) are run on
+  scan #3 (`scan_003_6de634cbb8b2`, classroom, 185 s, 885 frames selected), one change at a time.
+- **Why:** Umair chose scan #3 over scan #2. Scan #3 is the first recording with `camera.csv` / `anchors.csv` (v0.3.6)
+  and is about 3 min long, closer to a real room capture; scan #2 has the wrong 1.50 m layout ceiling (R-030).
+- **Evidence:** R-031 (scan #3 run with the default recipe) is the baseline for the stage times.
+- **Rejected:** scan #2 (482 frames, 41.7 min run_v8 in R-030): about half the GPU time per run, so cheaper, but
+  Umair did not want it.
+- **Limits:** each run on scan #3 takes longer than on scan #2 (R-031 total to fill in when it ends), so the planned
+  runs need more GPU hours.
+- **By:** Umair · **Source:** session 2026-11-12 · **Status:** Active
+
+## D-070 · 2026-11-12 · Speed and noise runs on scan #3 are scored on a fixed held-out split
+- **Decision:** every Step 3 noise and speed run on scan #3 (D-069) uses `run_v8.py --split
+  dataset/scan_003_6de634cbb8b2/offpath_test.txt` and is scored with `eval_offpath.py` (PSNR, SSIM, sharpness,
+  flatness on the held-out frames). The list holds 6 contiguous 3 s stretches spread over the middle 90% of the walk,
+  written by the new `src/arcore3dgs/make_split.py` from R-031's `frames.json`: 87 of 875 frames (9.9%).
+- **Why:** without held-out frames a speed change can only be timed, not judged (R-030 / R-031: "model quality not
+  measured"). The same kind of split as `offpath_test.txt` in R-014 / R-020, so the numbers are comparable in kind.
+- **Rejected:** scoring on training frames (measures fit, not quality); a random 10% of frames (test frames would sit
+  next to training frames and flatter the model); R-031 itself as the quality baseline (it trains on all frames).
+- **Limits:** the R-031 model cannot be scored (no split); the split's PSNR is not comparable in value with
+  newRoomAttemptSadness (different room). If a later run's selection drops a listed frame, it is just not held out.
+- **By:** Umair (agent's recommendation) · **Source:** session 2026-11-12 · **Status:** Active
+
+## D-071 · 2026-11-12 · Models are levelled with ARCore gravity: in the SfM export, and once for scans #2 / #3
+- **Decision:** (1) `sfm_colmap.py` (export) takes gravity from ARCore's camera orientations: the up direction in
+  the COLMAP world is the mean over the registered frames of each frame's ARCore up vector; the world is rotated so
+  that it is +Y, and only then are scale, yaw and translation fitted to the ARCore camera centres (RANSAC as before,
+  rotation about Y only). (2) The two existing models (scan #2 R-030, scan #3 R-031) are not retrained: a new
+  `src/arcore3dgs/level_model.py` rotates the trained `splat.ply` (positions, orientations and the degree-3 colour
+  coefficients) and `frames.json` with the same gravity and writes them under a new tag; then `run_full.sh --from
+  layout` re-runs layout → web on the levelled copy. The originals stay as they are.
+- **Why:** the Sim3 rotation came from camera centres only, which cannot fix the tilt when the walk is short (scan #2:
+  0.8 × 0.7 m) or the inlier set is close to a line (scan #3: 268 / 885 frames). Every later stage assumes +Y is up.
+- **Evidence:** R-032: ARCore gravity is 9.11° (scan #2) and 12.10° (scan #3) from the model's +Y, the same in every
+  frame (spread < 1°); floor, desk and ceiling planes are tilted the same way. Levelled in a prototype, scan #3's
+  layout goes from 2 walls / 0 corners to 4 walls / 3 corners at 89.5°, 89.8°, 88.9° with one clean ceiling peak.
+- **Rejected:** retraining scans #2 / #3 from the export stage (~45 / ~65 min GPU each; the rotation is rigid, so
+  the trained model can be rotated instead); levelling only inside `layout.py` (semantics, mesh labels and the web
+  export would each need the same rotation, and the model would stay tilted in the viewer); waiting for Tayyab's Step 3
+  work (the new rooms recorded on 2026-11-13 would come out tilted).
+- **Limits:** relies on ARCore's gravity, which is accurate on the phones used so far (per-frame spread < 1°); if
+  ARCore orientations are missing the export falls back to the old centre-only rotation and says so. Touches the export
+  part of `sfm_colmap.py`, which Tayyab is also changing (mapper settings) for Step 3: told in LOG for the merge.
+- **By:** Umair (agent's recommendation) · **Source:** session 2026-11-12 (Step 4), R-032 · **Status:** Active
+
+## D-072 · 2026-11-12 · The layout ceiling may not lie below the top of the walls
+- **Decision:** `layout.py` ignores horizontal ceiling candidates below the top of the highest wall (98th percentile
+  height of its points); among the rest the strongest cluster is the ceiling, as before. If none is left, the wall
+  top is used. `layout.json` records where the height came from (`ceiling_source`) and warnings when the height is
+  < 2.2 m or the ceiling is < 0.3 m above the highest camera.
+- **Why:** a white, textureless ceiling can be reconstructed too close to the cameras, and glass reflects it (scan #2):
+  the strongest horizontal plane above the cameras was then 1.50 m above the floor, though the walls reach higher.
+- **Evidence:** R-032: scan #2 levelled: strongest ceiling plane 1.79 m (0.4 m above the cameras), walls reach 2.28 m;
+  with this rule 2.41 m. Scan #3 levelled: no change (one ceiling peak at 2.52 m above wall tops of 2.36–2.44 m).
+- **Rejected:** highest strong peak (≥ 10% of the strongest): 1.72 m on scan #2; splat top percentile (depends on
+  floaters and on what is seen through doors); only a warning (leaves a wrong number in the plan and the semantics).
+- **Limits:** the wall top is a lower bound: walls seen only at grazing angles near the ceiling end lower than the
+  real wall. Scan #2's ceiling model stays wrong; the right fix there is a better capture (look up, walk around).
+  No tape check yet.
+- **By:** Umair (agent's recommendation) · **Source:** session 2026-11-12 (Step 4), R-032 · **Status:** Active
+
+## D-073 · 2026-11-16 · Long recordings: fewer frames (larger select window) so SfM fits in memory
+- **Decision:** when a recording gives far more frames than the rooms that fitted, re-run with a larger
+  `select_sharp` window (`run_v8.py --window`) instead of changing the SfM settings. For scan_008 (10,255 frames):
+  `--window 9` instead of 6, ~1,140 frames, close to R-037's 1,166; the rest of the R-023 recipe is unchanged.
+- **Why:** R-038 (window 6, 1,639 frames) was killed by the OOM killer in COLMAP `global_mapper` (global positioning on
+  the CPU, 26.1 GB resident on a 30 GB PC); R-037 with 1,166 frames ran on the same PC.
+- **Evidence:** R-038 (kernel log, `global_mapper.log`: 1,265,512 tracks, 16.2 M observations). Peak memory of
+  R-037 / R-031: not measured, so where the limit lies is not known.
+- **Rejected:** 4,096 SIFT features instead of 8,192 (keeps the frames but moves SfM away from the tested recipe);
+  incremental `mapper` (much slower, untested here); more swap (not tried).
+- **Limits:** frames are ~0.3 s apart instead of ~0.2 s, so fewer views per surface for training; not yet compared.
+  A fixed rule (window from frame count) is not made yet.
+- **By:** Umair (agent's recommendation) · **Source:** session 2026-11-16, R-038 · **Status:** Active
+
+## D-074 · 2026-11-19 · The Projects tab lists every processed scan bundle by itself
+- **Decision:** the web UI lists every folder in `prototype/web-ui/public/scans/` that has a `scan.json` as a project
+  (route `/api/scans`, `src/lib/scanBundles.ts`), opened at `/viewer/run-<folder>`. Card numbers come from the
+  bundle's `scan.json`, the scan number from `dataset/.scan_numbers.tsv` (D-065), the run ID and date from the
+  TRAINING.md heading that names the tag, the thumbnail from the run's `layout/plan.png`. Hand-written projects in
+  `mockData.ts` stay; a bundle one of them already shows (`newroom-scan`, `scan-008`) is not listed twice.
+- **Why:** Umair asked for every scan to be viewable from the Projects tab (2026-11-19); this settles the 2026-11-16
+  question "scan picker or `mockData.ts` by hand" (STATUS §7.10) and COMPLETION_PLAN 5.3 for this machine.
+- **Evidence:** 2026-11-19: 9 bundles on this PC listed, 7 new cards (newroom and scan #8 already had one);
+  `/viewer/run-…` 200, unknown non-`run-` ids still 404, a `../` folder name 404 (headless Chrome screenshot of
+  `/projects`; tsc / build pass, eslint 0 errors + the known warning).
+- **Rejected:** adding each scan to `mockData.ts` by hand (every run needs an edit and a commit); a separate scan
+  picker inside the viewer (the Projects tab is where the team looks).
+- **Limits:** bundles are gitignored (D-061), so each machine lists only its own runs; needs `next dev` / `next start`
+  (not a static export). Room names are not known, so cards say "Scan #N · tag". The splats of an auto-listed scan
+  were not seen rendering in a real browser (headless software rendering was still loading after 60 s).
+- **By:** Umair (his ask; the auto-listing approach is the agent's) · **Source:** session 2026-11-19 · **Status:** Active
+
+## D-075 · 2026-11-19 · Step 4 options on by default; older web bundles out of the Projects tab
+- **Decision:** settles OD-13. The no-roof rule, wall-gap openings (≥ 10 Gaussians behind per open cell), floor area
+  only for a closed outline and the plan.json / .svg / .dxf export stay on. `scripts/run_full.sh` now also passes
+  `layout.py --raised_max 1.5 --infer_gap 6`, `semantic3d.py --floor_win 0.06` (both sem3d passes),
+  `mesh_labels.py --clean_ceiling 0.04` and `plan_export.py --square`. The scripts' own defaults are unchanged (off),
+  so a script called by hand behaves as before. Older web bundles (`newRoomAttemptSadness_r1112nr`,
+  `scan_002_…_r1106`, `scan_003_…_r1112`, `_r1112lev`, `_r1119a`, `scan_007_…_r1118`, `_r1119a`) moved (not deleted,
+  D-049) from `prototype/web-ui/public/scans/` to `prototype/web-ui/scans_archive/` (gitignored, not served), so the
+  Projects tab shows the newest bundle per scan. `newroom` and `scan_008_…_r1116w9` stay: hand-written projects in
+  `mockData.ts` use them.
+- **Why:** Umair: "turn the options on, lose the previous web sessions" (2026-11-19).
+- **Evidence:** R-055 (`--raised_max 1.5`: scans #7 / #8 closed, no real wall dropped on six rooms; `--infer_gap 6`
+  inferred nothing on these rooms), #17 (`--floor_win 0.06`: scan #3 tilt 1.95° → 0.29°, measured on scan #3 only),
+  #18 (`--clean_ceiling 0.04`: ceilings 4.3 cm → 0.04 cm roughness), #12 (`--square`: wall ends move 1–5 cm on newRoom).
+- **Limits / not verified:** the five options have not yet run together through the full pipeline; `--floor_win
+  0.06` only checked on scan #3 and the platform in scan #3 is not confirmed by tape; the cleaned ceiling mesh not
+  looked at by a person. First check: the next session reruns the four rooms (R-057) with these defaults.
+- **Rejected:** keeping them off until more rooms are checked (agent had recommended looking at the mesh before
+  `--clean_ceiling` and keeping `--infer_gap` / `--square` off); deleting the old bundles (D-049).
+- **By:** Umair · **Source:** session 2026-11-19 · **Status:** Active
+
+## D-076 · 2026-11-19 · Online site: web UI on Vercel, scan bundles on Cloudflare R2
+- **Decision:** the team shares processed scans through a deployed website, not by copying datasets. The web UI
+  (`prototype/web-ui`) is deployed on Vercel (Hobby plan); each run's web bundle (`.spz` groups, `scan.json`,
+  `mesh.glb`, plus `plan.png` as its thumbnail) is uploaded to a public Cloudflare R2 bucket, with an `index.json` that
+  lists them for the Projects tab. Recordings (`dataset/`) and `splat.ply` stay on the machine that made them. Work:
+  issues #26 (accounts, Umair) and #27 – #30 (code), branch `feature/vercel-deploy`.
+- **Why:** Umair wants Tayyab (and evaluators) to see the scans in the browser without sharing datasets (2026-11-19).
+- **Evidence:** sizes measured on this PC 2026-11-19: scan #7 recording 16 GB, `splat.ply` 457 MB, web bundle 43 MB;
+  the eight bundles in `public/scans/` are 18 – 53 MB. Free tiers from third-party pricing pages (not Cloudflare's /
+  Vercel's own, to be checked at sign-up): R2 10 GB storage, egress free without a cap; Vercel Blob (Hobby) 1 GB
+  storage, 10 GB transfer a month, blocked for 30 days when exceeded; Backblaze B2 10 GB, egress up to 3× storage.
+- **Rejected:** opening this PC's dev server over Tailscale (agent's first recommendation; works only while this PC
+  runs); sending bundle folders by hand; Vercel Blob (too small); Backblaze B2 (egress capped; kept as the fallback if
+  R2's payment method is a problem); committing bundles to git (D-061, CI rejects binaries); bundles inside the Vercel
+  deployment (a redeploy per scan); a public tunnel (the login is a mock).
+- **Limits / not verified:** the bucket is public, so every published scan can be downloaded by anyone with the URL;
+  which scans may be published is Umair's choice (#26). R2's `r2.dev` URL is rate-limited (fine for a demo). Nothing
+  built or deployed yet.
+- **By:** Umair (storage: R2, over the agent's B2 / Vercel Blob alternatives) · **Source:** session 2026-11-19 ·
+  **Status:** Active
+- **Addendum (2026-11-19, Umair):** every scan so far (scans #1 – #8 on this PC) may be public. Tayyab may publish
+  his scans to the same site, and names must not clash. Scan numbers and run IDs are per machine (OD-12), so the
+  bucket is split by person: `scans/<owner>/<capture>_<tag>/`, one `index.json` per owner (`scans/<owner>/index.json`)
+  and `owners.json` at the top, so two people publishing at once never overwrite each other's list. Cards name the
+  owner ("Umair · scan #7"). The publish tool is a Python script so it also runs on Tayyab's Windows PC (#29). The
+  Vercel project is `https://build-scan-3d.vercel.app/` (deployed by Umair from `master`). Tayyab has not been asked
+  yet: his part (own R2 token, publishing from the 3070 PC) needs his agreement.
+
+## D-077 · 2026-11-19 · Online storage never above the 10 GB free tier; publish every scan
+- **Decision:** the R2 bucket (D-076) must never pass 10 GB, Cloudflare's free storage, at any time. No upload may
+  happen if the bucket total afterwards would be above it. `scripts/publish_scan.py` measures the whole bucket (every
+  owner and `archive/`, since archived scans are still stored) before uploading and refuses above a cap of **9.5 GB**
+  (0.5 GB headroom for the index files and for two people publishing at once); `R2_MAX_BYTES` in `.env` may only lower
+  the cap, never above 10 GB. Every processed scan is published (Umair: "publish all always"), within the cap.
+- **Why:** Umair: "make sure that nothing crosses 10GB … I don't have money left to allow that to happen" (2026-11-19).
+- **Evidence:** bundles measured on this PC: 18 – 55 MB each with plan.png, so ~170 bundles fit; bucket 0.05 GB after
+  the first upload (scan #7 `r1119c`, 45.4 MB).
+- **Limits / not verified:** the check runs in the publish script only: an upload made another way (dashboard, another
+  tool) is not checked. Two people publishing at the very same moment could each pass the check (headroom 0.5 GB,
+  more than any bundle). Unpublishing archives and does not free space (D-049); deleting from `archive/` needs Umair.
+  Cloudflare's free tier also limits operations (reads by viewers); not capped by the script, not measured.
+- **Rejected:** a cap exactly at 10 GB (no headroom); counting only the live scans (archive is billed too).
+- **By:** Umair · **Source:** session 2026-11-19 · **Status:** Active
+
+## D-079 · 2026-11-19 · Run IDs that clashed between the two PCs: Tayyab's R-032 – R-040 become R-062 – R-070
+- **Decision:** when `master` (Tayyab's PR #7, runs on the RTX 3070 PC) and `feature/vercel-deploy` / `feature/step4-layout`
+  (Umair's runs on the Ubuntu PC) were merged, both had used R-032 – R-040 for different runs. Tayyab's nine got the next
+  free numbers R-062 – R-070 (R-060 = scan #5, R-061 = the cuDSS test on `exp/colmap-cudss`); every reference in the
+  records and code comments was changed (branch `docs/renumber-3070-runs`), with an old → new table at the top of
+  TRAINING.md's run index. Umair's R-032 – R-040 and Tayyab's R-041 – R-046 keep their numbers. Next free run: R-071.
+- **Why:** Umair's numbers are cited by D-071, D-073, STATUS, LOG and the R-061 plan; Tayyab's by fewer places. One
+  numbering for the whole team; a table keeps old commit messages and file names (`topdown_vs_R-036.jpg`) readable.
+- **Evidence:** merge of `origin/master` into `feature/vercel-deploy` (PR #39), 2026-11-19: TRAINING.md conflicts with two
+  R-032 … R-040 sets; no decision IDs clash.
+- **Rejected:** renumbering Umair's runs (more references); suffixes like R-032T (breaks the R-NNN rule); not merging yet
+  (the deployed site would stay behind).
+- **Limits:** commit messages, GitHub issues and Tayyab's local folders keep the old numbers. Tayyab has to be told
+  (his branches made before 2026-11-19 still say R-032 – R-040). To avoid it again: check `origin/master`'s TRAINING.md
+  for the next free number before starting a run (OD-12).
+- **By:** Umair (option chosen from the agent's three, renumber Tayyab's recommended) · **Source:** session 2026-11-19 ·
+  **Status:** Active
+
 ## D-080 · 2026-11-18 · Featureless tracking: option 1 first, then continue
 
 - **Decision:** build FEATURELESS_TRACKING_PLAN.md option 1 first: step 0 (test set), step 1 (gyro rotation check in
@@ -577,7 +759,9 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | OD-7 | Server / RunPod: wire in the v9/v10 pipeline? | The image's torch / CUDA base is settled by D-047 / D-048 (same versions, same script) |
 | OD-8 | Archive (never delete, D-049) `train_fixed2_backup.py`, `train_v3_backup.py`, the old `run_*.bat`, `scratch/`, `ViewerHUD.tsx`? Into which folder? | Owners must agree |
 | OD-9 | Update README / AGENTS.md content that no longer matches (MEP layers, ~75 min, `structure.py`)? | Facts changed by D-023, D-024, D-033 |
-| OD-10 | Adopt the fast recipe (normal SfM + `--init_args=--photometric` + the `geo_splatfacto.py` speed-ups) as the default? | Same quality on newRoom's SfM (TRAINING R-032, R-033); ~67 min instead of 96 end to end (estimate from measured stages); 48.8 min on the new room (R-036). The SfM shortcut was rejected (R-035). Recommended: yes. Tayyab to decide |
+| OD-10 | Adopt the fast recipe (normal SfM + `--init_args=--photometric` + the `geo_splatfacto.py` speed-ups) as the default? | Same quality on newRoom's SfM (TRAINING R-062, R-063); ~67 min instead of 96 end to end (estimate from measured stages); 48.8 min on the new room (R-066). The SfM shortcut was rejected (R-065). Recommended: yes. Tayyab to decide |
+| OD-11 | SfM on hard captures: keep GLOMAP (`global_mapper`, ~9 min) and add a scale check that falls back to the incremental `mapper` (25 min on 842 frames, R-067) when part of the model is shrunken; or switch to the incremental mapper always; or keep GLOMAP and only warn? | GLOMAP shrank ~175 frames of the lecture hall into a "mini room" (TRAINING R-066, R-067); incremental mapper gave a correct but partial model (R-068); on newRoom GLOMAP is fine (scale check: 0 shrunken frames). Recommended: check + fallback. Tayyab to decide |
+| ~~OD-12~~ | ~~How to merge `origin/master` (Tayyab's PR #7) with Umair's Step 4 branches: run IDs R-032 … R-040 given to different runs on both sides~~ | IDs settled by **D-079** (2026-11-19, Umair: Tayyab's nine renumbered R-062 – R-070; D-069 did not clash after all: master has no D-069). Still open: `layout.py` now runs Tayyab's ceiling candidates (`d052301`, `--above_frac`) first and the D-072 wall-top rule after them; re-run the four R-057 rooms to check the heights (not done, GPU busy with R-061) |
+| ~~OD-13~~ | ~~Step 4 defaults from 2026-11-19 (issues #8 – #18)~~ | Settled by D-075 (2026-11-19, Umair: all options on) |
 | ~~OD-14~~ | Closed 2026-11-18 by D-080 (Tayyab): option 1, then continue | — |
-| OD-11 | SfM on hard captures: keep GLOMAP (`global_mapper`, ~9 min) and add a scale check that falls back to the incremental `mapper` (25 min on 842 frames, R-037) when part of the model is shrunken; or switch to the incremental mapper always; or keep GLOMAP and only warn? | GLOMAP shrank ~175 frames of the lecture hall into a "mini room" (TRAINING R-036, R-037); incremental mapper gave a correct but partial model (R-038); on newRoom GLOMAP is fine (scale check: 0 shrunken frames). Recommended: check + fallback. Tayyab to decide |
 | OD-15 | scan_009 / captures where SfM fails: (a) add the sensor-path recipe (`gyro_loop_bias.py` → `rot_sfm.py --bg_json --max_dt 300` → `prior_ba.py`) as a pipeline option used when the SfM scale check fails; (b) keep it as a manual experiment; (c) drop it and re-record such rooms. Also: which scan_009 model to show (`scan-009-gyro` R-047 or `scan-009-loop` R-071)? | R-071: loop closed, 680 frames, scale check ok, training-view PSNR ≈ R-047 (370 frames), scale ~2× off; R-072: position error 72 → 31 cm median on newRoom, still far worse than normal SfM. Recommended: (a) as an opt-in fallback, with the scale shown as unknown; show R-071. Tayyab to decide |

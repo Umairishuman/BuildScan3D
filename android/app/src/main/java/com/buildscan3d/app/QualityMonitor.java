@@ -61,7 +61,7 @@ public class QualityMonitor {
   private static final float CEIL_PITCH = 35f, FLOOR_PITCH = -35f;// deg
   private static final int COVER_FRAMES = 45;                     // ~1.5 s of looking counts as covered
   // A whole recording with a median predicted blur above this is rejected by the PC's check_capture.py
-  // (scan_3028a4de8fa0: 24.9 px, the lecture hall whose model had a shrunken "mini room", TRAINING R-036/R-037).
+  // (scan_3028a4de8fa0: 24.9 px, the lecture hall whose model had a shrunken "mini room", TRAINING R-066/R-067).
   private static final float MEDIAN_BLUR_FAIL = 15f;
 
   private Pose lastPose = null;

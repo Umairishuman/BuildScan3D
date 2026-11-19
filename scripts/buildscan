@@ -11,12 +11,15 @@
 #   scripts/buildscan check  <scan>              capture check (check_capture.py)
 #   scripts/buildscan run    <scan> [tag] [--from STAGE] [-- run_v8 args]
 #                                                full pipeline, best recipe by default             session: run-<tag>
-#   scripts/buildscan watch  <scan> [tag] [--raw] live view of a run: stage n of 15, what it does, training step,
+#   scripts/buildscan watch  <scan> [tag] [--raw] live view of a run: stage n of 16, what it does, training step,
 #                                                GPU (--raw: the raw logs). Ctrl+C stops watching only
 #   scripts/buildscan results <scan> [tag]       where the outputs are + stage times
 #
 #   scripts/buildscan view   <scan> [tag]        3D splat viewer, http://localhost:7010            session: viewer
 #   scripts/buildscan web                        web dashboard, http://localhost:3000              session: web
+#   scripts/buildscan publish <scan> [tag] [--room NAME]   put a run on the online site (R2, D-076); unpublish
+#                                                <scan> [tag] takes it off (files archived); published lists them
+#                                                (keys and PUBLISH_OWNER in .env; publish_scan.py, bs-server env)
 #
 #   scripts/buildscan attach <session>           open a session (leave with Ctrl+A then D; Ctrl+C would stop it)
 #   scripts/buildscan stop   <session>           stop a session (bs-server, run-<tag>, viewer, web)
@@ -39,7 +42,7 @@ RECIPE=(--sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgs
 
 say()  { printf '%s\n' "$*"; }
 die()  { printf 'buildscan: %s\n' "$*" >&2; exit 1; }
-usage() { sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,33p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
 running() { screen -ls 2>/dev/null | grep -qE "[0-9]+\.$1[[:space:]]"; }
 sessions() { screen -ls 2>/dev/null | grep -oE '[0-9]+\.[^[:space:]]+' | cut -d. -f2- || true; }
@@ -193,7 +196,15 @@ case "$cmd" in
 
   web)
     start_session web "cd prototype/web-ui && $MM run -n bs-ns npm run dev"
-    say "open http://localhost:3000  (a scan shows up only with a project entry in src/lib/mockData.ts)" ;;
+    say "open http://localhost:3000  (every bundle in prototype/web-ui/public/scans/ is listed, D-074)" ;;
+
+  publish|unpublish)
+    d=$(scan_dir "${1:-}"); shift || true
+    tag=""; [[ $# -gt 0 && "$1" != --* ]] && { tag=$1; shift; }
+    tag=$(run_tag "$d" "$tag")
+    "$MM" run -n bs-server python scripts/publish_scan.py "$cmd" "$(basename "$d")" "$tag" "$@" ;;
+
+  published) "$MM" run -n bs-server python scripts/publish_scan.py list "$@" ;;
 
   attach)
     n=${1:-}; [[ -n "$n" ]] || { mapfile -t ss < <(sessions); [[ ${#ss[@]} -gt 0 ]] || die "nothing is running"; n=$(pick "Open which session?" "${ss[@]}"); }

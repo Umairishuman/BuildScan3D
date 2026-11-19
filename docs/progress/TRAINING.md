@@ -31,6 +31,22 @@ Backfilled on 2026-11-06 from Problems_and_Solutions.md (P&S), the old TODO ([ar
 branch notes: those runs were not logged at the time, so commands and exact times are only given where the sources
 have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless stated.
 
+**Renumbered runs (2026-11-19, D-079).** Tayyab's runs on the RTX 3070 PC (2026-11-12 / 14) and Umair's runs on the
+Ubuntu PC were both numbered R-032 – R-040 in parallel branches. When they met on `master`, Tayyab's nine got the next
+free numbers; every reference in the records and code comments was changed with them. Older commit messages, issues
+and file names on the 3070 PC (e.g. `gs_v10inc/topdown_vs_R-036.jpg`) still use the old numbers:
+
+| Old (3070 PC, before 2026-11-19) | R-032 | R-033 | R-034 | R-035 | R-036 | R-037 | R-038 | R-039 | R-040 |
+|---|---|---|---|---|---|---|---|---|---|
+| **New** | R-062 | R-063 | R-064 | R-065 | R-066 | R-067 | R-068 | R-069 | R-070 |
+
+Second clash, same rule (2026-11-19, merge of `master` into `docs/featureless-tracking-plan`): Tayyab's night runs
+**R-053 → R-071** (scan_009 loop closure) and **R-054 → R-072** (newRoom validation); his decision **D-069 → D-080**
+(featureless tracking, option 1) and open decisions **OD-12 → OD-14**, **OD-13 → OD-15**. Commit messages `c1b2b8f`,
+`113e7a5` and the scripts `r053.sh` / `r054.sh` in the dataset folders keep the old numbers.
+
+R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (Tayyab) did not collide and are unchanged.
+
 | Run | Date | Name | Machine | Time | Result | Verdict |
 |---|---|---|---|---|---|---|
 | R-001 | 2026-10-06 | roomAttemptSadness own trainer v1–v3 (7k steps) | 3070 | 5–8 min train | v3: colour-fit 21.37 dB, SSIM 0.769; floaters 10.7 → 7.4% | Superseded |
@@ -63,16 +79,16 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-028 | 2026-11-06 | First Linux run: Umair's room, full v9 + PGSR → semantics → mesh → web | this PC (Ubuntu, RTX 4000 Ada) | stopped after ~5 min | select / SfM / prior OK on Linux | Abandoned (stopped by Umair) |
 | R-029 | 2026-11-06 | Umair's own run of the same recording, full pipeline (`--tag umair`) | this PC (Ubuntu, RTX 4000 Ada) | 34.7 min | **first complete run on Linux**; corridor end, 0 fixtures, 1 wall | Kept as pipeline test (scene not a room) |
 | R-030 | 2026-11-06 | `scan_646070948603` (lab room, 97 s), full pipeline through `scripts/buildscan` (`--tag r1106`) | this PC (Ubuntu, RTX 4000 Ada) | 50.2 min | ran clean; 2 walls, 8 fixtures; **room height 1.50 m looks wrong** | Inconclusive (scale / ceiling not checked) |
-| R-031 | 2026-11-12 | scan #3 `scan_003_6de634cbb8b2` (classroom, first v0.3.6 recording, 185 s), full pipeline (`--tag r1112`) | this PC (Ubuntu, RTX 4000 Ada) | running | — | — |
-| R-032 | 2026-11-12 | Training speed-up: exact TV-loss / colour-affine fixes, blur colour grid once (`fast_t1`) | 3070 | 28.2 min train (was 42.5) | 25.14 / 0.8251, sharp 0.80, flat 0.81 | Kept (proposed) |
-| R-033 | 2026-11-12 | Photometric-only fast-MVS init (`fast_t2_photo`) | 3070 | init 7.5 min (was 20.1) | 25.16 / 0.8240, flat 0.78 | Kept (proposed) |
-| R-034 | 2026-11-12 | Global mapper settings (`ba1`, `noretri`, default rerun) | 3070 | mapper 9.4 – 14.5 min | default runs differ by ~16 cameras | Inputs to R-035 |
-| R-035 | 2026-11-12 | Fast pipeline end to end incl. `--skip_retriangulation` (`v10fast`) | 3070 | 61.6 min (was 96.2) | 24.56 / 0.8078, visible smears | Rejected (SfM shortcut) |
-| R-036 | 2026-11-12 | New room `scan_3028a4de8fa0` (tiered lecture hall), normal SfM + speed-ups | 3070 | 48.8 min | fits training views; mini room inside the room (SfM scale collapse, see R-037) | Rejected |
-| R-037 | 2026-11-12 | `scan_3028a4de8fa0`: incremental mapper instead of GLOMAP (fix R-036 mini room) | 3070 (CPU) | map 25.4 min | 581/842 frames in one correctly scaled model; front of room split off | Diagnosis confirmed |
-| R-038 | 2026-11-12 | `scan_3028a4de8fa0`: fast recipe on R-037's 581-frame SfM (`v10inc`) | 3070 | 35.8 min (+ map 25.4, R-037) | no mini room; right-side walk missing | Kept |
-| R-039 | 2026-11-14 | roomAttemptSadness2: full v9 + PGSR → semantics → mesh → web (`v9pgsr8`) | 3070 | 87.7 min to the model + 32 min after | height 2.78 m; 22 fixtures (unchecked) | Kept (fixtures to check) |
-| R-040 | 2026-11-14 | newRoom: MCMC densification at the baseline budget (`mcmc620`) | 3070 | 35.0 min train | 24.65 / 0.8216, sharpness 0.64 (softer) | Rejected |
+| R-031 | 2026-11-12 | scan #3 `scan_003_6de634cbb8b2` (classroom, first v0.3.6 recording, 185 s), full pipeline (`--tag r1112`) | this PC (Ubuntu, RTX 4000 Ada) | 81.0 min (run_v8 64.7) | ran clean; 875/885 frames; **height 2.74 m** (plausible); 2 walls, 0 corners, 21 fixtures | Kept (`saved_models/2026-11-12_r1112_scan003/`); baseline stage times; quality and tape not measured |
+| R-032 | 2026-11-12 | Layout diagnostics on scan #2 / #3 (read-only, plan 4.1) | this PC (Ubuntu, RTX 4000 Ada) | seconds per pass | models tilted 9.1° / 12.1° from ARCore gravity (Sim3 from camera centres only); levelled prototype: scan #3 4 walls, 3 corners ~90°, 2.52 m | Diagnosis
+| R-033 | 2026-11-12 | `sfm_colmap.py --stage export` with ARCore gravity (D-071), scan #2 / #3, scratch output | this PC (CPU) | seconds | models level (0.06° / 0.00°); scale 0.0937 / 0.9521 (+0.45% on scan #3) | Kept
+| R-034 | 2026-11-12 | `level_model.py`: levelled copies of scan #2 / #3 models (tags `r1106lev`, `r1112lev`) | this PC | seconds | rotated 9.09° / 12.10°; renders match the source at 85–98 dB (after an SH transpose bug, fixed) | Kept
+| R-035 | 2026-11-12 | scan #3 levelled (`r1112lev`), layout → web | this PC | 18.0 min | 4 walls, 3 corners ~90°, height 2.52 m, floor 32.27 m², 18 fixtures | Kept (Step 4 layout / semantics of scan #3); tape pending |
+| R-036 | 2026-11-12 | scan #2 levelled (`r1106lev`), layout → web | this PC | 8.5 min | height 1.50 → 2.41 m (wall-top rule), 1 wall, 10 fixtures | Inconclusive: weak capture (camera in 0.8 × 0.7 m); re-record |
+| R-037 | 2026-11-12 | newRoomAttemptSadness, R-023 recipe, full pipeline (`r1112nr`), first run with D-071 / D-072 | this PC (Ubuntu, RTX 4000 Ada) | 103.0 min (run_v8 81.4) | 1157/1166 frames; gravity 0.00°; 6.63 × 4.37 m (R-023 6.60 × 4.36); height 2.81 m (R-023 2.72, via D-072); 18 fixtures (15) | Kept (machine agreement on size); height and PSNR not settled |
+| R-038 | 2026-11-16 | scan_008_7b486c855ed6, R-023 recipe, full pipeline (`r1116`), first Infinix X6833B capture | this PC (Ubuntu, RTX 4000 Ada) | 49.7 min, did not finish | 1639 of 10255 frames; COLMAP `global_mapper` killed by OOM (26.1 GB) at 13:16 | Failed (OOM in SfM) |
+| R-039 | 2026-11-16 | scan_008 re-run with `--window 9` (`r1116w9`, D-073), R-023 recipe otherwise | this PC (Ubuntu, RTX 4000 Ada) | 166.7 min (run_v8 145.4) | 1118/1118 frames; gravity 0.00°; 5 walls, floor 21.26 m², ceiling 3.19 m; 11 fixtures (unchecked) | Kept for now (in the web UI) |
+| R-040 | 2026-11-18 | scan #7 `scan_007_e6d4f090f88e` (269 s), R-023 recipe, default window 6 (`r1118`) | this PC (Ubuntu, RTX 4000 Ada) | 200.6 min (run_v8 175.4) | 1159/1160 frames; gravity 0.00°; 6 walls, floor 19.66 m², ceiling 3.40 m; **0 fixtures (29 rejected)** | Inconclusive (fixtures) |
 | R-041 | 2026-11-14 | newRoom: Fast training + PGSR-lite on newRoom (`pgsrfast`) | 3070 | 33.0 min train (R-021: 46) | 25.02 / 0.8232, sharpness 0.87 | Speed-ups OK with PGSR (R-021 flatness 1.27 vs 1.34 cm) |
 | R-042 | 2026-11-14 | newRoom: MCMC with a larger budget (`mcmc1m`) | 3070 | 40.4 min train | 24.74 / 0.8200, sharpness 0.69 | Rejected |
 | R-043 | 2026-11-14 | newRoom: revised opacity on clone / split (`revop`) | 3070 | 28.5 min train | 25.02 / 0.8244, flat 0.73 cm, −10% size | Inconclusive |
@@ -85,6 +101,22 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-050 | 2026-11-18 | scan_009: diagnosis of the SfM failure (IMU scale per window, gyro pair test, short-range mapping, ARCore vs gyro) | 3070 | ~55 min | SfM locally wrong in both mappers; not wrong matches, not timing; ARCore poor (gyro corr 0.34); IMU clean | Diagnosis |
 | R-051 | 2026-11-18 | scan_009: gyro-rotation + accelerometer SfM (`rot_sfm.py`, `v9pfr`) | 3070 | 30.0 min from export (train 22.8) | 698 frames, 23,508 points at 1.76 px; −1.9 dB vs R-047, blurrier; scale ~2–3× too large | Rejected |
 | R-052 | 2026-11-19 | scan_009: R-051's poses refined by BA with gyro / accelerometer priors (`prior_ba.py`, `v9pfb`) | 3070 | ~78 min (two trainings) | 698 frames, reprojection 1.77 → 1.22 px, gyro kept (2 frames > 2°); +0.49 dB vs R-051; ≈ R-047 (mean 19.30 vs 19.31), loop not closed | Kept (coverage) |
+| R-053 | 2026-11-19 | Layout re-runs on six rooms, no-roof check (#8), scratch output | this PC (Ubuntu, RTX 4000 Ada) | 8.8 min | scan #7: no roof, walls 3.12 m (was ceiling 3.435 m); 5 other rooms unchanged | Kept (#8) |
+| R-054 | 2026-11-19 | scans #7 / #3: layout (#8 #9 #10) → semantics → mesh labels → web, tag `r1119a` | this PC (Ubuntu, RTX 4000 Ada) | 8.1 min | #7 no roof, 1 doorway + 3 window openings, open outline; #3 open outline flagged, triangle area gone, 4 false openings | Superseded (#9 fixed after it) |
+| R-055 | 2026-11-19 | Layout on six rooms, `--debug`, default vs `--raised_max 1.5 --infer_gap 6` | this PC (Ubuntu, RTX 4000 Ada) | 16.9 min | scan #3 no false openings; `--raised_max` closes #7 and #8 (4 walls, 88–90°), drops nothing real | Kept (findings) |
+| R-056 | 2026-11-19 | Four rooms, layout → web → plan with the 2026-11-19 defaults, tag `r1119b` | this PC (Ubuntu, RTX 4000 Ada) | 15.6 min | #7 no roof + 2 openings; #3 no false openings; newRoom closed, 29.41 m²; #8 open, 2 doorways | Kept (for Umair's checks) |
+| R-057 | 2026-11-19 | Four rooms, layout → web → plan with the D-075 defaults, tag `r1119c` | this PC (Ubuntu, RTX 4000 Ada) | 16.7 min | #7 / #8 closed rectangles (17.99 / 26.44 m²); #3 tilt 0.29°; ceilings 4.3 → 0.04 cm; #8 lost a switch + socket | Kept (scan #8 corner = furniture, Umair) |
+| R-058 | 2026-11-19 | scan #6 `scan_006_1e457a214ce1` (259.8 s), full pipeline, R-023 recipe + D-075 (`r1119`) | this PC (Ubuntu, RTX 4000 Ada) | 45.5 min, did not finish | 1159 frames, 12.56 M observations; COLMAP `global_mapper` killed by OOM (26.4 GB) at 16:14:39 while the agent ran web work | Failed (OOM in SfM) |
+| R-059 | 2026-11-19 | scan #6 rerun after R-058, same recipe, PC kept quiet (`r1119b6`) | this PC (Ubuntu, RTX 4000 Ada) | running | — | running |
+| R-062 | 2026-11-12 | Training speed-up: exact TV-loss / colour-affine fixes, blur colour grid once (`fast_t1`) | 3070 | 28.2 min train (was 42.5) | 25.14 / 0.8251, sharp 0.80, flat 0.81 | Kept (proposed) |
+| R-063 | 2026-11-12 | Photometric-only fast-MVS init (`fast_t2_photo`) | 3070 | init 7.5 min (was 20.1) | 25.16 / 0.8240, flat 0.78 | Kept (proposed) |
+| R-064 | 2026-11-12 | Global mapper settings (`ba1`, `noretri`, default rerun) | 3070 | mapper 9.4 – 14.5 min | default runs differ by ~16 cameras | Inputs to R-065 |
+| R-065 | 2026-11-12 | Fast pipeline end to end incl. `--skip_retriangulation` (`v10fast`) | 3070 | 61.6 min (was 96.2) | 24.56 / 0.8078, visible smears | Rejected (SfM shortcut) |
+| R-066 | 2026-11-12 | New room `scan_3028a4de8fa0` (tiered lecture hall), normal SfM + speed-ups | 3070 | 48.8 min | fits training views; mini room inside the room (SfM scale collapse, see R-067) | Rejected |
+| R-067 | 2026-11-12 | `scan_3028a4de8fa0`: incremental mapper instead of GLOMAP (fix R-066 mini room) | 3070 (CPU) | map 25.4 min | 581/842 frames in one correctly scaled model; front of room split off | Diagnosis confirmed |
+| R-068 | 2026-11-12 | `scan_3028a4de8fa0`: fast recipe on R-067's 581-frame SfM (`v10inc`) | 3070 | 35.8 min (+ map 25.4, R-067) | no mini room; right-side walk missing | Kept |
+| R-069 | 2026-11-14 | roomAttemptSadness2: full v9 + PGSR → semantics → mesh → web (`v9pgsr8`) | 3070 | 87.7 min to the model + 32 min after | height 2.78 m; 22 fixtures (unchecked) | Kept (fixtures to check) |
+| R-070 | 2026-11-14 | newRoom: MCMC densification at the baseline budget (`mcmc620`) | 3070 | 35.0 min train | 24.65 / 0.8216, sharpness 0.64 (softer) | Rejected |
 | R-071 | 2026-11-19 | scan_009: loop closure (gyro bias from far-apart pairs, rot_sfm with all pairs, prior BA; `v9pfl`) | 3070 | 55 min | 680 frames, loop closed (> 120 s pairs 15.6° → 3.5°), scale check ok; PSNR ≈ R-047 / R-052; scale ~2× too large (not applied) | Kept (most complete) |
 | R-072 | 2026-11-19 | newRoom: validation of the R-071 recipe against the trusted SfM path | 3070 | 34 min | position error median 72 → 31 cm (p90 166 → 68 cm), scale 0.89; still far worse than normal SfM | Validation |
 
@@ -460,8 +492,12 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Command(s):** `scripts/run_full.sh dataset/scan_003_6de634cbb8b2 r1112 -- --sfm_args "--retrieval 20" --init fmvs
   --planar 0.2 --blur 0.0222 --pgsr`
 - **Goal:** first room recorded with v0.3.5 (COMPLETION_PLAN 1.4 / 3.2); check the layout height against tape (4.1).
-- **Start → end:** 15:04:02 → (running)
-- **Errors during the run:** none so far.
+- **Start → end:** 15:04:02 → 16:25:03 (81.0 min). run_v8 64.7 min (`timing.json`): select 0.37, SfM 12.11, export
+  0.01, prior 3.56, init 14.76 (PatchMatch 14.5, fusion 0.2), train 33.57, ply 0.28. Then (`stages.tsv`) layout 0.4,
+  sem2d 13.7, sem3d 0.1, verify 0.2, sem3d2 0.1, mesh 0.3, meshlabels 1.5, web 0.1. GPU (`gpu.csv`, every 30 s): up
+  to 4.8 of 20.5 GB, 38–77 °C. Compared with R-030 (482 frames): run_v8 64.7 vs 41.7 min, train 33.6 vs 27.8, init
+  14.8 vs 6.6, SfM 12.1 vs 4.9, sem2d 13.7 vs 7.7.
+- **Errors during the run:** none (`run_full.log` has no tracebacks or errors).
 - **Capture facts measured on 2026-11-12 (agent, from the dataset files, for COMPLETION_PLAN 1.6 / 1.7):**
   `check_capture.py`: READY TO PROCESS; **video 28.9 fps average, 176 dropped-frame gaps in 5,346 frames (3.3%),
   longest 99 ms** (NFR1 not met); poses 28.9 Hz, tracking lost 0.0%; predicted blur median 6.7 px (> 5 px on 75% of
@@ -471,281 +507,293 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   timestamps and missed most gaps, so the video count is the one to use.) ARCore depth: 782 maps
   (160 × 90), all 782 different, median valid fraction 0.86, median depth 0–5.5 m across maps, mean confidence
   0–81: **not stale** in this recording. IQA levels in `quality.csv`: GOOD 1,279, WARN 2,894, BAD 1,164.
-- **Result:** (to fill in at the end)
-- **Verdict:** (to fill in at the end)
+- **Result:** `dataset/scan_003_6de634cbb8b2/work_r1112_sfm/gs_r1112/` (`splat.ply` 124 MB, 522,615 splats), copied to `saved_models/2026-11-12_r1112_scan003/` with README.txt; web bundle
+  `prototype/web-ui/public/scans/scan_003_6de634cbb8b2_r1112/` (18 MB). SfM (`report.json`): 875 / 885 frames
+  registered, 114,929 points, Sim3 to ARCore scale 0.9478, 268 inliers, median 4.0 cm. Metric3D prior aligned median
+  error 3.7% (raw 32.6%). Dense init: 472,582 points at 1 cm.
+  **Layout:** floor y −8.329, ceiling y −5.588 → **height 2.741 m**; 2 walls (6.39 m, 2.57 m), 9.03 m apart, 0
+  corners. **Semantics v10:** floor tilt 0.28° (median residual 7.2 cm); ceiling plane fit rejected (tilt 8.06°), so
+  the ceiling was set level at the layout height (2.73 m); 21 fixtures accepted (1 door, 2 windows, 2 light switches,
+  4 power sockets, 4 ceiling lights, 1 tube light, 3 lamps, 4 ceiling fans), 34 rejected; CLIP check kept all 6
+  switches / sockets. Mesh 2,986,324 → 2,884,227 triangles; area by class (m²) other 161.47, ceiling 62.27, wall_0
+  10.09, wall_1 3.40, floor 2.19, door 1.73; `mesh_web.glb` 400k triangles, 8.5 MB.
+  **Height check (agent, 2026-11-12):** `analyze.py` (`feat/splat-compress`): model extent
+  p1–p99 7.88 × 3.90 × 9.74 m. Splats with opacity > 0.5 span y −9.14 … −5.06 (p0.5–p99.5); the part below the floor
+  is probably reflection of the glossy floor (3.13); the densest top band is −5.5 … −5.2, slightly above the layout
+  ceiling, so the true height may be somewhat more than 2.74 m. Median camera height 1.74 m above the layout floor.
+  Ceiling fans sit 2.34–2.58 m above the floor; `window_1` at 2.72 m (at the ceiling) is probably a wrong placement.
+  **Not measured:** model quality (no held-out split; this run trains on all frames), tape lengths (Umair will measure
+  the room, expected within a few days of 2026-11-12), room number.
+- **Verdict:** **kept** as the first v0.3.6 room and as the stage-time baseline for COMPLETION_PLAN 3.3 / 3.4
+  (D-069). The height is plausible (unlike R-030's 1.50 m) but unconfirmed until the tape; the layout found only 2 of
+  the walls and no corners. To do: tape check; view the model (`scripts/buildscan view 3 r1112`).
 
-### R-032 · 2026-11-12 · Training speed-up, phase 1: profiling + exact fixes + blur colour grid once (`fast_t1`)
-*Runs R-032 – R-038 were numbered R-029 – R-035 on the unmerged branch (the chat of 2026-11-12 uses those numbers);
-renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031) was merged into `exp/fast-pipeline`.*
-- **Who / machine:** Tayyab (agent) · RTX 3070 PC
-- **Branch / commit:** `exp/fast-pipeline` @ f33aeaf (uncommitted changes: yes, `geo_splatfacto.py`)
-- **Dataset:** newRoomAttemptSadness, the v9e2e work folder (`work_v9e2e_sfm`: same SfM, Metric3D prior, fast-MVS init,
-  plane masks, blur motion and 79-frame off-path split as R-020); only training changes.
-- **Command(s):** `geo_splatfacto.py --data work_v9e2e_sfm/transforms_fmvs.json --name fast_t1 --iters 15000
-  --dash_res_steps 7500 --stop_split_at 7500 --no_eval --prior mono_prior/train_v9e2e.npz --planar_lambda 0.2
-  --blur_exposure 0.0222` (R-020's train stage), then `ns-export`, then `eval_offpath.py` against `gs_v9e2e`.
-- **Goal:** same quality as R-020's training (PSNR 25.16 / SSIM 0.8247 / sharpness 0.80 / flatness 0.77 cm on the
-  79 held-out frames) in less than its 42.5 min.
-- **Profiling before the run (torch.profiler, 30-step windows, 01:00 – 01:10):**
-  - Low-res steps took 77 ms although rendering at 1/8 resolution costs ~3 ms: 29% of GPU time was `index_select` /
-    `index_add_` in nerfstudio's `total_variation_loss` on **all** 1086 per-image bilateral grids (107 MB) every step.
-    → `_TotalVariation` (same value and gradient, checked: max gradient difference 5e-12): 50 → 13 ms per call.
-    Low-res step 77 → 41 ms.
-  - Full-res steps took ~220 ms: the bilateral grid was applied to each motion-blur sub-render (2.8 per step on
-    average), and its per-pixel colour affine ran as a batched matmul of 2 M 3×3 matrices (~26 ms per call).
-    → elementwise affine (same result, max difference 2e-7; 31.5 → 18.3 ms per call) and, with the blur model,
-    the grid applied **once to the averaged render** (the camera's colour processing acts on the light integrated over
-    the exposure; not bit-identical to before, hence this run). `--blur_grid_per_sub` restores the old behaviour.
-    Full-res step 220 → 160 ms.
-- **Start → end:** 01:14 → 01:47 (training 28.2 min; then export + eval). Step times vs R-020 at the same step:
-  2k 64 vs 86 ms, 5k 63 vs 98, 8k (full res) 158 vs 233, 11k 135 vs 216, 14k 174 vs 261.
+### R-032 · 2026-11-12 · Layout diagnostics on scan #2 and scan #3 (read-only, COMPLETION_PLAN 4.1)
+- **Who / machine:** Umair (agent) · this PC (Ubuntu, RTX 4000 Ada)
+- **Branch / commit:** `feature/step4-layout` @ `99f8efe` (uncommitted changes: no; the script is a copy of
+  `layout.py` steps 1–2 plus prints, kept in the agent's scratchpad, not in the repo)
+- **Dataset:** scan #2 (`scan_002_646070948603`, R-030 model `gs_r1106`), scan #3 (`scan_003_6de634cbb8b2`, R-031
+  model `gs_r1112`)
+- **Command(s):** `micromamba run -n bs-ns python diag_layout.py --ply <gs>/splat.ply --work <work_sfm> --out <scratch>`
+  (same defaults as `layout.py`; writes nothing into `dataset/`)
+- **Goal:** find why R-030's layout took a plane at 1.50 m as the ceiling: the horizontal plane candidates (height
+  histogram), the camera heights that bound the floor / ceiling search, and the splat height histogram.
+- **Start → end:** 17:59 → before 18:20 (exact end not recorded); several diagnostic passes of a few seconds of GPU
+  rendering each, the time in between was analysis.
+- **Errors during the run:** none (one diagnostic script was first run with the system `python3`, which has no numpy;
+  re-run in `bs-ns`).
+- **Result:** the 1.50 m ceiling and the 2-wall classroom have **one root cause: the models are not level.** The
+  Sim3 to ARCore in `sfm_colmap.py` (export) takes its rotation from camera centres only. ARCore's own gravity
+  (each frame's `c2w_arcore` orientation) expressed in the model world is **9.11° off +Y in scan #2 and 12.10° in
+  scan #3**, the same in every frame (per-frame angle median 9.26° / 12.09°, spread < 1°). The planes agree: in
+  scan #3 the floor, desk-top and ceiling regions are all tilted 11.8–12.5° the same way; in scan #2 6.6–8.2°.
+  Scan #2's camera centres span only 0.8 × 0.7 m (the walk was mostly turning on the spot), so centres cannot fix
+  the rotation; in scan #3 the RANSAC inliers are 268 / 885 frames.
+  Consequences in `layout.py` (which assumes +Y is up): (1) scan #3: 807 of 3,982 flat regions (more pixel weight than
+  all vertical ones) have |n·up| ≈ 0.21 and are dropped as neither wall nor floor: these are the two long side
+  walls, hence 2 walls / 0 corners; (2) heights are measured along a tilted axis (12° over 9 m ≈ 1.9 m of height
+  change across the floor), so 2.74 m was not a real height; semantics' "floor tilt 0.28°" only fits a ±15 cm band
+  and so sees a level patch.
+  Scan #2 has a second, model problem: the white tiled ceiling appears at three heights in different frames
+  (0.3–0.5 m above the cameras when seen overhead, y ≈ 0.9 partly as a **reflection in the door glass**, y ≈ 1.6 when
+  seen across the room); the layout took the strongest, lowest one (1.50 m). Its walls reach 2.28–2.65 m.
+  **Prototype (scratchpad copy of `layout.py`, world levelled with ARCore gravity, same model, no retraining):**
+  scan #3 → **4 walls, 3 corners at 89.5°, 89.8°, 88.9°, walls 7.23 m and 9.05 m apart, one clean ceiling peak at
+  2.52 m** (walls reach 2.36–2.44 m; splat top p99 2.70 m); scan #2 → 1 wall, ceiling still 1.79 m (0.4 m above the
+  cameras: impossible); with "the ceiling may not lie below the top of the walls" 2.41 m. Without levelling that
+  rule alone gives scan #2 2.78 m, scan #3 2.83 m (tilted axis, so not trustworthy).
+- **Verdict:** diagnosis (no model changed). Cause found; fix options for Umair (DECISIONS). Heights still need the tape.
+
+### R-033 · 2026-11-12 · `sfm_colmap.py --stage export` with ARCore gravity (D-071) on scan #2 / #3, into scratch folders
+- **Who / machine:** Umair (agent) · this PC (Ubuntu, RTX 4000 Ada); CPU only
+- **Branch / commit:** `feature/step4-layout` @ `8f8e605` + uncommitted `sfm_colmap.py` change (the D-071 export)
+- **Dataset:** scan #2 (`work_r1106_sfm`, R-030's COLMAP model), scan #3 (`work_r1112_sfm`, R-031's)
+- **Command(s):** `micromamba run -n bs-system python src/arcore3dgs/sfm_colmap.py --work dataset/<scan>/work_<tag>
+  --out <scratch>/exp_<tag> --stage export` with `<scratch>/exp_<tag>/{sparse,undist,images}` linked to the existing
+  `work_<tag>_sfm/` (nothing written into `dataset/`)
+- **Goal:** check the new export: the printed tilt a centre-only Sim3 would leave must match R-032 (9.1° / 12.1°),
+  the new frames.json must be level (ARCore gravity on +Y), scale and inliers comparable with R-030 / R-031.
+- **Start → end:** start not recorded (after R-032) → 18:22 (export only, seconds per scan)
+- **Errors during the run:** none. One wrong reading of my own diagnostic, corrected before commit: the first version
+  printed "centre-only Sim3 would leave the model X deg off gravity" computed on the **new** inlier set (scan #3:
+  0.74°), which is not what R-031's RANSAC did (it picked a different 268-frame set that absorbed 12.1°). Renamed
+  to `gravity_tilt_full_sim3_same_inliers_deg`, "for comparison" only.
+- **Result:** scan #2: scale 0.0937 (R-030 0.0937), 244 / 482 centre inliers (242), median 5.4 cm (5.25); scan #3:
+  scale **0.9521** (R-031 0.9478, +0.45%), 276 / 885 inliers (268), median 5.7 cm (4.0; higher because the old
+  fit could tilt the model to absorb ARCore position noise). Checked independently (`gravcheck`): ARCore gravity
+  now 0.06° (scan #2) and 0.00° (scan #3) from +Y; per-frame spread 0.85° / 0.98° (ARCore's own noise).
+  Outputs only in the scratchpad; `dataset/` untouched (`work_r1112_sfm/frames.json` still 15:16).
+- **Verdict:** kept: the export levels both models. Not yet run end to end on a new recording (the next new room is
+  the first). The +0.45% scale change on scan #3 is within what the tape must decide.
+
+### R-034 · 2026-11-12 · `level_model.py`: levelled copies of the scan #2 and scan #3 models (D-071)
+- **Who / machine:** Umair (agent) · this PC (Ubuntu, RTX 4000 Ada)
+- **Branch / commit:** `feature/step4-layout` @ `ec170c7` + uncommitted new `src/arcore3dgs/level_model.py`
+- **Dataset:** scan #2 (`gs_r1106`, R-030) → tag `r1106lev`; scan #3 (`gs_r1112`, R-031) → tag `r1112lev`
+- **Command(s):** `micromamba run -n bs-ns python src/arcore3dgs/level_model.py --dataset dataset/<scan> --tag <tag>
+  --new_tag <tag>lev --check 3`
+- **Goal:** rotate the trained models and poses onto ARCore's gravity without retraining; the check renders 3 frames
+  from the source and the levelled model (levelled cameras) and must give the same images.
+- **Start → end:** first attempt ended 18:24; second attempt ended before 18:26 (R-035 start); seconds per model
 - **Errors during the run:**
-  1. 01:08 (profiling, before the run) — `AssertionError` in `lib_bilagrid.py:311` (`len(rgb.shape) == input_ndims`):
-     the blur path passes an [H, W, 3] image, splatfacto [1, H, W, 3] → reshape both to [1, 1, H, W, 3]. Resolved.
-- **Result:** `work_v9e2e_sfm/gs_fast_t1/` (eval sheets in `eval/`). 79 off-path frames, same eval as R-020:
+  1. 18:24 colour check — first attempt rendered source vs levelled at only 35.9–44.6 dB → cause: the SH rotation
+     matrix was applied transposed (`c'_j = Σ M[k, j] c_k` instead of `Σ M[j, k] c_k`); found by rendering at SH
+     degree 0 (geometry exact, 88–96 dB) vs degree 3 (35–40 dB) → fix in `level_model.py`; the faulty outputs were
+     moved out of `dataset/` into the agent's scratchpad (not used) and the script re-run (resolved: yes).
+- **Result:** `dataset/scan_002_646070948603/work_r1106lev_sfm/gs_r1106lev/splat.ply` (rotated 9.09°, 469 / 482 frames
+  agree, spread 0.83°) and `dataset/scan_003_6de634cbb8b2/work_r1112lev_sfm/gs_r1112lev/splat.ply` (12.10°, 875 / 875,
+  0.98°), each with `frames.json`, `level.json` and links to the source `images/` and `planes/`. Check: source vs
+  levelled renders **87.6–98.2 dB** (3 frames each; at SH degree 3 on scan #3 85.0–88.2 dB): the same model.
+  The SH coefficient order (channel-major, `f_rest_{c·15+k}`) was confirmed against photos: 22.81 / 16.20 / 19.24 dB
+  vs 21.71 / 15.14 / 17.04 dB for the other order.
+- **Verdict:** kept: levelled copies for re-running layout → web (R-035, R-036). Originals unchanged.
 
-  | model | splats | PSNR(cf) | SSIM | sharpness | flatness cm | train min |
-  |---|---|---|---|---|---|---|
-  | v9e2e (R-020) | 619,056 | 25.16 | 0.8247 | 0.80 | 0.77 | 42.5 |
-  | fast_t1 | 621,430 | 25.14 | 0.8251 | 0.80 | 0.81 | **28.2** |
+### R-035 · 2026-11-12 · scan #3 levelled (`r1112lev`): layout → semantics → mesh → web
+- **Who / machine:** Umair (agent) · this PC (Ubuntu, RTX 4000 Ada), `screen` session `run-r1112lev`
+- **Branch / commit:** `feature/step4-layout` @ `0b9c882` (uncommitted changes: TRAINING.md only)
+- **Dataset:** scan #3 (`scan_003_6de634cbb8b2`), R-031's model levelled by R-034 (12.10°)
+- **Command(s):** `scripts/run_full.sh dataset/scan_003_6de634cbb8b2 r1112lev --from layout -- --pgsr` (`--pgsr` only
+  selects the unbiased depth for the mesh, as in R-031)
+- **Goal:** layout with D-071 + D-072 (expected from the prototype: 4 walls, 3 corners, 2.52 m), then semantics v10,
+  mesh and web bundle on the levelled model; compare with R-031 (2 walls, 0 corners, 2.74 m, 21 fixtures).
+- **Start → end:** 18:26:56 → 18:44:56 (18.0 min): layout 1.2, sem2d 13.7, sem3d 0.1, verify 0.2, sem3d2 0.1,
+  mesh 0.3, meshlabels 2.4, web 0.1 (`stages.tsv`)
+- **Errors during the run:** none (`run_full.log` has no tracebacks or errors).
+- **Result:** `dataset/scan_003_6de634cbb8b2/work_r1112lev_sfm/gs_r1112lev/`; web bundle
+  `prototype/web-ui/public/scans/scan_003_6de634cbb8b2_r1112lev/` (18 MB). **Layout:** 4 walls (8.97, 7.19, 7.68,
+  3.69 m), walls 0 ↔ 2 7.23 m apart, 1 ↔ 3 9.05 m apart, 3 corners at 89.5°, 89.8°, 88.9°; height **2.525 m**
+  (ceiling source: strongest plane above the cameras, already above the wall tops, so D-072 changed nothing here).
+  **Semantics v10:** ceiling plane fit accepted, tilt 0.05°, residual 0.5 cm, ceiling 2.504 m (R-031: fit rejected at
+  8.06°); floor plane tilt **1.95°**, residual 2.4 cm (R-031: 0.28° / 7.2 cm, an artefact of the ±15 cm band; the
+  remaining 1.95° is not explained yet); **floor area 32.27 m²** (R-031: none); walls net 22.47 / 15.25 / 19.24 /
+  9.24 m². **18 fixtures** (R-031: 21): 1 door (0.98 × 2.04 m, 0.12–2.17 m above floor; R-031's door ran from −0.58
+  to 1.41 m), 2 windows (2.20–2.63 m, high), 2 light switches (0.67–0.68 m), 2 power sockets (0.68 / 0.81 m),
+  7 ceiling lights, 1 lamp, 3 ceiling fans; 30 rejected. Mesh 2,720,768 triangles; area by class (m²) other 120.53,
+  ceiling 62.1, floor 18.02, walls 14.97 / 12.74 / 6.12 / 4.22, ceiling fan 1.97, door 1.72.
+  Fixture check sheet: `semantic_v10/fixture_check.md` (`fixture_checklist.py`), for Umair (plan 4.2).
+  **Not measured:** tape (height, lengths), whether the fixtures are real (check pending).
+- **Verdict:** **kept** as scan #3's current layout / semantics (replaces R-031's for Step 4; R-031's model stays the
+  trained source and the Step 3 timing baseline). Height and lengths wait for the tape.
 
-  Off-path frames and the 4 room-centre views look the same (same printer-edge smear, same table top). Run-to-run
-  noise is not measured, so the 0.02 dB / 0.04 cm differences cannot be told apart from it.
-- **Verdict:** kept (proposed) — training −34% (−14.3 min) at equal quality; the TV and colour-affine changes are exact,
-  the blur colour-grid change is the only behaviour change.
+### R-036 · 2026-11-12 · scan #2 levelled (`r1106lev`): layout → semantics → mesh → web
+- **Who / machine:** Umair (agent) · this PC (Ubuntu, RTX 4000 Ada), `screen` session `run-r1106lev`
+- **Branch / commit:** `feature/step4-layout` @ `fc3d096` (uncommitted changes: TRAINING.md only)
+- **Dataset:** scan #2 (`scan_002_646070948603`), R-030's model levelled by R-034 (9.09°)
+- **Command(s):** `scripts/run_full.sh dataset/scan_002_646070948603 r1106lev --from layout -- --pgsr`
+- **Goal:** layout with D-071 + D-072 (prototype: 1 wall, ceiling 2.41 m from "above the wall tops", with a warning),
+  semantics, mesh, web on the levelled model; compare with R-030 (1.50 m, 2 walls, 8 fixtures).
+- **Start → end:** 18:45:32 → 18:53:59 (8.5 min): layout 0.1, sem2d 7.8, the rest 0.1 each (`stages.tsv`)
+- **Errors during the run:** none.
+- **Result:** `dataset/scan_002_646070948603/work_r1106lev_sfm/gs_r1106lev/`; web bundle
+  `prototype/web-ui/public/scans/scan_002_646070948603_r1106lev/`. **Layout:** strongest ceiling plane 1.790 m was
+  below the wall top (2.274 m) → **2.408 m** ("strongest horizontal plane above the wall tops", D-072); 1 wall
+  (3.74 m), 0 corners (R-030: 2 walls). **Semantics v10:** ceiling plane fit accepted (tilt 0.42°, residual 2.0 cm),
+  ceiling 2.503 m; floor tilt 1.57°, residual 1.9 cm; floor area not computed (one wall); **10 fixtures** (window,
+  2 light switches, 2 power sockets, 2 ceiling lights, 2 lamps, air conditioner), 45 rejected (R-030: 8 / 44).
+- **Verdict:** **inconclusive.** The height is now plausible (1.50 → 2.41 m) but rests on the wall-top rule: this
+  model's ceiling is wrong (R-032), and with the camera within 0.8 × 0.7 m the room cannot get more walls. Better
+  fixed by a new recording of the lab with the capture protocol than by more rules. Not checked against tape.
 
-### R-033 · 2026-11-12 · Speed-up phase 2: photometric-only fast-MVS init (`fast_t2_photo`)
-- **Who / machine:** Tayyab (agent) · RTX 3070 PC
-- **Branch / commit:** `exp/fast-pipeline` @ f33aeaf (uncommitted changes: yes, R-032's + `fast_mvs.py --iters / --photometric / --suffix`)
-- **Dataset:** newRoomAttemptSadness, `work_v9e2e_sfm` (as R-032).
-- **Command(s):** init variants: `fast_mvs.py --work work_v9e2e_sfm --json transforms.json --out_json transforms_fmvs_it3.json
-  --suffix _it3 --iters 3` and `... --suffix _photo --photometric`; then R-032's training on `transforms_fmvs_photo.json`.
-- **Goal:** cut the 20 min dense init without losing quality (compared with R-032, same training code).
-- **Init variants (PatchMatch time; cloud vs the current `init_fmvs.ply`, 258,364 points):**
-  current 5 iterations + geometric pass 20.1 min (in R-020) · 3 iterations 12.1 min, 244,948 points, 94.3% of the
-  current points within 2 cm, 96.1% of its points within 2 cm of the current cloud, 99.1% within 5 cm · photometric only
-  **7.5 min**, 262,592 points, 93.2% / 90.9% / 99.1%.
-- **Start → end:** first attempt 02:16 → stopped at step 8240 (~02:45); restarted 16:45 → 17:20 (training 30.6 min, slowed by R-034 running on the CPU at the same time)
+### R-037 · 2026-11-12 · newRoomAttemptSadness on this PC, R-023 recipe, full pipeline (tag `r1112nr`)
+- **Who / machine:** Umair (agent; Umair chose the recipe) · this PC (Ubuntu, RTX 4000 Ada), `screen` session `run-r1112nr`
+- **Branch / commit:** `feature/step4-layout` @ `104a535` (uncommitted changes: TRAINING.md only)
+- **Dataset:** `dataset/newRoomAttemptSadness`, copied from the RTX 3070 PC on 2026-11-12 by Umair (raw recording only:
+  `dataset.mp4`, `poses.csv` 7,047 rows, `points.csv`, `depth/` 1,677 files, `quality.csv`, `tracking.csv`,
+  `meta.json`; realme RMX5111; no `camera.csv` / `anchors.csv`); the R-014 held-out list is not on this PC
+- **Command(s):** `scripts/run_full.sh dataset/newRoomAttemptSadness r1112nr -- --sfm_args "--retrieval 20" --init fmvs
+  --planar 0.2 --blur 0.0222 --pgsr` (the R-023 recipe, all frames)
+- **Goal:** COMPLETION_PLAN 3.1 machine agreement against R-023 (3070: 1165 frames, layout 6.60 × 4.36 m, ceiling
+  2.72 m, tape 6.70 m, 15 v10 fixtures, 96 min for the R-020 run) and the first end-to-end run with D-071 (gravity
+  in the export) and D-072 (ceiling rule) on a room whose layout was right. No PSNR comparison (no split here).
+- **Errors during the run:** none (only `timm` FutureWarnings in the log).
+- **Output:** `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/` (606,881 splats), web bundle
+  `prototype/web-ui/public/scans/newRoomAttemptSadness_r1112nr/` (19 MB, not committed, like the other local bundles).
+- **Stage times** (`stages.tsv`, `timing.json`), 18:56:57 → 20:39:57 = **103.0 min**: select 0.5, SfM 12.4, export 0.0,
+  prior 4.6 (1157 frames in 267 s), init (fast MVS) 18.4, train 45.2, ply 0.3 (run_v8 81.4) · layout 1.8 · sem2d 18.2 ·
+  sem3d / verify / sem3d2 0.5 · mesh 0.3 · mesh labels 0.7 · web 0.1. For comparison: R-020 (v9e2e, 3070) 96 min,
+  R-023 training 46 min on the 3070; R-031 (scan #3, 885 frames, this PC) 81.0 min. Not the same stage split, so the
+  per-machine comparison is only rough.
+- **SfM:** 1157 / 1166 frames registered (R-023: 1165 frames); Sim3 scale 0.6259, 898 / 1166 centre inliers, median
+  3.3 cm. R-023's scale is not on this PC, so scale agreement is **not measured**.
+- **Gravity (D-071):** ARCore gravity 0.00° from +Y after levelling (per-frame spread 0.31°, 1164 frames); a
+  full-rotation Sim3 on the same inliers would have been 0.57° off, so this room was nearly level with the old export
+  too (unlike scan #2 / #3).
+- **Layout:** 5 walls 6.63 / 4.37 / 5.78 / 4.57 / 0.78 m, 4 corners 72.0 / 88.1 / 89.2 / 89.2°, no warnings. Main
+  rectangle **6.63 × 4.37 m** vs R-023 6.60 × 4.36 m (+3 cm / +1 cm) and tape 6.70 m (−7 cm). The 0.78 m wall and the
+  72° corner are not explained yet (look at `layout/plan.png`).
+- **Height: 2.81 m** vs R-023 2.72 m (+9 cm). D-072 changed it: the strongest horizontal plane was at 2.69 m above
+  the floor (ceiling_first_y 1.205), below the wall tops (1.301), so the rule took the plane above the wall tops
+  (ceiling_y 1.320). Semantics rejected its own ceiling fit (tilt 0.49°, residual 4.7 cm) and used 2.822 m. Which of
+  2.69 / 2.72 / 2.81 m is right is **not measured** (no tape height for this room); the wall tops may be floaters
+  above the ceiling, in which case D-072 overshoots here.
+- **Semantics v10:** floor tilt 0.25° (residual 0.5 cm), floor area 29.41 m² (R-023 bundle 28.81 m²), **18 fixtures**
+  vs R-023's 15: door 7 (6), light switch 3 (2), power socket 2 (1), ceiling light 3 (3), window 1 (1), tube light 1
+  (1), lamp 1 (1); 49 rejected. Which of the 3 extra ones are real is not checked: check sheet
+  `gs_r1112nr/semantic_v10/fixture_check.md` for Umair.
+- **Mesh:** unbiased depth, 579 frames, 1,858,737 triangles.
+- **Verdict:** **kept** as the machine-agreement run for this PC: the pipeline runs end to end and the room size agrees
+  with the 3070 within 3 cm. Not settled: height (+9 cm, D-072), 3 extra fixtures, PSNR / SSIM (needs the R-014 split
+  from Tayyab). Whether the model goes to `saved_models/`: Umair to decide.
+
+### R-038 · 2026-11-16 · scan_008 full pipeline, R-023 recipe (tag `r1116`)
+- **Who / machine:** Umair (started the run himself; agent wrote the entry) · this PC (Ubuntu, RTX 4000 Ada), `screen`
+  session `run-r1116`
+- **Branch / commit:** `feature/step4-layout` @ `4f0f710` (uncommitted changes: none in code; `.gitignore` /
+  DECISIONS.md edited during the run, no effect on the pipeline)
+- **Dataset:** `dataset/scan_008_7b486c855ed6`, added by Umair on 2026-11-16 with scan_005 / 006 / 007 (not run yet).
+  Phone INFINIX Infinix X6833B (the same phone as scans #1–#3; *corrected 2026-11-16: this entry first said it was the
+  first Infinix capture, which was wrong*), 1920 × 1080 at 30 fps; **366.5 s video** (ffprobe from the `bs-system`
+  env), 10,255 frames, `poses.csv` 10,172 rows, `depth/` 1,027 files (`imu.npz` is written by the pipeline at
+  12:27:16, not recorded). The longest recording on this PC (scan #3: 185 s; newRoom: 240 s). Which room it is: not
+  recorded yet (Umair to fill in).
+- **Command(s):** `scripts/run_full.sh dataset/scan_008_7b486c855ed6 r1116 -- --sfm_args "--retrieval 20" --init fmvs
+  --planar 0.2 --blur 0.0222 --pgsr` (the R-023 recipe, as in R-037)
+- **Goal:** first new-room run for COMPLETION_PLAN Step 3/4: SfM on the new phone, layout + height with D-071 / D-072,
+  semantics v10 on a room the rules were not tuned on (plan 4.1 / 4.2).
+- **Start → end:** 12:27:13 → 13:16:55 (49.7 min, **did not finish**). select 0.7 min (1639 of 10255 frames, predicted
+  blur median 4.2 px vs 5.2 px); SfM: feature extraction to 12:28:34; 37,345 ARCore-guided pairs (22.8 per frame),
+  `matches_importer` 12:28 → 12:32:56; `vocab_tree_matcher` (retrieval 20) to 12:39:53; `global_mapper` from 12:39:54:
+  37,250 matched pairs, 1 connected component with all 1639 images, rotation averaging 4.0 s, **1,265,512 tracks from
+  16,188,709 observations** (track establishment 35.0 s), global positioning started 12:42:48 on the CPU (log: "Ceres
+  was compiled without cuDSS support. Falling back to CPU-based sparse solvers").
 - **Errors during the run:**
-  1. ~02:45 training — the run stopped at step 8240 of 15000 with exit code 4 and no Python traceback, at the same moment
-     as R-034's COLMAP process (both started from the agent's shell; likely the shell session was ended). Nothing else on
-     the PC was affected. → restarted from scratch at 16:45 (partial outputs removed). (resolved: restarted)
-- **Result:** `work_v9e2e_sfm/gs_fast_t2_photo/`. 79 off-path frames:
+  1. 13:16:55 SfM (`global_mapper`, global positioning) — killed by the kernel OOM killer: `Out of memory: Killed process
+     71833 (colmap) total-vm:46212272kB, anon-rss:26138352kB` (26.1 GB resident; this PC has 30 GB RAM + 7 GB swap).
+     The `screen` session `run-r1116` ended, no `sparse/0` written. `scripts/buildscan watch` only showed "STOPPED ...
+     did not finish" with the last message `> global_mapper`; the cause is only in the kernel log (`journalctl -k`).
+     → cause: 1639 frames × 8192 SIFT features gives 16.2 M observations; GLOMAP's global positioning on the CPU did not
+     fit in memory. R-037 (1166 frames) and R-031 (885 frames) fitted on the same PC; their peak memory was not
+     measured. → fix / workaround: Umair chose fewer frames (`--window 9`, D-073) → re-run R-039 (resolved: in R-039).
+- **Result:** none; partial output `dataset/scan_008_7b486c855ed6/work_r1116_sfm/` (database.db 4.3 GB, matcher logs),
+  log `gs_r1116/run_full.log`.
+- **Verdict:** **failed** (OOM in SfM); re-run as R-039 with fewer frames (D-073).
 
-  | model | splats | PSNR(cf) | SSIM | sharpness | flatness cm |
-  |---|---|---|---|---|---|
-  | v9e2e (R-020) | 619,056 | 25.16 | 0.8247 | 0.80 | 0.77 |
-  | fast_t1 (R-032, current init) | 621,430 | 25.14 | 0.8251 | 0.80 | 0.81 |
-  | fast_t2_photo (photometric init) | 622,049 | 25.16 | 0.8240 | 0.80 | 0.78 |
+### R-039 · 2026-11-16 · scan_008 re-run with fewer frames (tag `r1116w9`)
+- **Who / machine:** Umair (chose the fix, D-073; agent started the run) · this PC (Ubuntu, RTX 4000 Ada), `screen`
+  session `run-r1116w9`
+- **Branch / commit:** `feature/step4-layout` @ `3959d4d` (uncommitted changes: TRAINING.md / DECISIONS.md only)
+- **Dataset:** `dataset/scan_008_7b486c855ed6` (as R-038)
+- **Command(s):** `scripts/buildscan run scan_008_7b486c855ed6 r1116w9 -- --window 9 --sfm_args "--retrieval 20"
+  --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
+- **Goal:** R-038's goal; SfM has to fit in memory with ~1,140 frames (R-037: 1,166 frames ran on this PC).
+- **Start → end:** 13:21:30 → 16:08:11 (`stages.tsv`; written up by the agent on 2026-11-19). select 0.7 min: **1118 frames** (predicted blur median 3.9 px vs 5.2 px).
+  SfM: 25,622 ARCore-guided pairs (22.9 per frame); `global_mapper` from ~13:30: **1,404,275 tracks from 10,774,946
+  observations** (R-037: 289,543 tracks / 1.78 M observations for 1,166 frames, so ~6× more per frame);
+  **global positioning 1699.9 s (28.3 min)** (R-037: 99.0 s), done 13:59:16; iterative bundle adjustment from 13:59:17.
+- **Memory** (agent's watcher, every 10 s; ``ps`` RSS of colmap and ``MemAvailable``): colmap 12.6 GB at 13:50:36, then
+  19.8 GB at 13:50:46 and **23.3 GB at 13:50:56 with 2.1 GB available** (the watcher stopped there, so the true peak
+  is not measured); swap in use 4.0 of 8.0 GB at 14:02. No OOM kill. At 14:02 colmap 10.4 GB in bundle adjustment.
+- **Errors during the run:** none so far (memory came within ~2 GB of running out at 13:50, see above).
+- **Stage times (min, `timing.json` / `stages.tsv`):** select 0.71, SfM 63.6, export 0.01, prior 4.94, init 17.39,
+  train 57.91, ply 0.87 → run_v8 145.4; layout 2.7, sem2d 16.6, sem3d 0.2, verify 0.1, sem3d2 0.2, mesh 0.3,
+  meshlabels 1.0, web 0.1. Whole run 13:21:30 → 16:08:11 = 166.7 min.
+- **Result:** 1118 of 1118 frames registered; ARCore gravity tilt 0.00° (spread 0.54°; full Sim3 on the same inliers
+  1.11°), `work_r1116w9_sfm/report.json`. Mono prior aligned median error 1.5% (raw 13.8%). Layout / semantics
+  (`semantic_v10/semantic.json`): 5 walls, floor 21.26 m², ceiling 3.194 m, floor tilt 0.22°, ceiling 0.63°;
+  11 fixtures accepted (1 door, 2 windows, 4 switches, 3 sockets, 1 ceiling light), 56 rejected. Web bundle
+  `prototype/web-ui/public/scans/scan_008_7b486c855ed6_r1116w9/` (2,506,236 splats), shown in the web UI as
+  `scan-008` (2026-11-18). No `fixture_check.md` written yet; no tape; room not named. The plan also covers two
+  small rooms next to the main one (web-ui STATUS §6).
+- **Verdict:** kept as the scan #8 model for now (Umair put it in the web UI); fixtures not checked by a person.
+  Output `dataset/scan_008_7b486c855ed6/work_r1116w9_sfm/gs_r1116w9/`.
 
-  Room-centre and off-path views look the same as v9e2e (no new holes or floaters).
-- **Verdict:** kept (proposed) — dense init 20.1 → 7.5 min (−12.6 min) at equal quality. The 3-iteration variant was not trained (slower, no reason to prefer it).
-
-### R-034 · 2026-11-12 · Speed-up phase 2: COLMAP global mapper settings (CPU)
-- **Who / machine:** Tayyab (agent) · RTX 3070 PC
-- **Branch / commit:** `exp/fast-pipeline` @ f33aeaf (no code change; COLMAP options only)
-- **Dataset:** newRoomAttemptSadness, a copy of `work_v9e2e_sfm/database.db` (R-020's matches), output in `work_v9e2e_sfm/_mapper_exp/`.
-- **Command(s):** `COLMAP global_mapper --database_path db.db --image_path work_v9e2e/images --output_path <variant>`
-  with `--GlobalMapper.ba_num_iterations 1` (`ba1`) and with `--GlobalMapper.skip_retriangulation 1` (`noretri`).
-- **Goal:** the mapper took 14.3 min in R-020 (global positioning 3.0, bundle adjustment 4.8, retriangulation +
-  refinement 6.5; Ceres has no CUDA in this COLMAP build, so all on the CPU). Compare poses (Sim3-aligned camera
-  centres in cm, rotations), points and lens parameters with R-020's `sparse/0`.
-- **Start → end:** first attempt 02:18 → stopped during `ba1`'s retriangulation (~02:45, see R-033 error 1); restarted 16:45 → (running)
-- **Errors during the run:**
-  1. ~02:45 — stopped with exit code 4 together with R-033 (no COLMAP error in the log). Restarted at 16:45. (resolved: restarted)
-- **Result:** (pending)
-- **Verdict:** (pending)
-
-### R-035 · 2026-11-12 · Fast pipeline end to end (`v10fast`): all kept speed-ups from the raw capture
-- **Who / machine:** Tayyab (agent) · RTX 3070 PC
-- **Branch / commit:** `exp/fast-pipeline` @ f33aeaf (uncommitted changes: yes: R-032 training changes, threaded
-  `mono_prior.py`, `fast_mvs.py --photometric`, `sfm_colmap.py --skip_retriangulation`, `run_v8.py --init_args`)
-- **Dataset:** newRoomAttemptSadness raw capture (nothing reused), same 79-frame off-path split as R-020
-  (`dataset/newRoomAttemptSadness/offpath_test.txt`, a copy of `work_v9e2e_sfm/offpath_test.txt`).
-- **Command(s):** `python src/arcore3dgs/run_v8.py --dataset dataset/newRoomAttemptSadness --tag v10fast
-  --split dataset/newRoomAttemptSadness/offpath_test.txt --sfm_args "--retrieval 20 --skip_retriangulation"
-  --init fmvs --init_args=--photometric --planar 0.2 --blur 0.0222`, then
-  `eval_offpath.py --work work_v10fast_sfm --models v10fast=gs_v10fast/splat.ply`.
-- **Goal:** R-020 took 96.2 min end to end (select 1.9, SfM 22.4, prior 8.1, init 20.4, train 42.5, export 0.7) for
-  PSNR 25.16 / SSIM 0.8247 / sharpness 0.80 / flatness 0.77 cm. Expected here: ~55–65 min at the same quality.
-- **R-034 result (mapper settings, used here):** two runs of the **default** mapper on the same matches already differ:
-  median camera 0.48 cm, 16 cameras > 10 cm, 4 > 30 cm, 14 rotated > 2° (GLOMAP is not deterministic).
-  `skip_retriangulation`: 9.4 vs 14.3 min, median 0.90 cm, 16 / 2 / 9 — within that run-to-run spread; kept.
-  `ba_num_iterations 1`: 14.2 min (no faster under CPU load), 51 cameras > 10 cm — rejected.
-- **Start → end:** 17:28 → 18:31 (total 61.6 min: select 1.77, SfM 17.58, export 0.01, prior 6.80, init 8.08, CPU wait 0.0, train 26.66, export 0.66)
-- **Errors during the run:**
-  1. 17:26 start — `run_v8.py: error: argument --init_args: expected one argument`: argparse takes a value that starts
-     with `--` and has no space for an option → `--init_args=--photometric`. Resolved (restarted 17:28).
-- **Result:** `work_v10fast_sfm/gs_v10fast/` (eval sheets in `eval/`). SfM registered 1157/1166 (9 frames dropped as
-  jumps > 30 cm, R-020: 1); all 79 held-out frames present; ARCore alignment median 3.16 cm (R-020 3.11); Sim3 scale
-  0.6756 vs 0.6682 in R-020 (1.1% different: the metric-scale issue, STATUS 7.4).
-
-  | model | splats | PSNR(cf) | SSIM | sharpness | flatness cm | total min |
-  |---|---|---|---|---|---|---|
-  | v9e2e (R-020) | 619,056 | 25.16 | 0.8247 | 0.80 | 0.77 | 96.2 |
-  | v10fast | 635,797 | **24.56** | **0.8078** | **0.75** | **0.95** | **61.6** |
-
-  Visibly worse off-path: a floater over the rug (frame 1), more smear at the door frame by the printer (frame 2) and on the
-  armchair edge (frame 4).
-- **Verdict:** rejected as a recipe. Training (R-032) and the photometric init (R-033) each held quality on R-020's SfM,
-  so the loss comes from the SfM stage: `--skip_retriangulation` and/or the mapper's run-to-run randomness (R-034). One
-  run cannot separate the two. Next: the same run with the default mapper.
-
-### R-036 · 2026-11-12 · New room `scan_3028a4de8fa0` with the proposed fast recipe (normal SfM + R-032/R-033 speed-ups)
-- **Who / machine:** Tayyab (agent) · RTX 3070 PC
-- **Branch / commit:** `exp/fast-pipeline` @ f33aeaf (uncommitted changes: yes, as R-035)
-- **Dataset:** `dataset/scan_3028a4de8fa0` (uploaded from the phone 2026-11-12 18:00 through the server in dry-run mode;
-  178 s, 5331 video frames, 389 depth maps). `check_capture.py`: READY TO PROCESS, but a hard capture: exposure 30 ms
-  (app-logged), turning median 17.6°/s (p90 36.0), walking 0.39 m/s (newRoom: 12.3°/s, 0.13 m/s), predicted blur median
-  24.9 px (> 10 px in 92% of frames), live IQA "bad" 93%, tracking lost 2.2%, 3.1% dropped video frames, no
-  camera.csv / anchors.csv (older app build).
-- **Command(s):** `python src/arcore3dgs/run_v8.py --dataset dataset/scan_3028a4de8fa0 --tag v10 --sfm_args "--retrieval 20"
-  --init fmvs --init_args=--photometric --planar 0.2 --blur 0.030` (all frames train: no held-out split, no
-  baseline model of this room).
-- **Goal:** end-to-end time of the proposed recipe on a second room (expected ~67 min); a usable model of the new room.
-- **Start → end:** 18:47 failed at once; restarted 18:52 → 19:37 (total **48.8 min**: select 1.55, SfM 8.67, export 0.01, prior 4.73, init 4.65, CPU wait 0.33, train 28.27, export 0.59)
-- **Errors during the run:**
-  1. 18:47 select — `FileNotFoundError: ...scan_3028a4de8fa0\imu.npz` in `select_sharp.py:28`. Cause: `select_sharp.py`
-     loaded the gyro cache `imu.npz` directly; it only existed for older datasets because `fallback.py` had made it. A
-     fresh capture (and the raw-capture zip shared on 2026-11-12) has none. → `select_sharp.py` now calls
-     `imu.extract_imu()` (reads the IMU tracks of `dataset.mp4`, caches `imu.npz`): 35,858 gyro samples over 178.2 s.
-     (resolved)
-- **Result:** `dataset/scan_3028a4de8fa0/work_v10_sfm/gs_v10/` (570,297 Gaussians, 141 MB). The room is a **tiered lecture
-  hall** (stepped seating). SfM: one component, 830 / 842 frames (12 dropped as jumps), 41,996 points, lens k1 0.094 /
-  k2 −0.216 (same phone as newRoom); **ARCore alignment only 97 inlier frames** (newRoom ~800), median 4.9 cm: ARCore
-  probably re-anchored around the 3.9 s tracking gap, so the metric scale rests on few frames (not checked with a tape).
-  Sheets in `views/` (6 *training* frames vs photos: they show fit, not off-path quality; PSNR 23.67 / SSIM 0.804 on
-  them) and room-centre views. Training views: seats, desks, curtains, ceiling tiles, AC units sharp; a green floater by
-  the window, a smeared wall band behind the seats, a ghosted chair. Room-centre views: poor (the camera-centroid
-  "centre" lies among the tiered seats, and the fast walk leaves thin off-path coverage). `layout.py`: 9.27 × 11.58 m,
-  height 3.21 m above the lowest floor, one corner 73.6° (layout assumes one floor level: rough for a tiered hall).
-- **Verdict:** recipe ran end to end on a second room in 48.8 min with no manual steps after the `imu.npz` fix. Quality
-  cannot be compared with the old recipe on this room (no baseline run); the capture itself is hard (25 px median blur).
-- **Follow-up 2026-11-12 (Umair/Tayyab viewing the model):** the viewer shows a **"mini room inside the room"**. Diagnosis
-  (R-037): part of the SfM model is rebuilt at a smaller scale. Metric3D-to-SfM depth ratio per frame (`mono_prior/stats.json`)
-  is ~2.2 up to frame ~3100 but ~0.6 for frames ~3180–3700 and ~4170–4600 (3.5× smaller). ARCore poses are broken
-  after frame ~2200 (ARCore path 15–71 m per 60 keyframes), so `--pairs arcore` picked wrong spatial neighbours there,
-  those frames were only weakly linked, and GLOMAP's global positioning shrank them. **Verdict changed: rejected (broken SfM).**
-  Scale check: a table measured in the viewer (`view.py` measure tool) in the main ("outer") room gives the real table
-  length (reported by the user 2026-11-12; value not recorded), so the main model's metric scale is right despite only
-  97 ARCore inliers. Metric3D reads ~1.3× short on this room (newRoom: SfM/Metric3D ratio 1.35, here 1.75): not a scale error.
-
-
-### R-037 · 2026-11-12 · `scan_3028a4de8fa0`: incremental mapper instead of GLOMAP (fix for R-036's mini room)
-- **Who / machine:** Tayyab (agent) · RTX 3070 PC (CPU only)
-- **Branch / commit:** `exp/fast-pipeline` @ f33aeaf (uncommitted changes: yes, as R-036)
-- **Dataset:** `dataset/scan_3028a4de8fa0`, R-036's keyframes and matches (`work_v10_sfm/database.db` copied to
-  `work_v10inc_sfm/`)
-- **Command(s):** `python src/arcore3dgs/sfm_colmap.py --work dataset/scan_3028a4de8fa0/work_v10 --out
-  dataset/scan_3028a4de8fa0/work_v10inc_sfm --mapper mapper --stage map`, then `--stage undistort`, `--stage export`
-- **Goal:** one consistently scaled model of the hall (no shrunken sub-model); compare camera path with R-036's.
-- **Start → end:** 20:58 → 21:24 (map stage 25.4 min, two mapping rounds)
-- **Progress:** started 20:58. Mapping round 0 (12 min): incremental mapper split the frames into 7 components
-  [565, 162, 33, 21, 19, 12, 3] of 842: it refuses to join the weakly linked part instead of shrinking it (as GLOMAP did).
-  Bridge round 0: 277 frames outside the main component matched against 81 of it (22,437 pairs), mapping round 1 from 21:12.
-- **Errors during the run:** none so far (many Ceres `CHOLMOD warning: Matrix not positive definite` lines in
-  `mapper.log` during round 1: a failed LM step that Ceres retries, not a crash)
-- **Result:** round 1 components [581, 162, 33, 21, 20, 2] of 842: the bridge round joined only 16 more frames. The
-  main component (`sparse/0`, 581 frames) has **no shrunken part**: SfM/Metric3D depth ratio per frame within 0.83–1.44×
-  of its median, 0 frames < 0.5× (R-036 model: 175 frames at ~0.38×; newRoom v9e2e control: 0). Check:
-  `src/arcore3dgs/sfm_scale_check.py` (per-frame median of SfM depth / Metric3D depth, R-036's `mono_prior`). Missing from it:
-  video frames 2640–3875 (162-frame component 2: walking along the side wall past the seat rows, then the front with
-  the teacher's desk and screen) and 4182–4734 (front of the room near the desk: white floor and walls, close range,
-  blurred). These are the frames GLOMAP shrank into the "mini room": repeated seat rows, plain white surfaces, fast
-  motion, and wrong ARCore neighbours give too few correct matches to tie them to the rest.
-- **Verdict:** confirms the R-036 diagnosis; incremental mapping gives a correctly scaled model of ~69% of the frames,
-  not the whole walk. Next step chosen by Tayyab 2026-11-12: train on the main component (R-038).
-
-### R-038 · 2026-11-12 · `scan_3028a4de8fa0`: rest of the fast recipe on R-037's main SfM component
-- **Who / machine:** Tayyab (agent) · RTX 3070 PC
-- **Branch / commit:** `exp/fast-pipeline` @ f33aeaf (uncommitted changes: yes, as R-036)
-- **Dataset:** `dataset/scan_3028a4de8fa0`, SfM = R-037 `work_v10inc_sfm/sparse/0` (581 / 842 keyframes)
-- **Command(s):** `python src/arcore3dgs/sfm_colmap.py --work dataset/scan_3028a4de8fa0/work_v10 --out
-  dataset/scan_3028a4de8fa0/work_v10inc_sfm --mapper mapper --stage undistort` (and `--stage export`), then
-  `python src/arcore3dgs/run_v8.py --dataset dataset/scan_3028a4de8fa0 --tag v10inc --from_stage export --init fmvs
-  --init_args=--photometric --planar 0.2 --blur 0.030`
-- **Goal:** a model of the hall without R-036's shrunken "mini room" (front of the room expected thin or missing).
-- **Start → end:** 21:27 → 22:03 (undistort + SfM export ~3 min; run_v8 35.8 min: export 0.01, prior 3.30, init 3.44, CPU wait 0.00, train 28.43, ply 0.60)
-- **Errors during the run:** none so far
-- **Result:** `dataset/scan_3028a4de8fa0/work_v10inc_sfm/gs_v10inc/splat.ply` (158 MB). SfM export: 572 frames (9 more
-  dropped as pose jumps), 32,418 points, ARCore alignment 100 inliers, median 6.6 cm. Metric3D/SfM scale per frame: 5 of
-  572 frames < 0.5× the median, 2 > 2× (R-036: 175 < 0.5×). Top-down splat density with camera path
-  (`gs_v10inc/topdown_vs_R-036.jpg`): R-036 shows a tight camera cluster and a ghost copy of the seat rows in the middle
-  of the hall; R-038 shows clean seat rows and no ghost; the right-hand walk (component 2) is missing from the camera
-  path, but that side of the hall is still built from the opposite side. Not measured: off-path PSNR (no held-out
-  split), table length in the viewer (asked the user to re-measure).
-- **Verdict:** mini room gone; kept as the model of this room until a recapture.
-
-### R-039 · 2026-11-14 · roomAttemptSadness2: full v9 + PGSR pipeline → layout → semantics v10 → mesh → web (COMPLETION_PLAN 3.2, 4.2)
-- **Who / machine:** Tayyab (agent, overnight session) · RTX 3070 PC
-- **Branch / commit:** `exp/overnight-2026-11-14` (from `exp/fast-pipeline` d936e66; uncommitted: `scripts/run_full.sh`
-  made to run on Windows Git Bash too)
-- **Dataset:** `dataset/roomAttemptSadness2` (realme RMX5111, recorded by 2026-10-09; the second room of the mid report,
-  so far only v3 / splatfacto runs R-002, R-004, R-010)
-- **Command(s):** first attempt `GPU_EVERY=120 bash scripts/run_full.sh dataset/roomAttemptSadness2 v9pgsr -- --sfm_args "--retrieval 20"
-  --init fmvs --planar 0.2 --blur 0.0222 --pgsr` (the R-023 / R-031 recipe; training uses this branch's exact TV-loss
-  speed-up and the blur colour grid applied once, R-032; first run of those together with `--pgsr`)
-- **Goal:** a v9 model + semantics of the second room (3.2, 4.2), and the first check of the speed-ups with PGSR.
-- **Restart (01:42):** `GPU_EVERY=120 bash scripts/run_full.sh dataset/roomAttemptSadness2 v9pgsr8 -- --window 8
-  --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
-- **Start → end:** 01:30 first attempt (failed 01:39); 01:42 → 03:27 (stopped in sem2d); resumed 05:54 → 06:21
-- **Errors during the run:**
-  1. 01:39 sfm — `vocab_tree_matcher` exited with status 3221226505 (0xC0000409) right after `matches_importer`; Git Bash
-     also printed `child_copy: cygheap read copy failed ... Win32 error 299`. Cause: system RAM exhausted (16 GB PC,
-     ~7 GB taken by other programs; the agent was running a `layout.py` test (2.5 GB, stuck) and an MCMC smoke test
-     that caches ~6.6 GB of images at the same time; the smoke test also died, `numpy ... _ArrayMemoryError`). Fix: one
-     GPU/RAM job at a time. Select had picked 1,381 keyframes (window 6) = ~8.4 GB of cached images in training, more
-     than the ~9 GB this PC has free, so the run was restarted at 01:42 as tag `v9pgsr8` with `--window 8`
-     (~1,090 frames, like newRoom's 1,165). (resolved by restart)
-  2. 03:16–03:27 sem2d — ~12 s per frame (50 of 500 frames in ~10 min; R-025 on newRoom: ~4 s per frame). GPU memory
-     7,944 / 8,192 MiB at 100%: the batched tile pass (`exp/fast-pipeline` ddd33e8, all zoomed tiles of a frame in one
-     Grounding DINO call) filled the 8 GB card and Windows spilled GPU memory into system RAM. Stopped by the agent at
-     03:27 (sem2d killed, run_full.sh ended). Fix: `semantic2d.py --tile_batch` (default 1 = one tile per call, the
-     pre-ddd33e8 behaviour). The run continues with `--from sem2d` after the newRoom experiments (scratchpad `queue3.sh`).
-- **Progress (v9pgsr8):** select 1,042 keyframes (window 8; predicted blur median 7.0 px over all 8,731 frames).
-  SfM 21.3 min: one component, 1,014 / 1,042 registered, 1,000 kept (14 dropped as jumps), 146,818 points; Sim3 to
-  ARCore 777 inliers, median 3.3 cm. SfM vs ARCore camera centres: median 3.0 cm up to video frame 5800, 8.0 cm for
-  5800–6250, 43 cm (p90 2.6 m) after 6250 (ARCore drifts late in the walk; SfM is the reference there).
-  `sfm_scale_check.py`: no shrunken block; one block at 2.2× (frames ~5898–6200) = close-ups of a curtain filling the
-  view, where Metric3D reads too near (SfM agrees with ARCore there): this is why the check only flags blocks < 0.5×.
-- **Stage times so far:** select 4.5 (first attempt) / not re-timed, SfM 21.3, prior ~6, init 19.1 (PatchMatch 18.7),
-  train 36.2 (with PGSR, 15k steps), ply 1.2, layout 5.6 min (2.775 m room height; ceiling candidates 2.78 m weight 1.00
-  with 1.7% above, 3.02 m weight 0.26, 2.46 m weight 0.20).
-- **Result:** `dataset/roomAttemptSadness2/work_v9pgsr8_sfm/gs_v9pgsr8/` (`splat.ply`, `layout/`, `semantic_v10/`,
-  `mesh/`, `stages.tsv`, `sfm_scale_check` not run: the warning was added after this run's prior stage); web bundle
-  `prototype/web-ui/public/scans/roomAttemptSadness2_v9pgsr8/` (33 MB, gitignored). Stage times: run_v8 87.7 min
-  (select 3.6, SfM 21.3, prior 6.3, init 19.1, train 36.2, ply 1.3), layout 5.6, sem2d 24.6 (resumed run, one tile per
-  call, 500 frames), sem3d 0.4, verify 0.3, sem3d2 0.4, mesh 0.3, meshlabels 0.5, web 0.2 min. Layout: 2.775 m
-  height. Semantics v10: floor tilt 0.67°, ceiling height 2.819 m, floor area 11.92 m²; **22 fixtures accepted**
-  (door 1, window 1, light switch 8, power socket 5, ceiling light 4, tube light 1, lamp 2), 51 rejected. Not
-  measured: off-path quality (no held-out split), tape, fixture correctness (no person has checked them; the v10 rules
-  were tuned on newRoom).
-- **Verdict:** **kept as the v9 model of the second room** (COMPLETION_PLAN 3.2 done for this room; 4.2 needs a person
-  to check the 22 fixtures against the room). Not copied to `saved_models/` (Tayyab to decide).
-
-### R-040 · 2026-11-14 · newRoom: MCMC densification at the baseline budget (`mcmc620`)
-- **Who / machine:** Tayyab (agent, overnight session) · RTX 3070 PC
-- **Branch / commit:** `exp/overnight-2026-11-14` (uncommitted: the `--mcmc_cap` option in `geo_splatfacto.py` until it is tested)
-- **Dataset:** newRoomAttemptSadness, `work_v9e2e_sfm` (R-020's SfM, prior, fast-MVS init and off-path split)
-- **Command(s):** `train_eval.sh mcmc620 --mcmc_cap 620000` (scratchpad helper = R-032's commands: `geo_splatfacto.py --data work_v9e2e_sfm/transforms_fmvs.json --iters 15000 --dash_res_steps 7500 --stop_split_at 7500 --no_eval --prior mono_prior/train_v9e2e.npz --planar_lambda 0.2 --blur_exposure 0.0222 --mcmc_cap 620000`, `ns-export`, `eval_offpath.py` vs `gs_v9e2e` on the 79 off-path frames)
-- **Goal:** gsplat `MCMCStrategy` (3DGS as MCMC, Kheradmand et al. 2024: relocation of dead Gaussians + position noise, opacity / scale regularisers 0.01) instead of splatfacto's split / clone / prune, capped at ~620k Gaussians (v9e2e has 619,056). New `--mcmc_cap` option in `geo_splatfacto.py`. Does it beat R-032 (25.14 / 0.8251) at the same size?
-- **Start → end:** 03:27 → 04:03 (train 35.0 min)
-- **Errors during the run:** none so far
-- **Result:** `work_v9e2e_sfm/gs_mcmc620/` (eval sheets in `eval/`). MCMC grew from the 258k-point init by 5% per 100
-  steps as expected (e.g. step 900: 15,352 relocated, 14,954 added, 314,042 total); the exported `splat.ply` has
-  402,989 Gaussians (why fewer than the cap was not investigated). Off-path, 79 frames: **PSNR(cf) 24.65 / SSIM 0.8216 /
-  sharpness 0.64 / flatness 0.98 cm** vs v9e2e 25.16 / 0.8247 / 0.80 / 0.77 and R-032 25.14 / 0.8251 / 0.80 / 0.81.
-  Full-resolution steps ~209 ms (R-032 ~160 ms). Crops: printer edges, plant leaves and floor grain visibly softer.
-- **Verdict:** **rejected** (one setting). Possible reasons, not tested: relocation stops at step 7,500 (half of
-  training; gsplat's default keeps it to 25k of 30k), interaction with the DashGaussian low-resolution phase and the
-  depth / normal priors, the opacity regulariser pushing opacities down.
+### R-040 · 2026-11-18 · scan #7 full pipeline, R-023 recipe (tag `r1118`)
+- **Who / machine:** Umair (started the run himself through the `scripts/buildscan` menu, recording 2) · this PC
+  (Ubuntu, RTX 4000 Ada), `screen` session `run-r1118`. Before it, the agent closed the finished R-039 session
+  `run-r1116w9` (it was waiting at "press Enter to close" and blocked the one-run-at-a-time check). The `viewer`
+  session (`view.py` on scan #8's `splat.ply`, ~2.3 GB GPU) was still open when the run started.
+- **Branch / commit:** `feature/viewer-scan-008` @ `b969f49` (uncommitted changes: `prototype/web-ui/next-env.d.ts`,
+  `tsconfig.tsbuildinfo` from a `next build`; nothing in the pipeline)
+- **Dataset:** `dataset/scan_007_e6d4f090f88e` (Umair, Infinix X6833B, 269.2 s, 7,243 frames; room not named yet)
+- **Command(s):** `scripts/run_full.sh dataset/scan_007_e6d4f090f88e r1118 -- --sfm_args "--retrieval 20" --init fmvs
+  --planar 0.2 --blur 0.0222 --pgsr` (started by `scripts/buildscan`; no `--window`, so `select_sharp` uses 6)
+- **Goal:** first model of scan #7 (STATUS §7, scans #5–#7). The default window was kept; D-073's `--window 9` was
+  needed for scan #8 (342 s). SfM has to fit in memory (R-037: 1,166 frames ran; R-038: 1,639 frames killed by OOM).
+  Then check `report.json` gravity tilt, layout walls / height, fixtures and the check sheet.
+- **Start → end:** 10:19:18 → 13:39:51 (`stages.tsv`; written up by the agent on 2026-11-19, the `screen` session was still open at "press Enter"). select 0.6 min: **1160 frames** of 7,243 (predicted blur median 0.6 px vs
+  0.8 px over all frames). SfM started right after (`feature_extractor` running at 10:20:06; `vocab_tree_matcher` by the time of writing). At 10:20:06: 25 GB RAM available, swap 1 of 7 GB used.
+- **Errors during the run:** none in `run_full.log` (only timm FutureWarnings).
+- **Stage times (min, `timing.json` / `stages.tsv`):** select 0.57, SfM 96.38, export 0.01, prior 5.18, init 19.69,
+  train 52.9, ply 0.68 → run_v8 175.4; layout 2.7, sem2d 17.7, sem3d 0.3, verify 0.2, sem3d2 0.3, mesh 2.6,
+  meshlabels 1.1, web 0.2. Whole run 10:19:18 → 13:39:51 = 200.6 min.
+- **Result:** SfM registered 1159 of 1160 frames; ARCore gravity tilt 0.00° (spread 0.83°; a full Sim3 on the same
+  inliers would have been 1.72° off), `work_r1118_sfm/report.json`. Mono prior aligned median error 2.3% (raw
+  Metric3D 12.9%). Web bundle groups hold 1,840,851 splats (`scan.json`). Layout /
+  semantics (`semantic_v10/semantic.json`): 6 walls, floor 19.66 m², ceiling 3.401 m, floor tilt 0.98°, ceiling
+  0.00°. **0 fixtures accepted, 29 rejected** by the geometry rules: 14 sockets ("small, on a wall"), 6 doors
+  ("tall, from the floor, 0.45–2 m wide, in a wall"), 6 windows ("in a wall, sill ≥ 0.5 m, ≥ 0.3 m wide"),
+  3 ceiling lights ("8 cm – 1.5 m, at the ceiling"). Why every candidate failed is not investigated yet (STATUS
+  §7.5). Web bundle `prototype/web-ui/public/scans/scan_007_e6d4f090f88e_r1118/` (floor, ceiling, walls, other,
+  mesh; no electrical / openings groups). No tape, room not named.
+- **Verdict:** inconclusive until Umair has looked at the model and the rejected fixtures (the reconstruction itself
+  finished without errors). Output `dataset/scan_007_e6d4f090f88e/work_r1118_sfm/gs_r1118/`.
 
 ### R-041 · 2026-11-14 · newRoom: Fast training + PGSR-lite on newRoom (`pgsrfast`)
 - **Who / machine:** Tayyab (agent, overnight session) · RTX 3070 PC
 - **Branch / commit:** `exp/overnight-2026-11-14` (uncommitted: the `--mcmc_cap` option in `geo_splatfacto.py` until it is tested)
 - **Dataset:** newRoomAttemptSadness, `work_v9e2e_sfm` (R-020's SfM, prior, fast-MVS init and off-path split)
-- **Command(s):** `train_eval.sh pgsrfast --pgsr` (scratchpad helper = R-032's commands: `geo_splatfacto.py --data work_v9e2e_sfm/transforms_fmvs.json --iters 15000 --dash_res_steps 7500 --stop_split_at 7500 --no_eval --prior mono_prior/train_v9e2e.npz --planar_lambda 0.2 --blur_exposure 0.0222 --pgsr`, `ns-export`, `eval_offpath.py` vs `gs_v9e2e` on the 79 off-path frames)
-- **Goal:** The speed-ups (R-032) together with `--pgsr` (the best model's recipe, R-021 / R-023): same quality as R-021 v9pgsr (25.09 / 0.8254, 46 min training)?
+- **Command(s):** `train_eval.sh pgsrfast --pgsr` (scratchpad helper = R-062's commands: `geo_splatfacto.py --data work_v9e2e_sfm/transforms_fmvs.json --iters 15000 --dash_res_steps 7500 --stop_split_at 7500 --no_eval --prior mono_prior/train_v9e2e.npz --planar_lambda 0.2 --blur_exposure 0.0222 --pgsr`, `ns-export`, `eval_offpath.py` vs `gs_v9e2e` on the 79 off-path frames)
+- **Goal:** The speed-ups (R-062) together with `--pgsr` (the best model's recipe, R-021 / R-023): same quality as R-021 v9pgsr (25.09 / 0.8254, 46 min training)?
 - **Start → end:** 04:03 → 04:37 (train 33.0 min)
 - **Errors during the run:** none so far
 - **Result:** `work_v9e2e_sfm/gs_pgsrfast/` (623,022 Gaussians). Off-path, 79 frames: **PSNR(cf) 25.02 / SSIM 0.8232 /
@@ -761,27 +809,27 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Who / machine:** Tayyab (agent, overnight session) · RTX 3070 PC
 - **Branch / commit:** `exp/overnight-2026-11-14` (uncommitted: the `--mcmc_cap` option in `geo_splatfacto.py` until it is tested)
 - **Dataset:** newRoomAttemptSadness, `work_v9e2e_sfm` (R-020's SfM, prior, fast-MVS init and off-path split)
-- **Command(s):** `train_eval.sh mcmc1m --mcmc_cap 1000000` (scratchpad helper = R-032's commands: `geo_splatfacto.py --data work_v9e2e_sfm/transforms_fmvs.json --iters 15000 --dash_res_steps 7500 --stop_split_at 7500 --no_eval --prior mono_prior/train_v9e2e.npz --planar_lambda 0.2 --blur_exposure 0.0222 --mcmc_cap 1000000`, `ns-export`, `eval_offpath.py` vs `gs_v9e2e` on the 79 off-path frames)
+- **Command(s):** `train_eval.sh mcmc1m --mcmc_cap 1000000` (scratchpad helper = R-062's commands: `geo_splatfacto.py --data work_v9e2e_sfm/transforms_fmvs.json --iters 15000 --dash_res_steps 7500 --stop_split_at 7500 --no_eval --prior mono_prior/train_v9e2e.npz --planar_lambda 0.2 --blur_exposure 0.0222 --mcmc_cap 1000000`, `ns-export`, `eval_offpath.py` vs `gs_v9e2e` on the 79 off-path frames)
 - **Goal:** Does a 1M-Gaussian MCMC model improve off-path quality, and at what time / size cost?
 - **Start → end:** 04:37 → 05:19 (train 40.4 min)
 - **Errors during the run:** none so far
 - **Result:** `work_v9e2e_sfm/gs_mcmc1m/` (601,002 Gaussians exported). Off-path, 79 frames: **PSNR(cf) 24.74 / SSIM
   0.8200 / sharpness 0.69 / flatness 0.93 cm**, 40.4 min training (v9e2e 25.16 / 0.8247 / 0.80 / 0.77, 42.5 min).
-- **Verdict:** **rejected**: a larger budget helps MCMC a little over R-040 (+0.09 dB, sharpness 0.64 → 0.69) but it
+- **Verdict:** **rejected**: a larger budget helps MCMC a little over R-070 (+0.09 dB, sharpness 0.64 → 0.69) but it
   stays below splatfacto's densification on this pipeline. MCMC as wired here (relocation stopping at 7,500 steps,
   DashGaussian, depth / normal / planar priors) is not worth more runs without changing those first.
 
 ### R-043 · 2026-11-14 · newRoom: revised opacity on clone / split (`revop`)
 - **Who / machine:** Tayyab (agent, overnight session) · RTX 3070 PC
 - **Branch / commit:** `exp/overnight-2026-11-14` (new `--revised_opacity` option in `geo_splatfacto.py`, uncommitted until tested)
-- **Dataset:** newRoomAttemptSadness, `work_v9e2e_sfm` (as R-040)
-- **Command(s):** as R-040 with `--revised_opacity` (gsplat `DefaultStrategy(revised_opacity=True)`: Bulò et al. 2024,
+- **Dataset:** newRoomAttemptSadness, `work_v9e2e_sfm` (as R-070)
+- **Command(s):** as R-070 with `--revised_opacity` (gsplat `DefaultStrategy(revised_opacity=True)`: Bulò et al. 2024,
   "Revising Densification in Gaussian Splatting"; splatfacto turns it off)
-- **Goal:** cheaper floater / over-opacity fix than MCMC: does it beat R-032 (25.14 / 0.8251)?
+- **Goal:** cheaper floater / over-opacity fix than MCMC: does it beat R-062 (25.14 / 0.8251)?
 - **Start → end:** 05:24 → 05:53 (train 28.5 min)
 - **Errors during the run:** none so far
-- **Result:** `work_v9e2e_sfm/gs_revop/` (561,425 Gaussians, −10% vs R-032's 621,430). Off-path, 79 frames: **PSNR(cf)
-  25.02 / SSIM 0.8244 / sharpness 0.79 / flatness 0.73 cm**, 28.5 min, vs R-032 (same code without the option)
+- **Result:** `work_v9e2e_sfm/gs_revop/` (561,425 Gaussians, −10% vs R-062's 621,430). Off-path, 79 frames: **PSNR(cf)
+  25.02 / SSIM 0.8244 / sharpness 0.79 / flatness 0.73 cm**, 28.5 min, vs R-062 (same code without the option)
   25.14 / 0.8251 / 0.80 / 0.81 cm, 28.2 min.
 - **Verdict:** **inconclusive, not adopted**: −0.12 dB PSNR, flatness 0.08 cm better, 10% smaller model; differences of
   this size are within what one run per setting can resolve (run-to-run noise not measured, STATUS 7.3).
@@ -789,15 +837,15 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 ### R-044 · 2026-11-14 · newRoom: lower densification threshold (`dg4`)
 - **Who / machine:** Tayyab (agent, overnight session) · RTX 3070 PC
 - **Branch / commit:** `exp/overnight-2026-11-14`
-- **Dataset:** newRoomAttemptSadness, `work_v9e2e_sfm` (as R-040)
-- **Command(s):** as R-040 with `--densify_grad 0.0004` (default 0.0006): more splitting / cloning where the image
+- **Dataset:** newRoomAttemptSadness, `work_v9e2e_sfm` (as R-070)
+- **Command(s):** as R-070 with `--densify_grad 0.0004` (default 0.0006): more splitting / cloning where the image
   gradient is high
-- **Goal:** do more Gaussians in detailed areas sharpen the off-path views (R-040 showed softness is the weak point),
+- **Goal:** do more Gaussians in detailed areas sharpen the off-path views (R-070 showed softness is the weak point),
   and at what size / time cost?
 - **Start → end:** 06:21 → 06:53 (train 30.8 min); then the R-021 / R-041 flatness eval (06:53)
 - **Errors during the run:** none so far
-- **Result:** `work_v9e2e_sfm/gs_dg4/` (**868,556 Gaussians, +40%** vs R-032). Off-path, 79 frames: **PSNR(cf) 25.07 /
-  SSIM 0.8243 / sharpness 0.85 / flatness 0.74 cm**, 30.8 min, vs R-032 25.14 / 0.8251 / 0.80 / 0.81 (28.2 min).
+- **Result:** `work_v9e2e_sfm/gs_dg4/` (**868,556 Gaussians, +40%** vs R-062). Off-path, 79 frames: **PSNR(cf) 25.07 /
+  SSIM 0.8243 / sharpness 0.85 / flatness 0.74 cm**, 30.8 min, vs R-062 25.14 / 0.8251 / 0.80 / 0.81 (28.2 min).
   Crops next to v9e2e: printer, floor and plant look the same; leaves perhaps slightly crisper.
 - **Verdict:** **inconclusive, not adopted**: higher sharpness score and flatness, slightly lower PSNR / SSIM, no
   visible gain, and 40% larger models (web delivery).
@@ -812,7 +860,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   longest 26.9 s); FAIL: predicted blur median 21.7 px (> 10 px on 77% of frames); live IQA bad 92%; exposure 20 ms at
   ISO 689. Run at Tayyab's request anyway, to see what the pipeline makes of it.
 - **Command(s):** `GPU_EVERY=120 bash scripts/run_full.sh dataset/scan_009_057ed3beb4fc v9pgsr -- --sfm_args
-  "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr` (the R-039 recipe, default select window)
+  "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr` (the R-069 recipe, default select window)
 - **Goal:** a v9 model of this capture; see whether SfM recovers where ARCore tracking was lost.
 - **Errors during the run:**
 
@@ -972,7 +1020,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   --sfm_args "--feature aliked --temporal 30 --retrieval 30 --mapper mapper --gyro_thr 2" --init fmvs --planar 0.2
   --blur 0.0222 --pgsr` (scratchpad `r048.sh`)
 - **Goal:** R-047 left position / scale errors (long path jumps, a shrunken block) that a rotation check cannot see.
-  Does COLMAP's incremental mapper (correct but partial on the lecture hall, R-038; OD-11) give a cleaner model of
+  Does COLMAP's incremental mapper (correct but partial on the lecture hall, R-068; OD-11) give a cleaner model of
   scan_009 than GLOMAP (R-046 / R-047)? Compared on frames placed, path jumps, the scale check and renders.
 - **Start → end:** 01:13 → 02:27 (stopped by the agent at the prior stage); map round 0 01:13 → ~01:36 (components
   [417, 191, 40, 20, 2]), bridge matching (477 × 84 → 40,068 pairs) → 01:50, map round 1 01:50 → 02:25 (**[684, 3]**),
@@ -1138,6 +1186,460 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **End:** 02:51
 - **Verdict:** kept as the scan_009 model with the most coverage (698 frames vs 370); quality about equal to R-047
   (better in the middle of the walk, worse where the loop meets). `prior_ba.py` kept. Next: close the loop (R-071).
+
+
+
+### R-053 · 2026-11-19 · Layout re-runs on six rooms for the no-roof check (#8), into scratch folders
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada). Numbered R-053, not R-041: R-041 … R-051 are
+  taken on `origin/master` / Tayyab's branches (OD-12).
+- **Branch / commit:** `fix/8-open-ceiling` @ `fc816fb` (no uncommitted changes); a frozen copy of `layout.py` in the agent's
+  scratch folder runs, so later edits do not leak in.
+- **Dataset:** trained models of scan #1 (`umair`), #2 (`r1106lev`), #3 (`r1112lev`), #7 (`r1118`), #8 (`r1116w9`),
+  newRoom (`r1112nr`); nothing in `dataset/` is written.
+- **Command(s):** per room `micromamba run -n bs-ns python layout.py --ply <gs>/splat.ply --work <work_sfm> --out
+  <scratch>/r053/<room>/layout`; before it, a read-only ceiling-evidence script on the same models (coverage of the
+  floor outline, colour, Gaussian count).
+- **Goal:** scan #7 (no roof) reports no ceiling and the wall-top height; the five rooms with ceilings keep the
+  height, walls and corners of their last layout run.
+- **Start → end:** 08:47:39 → 08:56:27 (8.8 min; scan #7 2.4 min, #3 1.3, #8 3.1, newRoom 1.8, #2 and #1 a few s each)
+- **Errors during the run:** none (all six exit 0).
+- **Result:** ceiling evidence (share of the floor outline under the ceiling plane / colour blue − red / opaque
+  Gaussians at the plane): scan #7 **19.6 % / +0.253 / 2,919** → no roof, height = wall top **3.120 m** (was a 3.435 m
+  "ceiling"); scan #3 95.6 % / −0.002 / 114,862; scan #8 51.3 % / −0.144 / 243,198; newRoom 63.1 % / −0.031 / 6,254;
+  scan #2 47.0 % / −0.051 / 13,498; scan #1 15.8 % / −0.130 / 11,878 (low cover but not sky-coloured, so unchanged).
+  The five rooms with a ceiling keep exactly their earlier height, walls, corners and wall lengths (2.525 / 3.161 /
+  2.808 / 2.408 / 4.193 m). Outputs `<scratchpad>/r053/<room>/layout/` (not kept).
+- **Verdict:** kept: the no-roof rule (#8) changes only the roofless room. Rule defaults (35 % cover, blue − red 0.15)
+  are the agent's, from these six rooms; confirm or change (COMPLETION_PLAN Step 4, open for Umair).
+
+### R-054 · 2026-11-19 · scans #7 and #3: layout with #8 / #9 / #10 → semantics → mesh labels → web (tag `r1119a`)
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada).
+- **Branch / commit:** `feature/9-wall-openings` @ `0a45f89` (stacked on `fix/10-room-closed`, `fix/8-open-ceiling`); no
+  uncommitted changes in the pipeline.
+- **Dataset:** trained models of scan #7 (`r1118`, R-040) and scan #3 (`r1112lev`, R-035), not retrained. New tag
+  `r1119a` inside each run's work folder: `gs_r1119a/splat.ply` and `gs_r1119a/mesh/mesh.ply` are links to the
+  originals; the 2D masks `semantic2d_v10` and the mesh are reused. R-040 / R-035 outputs are not touched.
+- **Command(s):** the `run_full.sh` stages layout, sem3d, verify, sem3d2, meshlabels (`--clean 0.01 --glb 400000`),
+  web, with the same arguments, through `<scratchpad>/r054.sh`; web bundles go to
+  `prototype/web-ui/public/scans/<scan>_r1119a/` (gitignored, listed in the Projects tab by D-074).
+- **Goal:** scan #7: no roof (#8), its empty doorways / window openings found from the wall gaps (#9), outline
+  closed or a warning (#10); scan #3: the 4-walls-3-corners outline is flagged and the triangle floor area
+  (32.27 m²) is no longer reported (#10); no false openings in a finished room (#9).
+- **Start → end:** 08:57:17 → 09:05:25 (8.1 min; scan #7 08:57:17 → 09:01:06: layout 2.3, sem3d 0.2, verify 0.2, sem3d2 0.2,
+  meshlabels 0.9, web 0.1 min; scan #3 09:01:06 → 09:05:25, `gs_r1119a/stages.tsv`)
+- **Errors during the run:** none (exit 0).
+- **Result:** scan #7: no roof, walls 3.12 m; outline flagged not closed (6 walls, 4 corners), floor area null;
+  wall-gap openings: doorway 0.80 m (wall 1, 0.10–2.40 m), window openings 2.10 m (wall 4, 0.40–2.30 m), 0.50 m
+  (wall 2, 2.30–3.20 m), 0.30 m (wall 0, 1.90–2.40 m); 4 fixtures, 29 rejected; net wall areas reduced by them;
+  check sheet `gs_r1119a/semantic_v10/fixture_check.md`, plan `gs_r1119a/layout/plan.svg|dxf`. Scan #3: outline
+  flagged not closed (4 walls, 3 corners), floor area null (was the 32.27 m² triangle), ceiling 2.504 m; **4 false
+  "window openings"** in the finished classroom (0.3–0.6 m wide, 1–2 Gaussians seen behind per open cell, against 41 /
+  19 for scan #7's doorway / big opening; scan #7's two small ones 1 and 4). Web bundles
+  `public/scans/scan_007_e6d4f090f88e_r1119a/`, `scan_003_6de634cbb8b2_r1119a/`.
+- **Verdict:** #8 and #10 behave as intended; #9 gave false openings on a finished room → fixed by a view-through
+  minimum of 10 Gaussians per open cell (`f0e8bd7`); the `r1119a` bundles predate that fix and are superseded by
+  the re-run after R-055.
+
+### R-055 · 2026-11-19 · Layout on six rooms with `--debug`: default vs `--raised_max 1.5 --infer_gap 6` (#9, #10, #11)
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada).
+- **Branch / commit:** `fix/11-wall-behind-boards` @ `30315b9`; a frozen copy of `layout.py` runs from the scratch folder.
+- **Dataset:** trained models of scans #1, #2, #3, #7, #8, newRoom (as R-053); nothing in `dataset/` written.
+- **Command(s):** per room `layout.py --ply ... --work ... --out <scratch>/r055/<cfg>/<room>/layout --debug`, with
+  cfg `default` and cfg `opts` = `--raised_max 1.5 --infer_gap 6`. Before it: one `--debug` run on scan #7 alone.
+- **Goal:** (a) the view-through minimum leaves no openings on finished rooms and keeps scan #7's doorway / big
+  window opening; (b) which real walls start > 0.5 m above the floor (would `--raised_max` drop them?); (c) what
+  `--infer_gap 6` closes; (d) scan #7's plank faces gone with the options.
+- **Start → end:** 09:07:45 → 09:24:41 (16.9 min, 12 layout runs; before it the scan #7 `--debug` run, ~2.5 min)
+- **Errors during the run:** none (all exit 0).
+- **Result (default):** heights / walls / corners as R-053. Wall-gap openings: scan #7 doorway 0.80 m (41 Gaussians
+  behind per open cell) + window opening 2.10 m (19); scan #3 **none** (R-054's four false ones gone); scan #8 doorway
+  1.0 m (13), window opening 2.0 m (23), doorway 1.3 m (365); newRoom doorway 0.8 m (24), window opening 0.4 m at
+  0.5–0.9 m (17); scans #1 / #2 none. Closed outline: none of the six (#1 / #2 one wall; #3 / #7 / #8 a real gap;
+  **newRoom wrongly**: its 0.78 m jog is 16° off its neighbour, no corner by design, ends 0.42 m apart → fixed in
+  `8b7f7f2`, checked in R-056).
+- **Result (`--raised_max 1.5 --infer_gap 6`):** scan #7: both plank faces dropped (1.06 m from 1.21 m up, 0.57 m from
+  0.60 m up) → **4 walls, 4 corners 87.7–89.7°**, the real north wall now meets both neighbours (closed rectangle).
+  Scan #8: one surface dropped (0.67 m from 0.58 m up; the slanted 1.88 m "wall" with a 70.6° corner) → **4 walls,
+  corners 88.6–89.5°**, 6.03 × 4.48 m. newRoom / #2 / #1: nothing dropped (newRoom's only raised wall is 4.97 m long,
+  0.62 m up; its 0.67 m jog starts 0.11 m up). Scan #3: `--infer_gap` infers nothing: the missing corner (gaps
+  1.49 / 3.61 m) lies 3 m beyond the last reconstructed floor (z ≈ −7.6 vs −4.43), so the floor check refuses it.
+- **Verdict:** view-through minimum kept (no openings on scan #3). `--raised_max 1.5` fixed scans #7 and #8 and
+  touched no real wall on six rooms → recommended as default (Umair's decision, #11). `--infer_gap`: no effect on
+  these rooms; stays off.
+
+### R-056 · 2026-11-19 · Four rooms: layout → semantics → mesh labels → web → plan with the defaults of 2026-11-19 (tag `r1119b`)
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada).
+- **Branch / commit:** `fix/11-wall-behind-boards` @ `8b7f7f2` (defaults: no-roof rule, wall-gap openings with the
+  view-through minimum, closed-room check with step joins, floor plan; `--raised_max`, `--infer_gap`,
+  `--clean_ceiling`, `--square` off).
+- **Dataset:** trained models of scans #7 (`r1118`), #3 (`r1112lev`), #8 (`r1116w9`), newRoom (`r1112nr`), not
+  retrained; new tag `r1119b` as in R-054 (links to the model and mesh, 2D masks reused).
+- **Command(s):** `<scratchpad>/r056.sh`: the `run_full.sh` stages layout, sem3d, verify, sem3d2, meshlabels, web,
+  plan, then `fixture_checklist.py --rejected`; bundles in `prototype/web-ui/public/scans/<scan>_r1119b/`.
+- **Goal:** final outputs for Umair to check (sheets, plans, web bundles); newRoom's outline closed again (`8b7f7f2`)
+  with its floor area; no regressions in the semantics chain.
+- **Start → end:** 09:25:07 → 09:40:45 (15.6 min; per room layout 1.8–2.9 min, sem3d / verify / sem3d2 ~0.2 min each,
+  meshlabels ~0.9 min, web 0.1 min, plan < 0.1 min; `gs_r1119b/stages.tsv`)
+- **Errors during the run:** none (exit 0).
+- **Result:** scan #7: no roof, walls 3.12 m, outline open, openings doorway 0.80 m + window opening 2.10 m, 2
+  fixtures (both openings). Scan #3: ceiling 2.504 m, outline open (floor area null, was the 32.27 m² triangle),
+  **no wall-gap openings**, 18 fixtures (as R-035). Scan #8: ceiling 3.194 m, outline open (21° / 2.31 m gap; floor
+  area null, was 21.26 m² from 4 of 5 corners), wall-gap doorways 1.0 m and 1.3 m, 13 fixtures (11 + 2). newRoom:
+  **outline closed (step join), floor 29.41 m² (unchanged)**, ceiling 2.822 m, one wall-gap window opening 0.4 m,
+  19 fixtures (18 + 1). Each room: `gs_r1119b/layout/plan.svg|dxf|json`, `semantic_v10/fixture_check.md`
+  (`--rejected`), web bundle `public/scans/<scan>_r1119b/`.
+- **Verdict:** kept as the current outputs for Umair's checks (#21, #24); whether the 5 wall-gap openings are real
+  is not known yet.
+
+### R-057 · 2026-11-19 · Four rooms: layout → semantics → mesh labels → web → plan with the D-075 defaults (tag `r1119c`)
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada); the `viewer` screen session (~2.3 GB GPU)
+  stays open, `run-r1118` is closed.
+- **Branch / commit:** `feature/step4-layout` @ `8022277` (no uncommitted changes).
+- **Dataset:** trained models of scans #7 (`r1118`), #3 (`r1112lev`), #8 (`r1116w9`), newRoom (`r1112nr`), not
+  retrained; new tag `r1119c` as in R-056 (links to the model and mesh, 2D masks reused).
+- **Command(s):** `<scratchpad>/r057.sh`: R-056's stages layout, sem3d, verify, sem3d2, meshlabels, web, plan, then
+  `fixture_checklist.py --rejected`, with the flags `run_full.sh` passes since D-075: `layout.py --raised_max 1.5
+  --infer_gap 6`, `semantic3d.py --floor_win 0.06` (both passes), `mesh_labels.py --clean_ceiling 0.04`,
+  `plan_export.py --square`; bundles in `prototype/web-ui/public/scans/<scan>_r1119c/`.
+- **Goal:** the five D-075 options together on four rooms, against R-056 (`r1119b`): walls, corners, closed outline,
+  floor area, floor tilt, ceiling roughness, plan.svg. Expected from R-055 / #17 / #18: scans #7 and #8 closed with
+  4 walls, scan #3 floor tilt ~0.3°, ceilings ~0 cm rough. Any room that gets worse goes to Umair before anything
+  else.
+- **Start → end:** 15:09:11 → 15:25:53 (16.7 min; per room layout 1.2–2.9 min, sem3d / verify / sem3d2 ~0.2 min each,
+  meshlabels 0.9–3.5 min, web 0.1 min, plan < 0.1 min; `gs_r1119c/stages.tsv`)
+- **Errors during the run:** none (exit 0). Not an error: with `--square`, `plan_export.py` writes
+  `layout/plan_square.json|svg|dxf` and no `plan.svg`; `layout/plan.png` (thumbnail) is still written by `layout.py`.
+- **Comparison script:** `<scratchpad>/compare.py` (layout.json, semantic.json, and `mesh.py`'s `shell_flatness` on
+  `mesh_clean.ply`: median |deviation| cm, % within 1 cm). Run on `r1119b` first: it gives #18's numbers (scan #8
+  ceiling 4.35 cm, newRoom 4.31 cm), so the measure is the same.
+- **Result (R-056 `r1119b` → R-057 `r1119c`):**
+
+  | Room | Walls | Corners | Closed | Floor area | Floor tilt | Ceiling rough (cm, % ≤ 1 cm) | Fixtures (rejected) | Wall-gap openings |
+  |---|---|---|---|---|---|---|---|---|
+  | scan #7 | 6 → **4** | 4 (one 63.5°) → 4 (87.7–89.7°) | no → **yes** | null → **17.99 m²** | 0.98° → 0.18° | no roof | 2 (29) → 3 (29) | doorway 0.8 + window 2.1 → **+ doorway 1.0 m** (wall 2, 0.1–2.4 m, the wall the planks hid) |
+  | scan #3 | 4 → 4 | 3 → 3 | no → no | null → null | **1.95° → 0.29°** | 0.02 (89.4) → 0.00 (97.6) | 18 (30) → **20 (28)**: + socket at 0.59 m (45 views, no candidate before), + ceiling fan 3 (rejected before as "away from walls") | none → none |
+  | scan #8 | 5 → **4** | 4 (one 70.6°) → 4 (88.6–89.5°) | no → **yes** | null → **26.44 m²** | 0.22° → 0.21° | **4.35 (19.6) → 0.04 (66.6)** | 13 (56) → **10 (58)** | doorways 1.0 + 1.3, window 2.0 → **doorway 1.3 m gone** |
+  | newRoom | 5 → 5 | same | yes → yes | 29.41 → 29.41 | 0.25° → 0.24° | **4.31 (22.3) → 0.04 (61.2)** | 19 (49) → 19 (49) | same |
+
+  Scan #3's semantic ceiling height 2.504 → **2.582 m** (floor fit on the lower level, `--floor_win`); `layout.json`
+  height unchanged 2.525 m, so the two now differ by 5.7 cm; tape decides (#17, #20). Scan #8 lost **light switch 1
+  and power socket 1** (one plate at 1.27 / 1.28 m, 23 / 35 views): they sat on the 1.88 m diagonal surface
+  (0.58 m up, 0.67 m tall) that `--raised_max 1.5` dropped across the corner of walls 1 / 0; now 1.52 m from the
+  nearest wall, so rejected "small, on a wall". The 1.3 m "doorway" lost with it was on the same surface (0.1–3.2 m,
+  365 Gaussians seen through: the space behind the surface is open). Cutting the corner off would make the floor
+  about 2.0 m² smaller (triangle of the three points, agent's estimate). `--square` turned walls by 0.02–2.35°
+  (largest scan #7 wall 2: 2.35°, scan #8 wall 1: 1.91°). Wall flatness otherwise unchanged except where a wall got
+  longer (scan #8 wall 1 0.06 → 1.55 cm, scan #7 wall 2 2.58 → 0.26 cm). Check sheets
+  `gs_r1119c/semantic_v10/fixture_check.md` (`--rejected`); bundles `public/scans/<scan>_r1119c/`.
+- **Verdict:** kept for scans #7, #3 and newRoom; **scan #8 waits for Umair**: closed rectangle and smooth ceiling,
+  but a switch + socket plate lost. Is the diagonal surface in that corner a wall (then `--raised_max` is wrong here)
+  or furniture with a plate on it? → **Umair (2026-11-19): furniture / a low board in that corner**, so
+  `--raised_max 1.5` is right there and the lost plate was not on a wall; `r1119c` is current for all four rooms and
+  the `r1119b` bundles moved to `scans_archive/`.
+
+### R-058 · 2026-11-19 · scan #6 full pipeline, R-023 recipe, D-075 defaults (tag `r1119`)
+- **Who / machine:** agent for Umair (Umair's command and go-ahead) · this PC (Ubuntu, RTX 4000 Ada), `screen`
+  session `run-r1119`; the `viewer` session (~2.3 GB GPU) stays open.
+- **Branch / commit:** `feature/step4-layout` @ `2e7bbb8` (no uncommitted changes in the pipeline)
+- **Dataset:** `dataset/scan_006_1e457a214ce1` (Umair, Infinix X6833B, 259.8 s, 7,274 video frames; room not named yet)
+- **Command(s):** `scripts/buildscan run 6 r1119 -- --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222
+  --pgsr` (default window 6, like scan #7 at 269 s, R-040)
+- **Goal:** first model of scan #6 (#19), with the post-training stages on the D-075 defaults; then gravity tilt,
+  layout walls / height / closed outline, fixtures and the check sheet. SfM has to fit in RAM (R-040: 1,160 frames
+  ran in 96 min).
+- **Start → end:** 15:29:08 → killed 16:14:39 (45.5 min); select 0.6 min (**1159 frames** of 7,274, predicted blur
+  median 3.9 px vs 5.0 px over all), SfM: feature extraction, 26,147 ARCore-guided pairs, vocabulary-tree matching,
+  `global_mapper` from ~15:40 (12,557,723 observations; global positioning on the CPU, Ceres without CUDA).
+- **Errors during the run:**
+  1. 16:14:39 sfm (`global_mapper`) — kernel OOM killer: "Out of memory: Killed process 688507 (colmap)
+     total-vm:43322560kB, anon-rss:26405116kB" (`journalctl -k`); the allocation that triggered it came from the
+     agent's Claude process; VS Code helper processes and every `screen` session of the VS Code scope (`run-r1119`,
+     `viewer`) were killed with it; no reboot. `run_full.log` just stops (no "all done", no `stages.tsv`). → cause:
+     COLMAP needed ~26.4 GB of the 30 GB; scan #7 passed with 12,684,881 observations (R-040), so this recording is
+     not too big by itself: during global positioning the agent ran web-UI work on the same PC (`next dev` servers,
+     a `next build`, pytest, uploads to R2; `feature/vercel-deploy`), the `viewer` session was open, and swap was
+     3 of 7 GB used. → fix: not resolved; rerun with nothing else heavy on the PC (agent does no builds / dev servers
+     during SfM), or fewer frames (`--window 9`, D-073), or more swap (sudo, Umair). Choice is Umair's.
+- **Result:** none (stopped in SfM). Work folder `dataset/scan_006_1e457a214ce1/work_r1119_sfm/` (database, partial).
+- **Verdict:** failed (OOM in SfM, R-038's failure; the agent's parallel work is the likely tipping point).
+
+### R-059 · 2026-11-19 · scan #6 rerun after R-058's OOM, same recipe, PC kept quiet (tag `r1119b6`)
+- **Who / machine:** agent for Umair (Umair chose "same recipe, PC kept quiet" after R-058) · this PC (Ubuntu, RTX
+  4000 Ada), `screen` session `run-r1119b6`; no `viewer`, no dev servers; the agent runs nothing heavy (builds, dev
+  servers, tests, uploads) until SfM has finished, and logs free RAM every minute to its scratch folder.
+- **Branch / commit:** `feature/step4-layout` @ `d6bb0ee` (no uncommitted changes)
+- **Dataset:** `dataset/scan_006_1e457a214ce1` (259.8 s, 7,274 video frames)
+- **Command(s):** `scripts/buildscan run 6 r1119b6 -- --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
+- **Goal:** first model of scan #6 (#19); SfM must pass in RAM like scan #7 (12.68 M observations, R-040). Then
+  layout / fixtures / check sheet, publish within the 10 GB cap (D-077).
+- **Start → end:** (running)
+- **Errors during the run:** none so far.
+
+### R-062 · 2026-11-12 · Training speed-up, phase 1: profiling + exact fixes + blur colour grid once (`fast_t1`)
+*Runs R-062 – R-068 were numbered R-029 – R-065 on the unmerged branch (the chat of 2026-11-12 uses those numbers);
+renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031) was merged into `exp/fast-pipeline`.*
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/fast-pipeline` @ f33aeaf (uncommitted changes: yes, `geo_splatfacto.py`)
+- **Dataset:** newRoomAttemptSadness, the v9e2e work folder (`work_v9e2e_sfm`: same SfM, Metric3D prior, fast-MVS init,
+  plane masks, blur motion and 79-frame off-path split as R-020); only training changes.
+- **Command(s):** `geo_splatfacto.py --data work_v9e2e_sfm/transforms_fmvs.json --name fast_t1 --iters 15000
+  --dash_res_steps 7500 --stop_split_at 7500 --no_eval --prior mono_prior/train_v9e2e.npz --planar_lambda 0.2
+  --blur_exposure 0.0222` (R-020's train stage), then `ns-export`, then `eval_offpath.py` against `gs_v9e2e`.
+- **Goal:** same quality as R-020's training (PSNR 25.16 / SSIM 0.8247 / sharpness 0.80 / flatness 0.77 cm on the
+  79 held-out frames) in less than its 42.5 min.
+- **Profiling before the run (torch.profiler, 30-step windows, 01:00 – 01:10):**
+  - Low-res steps took 77 ms although rendering at 1/8 resolution costs ~3 ms: 29% of GPU time was `index_select` /
+    `index_add_` in nerfstudio's `total_variation_loss` on **all** 1086 per-image bilateral grids (107 MB) every step.
+    → `_TotalVariation` (same value and gradient, checked: max gradient difference 5e-12): 50 → 13 ms per call.
+    Low-res step 77 → 41 ms.
+  - Full-res steps took ~220 ms: the bilateral grid was applied to each motion-blur sub-render (2.8 per step on
+    average), and its per-pixel colour affine ran as a batched matmul of 2 M 3×3 matrices (~26 ms per call).
+    → elementwise affine (same result, max difference 2e-7; 31.5 → 18.3 ms per call) and, with the blur model,
+    the grid applied **once to the averaged render** (the camera's colour processing acts on the light integrated over
+    the exposure; not bit-identical to before, hence this run). `--blur_grid_per_sub` restores the old behaviour.
+    Full-res step 220 → 160 ms.
+- **Start → end:** 01:14 → 01:47 (training 28.2 min; then export + eval). Step times vs R-020 at the same step:
+  2k 64 vs 86 ms, 5k 63 vs 98, 8k (full res) 158 vs 233, 11k 135 vs 216, 14k 174 vs 261.
+- **Errors during the run:**
+  1. 01:08 (profiling, before the run) — `AssertionError` in `lib_bilagrid.py:311` (`len(rgb.shape) == input_ndims`):
+     the blur path passes an [H, W, 3] image, splatfacto [1, H, W, 3] → reshape both to [1, 1, H, W, 3]. Resolved.
+- **Result:** `work_v9e2e_sfm/gs_fast_t1/` (eval sheets in `eval/`). 79 off-path frames, same eval as R-020:
+
+  | model | splats | PSNR(cf) | SSIM | sharpness | flatness cm | train min |
+  |---|---|---|---|---|---|---|
+  | v9e2e (R-020) | 619,056 | 25.16 | 0.8247 | 0.80 | 0.77 | 42.5 |
+  | fast_t1 | 621,430 | 25.14 | 0.8251 | 0.80 | 0.81 | **28.2** |
+
+  Off-path frames and the 4 room-centre views look the same (same printer-edge smear, same table top). Run-to-run
+  noise is not measured, so the 0.02 dB / 0.04 cm differences cannot be told apart from it.
+- **Verdict:** kept (proposed) — training −34% (−14.3 min) at equal quality; the TV and colour-affine changes are exact,
+  the blur colour-grid change is the only behaviour change.
+
+### R-063 · 2026-11-12 · Speed-up phase 2: photometric-only fast-MVS init (`fast_t2_photo`)
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/fast-pipeline` @ f33aeaf (uncommitted changes: yes, R-062's + `fast_mvs.py --iters / --photometric / --suffix`)
+- **Dataset:** newRoomAttemptSadness, `work_v9e2e_sfm` (as R-062).
+- **Command(s):** init variants: `fast_mvs.py --work work_v9e2e_sfm --json transforms.json --out_json transforms_fmvs_it3.json
+  --suffix _it3 --iters 3` and `... --suffix _photo --photometric`; then R-062's training on `transforms_fmvs_photo.json`.
+- **Goal:** cut the 20 min dense init without losing quality (compared with R-062, same training code).
+- **Init variants (PatchMatch time; cloud vs the current `init_fmvs.ply`, 258,364 points):**
+  current 5 iterations + geometric pass 20.1 min (in R-020) · 3 iterations 12.1 min, 244,948 points, 94.3% of the
+  current points within 2 cm, 96.1% of its points within 2 cm of the current cloud, 99.1% within 5 cm · photometric only
+  **7.5 min**, 262,592 points, 93.2% / 90.9% / 99.1%.
+- **Start → end:** first attempt 02:16 → stopped at step 8240 (~02:45); restarted 16:45 → 17:20 (training 30.6 min, slowed by R-064 running on the CPU at the same time)
+- **Errors during the run:**
+  1. ~02:45 training — the run stopped at step 8240 of 15000 with exit code 4 and no Python traceback, at the same moment
+     as R-064's COLMAP process (both started from the agent's shell; likely the shell session was ended). Nothing else on
+     the PC was affected. → restarted from scratch at 16:45 (partial outputs removed). (resolved: restarted)
+- **Result:** `work_v9e2e_sfm/gs_fast_t2_photo/`. 79 off-path frames:
+
+  | model | splats | PSNR(cf) | SSIM | sharpness | flatness cm |
+  |---|---|---|---|---|---|
+  | v9e2e (R-020) | 619,056 | 25.16 | 0.8247 | 0.80 | 0.77 |
+  | fast_t1 (R-062, current init) | 621,430 | 25.14 | 0.8251 | 0.80 | 0.81 |
+  | fast_t2_photo (photometric init) | 622,049 | 25.16 | 0.8240 | 0.80 | 0.78 |
+
+  Room-centre and off-path views look the same as v9e2e (no new holes or floaters).
+- **Verdict:** kept (proposed) — dense init 20.1 → 7.5 min (−12.6 min) at equal quality. The 3-iteration variant was not trained (slower, no reason to prefer it).
+
+### R-064 · 2026-11-12 · Speed-up phase 2: COLMAP global mapper settings (CPU)
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/fast-pipeline` @ f33aeaf (no code change; COLMAP options only)
+- **Dataset:** newRoomAttemptSadness, a copy of `work_v9e2e_sfm/database.db` (R-020's matches), output in `work_v9e2e_sfm/_mapper_exp/`.
+- **Command(s):** `COLMAP global_mapper --database_path db.db --image_path work_v9e2e/images --output_path <variant>`
+  with `--GlobalMapper.ba_num_iterations 1` (`ba1`) and with `--GlobalMapper.skip_retriangulation 1` (`noretri`).
+- **Goal:** the mapper took 14.3 min in R-020 (global positioning 3.0, bundle adjustment 4.8, retriangulation +
+  refinement 6.5; Ceres has no CUDA in this COLMAP build, so all on the CPU). Compare poses (Sim3-aligned camera
+  centres in cm, rotations), points and lens parameters with R-020's `sparse/0`.
+- **Start → end:** first attempt 02:18 → stopped during `ba1`'s retriangulation (~02:45, see R-063 error 1); restarted 16:45 → (running)
+- **Errors during the run:**
+  1. ~02:45 — stopped with exit code 4 together with R-063 (no COLMAP error in the log). Restarted at 16:45. (resolved: restarted)
+- **Result:** (pending)
+- **Verdict:** (pending)
+
+### R-065 · 2026-11-12 · Fast pipeline end to end (`v10fast`): all kept speed-ups from the raw capture
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/fast-pipeline` @ f33aeaf (uncommitted changes: yes: R-062 training changes, threaded
+  `mono_prior.py`, `fast_mvs.py --photometric`, `sfm_colmap.py --skip_retriangulation`, `run_v8.py --init_args`)
+- **Dataset:** newRoomAttemptSadness raw capture (nothing reused), same 79-frame off-path split as R-020
+  (`dataset/newRoomAttemptSadness/offpath_test.txt`, a copy of `work_v9e2e_sfm/offpath_test.txt`).
+- **Command(s):** `python src/arcore3dgs/run_v8.py --dataset dataset/newRoomAttemptSadness --tag v10fast
+  --split dataset/newRoomAttemptSadness/offpath_test.txt --sfm_args "--retrieval 20 --skip_retriangulation"
+  --init fmvs --init_args=--photometric --planar 0.2 --blur 0.0222`, then
+  `eval_offpath.py --work work_v10fast_sfm --models v10fast=gs_v10fast/splat.ply`.
+- **Goal:** R-020 took 96.2 min end to end (select 1.9, SfM 22.4, prior 8.1, init 20.4, train 42.5, export 0.7) for
+  PSNR 25.16 / SSIM 0.8247 / sharpness 0.80 / flatness 0.77 cm. Expected here: ~55–65 min at the same quality.
+- **R-064 result (mapper settings, used here):** two runs of the **default** mapper on the same matches already differ:
+  median camera 0.48 cm, 16 cameras > 10 cm, 4 > 30 cm, 14 rotated > 2° (GLOMAP is not deterministic).
+  `skip_retriangulation`: 9.4 vs 14.3 min, median 0.90 cm, 16 / 2 / 9 — within that run-to-run spread; kept.
+  `ba_num_iterations 1`: 14.2 min (no faster under CPU load), 51 cameras > 10 cm — rejected.
+- **Start → end:** 17:28 → 18:31 (total 61.6 min: select 1.77, SfM 17.58, export 0.01, prior 6.80, init 8.08, CPU wait 0.0, train 26.66, export 0.66)
+- **Errors during the run:**
+  1. 17:26 start — `run_v8.py: error: argument --init_args: expected one argument`: argparse takes a value that starts
+     with `--` and has no space for an option → `--init_args=--photometric`. Resolved (restarted 17:28).
+- **Result:** `work_v10fast_sfm/gs_v10fast/` (eval sheets in `eval/`). SfM registered 1157/1166 (9 frames dropped as
+  jumps > 30 cm, R-020: 1); all 79 held-out frames present; ARCore alignment median 3.16 cm (R-020 3.11); Sim3 scale
+  0.6756 vs 0.6682 in R-020 (1.1% different: the metric-scale issue, STATUS 7.4).
+
+  | model | splats | PSNR(cf) | SSIM | sharpness | flatness cm | total min |
+  |---|---|---|---|---|---|---|
+  | v9e2e (R-020) | 619,056 | 25.16 | 0.8247 | 0.80 | 0.77 | 96.2 |
+  | v10fast | 635,797 | **24.56** | **0.8078** | **0.75** | **0.95** | **61.6** |
+
+  Visibly worse off-path: a floater over the rug (frame 1), more smear at the door frame by the printer (frame 2) and on the
+  armchair edge (frame 4).
+- **Verdict:** rejected as a recipe. Training (R-062) and the photometric init (R-063) each held quality on R-020's SfM,
+  so the loss comes from the SfM stage: `--skip_retriangulation` and/or the mapper's run-to-run randomness (R-064). One
+  run cannot separate the two. Next: the same run with the default mapper.
+
+### R-066 · 2026-11-12 · New room `scan_3028a4de8fa0` with the proposed fast recipe (normal SfM + R-062/R-063 speed-ups)
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/fast-pipeline` @ f33aeaf (uncommitted changes: yes, as R-065)
+- **Dataset:** `dataset/scan_3028a4de8fa0` (uploaded from the phone 2026-11-12 18:00 through the server in dry-run mode;
+  178 s, 5331 video frames, 389 depth maps). `check_capture.py`: READY TO PROCESS, but a hard capture: exposure 30 ms
+  (app-logged), turning median 17.6°/s (p90 36.0), walking 0.39 m/s (newRoom: 12.3°/s, 0.13 m/s), predicted blur median
+  24.9 px (> 10 px in 92% of frames), live IQA "bad" 93%, tracking lost 2.2%, 3.1% dropped video frames, no
+  camera.csv / anchors.csv (older app build).
+- **Command(s):** `python src/arcore3dgs/run_v8.py --dataset dataset/scan_3028a4de8fa0 --tag v10 --sfm_args "--retrieval 20"
+  --init fmvs --init_args=--photometric --planar 0.2 --blur 0.030` (all frames train: no held-out split, no
+  baseline model of this room).
+- **Goal:** end-to-end time of the proposed recipe on a second room (expected ~67 min); a usable model of the new room.
+- **Start → end:** 18:47 failed at once; restarted 18:52 → 19:37 (total **48.8 min**: select 1.55, SfM 8.67, export 0.01, prior 4.73, init 4.65, CPU wait 0.33, train 28.27, export 0.59)
+- **Errors during the run:**
+  1. 18:47 select — `FileNotFoundError: ...scan_3028a4de8fa0\imu.npz` in `select_sharp.py:28`. Cause: `select_sharp.py`
+     loaded the gyro cache `imu.npz` directly; it only existed for older datasets because `fallback.py` had made it. A
+     fresh capture (and the raw-capture zip shared on 2026-11-12) has none. → `select_sharp.py` now calls
+     `imu.extract_imu()` (reads the IMU tracks of `dataset.mp4`, caches `imu.npz`): 35,858 gyro samples over 178.2 s.
+     (resolved)
+- **Result:** `dataset/scan_3028a4de8fa0/work_v10_sfm/gs_v10/` (570,297 Gaussians, 141 MB). The room is a **tiered lecture
+  hall** (stepped seating). SfM: one component, 830 / 842 frames (12 dropped as jumps), 41,996 points, lens k1 0.094 /
+  k2 −0.216 (same phone as newRoom); **ARCore alignment only 97 inlier frames** (newRoom ~800), median 4.9 cm: ARCore
+  probably re-anchored around the 3.9 s tracking gap, so the metric scale rests on few frames (not checked with a tape).
+  Sheets in `views/` (6 *training* frames vs photos: they show fit, not off-path quality; PSNR 23.67 / SSIM 0.804 on
+  them) and room-centre views. Training views: seats, desks, curtains, ceiling tiles, AC units sharp; a green floater by
+  the window, a smeared wall band behind the seats, a ghosted chair. Room-centre views: poor (the camera-centroid
+  "centre" lies among the tiered seats, and the fast walk leaves thin off-path coverage). `layout.py`: 9.27 × 11.58 m,
+  height 3.21 m above the lowest floor, one corner 73.6° (layout assumes one floor level: rough for a tiered hall).
+- **Verdict:** recipe ran end to end on a second room in 48.8 min with no manual steps after the `imu.npz` fix. Quality
+  cannot be compared with the old recipe on this room (no baseline run); the capture itself is hard (25 px median blur).
+- **Follow-up 2026-11-12 (Umair/Tayyab viewing the model):** the viewer shows a **"mini room inside the room"**. Diagnosis
+  (R-067): part of the SfM model is rebuilt at a smaller scale. Metric3D-to-SfM depth ratio per frame (`mono_prior/stats.json`)
+  is ~2.2 up to frame ~3100 but ~0.6 for frames ~3180–3700 and ~4170–4600 (3.5× smaller). ARCore poses are broken
+  after frame ~2200 (ARCore path 15–71 m per 60 keyframes), so `--pairs arcore` picked wrong spatial neighbours there,
+  those frames were only weakly linked, and GLOMAP's global positioning shrank them. **Verdict changed: rejected (broken SfM).**
+  Scale check: a table measured in the viewer (`view.py` measure tool) in the main ("outer") room gives the real table
+  length (reported by the user 2026-11-12; value not recorded), so the main model's metric scale is right despite only
+  97 ARCore inliers. Metric3D reads ~1.3× short on this room (newRoom: SfM/Metric3D ratio 1.35, here 1.75): not a scale error.
+
+
+### R-067 · 2026-11-12 · `scan_3028a4de8fa0`: incremental mapper instead of GLOMAP (fix for R-066's mini room)
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC (CPU only)
+- **Branch / commit:** `exp/fast-pipeline` @ f33aeaf (uncommitted changes: yes, as R-066)
+- **Dataset:** `dataset/scan_3028a4de8fa0`, R-066's keyframes and matches (`work_v10_sfm/database.db` copied to
+  `work_v10inc_sfm/`)
+- **Command(s):** `python src/arcore3dgs/sfm_colmap.py --work dataset/scan_3028a4de8fa0/work_v10 --out
+  dataset/scan_3028a4de8fa0/work_v10inc_sfm --mapper mapper --stage map`, then `--stage undistort`, `--stage export`
+- **Goal:** one consistently scaled model of the hall (no shrunken sub-model); compare camera path with R-066's.
+- **Start → end:** 20:58 → 21:24 (map stage 25.4 min, two mapping rounds)
+- **Progress:** started 20:58. Mapping round 0 (12 min): incremental mapper split the frames into 7 components
+  [565, 162, 33, 21, 19, 12, 3] of 842: it refuses to join the weakly linked part instead of shrinking it (as GLOMAP did).
+  Bridge round 0: 277 frames outside the main component matched against 81 of it (22,437 pairs), mapping round 1 from 21:12.
+- **Errors during the run:** none so far (many Ceres `CHOLMOD warning: Matrix not positive definite` lines in
+  `mapper.log` during round 1: a failed LM step that Ceres retries, not a crash)
+- **Result:** round 1 components [581, 162, 33, 21, 20, 2] of 842: the bridge round joined only 16 more frames. The
+  main component (`sparse/0`, 581 frames) has **no shrunken part**: SfM/Metric3D depth ratio per frame within 0.83–1.44×
+  of its median, 0 frames < 0.5× (R-066 model: 175 frames at ~0.38×; newRoom v9e2e control: 0). Check:
+  `src/arcore3dgs/sfm_scale_check.py` (per-frame median of SfM depth / Metric3D depth, R-066's `mono_prior`). Missing from it:
+  video frames 2640–3875 (162-frame component 2: walking along the side wall past the seat rows, then the front with
+  the teacher's desk and screen) and 4182–4734 (front of the room near the desk: white floor and walls, close range,
+  blurred). These are the frames GLOMAP shrank into the "mini room": repeated seat rows, plain white surfaces, fast
+  motion, and wrong ARCore neighbours give too few correct matches to tie them to the rest.
+- **Verdict:** confirms the R-066 diagnosis; incremental mapping gives a correctly scaled model of ~69% of the frames,
+  not the whole walk. Next step chosen by Tayyab 2026-11-12: train on the main component (R-068).
+
+### R-068 · 2026-11-12 · `scan_3028a4de8fa0`: rest of the fast recipe on R-067's main SfM component
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/fast-pipeline` @ f33aeaf (uncommitted changes: yes, as R-066)
+- **Dataset:** `dataset/scan_3028a4de8fa0`, SfM = R-067 `work_v10inc_sfm/sparse/0` (581 / 842 keyframes)
+- **Command(s):** `python src/arcore3dgs/sfm_colmap.py --work dataset/scan_3028a4de8fa0/work_v10 --out
+  dataset/scan_3028a4de8fa0/work_v10inc_sfm --mapper mapper --stage undistort` (and `--stage export`), then
+  `python src/arcore3dgs/run_v8.py --dataset dataset/scan_3028a4de8fa0 --tag v10inc --from_stage export --init fmvs
+  --init_args=--photometric --planar 0.2 --blur 0.030`
+- **Goal:** a model of the hall without R-066's shrunken "mini room" (front of the room expected thin or missing).
+- **Start → end:** 21:27 → 22:03 (undistort + SfM export ~3 min; run_v8 35.8 min: export 0.01, prior 3.30, init 3.44, CPU wait 0.00, train 28.43, ply 0.60)
+- **Errors during the run:** none so far
+- **Result:** `dataset/scan_3028a4de8fa0/work_v10inc_sfm/gs_v10inc/splat.ply` (158 MB). SfM export: 572 frames (9 more
+  dropped as pose jumps), 32,418 points, ARCore alignment 100 inliers, median 6.6 cm. Metric3D/SfM scale per frame: 5 of
+  572 frames < 0.5× the median, 2 > 2× (R-066: 175 < 0.5×). Top-down splat density with camera path
+  (`gs_v10inc/topdown_vs_R-036.jpg`): R-066 shows a tight camera cluster and a ghost copy of the seat rows in the middle
+  of the hall; R-068 shows clean seat rows and no ghost; the right-hand walk (component 2) is missing from the camera
+  path, but that side of the hall is still built from the opposite side. Not measured: off-path PSNR (no held-out
+  split), table length in the viewer (asked the user to re-measure).
+- **Verdict:** mini room gone; kept as the model of this room until a recapture.
+
+### R-069 · 2026-11-14 · roomAttemptSadness2: full v9 + PGSR pipeline → layout → semantics v10 → mesh → web (COMPLETION_PLAN 3.2, 4.2)
+- **Who / machine:** Tayyab (agent, overnight session) · RTX 3070 PC
+- **Branch / commit:** `exp/overnight-2026-11-14` (from `exp/fast-pipeline` d936e66; uncommitted: `scripts/run_full.sh`
+  made to run on Windows Git Bash too)
+- **Dataset:** `dataset/roomAttemptSadness2` (realme RMX5111, recorded by 2026-10-09; the second room of the mid report,
+  so far only v3 / splatfacto runs R-002, R-004, R-010)
+- **Command(s):** first attempt `GPU_EVERY=120 bash scripts/run_full.sh dataset/roomAttemptSadness2 v9pgsr -- --sfm_args "--retrieval 20"
+  --init fmvs --planar 0.2 --blur 0.0222 --pgsr` (the R-023 / R-031 recipe; training uses this branch's exact TV-loss
+  speed-up and the blur colour grid applied once, R-062; first run of those together with `--pgsr`)
+- **Goal:** a v9 model + semantics of the second room (3.2, 4.2), and the first check of the speed-ups with PGSR.
+- **Restart (01:42):** `GPU_EVERY=120 bash scripts/run_full.sh dataset/roomAttemptSadness2 v9pgsr8 -- --window 8
+  --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
+- **Start → end:** 01:30 first attempt (failed 01:39); 01:42 → 03:27 (stopped in sem2d); resumed 05:54 → 06:21
+- **Errors during the run:**
+  1. 01:39 sfm — `vocab_tree_matcher` exited with status 3221226505 (0xC0000409) right after `matches_importer`; Git Bash
+     also printed `child_copy: cygheap read copy failed ... Win32 error 299`. Cause: system RAM exhausted (16 GB PC,
+     ~7 GB taken by other programs; the agent was running a `layout.py` test (2.5 GB, stuck) and an MCMC smoke test
+     that caches ~6.6 GB of images at the same time; the smoke test also died, `numpy ... _ArrayMemoryError`). Fix: one
+     GPU/RAM job at a time. Select had picked 1,381 keyframes (window 6) = ~8.4 GB of cached images in training, more
+     than the ~9 GB this PC has free, so the run was restarted at 01:42 as tag `v9pgsr8` with `--window 8`
+     (~1,090 frames, like newRoom's 1,165). (resolved by restart)
+  2. 03:16–03:27 sem2d — ~12 s per frame (50 of 500 frames in ~10 min; R-025 on newRoom: ~4 s per frame). GPU memory
+     7,944 / 8,192 MiB at 100%: the batched tile pass (`exp/fast-pipeline` ddd33e8, all zoomed tiles of a frame in one
+     Grounding DINO call) filled the 8 GB card and Windows spilled GPU memory into system RAM. Stopped by the agent at
+     03:27 (sem2d killed, run_full.sh ended). Fix: `semantic2d.py --tile_batch` (default 1 = one tile per call, the
+     pre-ddd33e8 behaviour). The run continues with `--from sem2d` after the newRoom experiments (scratchpad `queue3.sh`).
+- **Progress (v9pgsr8):** select 1,042 keyframes (window 8; predicted blur median 7.0 px over all 8,731 frames).
+  SfM 21.3 min: one component, 1,014 / 1,042 registered, 1,000 kept (14 dropped as jumps), 146,818 points; Sim3 to
+  ARCore 777 inliers, median 3.3 cm. SfM vs ARCore camera centres: median 3.0 cm up to video frame 5800, 8.0 cm for
+  5800–6250, 43 cm (p90 2.6 m) after 6250 (ARCore drifts late in the walk; SfM is the reference there).
+  `sfm_scale_check.py`: no shrunken block; one block at 2.2× (frames ~5898–6200) = close-ups of a curtain filling the
+  view, where Metric3D reads too near (SfM agrees with ARCore there): this is why the check only flags blocks < 0.5×.
+- **Stage times so far:** select 4.5 (first attempt) / not re-timed, SfM 21.3, prior ~6, init 19.1 (PatchMatch 18.7),
+  train 36.2 (with PGSR, 15k steps), ply 1.2, layout 5.6 min (2.775 m room height; ceiling candidates 2.78 m weight 1.00
+  with 1.7% above, 3.02 m weight 0.26, 2.46 m weight 0.20).
+- **Result:** `dataset/roomAttemptSadness2/work_v9pgsr8_sfm/gs_v9pgsr8/` (`splat.ply`, `layout/`, `semantic_v10/`,
+  `mesh/`, `stages.tsv`, `sfm_scale_check` not run: the warning was added after this run's prior stage); web bundle
+  `prototype/web-ui/public/scans/roomAttemptSadness2_v9pgsr8/` (33 MB, gitignored). Stage times: run_v8 87.7 min
+  (select 3.6, SfM 21.3, prior 6.3, init 19.1, train 36.2, ply 1.3), layout 5.6, sem2d 24.6 (resumed run, one tile per
+  call, 500 frames), sem3d 0.4, verify 0.3, sem3d2 0.4, mesh 0.3, meshlabels 0.5, web 0.2 min. Layout: 2.775 m
+  height. Semantics v10: floor tilt 0.67°, ceiling height 2.819 m, floor area 11.92 m²; **22 fixtures accepted**
+  (door 1, window 1, light switch 8, power socket 5, ceiling light 4, tube light 1, lamp 2), 51 rejected. Not
+  measured: off-path quality (no held-out split), tape, fixture correctness (no person has checked them; the v10 rules
+  were tuned on newRoom).
+- **Verdict:** **kept as the v9 model of the second room** (COMPLETION_PLAN 3.2 done for this room; 4.2 needs a person
+  to check the 22 fixtures against the room). Not copied to `saved_models/` (Tayyab to decide).
+
+### R-070 · 2026-11-14 · newRoom: MCMC densification at the baseline budget (`mcmc620`)
+- **Who / machine:** Tayyab (agent, overnight session) · RTX 3070 PC
+- **Branch / commit:** `exp/overnight-2026-11-14` (uncommitted: the `--mcmc_cap` option in `geo_splatfacto.py` until it is tested)
+- **Dataset:** newRoomAttemptSadness, `work_v9e2e_sfm` (R-020's SfM, prior, fast-MVS init and off-path split)
+- **Command(s):** `train_eval.sh mcmc620 --mcmc_cap 620000` (scratchpad helper = R-062's commands: `geo_splatfacto.py --data work_v9e2e_sfm/transforms_fmvs.json --iters 15000 --dash_res_steps 7500 --stop_split_at 7500 --no_eval --prior mono_prior/train_v9e2e.npz --planar_lambda 0.2 --blur_exposure 0.0222 --mcmc_cap 620000`, `ns-export`, `eval_offpath.py` vs `gs_v9e2e` on the 79 off-path frames)
+- **Goal:** gsplat `MCMCStrategy` (3DGS as MCMC, Kheradmand et al. 2024: relocation of dead Gaussians + position noise, opacity / scale regularisers 0.01) instead of splatfacto's split / clone / prune, capped at ~620k Gaussians (v9e2e has 619,056). New `--mcmc_cap` option in `geo_splatfacto.py`. Does it beat R-062 (25.14 / 0.8251) at the same size?
+- **Start → end:** 03:27 → 04:03 (train 35.0 min)
+- **Errors during the run:** none so far
+- **Result:** `work_v9e2e_sfm/gs_mcmc620/` (eval sheets in `eval/`). MCMC grew from the 258k-point init by 5% per 100
+  steps as expected (e.g. step 900: 15,352 relocated, 14,954 added, 314,042 total); the exported `splat.ply` has
+  402,989 Gaussians (why fewer than the cap was not investigated). Off-path, 79 frames: **PSNR(cf) 24.65 / SSIM 0.8216 /
+  sharpness 0.64 / flatness 0.98 cm** vs v9e2e 25.16 / 0.8247 / 0.80 / 0.77 and R-062 25.14 / 0.8251 / 0.80 / 0.81.
+  Full-resolution steps ~209 ms (R-062 ~160 ms). Crops: printer edges, plant leaves and floor grain visibly softer.
+- **Verdict:** **rejected** (one setting). Possible reasons, not tested: relocation stops at step 7,500 (half of
+  training; gsplat's default keeps it to 25k of 30k), interaction with the DashGaussian low-resolution phase and the
+  depth / normal priors, the opacity regulariser pushing opacities down.
 
 
 ### R-071 · 2026-11-19 · scan_009_057ed3beb4fc: loop closure: gyro bias from far-apart image pairs, rot_sfm with all pairs, prior BA (`v9pfl`)

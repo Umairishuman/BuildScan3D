@@ -34,6 +34,7 @@ import { SemanticLayersState, RenderMode } from "@/components/Viewer3D/SceneBuil
 import { MeasurementRecord } from "@/components/Viewer3D/MeasurementTool";
 import { ExportModal } from "@/components/ExportModal";
 import { MOCK_PROJECTS } from "@/lib/mockData";
+import { useAllProjects } from "@/lib/useAllProjects";
 import { Eye, EyeOff } from "lucide-react";
 
 interface ViewerPageProps {
@@ -42,11 +43,42 @@ interface ViewerPageProps {
 
 type PanelKey = "layers" | "measurements" | null;
 
+/** Ids of scan bundles listed automatically from public/scans/ or the R2 bucket (src/lib/scanBundles.ts BUNDLE_ID_PREFIX). */
+const BUNDLE_ID_PREFIX = "run-";
+
 export default function ViewerPage({ params }: ViewerPageProps) {
   const { id: projectId } = use(params);
   const project = MOCK_PROJECTS.find((p) => p.id === projectId);
-  if (!project) notFound();
-  return <ViewerWorkspace project={project} />;
+  // Mock projects without a scan bundle open straight away. Hand-written projects with a bundle go through the
+  // listed projects too, so on a server without their local folder they open the published copy (D-076).
+  if (project && !project.scanUrl) return <ViewerWorkspace project={project} />;
+  // Not hand-written: only an auto-listed bundle can still match; anything else is a 404 straight away.
+  if (!project && !projectId.startsWith(BUNDLE_ID_PREFIX)) notFound();
+  return <BundleViewer projectId={projectId} />;
+}
+
+function BundleViewer({ projectId }: { projectId: string }) {
+  const { projects, loading, error } = useAllProjects();
+  const project = projects.find((p) => p.id === projectId);
+  // wait for the list even for a hand-written project: its scanUrl may still change to the published copy
+  if (project && !loading) return <ViewerWorkspace project={project} />;
+  if (loading) {
+    return (
+      <AppShell variant="contained" activeNav="projects">
+        <p className="py-16 text-center text-sm text-[#64748b]">Loading scan…</p>
+      </AppShell>
+    );
+  }
+  if (error) {
+    return (
+      <AppShell variant="contained" activeNav="projects">
+        <p className="py-16 text-center text-sm text-[#64748b]">
+          Could not list the processed scans ({error}).
+        </p>
+      </AppShell>
+    );
+  }
+  notFound();
 }
 
 /* --------------------------- Semantic Layers config --------------------------- */
@@ -103,6 +135,7 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
   const [hiddenGroups, setHiddenGroups] = useState<string[]>([]);
   const [tintByClass, setTintByClass] = useState(false);
   const [showFixtures, setShowFixtures] = useState(true);
+  const [selectedFixture, setSelectedFixture] = useState<string | null>(null);
   const isRealScan = Boolean(project.splatUrl || project.scanUrl);
   const chromeTimeoutRef = useRef<number | null>(null);
 
@@ -245,6 +278,10 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
                   showMesh={renderMode === "mesh"}
                   showFixtures={showFixtures}
                   onScanLoaded={setScanInfo}
+                  onFixtureClick={(id) => {
+                    setSelectedFixture(id);
+                    setOpenPanel("layers");
+                  }}
                   onMeasurementsChange={setMeasurements}
                   onHoverCoordinate={setHoveredCoordinate}
                   onOrbitChange={handleOrbitChange}
@@ -374,6 +411,8 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
                         showFixtures={showFixtures}
                         onToggleFixtures={() => setShowFixtures((v) => !v)}
                         onFlyTo={(point) => canvasRef.current?.flyTo?.(point)}
+                        selectedFixtureId={selectedFixture}
+                        onSelectFixture={setSelectedFixture}
                       />
                     </FloatingSidePanel>
                   ) : openPanel === "layers" ? (

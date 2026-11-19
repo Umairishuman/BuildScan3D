@@ -47,7 +47,30 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [-0.98, -0.06, -0.2], target: [-1.98, -0.36, -0.2] },
   },
   {
-    // R-039 (2026-11-14). Bundle is local only (git-ignored, other.spz > CI's 10 MB limit): rebuild with run_full.sh.
+    // Scan #8 (scan_008_7b486c855ed6), run R-039 (tag r1116w9, --window 9, D-073). Numbers from the bundle's
+    // scan.json and layout.json. The bundle is gitignored (D-061): it exists only on the Ubuntu PC that ran it.
+    id: "scan-008",
+    name: "Scan #8 (Real Capture)",
+    floor: "Room not named yet",
+    block: "Residence",
+    area: "≈ 21 m²",
+    location: "Scan #8 • R-039 • ≈ 21 m²",
+    dateCaptured: "Nov 16, 2026",
+    status: "ready",
+    statusLabel: "3DGS Ready · 2.51M splats · labelled",
+    thumbnail: "/thumbnails/scan_008_plan.png",
+    scansCount: 1,
+    gaussianCount: "2,506,236",
+    accuracy: "Room 6.03 × 4.40 m auto-measured (no tape check yet)",
+    captureDevice: "Infinix X6833B (ARCore)",
+    description:
+      "Real 6-minute phone video reconstructed with the BuildScan pipeline (R-023 recipe, every 9th frame) and labelled automatically: walls, floor, ceiling, a door, two windows, four switches, three sockets and a ceiling light, plus a surface mesh. Floor 21.3 m², ceiling 3.19 m (not checked against a tape).",
+    scanUrl: "/scans/scan_008_7b486c855ed6_r1116w9/",
+    // Middle of the detected fixtures, 1.5 m above the floor (floor y = -3.12), looking at door_1.
+    splatStart: { position: [7.7, -1.6, 4.0], target: [9.85, -1.9, 2.32] },
+  },
+  {
+    // R-069 (2026-11-14). Bundle is local only (git-ignored, other.spz > CI's 10 MB limit): rebuild with run_full.sh.
     id: "bedroom-scan",
     name: "Bedroom Scan (Real Capture)",
     floor: "Ground Floor",
@@ -88,7 +111,7 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [-0.98, -0.06, -0.2], target: [-1.98, -0.36, -0.2] },
   },
   {
-    // R-038 (2026-11-12), dataset/scan_3028a4de8fa0 gs_v10inc. File is local only (git-ignored, > 10 MB).
+    // R-068 (2026-11-12), dataset/scan_3028a4de8fa0 gs_v10inc. File is local only (git-ignored, > 10 MB).
     id: "lecture-hall-scan",
     name: "Lecture Hall Scan (Real Capture)",
     floor: "—",
@@ -104,7 +127,7 @@ export const MOCK_PROJECTS: Project[] = [
     accuracy: "Scaled by ARCore (100 frames, median 6.6 cm); table length not re-measured",
     captureDevice: "realme RMX5111 (ARCore)",
     description:
-      "Lecture hall (scan_3028a4de8fa0) with the fast recipe on the incremental-mapper SfM (R-038): 572 of 842 frames, no shrunken 'mini room'. The right-hand part of the walk did not register, so that side is built only from the opposite side. Unlabelled.",
+      "Lecture hall (scan_3028a4de8fa0) with the fast recipe on the incremental-mapper SfM (R-068): 572 of 842 frames, no shrunken 'mini room'. The right-hand part of the walk did not register, so that side is built only from the opposite side. Unlabelled.",
     splatUrl: "/splats/hall_v10inc.spz",
   },
   {

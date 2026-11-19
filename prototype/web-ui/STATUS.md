@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-11-19 (`scan-009-loop`: R-071, the loop-closed scan_009 model, added to the project list)
+Last updated: 2026-11-19 (`scan-009-loop`: R-071, the loop-closed scan_009 model, added to the project list) Merged with `master` the same day; before that: 2026-11-19 (published scans from the R2 bucket listed for the Vercel site, D-076; earlier: wall-gap openings and no-roof / open-outline flags shown; earlier the same day: every scan bundle listed in the Projects tab); merged with `master`: 2026-11-15 (real models in the project list: bedroom, lecture hall, scan 009 + its pose-free model, newRoom v9e2e / v6 / v3; local-only files)
 
 ---
 
@@ -132,6 +132,94 @@ real path.** Currently only `/dashboard` has a href.
 
 ## 4. Completed
 
+### Published scans from the R2 bucket (online site) ✅ code, not deployed yet (2026-11-19, repo D-076, issues #27 / #28 / #29)
+- **Why:** Umair wants Tayyab and evaluators to see the scans on `https://build-scan-3d.vercel.app/` without sharing
+  datasets; bundles live in a public Cloudflare R2 bucket, one prefix and one `index.json` per person.
+- **New** `src/lib/remoteBundles.ts` (server only): when `SCANS_BASE_URL` is set, reads `owners.json` and each
+  `scans/<owner>/index.json` (no-store, 8 s timeout; a broken index skips only that owner) and builds the same cards as
+  local bundles, id `run-<owner>-<folder>`, title "Umair · Scan #7 · <room or tag>", thumbnail the published
+  `plan.png`, `scanUrl` absolute in the bucket. **New** `src/lib/mergeProjects.ts` (pure, from `useAllProjects.ts`):
+  a hand-written project whose folder is not on the server (`scan-008` on Vercel) opens the published copy of that
+  folder; a local bundle always wins. **Modified** `src/lib/scanBundles.ts` (card builder `bundleToProject` shared;
+  `planImagePath` also finds `work_<model tag>_sfm/gs_<tag>/` for re-runs, so the R-054 – R-057 cards get their plan
+  instead of the logo), `src/app/api/scans/route.ts` (local + published, `force-dynamic`), `src/app/viewer/[id]/page.tsx`
+  (hand-written projects with a bundle wait for the list), `ProjectCard.tsx` / `DashboardHome/Overview.tsx`
+  (`unoptimized` for absolute thumbnails, no remote image config needed). Without `SCANS_BASE_URL` nothing changes.
+- **Verification:** `npx tsc --noEmit` silent; eslint on the changed files clean; `npx next build` ok. `next dev` on
+  :3006 with `SCANS_BASE_URL` pointing at a local folder bucket written by `scripts/publish_scan.py --target dir:`
+  (served with `Access-Control-Allow-Origin: *`): `/api/scans` lists Umair's scans #7 / #8 and a test "Tayyab" scan #3
+  with owner, room name and plan thumbnails; `/projects`, `/viewer/run-umair-…`, `/viewer/run-tayyab-…`,
+  `/viewer/scan-008` 200, unknown id 404. `mergeProjects` tested with Node (Vercel case, local-wins case, nothing
+  published). **Not checked in a browser, not deployed, not tried against R2.**
+- **Later 2026-11-19:** real bucket (`https://pub-bb143f8a2567472b944c2c4f06f1f08c.r2.dev`, 7 bundles, 0.24 GB): listed
+  3 of 3 times after one retry was added (`fetch failed` once). **Where it runs decides what is listed (Umair):** on
+  Vercel (`VERCEL=1`, override `SCANS_LOCAL=0/1`) only published scans, and hand-written scan cards without a
+  published copy are hidden (`newroom-scan`; `scan-008` opens its published `r1116w9`); on a PC local bundles +
+  published ones, a folder that is both shows once, marked "· online". Checked with `next dev` both ways against the
+  bucket. Local config: `prototype/web-ui/.env.local` with `SCANS_BASE_URL` (gitignored). Still not seen in a browser.
+
+### Wall-gap openings, no-roof and open-outline flags in the viewer ✅ (2026-11-19, Step 4 issues #8 / #9 / #10)
+- **Why:** the pipeline now finds doorways / window openings without a leaf from gaps in the walls, knows when a space
+  has no roof, and when its outline is not a closed room; the viewer should show it.
+- **Modified** `src/components/Viewer3D/scanTypes.ts`: `ScanInfo.open_top?`, `room_closed?`, `warnings?`;
+  `ScanFixture.source?` ("wall gap (layout)"); `FIXTURE_COLORS` for `doorway` / `window opening`.
+  `src/components/ProjectDetail/ScanLayersPanel.tsx`: a wall-gap opening shows "Found from: wall gap (layout)" in the
+  size card and "wall gap" in the list instead of a frame count. `src/lib/scanBundles.ts`: cards say "no roof" /
+  "open outline" in the status label, the facts and layout warnings in the description, "No roof: wall height only"
+  as accuracy. Older bundles without these fields are unchanged.
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` 0 errors, 1 known warning. Bundles
+  with the new fields: `public/scans/scan_007_e6d4f090f88e_r1119a/`, `scan_003_6de634cbb8b2_r1119a/` (R-054).
+  **Not checked in a browser.**
+
+### Every processed scan bundle in the Projects tab ✅ (2026-11-19, Umair's ask, repo D-074)
+- **Why:** each new run needed a hand-written `mockData.ts` entry before it could be opened; Umair wants every scan
+  viewable from the Projects tab.
+- **New** `src/lib/scanBundles.ts` (server only): every folder in `public/scans/` with a `scan.json` becomes a `Project`
+  with id `run-<folder>`: splat count, walls, floor area, ceiling height and fixture counts from `scan.json`; "Scan #N"
+  from `../../dataset/.scan_numbers.tsv`; run ID and date from the `docs/progress/TRAINING.md` heading naming the tag
+  (else the `scan.json` time); thumbnail = the run's `layout/plan.png` (else `/images/logo-new.png`); start camera =
+  middle of the fixtures 1.5 m above the floor, looking at a door (no fixtures: Spark's default at the origin).
+  **New** `src/app/api/scans/route.ts` (GET → JSON list) and `src/app/api/scans/[folder]/plan/route.ts` (serves the
+  plan; only for listed folders, so no path is built from the URL). **New** `src/lib/useAllProjects.ts`: hand-written
+  projects + bundles, skipping bundles a hand-written project already uses (`newroom-scan`, `scan-008`); real scans
+  first. **Modified** `src/app/projects/page.tsx` (uses the hook) and `src/app/viewer/[id]/page.tsx` (`run-` ids are
+  looked up through the hook with a "Loading scan…" state; any other unknown id still `notFound()` on the server).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` 0 errors, 1 known warning
+  (ExportModal.tsx:29); `npx next build` ok (adds `ƒ /api/scans`, `ƒ /api/scans/[folder]/plan`); `next start` on
+  :3005: `/api/scans` lists 9 bundles (7 new cards), `/projects` 200, `/viewer/run-scan_007_e6d4f090f88e_r1118` 200,
+  `/viewer/scan-008` 200, `/viewer/newroom-scan` 200, `/viewer/does-not-exist` 404, plan of a listed run 200, `..`
+  folder 404. Headless Chrome: `/projects` shows the 7 new cards with their plans; `/viewer/run-scan_003_…_r1112lev`
+  shows the title, run ID, ceiling, splat count and fixture markers, splats still loading after 60 s (software
+  rendering). **Not checked in a real browser.**
+
+### Scan #8 as its own project (`scan-008`) ✅ (2026-11-18, Umair's ask)
+- **Why:** the portal only knew the living room (`newroom-scan`); scan #8 (R-039, tag `r1116w9`) had a bundle in
+  `public/scans/` but nothing pointed at it.
+- **Modified** `src/lib/mockData.ts`: new `scan-008` entry (`scanUrl: "/scans/scan_008_7b486c855ed6_r1116w9/"`). Numbers come
+  from the bundle's `scan.json` (2,506,236 splats, floor 21.26 m², ceiling 3.194 m, 11 fixtures) and the run's
+  `layout/layout.json` (6.03 × 4.40 m between opposite walls). Start camera: middle of the detected fixtures, 1.5 m above
+  `floor_y` −3.12, looking at `door_1`. `newroom-scan` is unchanged (still `/scans/newroom/`).
+- **New** `public/thumbnails/scan_008_plan.png`: a copy of the run's own top-down plan (`gs_r1116w9/layout/plan.png`),
+  not a photo.
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` gives 0 errors and 1 known warning
+  (ExportModal.tsx:29); `npx next build` compiled and prerendered all 8 routes (through `micromamba run -n bs-ns`);
+  the dev server returns 200 for `/projects`, `/viewer/scan-008`, `/viewer/newroom-scan` and the thumbnail.
+  **Not checked in a browser** (start pose untested). Room not named yet; no tape check.
+
+### Fixture size card (FR10) and clickable fixture markers ✅ (2026-11-12, COMPLETION_PLAN 4.3, Umair's session)
+- **Why:** FR10 asks for per-element dimensions; the list showed width × height and the centre height in one grey line,
+  and clicking a marker in 3D did nothing.
+- **Modified** `ProjectDetail/ScanLayersPanel.tsx`: a clicked fixture row opens a size card (width, height, area,
+  centre / bottom / top above the floor, wall and position along it, confirming frames); clicking again closes it.
+  New optional props `selectedFixtureId`, `onSelectFixture`. `Viewer3D/SplatCanvas.tsx`: optional `onFixtureClick`;
+  outside measure mode a click (not a drag) on a fixture marker reports its id. `Viewer3D/scanTypes.ts`: optional
+  `bottom` / `top` on `ScanFixture`. `app/viewer/[id]/page.tsx`: `selectedFixture` state; a marker click opens the
+  Layers panel on that fixture. Pipeline side: `src/arcore3dgs/export_web.py` now also writes `bottom` / `top`
+  (older bundles without them still work: the card leaves those rows out).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` → 0 errors, 1 known warning
+  (ExportModal.tsx:29); `npx next build` compiled + prerendered all routes (run through `micromamba run -n bs-ns`,
+  where Node lives on the Ubuntu PC). **Not checked in a browser**, and no size checked against tape yet.
+
 ### Loop-closed scan_009 model in the project list ✅ (2026-11-19, night session for Tayyab)
 - **Modified** `src/lib/mockData.ts`: `scan-009-loop` (`/splats/scan009_v9pfl.spz`, R-071: gyro + accelerometer camera
   path with the loop closed, 680 keyframes, 454,442 splats, 8.6 MB, status draft, start pose frame_00001
@@ -148,14 +236,14 @@ real path.** Currently only `/dashboard` has a href.
   `next build` not re-run; not looked at in a browser.
 
 ### More real models in the project list ✅ (partly, 2026-11-15, user ask: "add other splats as an option to be viewed too which exist")
-- **Modified** `src/lib/mockData.ts`: `bedroom-scan` (labelled bundle `/scans/roomAttemptSadness2_v9pgsr8/`, R-039,
+- **Modified** `src/lib/mockData.ts`: `bedroom-scan` (labelled bundle `/scans/roomAttemptSadness2_v9pgsr8/`, R-069,
   1,445,529 splats, floor 11.9 m², ceiling 2.82 m from its scan.json; fixtures not checked by a person) and
   `newroom-v9e2e` (single file `/splats/newroom_v9e2e.spz`, copy of `saved_models/2026-10-26_v9_e2e`, R-020).
   `saved_models/2026-10-24_v8_geofast15` left out on purpose (R-015: do not use, D-028).
 - **New asset** `public/thumbnails/room2_v9.jpg`: a real keyframe of the capture (`frame_01388`, rotated upright, 1200x675).
 - **Modified** `.gitignore`: `/public/splats/*.spz` and `/public/scans/roomAttemptSadness2_v9pgsr8/` (files over the
   CI 10 MB limit, D-055); they live only on the machine that made / copied them, like the old PLY.
-- **Added after R-045's training (RAM free again):** `lecture-hall-scan` (`/splats/hall_v10inc.spz`, R-038,
+- **Added after R-045's training (RAM free again):** `lecture-hall-scan` (`/splats/hall_v10inc.spz`, R-068,
   scan_3028a4de8fa0, 637,318 splats), `newroom-v6` (R-012) and `newroom-v3` (R-009) as "older version" cards, and
   `scan-009` (`/splats/scan009_v9pgsr.spz`, R-045, a partial model of a capture that failed check_capture, status
   draft). PLYs converted with `src/arcore3dgs/to_spz.mjs` (1.5–2.8 s each). New thumbnails `hall_v10inc.jpg`,
@@ -740,6 +828,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | **Orphaned dead code** | `Viewer3D/ViewerHUD.tsx` | The retired dark HUD. Nothing imports it. User declined deletion once — **ask before removing.** |
 | **List view does nothing** | `dashboard/page.tsx` | `viewMode` state drives only button styling; the grid is always 3-col. Either implement the list layout or remove the toggle. |
 | **`globals.css` conflicts** | `src/app/globals.css` | Duplicate `--background` declaration, plus a `prefers-color-scheme: dark` block setting `#0a0a0a`. Currently inert because `layout.tsx` hardcodes `bg-[#f8fafc]` on `<body>` — but it is a live trap. |
+| Hand-written scan cards on Vercel | `src/lib/mockData.ts` | `scan-008` opens the published `r1116w9`; `newroom-scan` (git-tracked `newroom/`, not published) is hidden there by design. Published card dates come from TRAINING.md headings naming the tag; scan #1 (`umair`, R-029 has no tag in its heading) shows the publish date. |
 | 1 pre-existing lint warning | `ExportModal.tsx:29` | Unused `filename` param. Harmless; clean up when touching the file. (FloorPlanView deleted — its 3 warnings gone with it.) |
 | Non-functional controls | dashboard date-range button, `View all activity →` footer link in the notifications panel, "Export as PDF" in `ReportTab.tsx` | Bell is now wired (Step 5); the rest stay stubs. `Generate Report` in ReportTab shows a spinner + updates the timestamp but doesn't produce a file. |
 | Search is shallow | `dashboard/page.tsx` | Filters name/block/floor only. |
@@ -750,7 +839,10 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | Nav items are inert | `lib/navigation.ts` | Projects/Scans/Reports/Team/Settings have `href: null` by design until built. |
 | ~~Mock-scene controls on real scans~~ | `viewer/[id]/page.tsx` | Resolved 2026-10-24: hidden for splat projects. Bring back once real semantic layers exist. |
 | ~~148 MB PLY over HTTP~~ | `public/splats/` | Resolved 2026-10-24: served as 12.5 MB `.spz`. |
-| Missing project thumbnails | `public/thumbnails/` | All pre-existing fixtures point at `/thumbnails/card*.jpg`, which do not exist (folder was absent until this step added `newroom_v6.jpg`). |
+| Small fixture markers | `Viewer3D/SplatCanvas.tsx` | Markers are 4.5 cm spheres, so clicking one in 3D needs a close view; the list in Scan Layers is the reliable way. |
+| Scan #8 bundle exists only on the Ubuntu PC | `mockData.ts` (`scan-008`) | `public/scans/scan_008_7b486c855ed6_r1116w9/` is gitignored (D-061), so on any other machine `/viewer/scan-008` cannot load the scan. The scan #8 layout also covers two small rooms next to the main one (see `plan.png`). |
+| Auto-listed scans need a Node server | `src/lib/scanBundles.ts`, `src/app/api/scans/` | The list is read from disk on each request, so it works with `next dev` / `next start`, not a static export. Each machine lists only its own bundles (gitignored, D-061). Cards say "Scan #N · tag" because room names are not recorded anywhere yet. `/viewer/run-<unknown>` answers 200 first and then shows the not-found page on the client. |
+| Missing project thumbnails | `public/thumbnails/` | All pre-existing fixtures point at `/thumbnails/card*.jpg`, which do not exist. `newroom_v6.jpg` (the Living Room card) is not on the Ubuntu PC either (2026-11-19: only `scan_008_plan.png` is there). |
 
 ---
 
@@ -773,9 +865,13 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-11-19** — Wall-gap openings (`doorway`, `window opening`) and no-roof / open-outline flags shown in cards and Scan Layers.
+- **2026-11-19** — Projects tab lists every processed scan bundle in `public/scans/` (`/api/scans`, `/viewer/run-<folder>`).
+- **2026-11-18** — Scan #8 (R-039) added as its own project `scan-008`; the plan image is its thumbnail.
 - **2026-11-19** — `scan-009-loop` (R-071, loop-closed sensor camera path) added to the project list.
 - **2026-11-18** — `scan-009-gyro` (R-047, gyro-checked cameras) added to the project list.
 - **2026-11-15** — Real models added to the project list: `bedroom-scan` (labelled), `lecture-hall-scan`, `scan-009` (partial), `scan-009-posefree` (R-046), `newroom-v9e2e`, `newroom-v6`, `newroom-v3`; local model files git-ignored.
+- **2026-11-12** — Fixture size card in Scan Layers (width, height, area, heights above floor, wall) and clickable fixture markers (FR10).
 - **2026-11-06** — `newroom-scan` no longer points at the unused `/splats/newroom_v6.spz`; the file is out of git (CI 10 MB limit).
 - **2026-11-03** — `public/scans/newroom/` regenerated with v10 labels (15 fixtures: 6 doors, tube light class); `FIXTURE_COLORS` gains "tube light".
 - **2026-10-27** — Scan Layers panel (groups, tint, fixtures with fly-to, wall areas) and Mesh render mode on `newroom-scan`.

@@ -4,7 +4,7 @@
   python3 scripts/watch_run.py <run dir: dataset/<scan>/work_<tag>_sfm/gs_<tag>> [--label "scan #3 ..."]
                                [--session run-<tag>] [--once] [--every 5]
 
-Reads run_full.log (stage markers written by run_full.sh and run_v8.py) and train.log, and shows which of the 15
+Reads run_full.log (stage markers written by run_full.sh and run_v8.py) and train.log, and shows which of the 16
 stages is running, what it does, how long it has been running (and how long it took in R-030 for comparison), the
 training step, the GPU, and the last message with the long paths removed. Standard library only.
 """
@@ -32,6 +32,7 @@ STAGES = [
     ("mesh", "building a surface mesh", 0.1),
     ("meshlabels", "colouring the mesh with the labels", 0.2),
     ("web", "packing everything for the web viewer", 0.1),
+    ("plan", "writing the floor plan (svg, dxf)", 0.0),
 ]
 NAMES = [s[0] for s in STAGES]
 GPU_RE = re.compile(r"^\s*\[gpu (\d\d:\d\d:\d\d)\] (\d+)% \| (\d+) / (\d+) MiB \| (\d+) C \| (\d+) W")

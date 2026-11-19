@@ -57,7 +57,7 @@ if os.path.exists(os.path.join(root, "quality.csv")):
     blur = np.array([float(r[9]) for r in rows if len(r) > 9 and float(r[9]) >= 0])   # app >= 2026-10-23
     if len(blur):
         # FAIL above 15 px: scan_3028a4de8fa0 (median 24.9 px, > 10 px on 92%, walked 0.39 m/s) passed this check as
-        # READY, then SfM shrank part of the hall into a "mini room" (TRAINING R-036 / R-037). Good captures: newRoom
+        # READY, then SfM shrank part of the hall into a "mini room" (TRAINING R-066 / R-067). Good captures: newRoom
         # 6-12 px, scan #3 6.7 px.
         mb = np.median(blur)
         report("PASS" if mb <= 5 else ("WARN" if mb <= 15 else "FAIL"),
