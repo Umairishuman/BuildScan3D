@@ -95,17 +95,18 @@ if [[ $FROM_I -le $(idx ply) ]]; then
   FROM_I=$(( $(idx ply) + 1 ))
 fi
 
-# 2. room layout, 3. semantics, 4. mesh + web bundle (STATUS §5)
-stage layout     ns  "$HERE/layout.py" --ply "$M/splat.ply" --work "$S" --out "$M/layout"
+# 2. room layout, 3. semantics, 4. mesh + web bundle (STATUS §5). Step 4 options on by default since 2026-11-19 (D-075):
+#    --raised_max 1.5 --infer_gap 6 (layout), --floor_win 0.06 (sem3d), --clean_ceiling 0.04 (mesh), --square (plan)
+stage layout     ns  "$HERE/layout.py" --ply "$M/splat.ply" --work "$S" --out "$M/layout" --raised_max 1.5 --infer_gap 6
 stage sem2d      sem "$HERE/semantic2d.py" --work "$S" --every 2 --box_thr 0.28 --tiles 640 --out semantic2d_v10
-stage sem3d      ns  "$HERE/semantic3d.py" --ply "$M/splat.ply" --work "$S" --layout "$M/layout/layout.json" --out "$M/semantic_v10" --sem2d semantic2d_v10
+stage sem3d      ns  "$HERE/semantic3d.py" --ply "$M/splat.ply" --work "$S" --layout "$M/layout/layout.json" --out "$M/semantic_v10" --sem2d semantic2d_v10 --floor_win 0.06
 stage verify     sem "$HERE/verify_fixtures.py" --work "$S" --sem2d semantic2d_v10 --semantic "$M/semantic_v10"
-stage sem3d2     ns  "$HERE/semantic3d.py" --ply "$M/splat.ply" --work "$S" --layout "$M/layout/layout.json" --out "$M/semantic_v10" --sem2d semantic2d_v10 --verdicts "$M/semantic_v10/verdicts.json"
+stage sem3d2     ns  "$HERE/semantic3d.py" --ply "$M/splat.ply" --work "$S" --layout "$M/layout/layout.json" --out "$M/semantic_v10" --sem2d semantic2d_v10 --verdicts "$M/semantic_v10/verdicts.json" --floor_win 0.06
 DEPTH=(); [[ " ${V8_ARGS[*]} " == *" --pgsr "* ]] && DEPTH=(--depth unbiased)
 stage mesh       ns  "$HERE/mesh.py" --ply "$M/splat.ply" --work "$S" --out "$M/mesh" "${DEPTH[@]}"
-stage meshlabels ns  "$HERE/mesh_labels.py" --mesh "$M/mesh/mesh.ply" --ply "$M/splat.ply" --semantic "$M/semantic_v10" --layout "$M/layout/layout.json" --clean 0.01 --glb 400000
+stage meshlabels ns  "$HERE/mesh_labels.py" --mesh "$M/mesh/mesh.ply" --ply "$M/splat.ply" --semantic "$M/semantic_v10" --layout "$M/layout/layout.json" --clean 0.01 --clean_ceiling 0.04 --glb 400000
 stage web        ns  "$HERE/export_web.py" --ply "$M/splat.ply" --semantic "$M/semantic_v10" --glb "$M/mesh/mesh_web.glb" --out "$WEB_OUT"
-stage plan       ns  "$HERE/plan_export.py" --layout "$M/layout/layout.json" --semantic "$M/semantic_v10/semantic.json" --out "$M/layout" --title "$(basename "$D") $TAG"
+stage plan       ns  "$HERE/plan_export.py" --layout "$M/layout/layout.json" --semantic "$M/semantic_v10/semantic.json" --out "$M/layout" --title "$(basename "$D") $TAG" --square
 
 echo; echo "=== all done $(date '+%F %T'): model $M, web bundle $WEB_OUT"
 cat "$M/stages.tsv"
