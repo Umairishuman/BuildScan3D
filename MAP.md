@@ -150,7 +150,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does | Status |
 |---|---|---|
-| `layout.py` | Room layout: any number of walls, floor, ceiling, corners, dimensions, `plan.png` | **[v9]** |
+| `layout.py` | Room layout: any number of walls, floor, ceiling, corners, dimensions, `plan.png`; since 2026-11-19 also no-roof detection (`open_top`, #8), wall-gap openings (`openings.py`, #9), `room_closed` + warnings (#10); options `--debug`, `--raised_max`, `--infer_gap` (off) | **[v9]** |
 | `openings.py` | Doorways and window openings without a leaf / frame from gaps in each wall's surface with the model seen through them; used by `layout.py` (#9) | **[v9]** shared |
 | `plan_export.py` | As-built floor plan from `layout.json` (+ `semantic.json`): `plan.json`, `plan.svg`, `plan.dxf` (R12, layers WALLS / OPENINGS / FIXTURES / TEXT); `--square` turns near-right-angle walls (drawing aid, off by default) (#12, plan 4.9) | **[v9]** stage `plan` of `run_full.sh` |
 | `level_model.py` | Levels an already trained model with ARCore gravity (rotates splats incl. colour coefficients and poses) into a new tag, for models exported before D-071 (2026-11-12) | **[v9]** one-off tool |
@@ -158,10 +158,10 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `semantic3d.py` | Votes 2D labels onto Gaussians, structure from layout, fixture instances + geometry rules | **[v9]** |
 | `verify_fixtures.py` | CLIP crop check of switch / socket candidates | **[v9]** semantic-env |
 | `mesh.py` | TSDF mesh from rendered depth (Open3D 0.19), PGSR unbiased depth, shell flatness | **[v9]** |
-| `mesh_labels.py` | Labels onto the mesh, shell denoising, areas, `.glb` | **[v9]** |
+| `mesh_labels.py` | Labels onto the mesh, shell denoising, areas, `.glb`; `--clean_ceiling` own radius for the ceiling (off, #18) | **[v9]** |
 | `export_web.py` | Splits the model into label groups (`.spz`), `scan.json`, mesh for the viewer | **[v9]** |
 | `to_spz.mjs` | PLY → `.spz` with Spark's encoder (run from `prototype/web-ui`, Node) | **[v9]** |
-| `structure.py` | Older box-room structural layer (planes, walls, openings) | [exp] superseded by `layout.py` |
+| `structure.py` | Older box-room structural layer (planes, walls, openings) | [exp] superseded by `layout.py` (its ceiling-height item marked obsolete 2026-11-19, #18) |
 | `planarize.py` | Post-hoc snapping of splats to planes | [exp] rejected (D-017) |
 | `clean_splats.py` | Floater pruning by measured free space | [exp] not default (D-040) |
 
