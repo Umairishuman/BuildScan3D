@@ -628,6 +628,24 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   A fixed rule (window from frame count) is not made yet.
 - **By:** Umair (agent's recommendation) · **Source:** session 2026-11-16, R-038 · **Status:** Active
 
+## D-074 · 2026-11-19 · The Projects tab lists every processed scan bundle by itself
+- **Decision:** the web UI lists every folder in `prototype/web-ui/public/scans/` that has a `scan.json` as a project
+  (route `/api/scans`, `src/lib/scanBundles.ts`), opened at `/viewer/run-<folder>`. Card numbers come from the
+  bundle's `scan.json`, the scan number from `dataset/.scan_numbers.tsv` (D-065), the run ID and date from the
+  TRAINING.md heading that names the tag, the thumbnail from the run's `layout/plan.png`. Hand-written projects in
+  `mockData.ts` stay; a bundle one of them already shows (`newroom-scan`, `scan-008`) is not listed twice.
+- **Why:** Umair asked for every scan to be viewable from the Projects tab (2026-11-19); this settles the 2026-11-16
+  question "scan picker or `mockData.ts` by hand" (STATUS §7.10) and COMPLETION_PLAN 5.3 for this machine.
+- **Evidence:** 2026-11-19: 9 bundles on this PC listed, 7 new cards (newroom and scan #8 already had one);
+  `/viewer/run-…` 200, unknown non-`run-` ids still 404, a `../` folder name 404 (headless Chrome screenshot of
+  `/projects`; tsc / build pass, eslint 0 errors + the known warning).
+- **Rejected:** adding each scan to `mockData.ts` by hand (every run needs an edit and a commit); a separate scan
+  picker inside the viewer (the Projects tab is where the team looks).
+- **Limits:** bundles are gitignored (D-061), so each machine lists only its own runs; needs `next dev` / `next start`
+  (not a static export). Room names are not known, so cards say "Scan #N · tag". The splats of an auto-listed scan
+  were not seen rendering in a real browser (headless software rendering was still loading after 60 s).
+- **By:** Umair (his ask; the auto-listing approach is the agent's) · **Source:** session 2026-11-19 · **Status:** Active
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |
@@ -641,3 +659,4 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | OD-7 | Server / RunPod: wire in the v9/v10 pipeline? | The image's torch / CUDA base is settled by D-047 / D-048 (same versions, same script) |
 | OD-8 | Archive (never delete, D-049) `train_fixed2_backup.py`, `train_v3_backup.py`, the old `run_*.bat`, `scratch/`, `ViewerHUD.tsx`? Into which folder? | Owners must agree |
 | OD-9 | Update README / AGENTS.md content that no longer matches (MEP layers, ~75 min, `structure.py`)? | Facts changed by D-023, D-024, D-033 |
+| OD-12 | How to merge `origin/master` (Tayyab's PR #7, 43 commits) with Umair's Step 4 branches: run IDs R-032 … R-040 and decision ID D-069 were given to different runs / decisions on both sides | Agent's suggestion 2026-11-19: Tayyab's numbers stay (they are on `master`), Umair's clashing entries get the next free numbers with a "was R-0xx on `feature/step4-layout`" note; `layout.py` has two ceiling rules (D-072 and Tayyab's `d052301`) to reconcile |

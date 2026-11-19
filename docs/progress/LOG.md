@@ -546,3 +546,22 @@ sheet `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/semantic_v10/fi
   scans #5–#7 (each a logged run; #5 is 352.5 s long, so use `--window 9` per D-073 and watch RAM). Umair to choose
   how new scans reach the viewer (scan picker or `mockData.ts`). Thursday 2026-11-19: plan 3.18. Tape heights and the
   fixture sheets (4.1, 4.2, 4.4) still wait for Umair (no tape today).
+
+## 2026-11-19 · Umair · `feature/step4-layout` → `feature/viewer-all-scans`
+- Did: read the records for Step 4. `feature/step4-layout` fast-forwarded to `feature/viewer-scan-008` (Umair's ask;
+  it was 2 commits behind and nothing else: `b969f49` scan #8 project, `424ea4f` R-040 start). New branch
+  `feature/viewer-all-scans` (not pushed): the web Projects tab lists every bundle in `public/scans/`
+  (`/api/scans`, `src/lib/scanBundles.ts`, `src/lib/useAllProjects.ts`; opens at `/viewer/run-<folder>`), D-074.
+  Wrote up R-039 (scan #8, finished 2026-11-16 16:08, 166.7 min, 11 fixtures) and R-040 (scan #7, finished 2026-11-18
+  13:39:51, 200.6 min, 6 walls, ceiling 3.40 m, **0 fixtures: all 29 candidates rejected by the rules**), which were
+  both still "running" in TRAINING.md.
+- Found: `origin/master` has 43 commits the Step 4 branches do not (Tayyab's PR #7 and v0.3.8), including a second
+  ceiling rule in `layout.py` (`d052301`), the plan.png crash fix (`a098711`) and `tape_check.py` (plan E2). A dry
+  merge conflicts in 9 files; run IDs R-032 … R-040 and D-069 were used for different things on both sides (OD-12).
+  Not merged: needs the team's choice on numbering.
+- Runs: none started (R-039 / R-040 only written up). Decisions: D-074 (Umair's ask). Open: OD-12.
+- Problems: my first `pkill -f "next start -p 3005"` matched its own shell and killed it (no harm; used the port's PID
+  after). A placeholder splat count slipped into R-040 for one step and was replaced by the measured 1,840,851.
+- Next: Umair looks at `/projects` in a browser (does an auto-listed scan render?); decide OD-12 with Tayyab, then
+  merge `origin/master`; Step 4 Musts: tape (4.1), fixture sheets for scans #3, #8, #4 (4.2), why scan #7 has 0
+  fixtures, FR10 size card vs tape (4.3); scans #5 / #6 still unprocessed.

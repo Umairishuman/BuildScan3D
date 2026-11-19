@@ -2,7 +2,7 @@
 
 **What is where, and what each file does.** Read this first in a new session (human or agent), then
 [CLAUDE.md](CLAUDE.md) (how we work) and [docs/progress/STATUS.md](docs/progress/STATUS.md) (where the project stands).
-Last checked against the code: 2026-11-12 (branch `feature/iqa-timing`: app changelog `android/CHANGELOG.md`, update checks on start and return, `iqa_ms`; earlier: app moved to `android/` §6, USB upload, light UI).
+Last checked against the code: 2026-11-19 (web UI: `/api/scans` lists every scan bundle, D-074; earlier 2026-11-12: branch `feature/iqa-timing`: app changelog `android/CHANGELOG.md`, update checks on start and return, `iqa_ms`; earlier: app moved to `android/` §6, USB upload, light UI).
 When you add, move, retire or repurpose a file, update this map in the same commit.
 
 Markers: **[v9]** = part of the current best pipeline (v9 processing + v10 semantics) · [eval] = evaluation /
@@ -263,13 +263,16 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | Path | What |
 |---|---|
 | `src/app/` | Routes: `/` login, `/dashboard`, `/projects`, `/projects/new`, `/viewer/[id]`, `/floorplan/[id]`, `/workspace/boiler-room` |
+| `src/app/api/scans/route.ts`, `src/app/api/scans/[folder]/plan/route.ts` | Lists every bundle in `public/scans/` as a project (JSON) and serves each run's `layout/plan.png` as its thumbnail (D-074) |
+| `src/lib/scanBundles.ts` | Server side: reads the bundles' `scan.json`, `dataset/.scan_numbers.tsv` and the TRAINING.md headings (run ID, date) into project cards |
+| `src/lib/useAllProjects.ts` | Client hook: `mockData.ts` projects + the listed bundles (no duplicates); used by `/projects` and `/viewer/run-<folder>` |
 | `src/components/Viewer3D/SplatCanvas.tsx` | **Real scan viewer** (Spark, `.spz`, label groups, mesh mode, measuring) |
 | `src/components/Viewer3D/Canvas3D.tsx`, `SceneBuilder.ts`, `MeasurementTool.ts` | Mock 3D scene (procedural room) and measuring for mock projects |
 | `src/components/ProjectDetail/ScanLayersPanel.tsx` | Scan Layers panel for real scans |
 | `src/components/...` | Dashboard, projects, floor plan, notifications, modals (mostly mock data) |
-| `src/lib/mockData.ts` | All mock projects / scans (the real scan is `newroom-scan`) |
+| `src/lib/mockData.ts` | Mock projects and the hand-written real ones (`newroom-scan`, `scan-008`); other processed scans are listed automatically (`scanBundles.ts`) |
 | `public/scans/newroom/` | The real labelled scan bundle (from `export_web.py`) |
-| `public/scans/scan_<id>_<tag>/` | Per-run bundles written by every `run_full.sh` run; gitignored (D-061), live only on the machine that ran it |
+| `public/scans/scan_<id>_<tag>/` | Per-run bundles written by every `run_full.sh` run; gitignored (D-061), live only on the machine that ran it; each one appears in the Projects tab by itself (D-074) |
 | `public/splats/` | Empty. The old v6 splat (`newroom_v6.spz`, 12.5 MB, unused since the labelled bundle) was taken out of git on 2026-11-06 (D-055); local copy in `saved_models/web/` on the Ubuntu PC |
 
 ## 8. `docs/`

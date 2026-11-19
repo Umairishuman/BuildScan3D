@@ -71,8 +71,8 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-036 | 2026-11-12 | scan #2 levelled (`r1106lev`), layout → web | this PC | 8.5 min | height 1.50 → 2.41 m (wall-top rule), 1 wall, 10 fixtures | Inconclusive: weak capture (camera in 0.8 × 0.7 m); re-record |
 | R-037 | 2026-11-12 | newRoomAttemptSadness, R-023 recipe, full pipeline (`r1112nr`), first run with D-071 / D-072 | this PC (Ubuntu, RTX 4000 Ada) | 103.0 min (run_v8 81.4) | 1157/1166 frames; gravity 0.00°; 6.63 × 4.37 m (R-023 6.60 × 4.36); height 2.81 m (R-023 2.72, via D-072); 18 fixtures (15) | Kept (machine agreement on size); height and PSNR not settled |
 | R-038 | 2026-11-16 | scan_008_7b486c855ed6, R-023 recipe, full pipeline (`r1116`), first Infinix X6833B capture | this PC (Ubuntu, RTX 4000 Ada) | 49.7 min, did not finish | 1639 of 10255 frames; COLMAP `global_mapper` killed by OOM (26.1 GB) at 13:16 | Failed (OOM in SfM) |
-| R-039 | 2026-11-16 | scan_008 re-run with `--window 9` (`r1116w9`, D-073), R-023 recipe otherwise | this PC (Ubuntu, RTX 4000 Ada) | running | pending | Running |
-| R-040 | 2026-11-18 | scan #7 `scan_007_e6d4f090f88e` (269 s), R-023 recipe, default window 6 (`r1118`) | this PC (Ubuntu, RTX 4000 Ada) | running | pending | Running |
+| R-039 | 2026-11-16 | scan_008 re-run with `--window 9` (`r1116w9`, D-073), R-023 recipe otherwise | this PC (Ubuntu, RTX 4000 Ada) | 166.7 min (run_v8 145.4) | 1118/1118 frames; gravity 0.00°; 5 walls, floor 21.26 m², ceiling 3.19 m; 11 fixtures (unchecked) | Kept for now (in the web UI) |
+| R-040 | 2026-11-18 | scan #7 `scan_007_e6d4f090f88e` (269 s), R-023 recipe, default window 6 (`r1118`) | this PC (Ubuntu, RTX 4000 Ada) | 200.6 min (run_v8 175.4) | 1159/1160 frames; gravity 0.00°; 6 walls, floor 19.66 m², ceiling 3.40 m; **0 fixtures (29 rejected)** | Inconclusive (fixtures) |
 
 ## Runs
 
@@ -690,7 +690,7 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Command(s):** `scripts/buildscan run scan_008_7b486c855ed6 r1116w9 -- --window 9 --sfm_args "--retrieval 20"
   --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
 - **Goal:** R-038's goal; SfM has to fit in memory with ~1,140 frames (R-037: 1,166 frames ran on this PC).
-- **Start → end:** 13:21:30 → (running). select 0.7 min: **1118 frames** (predicted blur median 3.9 px vs 5.2 px).
+- **Start → end:** 13:21:30 → 16:08:11 (`stages.tsv`; written up by the agent on 2026-11-19). select 0.7 min: **1118 frames** (predicted blur median 3.9 px vs 5.2 px).
   SfM: 25,622 ARCore-guided pairs (22.9 per frame); `global_mapper` from ~13:30: **1,404,275 tracks from 10,774,946
   observations** (R-037: 289,543 tracks / 1.78 M observations for 1,166 frames, so ~6× more per frame);
   **global positioning 1699.9 s (28.3 min)** (R-037: 99.0 s), done 13:59:16; iterative bundle adjustment from 13:59:17.
@@ -698,8 +698,18 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
   19.8 GB at 13:50:46 and **23.3 GB at 13:50:56 with 2.1 GB available** (the watcher stopped there, so the true peak
   is not measured); swap in use 4.0 of 8.0 GB at 14:02. No OOM kill. At 14:02 colmap 10.4 GB in bundle adjustment.
 - **Errors during the run:** none so far (memory came within ~2 GB of running out at 13:50, see above).
-- **Result:** pending. Output `dataset/scan_008_7b486c855ed6/work_r1116w9_sfm/gs_r1116w9/`.
-- **Verdict:** pending.
+- **Stage times (min, `timing.json` / `stages.tsv`):** select 0.71, SfM 63.6, export 0.01, prior 4.94, init 17.39,
+  train 57.91, ply 0.87 → run_v8 145.4; layout 2.7, sem2d 16.6, sem3d 0.2, verify 0.1, sem3d2 0.2, mesh 0.3,
+  meshlabels 1.0, web 0.1. Whole run 13:21:30 → 16:08:11 = 166.7 min.
+- **Result:** 1118 of 1118 frames registered; ARCore gravity tilt 0.00° (spread 0.54°; full Sim3 on the same inliers
+  1.11°), `work_r1116w9_sfm/report.json`. Mono prior aligned median error 1.5% (raw 13.8%). Layout / semantics
+  (`semantic_v10/semantic.json`): 5 walls, floor 21.26 m², ceiling 3.194 m, floor tilt 0.22°, ceiling 0.63°;
+  11 fixtures accepted (1 door, 2 windows, 4 switches, 3 sockets, 1 ceiling light), 56 rejected. Web bundle
+  `prototype/web-ui/public/scans/scan_008_7b486c855ed6_r1116w9/` (2,506,236 splats), shown in the web UI as
+  `scan-008` (2026-11-18). No `fixture_check.md` written yet; no tape; room not named. The plan also covers two
+  small rooms next to the main one (web-ui STATUS §6).
+- **Verdict:** kept as the scan #8 model for now (Umair put it in the web UI); fixtures not checked by a person.
+  Output `dataset/scan_008_7b486c855ed6/work_r1116w9_sfm/gs_r1116w9/`.
 
 ### R-040 · 2026-11-18 · scan #7 full pipeline, R-023 recipe (tag `r1118`)
 - **Who / machine:** Umair (started the run himself through the `scripts/buildscan` menu, recording 2) · this PC
@@ -714,8 +724,20 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Goal:** first model of scan #7 (STATUS §7, scans #5–#7). The default window was kept; D-073's `--window 9` was
   needed for scan #8 (342 s). SfM has to fit in memory (R-037: 1,166 frames ran; R-038: 1,639 frames killed by OOM).
   Then check `report.json` gravity tilt, layout walls / height, fixtures and the check sheet.
-- **Start → end:** 10:19:18 → (running). select 0.6 min: **1160 frames** of 7,243 (predicted blur median 0.6 px vs
+- **Start → end:** 10:19:18 → 13:39:51 (`stages.tsv`; written up by the agent on 2026-11-19, the `screen` session was still open at "press Enter"). select 0.6 min: **1160 frames** of 7,243 (predicted blur median 0.6 px vs
   0.8 px over all frames). SfM started right after (`feature_extractor` running at 10:20:06; `vocab_tree_matcher` by the time of writing). At 10:20:06: 25 GB RAM available, swap 1 of 7 GB used.
-- **Errors during the run:** none so far.
-- **Result:** pending. Output `dataset/scan_007_e6d4f090f88e/work_r1118_sfm/gs_r1118/`.
-- **Verdict:** pending.
+- **Errors during the run:** none in `run_full.log` (only timm FutureWarnings).
+- **Stage times (min, `timing.json` / `stages.tsv`):** select 0.57, SfM 96.38, export 0.01, prior 5.18, init 19.69,
+  train 52.9, ply 0.68 → run_v8 175.4; layout 2.7, sem2d 17.7, sem3d 0.3, verify 0.2, sem3d2 0.3, mesh 2.6,
+  meshlabels 1.1, web 0.2. Whole run 10:19:18 → 13:39:51 = 200.6 min.
+- **Result:** SfM registered 1159 of 1160 frames; ARCore gravity tilt 0.00° (spread 0.83°; a full Sim3 on the same
+  inliers would have been 1.72° off), `work_r1118_sfm/report.json`. Mono prior aligned median error 2.3% (raw
+  Metric3D 12.9%). Web bundle groups hold 1,840,851 splats (`scan.json`). Layout /
+  semantics (`semantic_v10/semantic.json`): 6 walls, floor 19.66 m², ceiling 3.401 m, floor tilt 0.98°, ceiling
+  0.00°. **0 fixtures accepted, 29 rejected** by the geometry rules: 14 sockets ("small, on a wall"), 6 doors
+  ("tall, from the floor, 0.45–2 m wide, in a wall"), 6 windows ("in a wall, sill ≥ 0.5 m, ≥ 0.3 m wide"),
+  3 ceiling lights ("8 cm – 1.5 m, at the ceiling"). Why every candidate failed is not investigated yet (STATUS
+  §7.5). Web bundle `prototype/web-ui/public/scans/scan_007_e6d4f090f88e_r1118/` (floor, ceiling, walls, other,
+  mesh; no electrical / openings groups). No tape, room not named.
+- **Verdict:** inconclusive until Umair has looked at the model and the rejected fixtures (the reconstruction itself
+  finished without errors). Output `dataset/scan_007_e6d4f090f88e/work_r1118_sfm/gs_r1118/`.

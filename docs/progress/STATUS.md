@@ -1,6 +1,6 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-16 by Umair (scans #5–#8 added; scan #8 R-038 killed by OOM in SfM, re-run R-039 with `--window 9` (D-073) passed SfM mapping; plan 3.18 hierarchical_mapper test planned for 2026-11-19; web bundles: every folder but `newroom/` ignored (D-061 addendum)).
+Last updated: 2026-11-19 by Umair (every processed scan bundle listed in the web Projects tab, D-074; R-039 / R-040 written up: scan #7 got 0 fixtures; `feature/step4-layout` fast-forwarded to `feature/viewer-scan-008`; `origin/master` has 43 commits not on the Step 4 branches, with clashing run / decision numbers, OD-12)
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -87,8 +87,8 @@ Older recordings (before numbering) are on the RTX 3070 PC and keep their names.
 | scan #4 | (number 4 = `newRoomAttemptSadness`, registered when it was copied here, `dataset/.scan_numbers.tsv`) | | | | | |
 | **scan #5** | `dataset/scan_005_4aadb16181d9` | on this PC 2026-11-16 (folder 12:05) | Umair, Infinix X6833B | room to fill in | 352.5 s | none yet |
 | **scan #6** | `dataset/scan_006_1e457a214ce1` | on this PC 2026-11-16 (folder 12:06) | Umair, Infinix X6833B | room to fill in | 259.8 s | none yet |
-| **scan #7** | `dataset/scan_007_e6d4f090f88e` | on this PC 2026-11-16 (folder 12:06) | Umair, Infinix X6833B | room to fill in | 269.2 s | none yet |
-| **scan #8** | `dataset/scan_008_7b486c855ed6` | on this PC 2026-11-16 (folder 12:27) | Umair, Infinix X6833B | room to fill in | 366.5 s | R-038 (OOM in SfM), R-039 (window 9, running) |
+| **scan #7** | `dataset/scan_007_e6d4f090f88e` | on this PC 2026-11-16 (folder 12:06) | Umair, Infinix X6833B | room to fill in | 269.2 s | R-040 (finished 2026-11-18; 0 fixtures) |
+| **scan #8** | `dataset/scan_008_7b486c855ed6` | on this PC 2026-11-16 (folder 12:27) | Umair, Infinix X6833B | room to fill in | 366.5 s | R-038 (OOM in SfM), R-039 (window 9, finished, 11 fixtures) |
 | newRoomAttemptSadness | 3070 PC; **this PC since 2026-11-12** (raw recording only): `dataset/newRoomAttemptSadness` | by 2026-10-10 (first run R-007) | realme RMX5111; who recorded it not written down | Room of the best model (R-023) and semantics v10 | 240 s | R-007 … R-025; here R-037 |
 | roomAttemptSadness2 | 3070 PC | by 2026-10-09 (first run R-002) | realme RMX5111; who recorded it not written down | Second room of the mid report | not recorded here | R-002, R-004, R-010 |
 
@@ -225,6 +225,12 @@ pipeline step, with done-when, dependencies, priority (Must / Should / Could), t
 
 ### 7.1 Organisation, environments and infrastructure
 
+- [ ] **[new 2026-11-19] Merge `origin/master` into the Step 4 work (OD-12).** `origin/master` has 43 commits that
+      `feature/step4-layout` does not (Tayyab's PR #7: fast pipeline, `tape_check.py`, server v9 runner, layout ceiling
+      rule `d052301`, plan.png fix `a098711`, real models in `mockData.ts`, app v0.3.8). A dry run conflicts in MAP,
+      COMPLETION_PLAN, LOG, STATUS, TRAINING, web-ui `.gitignore` / STATUS / `mockData.ts` and `sfm_colmap.py`;
+      `layout.py` merges as text but has two ceiling rules. Run IDs R-032 … R-040 and D-069 mean different things on
+      the two sides; `origin/docs/featureless-tracking-plan` goes on to R-051. Team decision on the numbering first.
 - [x] **[new 2026-11-12] Update the server checkout on this PC** — done 2026-11-12: `origin/master` (PR #4) merged into `exp/first-linux-run`. Was: run the server from a branch that includes PR #4 (local `master` is
       behind `origin/master`; the server runs from `exp/first-linux-run`), so v0.3.5 uploads keep the new files.
 
@@ -426,6 +432,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.5 Semantic labelling (Umair's next focus)
 
+- [ ] **[new 2026-11-19] scan #7 (R-040): 0 fixtures accepted, all 29 candidates rejected by the geometry rules**
+      (14 sockets "small, on a wall", 6 doors, 6 windows, 3 ceiling lights), while the layout found 6 walls and a
+      3.40 m ceiling. Not investigated: look at the model and `semantic_v10/semantic.json` `rejected` (wrong walls?
+      scale? a real room without fixtures?). Needs Umair to say what is in the room.
 - [ ] Test v10 semantics on a second room (the real test); the user confirms the 3 new detections (`door_1`, `door_6`, `tube_light_1`). *(from TODO 2026-11-03)*
 - [ ] Open doorways (no door leaf) from gaps in the layout walls; windows on room 2. *(from TODO 2026-10-27)*
 - [ ] Still missed on newRoom: the socket under the ironing table (never a good candidate) and round light #14 (the
@@ -519,9 +529,13 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 - [ ] `.spz` (in use) vs `.ksplat` (proposal, Zaid's branch): team decision. If `.ksplat` stays: finish v2-B/v2-C/scan-2
       renders, quality vs photos, FPS on the target laptop. [feat/splat-compress README]
-- [ ] **[new 2026-11-16] Show every processed scan in the viewer with its semantics:** today only `newroom/` is wired
-      (`mockData.ts`); per-run bundles in `public/scans/<scan>_<tag>/` are not listed. Umair to choose: a scan picker that
-      lists the bundles, or adding scans by hand to `mockData.ts`. The FR10 size card is still not checked in a browser.
+- [x] **[new 2026-11-16] Show every processed scan in the viewer with its semantics** — done 2026-11-19 (D-074, moved to §8):
+      the Projects tab lists every bundle in `public/scans/` (`/api/scans`). The FR10 size card is still not checked in a browser.
+- [ ] **[new 2026-11-19] Check an auto-listed scan in a real browser** (`/viewer/run-<folder>`): splats, Scan Layers,
+      camera start (middle of the fixtures, 1.5 m above the floor; ARCore origin when there are no fixtures). Headless
+      software rendering was still loading after 60 s.
+- [ ] **[new 2026-11-19] Room names on the auto-listed cards** (they say "Scan #N · tag"): e.g. a small names file next
+      to the scan register, once the rooms are written down in "Which recording is which".
 - [ ] Adaptive splat budget / level of detail (FR9, NFR5). [proposal v4]
 - [ ] Web-UI step 8 (S9 empty and error states) and the known issues in `prototype/web-ui/STATUS.md` §6 (list view toggle,
       `globals.css` conflicts, stub buttons, every floor-plan room opens the same model, inert measurement types, missing thumbnails).
@@ -598,6 +612,10 @@ Dated milestones; details in [LOG.md](LOG.md), reasons in [DECISIONS.md](DECISIO
   (D-071, R-033); `level_model.py` levels trained models (R-034); the ceiling may not lie below the wall tops (D-072).
   scan #3: 2 → 4 walls, 0 → 3 corners (89–90°), 2.74 → 2.52 m (R-035); scan #2: 1.50 → 2.41 m (R-036). Viewer:
   fixture size card (FR10). `fixture_checklist.py` for the per-room fixture check.
+
+- **2026-11-19: every processed scan in the web Projects tab** (Umair, D-074): `/api/scans` lists the bundles in
+  `public/scans/` with their numbers, run IDs and layout plans; `/viewer/run-<folder>` opens them. `feature/step4-layout`
+  fast-forwarded to `feature/viewer-scan-008`; work on `feature/viewer-all-scans`. R-039 / R-040 written up.
 
 ## 9. Known limits
 

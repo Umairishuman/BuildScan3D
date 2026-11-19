@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-11-18 (scan #8 added as its own project, `scan-008`)
+Last updated: 2026-11-19 (every scan bundle in `public/scans/` listed in the Projects tab, `/api/scans`)
 
 ---
 
@@ -131,6 +131,27 @@ real path.** Currently only `/dashboard` has a href.
 ---
 
 ## 4. Completed
+
+### Every processed scan bundle in the Projects tab ✅ (2026-11-19, Umair's ask, repo D-074)
+- **Why:** each new run needed a hand-written `mockData.ts` entry before it could be opened; Umair wants every scan
+  viewable from the Projects tab.
+- **New** `src/lib/scanBundles.ts` (server only): every folder in `public/scans/` with a `scan.json` becomes a `Project`
+  with id `run-<folder>`: splat count, walls, floor area, ceiling height and fixture counts from `scan.json`; "Scan #N"
+  from `../../dataset/.scan_numbers.tsv`; run ID and date from the `docs/progress/TRAINING.md` heading naming the tag
+  (else the `scan.json` time); thumbnail = the run's `layout/plan.png` (else `/images/logo-new.png`); start camera =
+  middle of the fixtures 1.5 m above the floor, looking at a door (no fixtures: Spark's default at the origin).
+  **New** `src/app/api/scans/route.ts` (GET → JSON list) and `src/app/api/scans/[folder]/plan/route.ts` (serves the
+  plan; only for listed folders, so no path is built from the URL). **New** `src/lib/useAllProjects.ts`: hand-written
+  projects + bundles, skipping bundles a hand-written project already uses (`newroom-scan`, `scan-008`); real scans
+  first. **Modified** `src/app/projects/page.tsx` (uses the hook) and `src/app/viewer/[id]/page.tsx` (`run-` ids are
+  looked up through the hook with a "Loading scan…" state; any other unknown id still `notFound()` on the server).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` 0 errors, 1 known warning
+  (ExportModal.tsx:29); `npx next build` ok (adds `ƒ /api/scans`, `ƒ /api/scans/[folder]/plan`); `next start` on
+  :3005: `/api/scans` lists 9 bundles (7 new cards), `/projects` 200, `/viewer/run-scan_007_e6d4f090f88e_r1118` 200,
+  `/viewer/scan-008` 200, `/viewer/newroom-scan` 200, `/viewer/does-not-exist` 404, plan of a listed run 200, `..`
+  folder 404. Headless Chrome: `/projects` shows the 7 new cards with their plans; `/viewer/run-scan_003_…_r1112lev`
+  shows the title, run ID, ceiling, splat count and fixture markers, splats still loading after 60 s (software
+  rendering). **Not checked in a real browser.**
 
 ### Scan #8 as its own project (`scan-008`) ✅ (2026-11-18, Umair's ask)
 - **Why:** the portal only knew the living room (`newroom-scan`); scan #8 (R-039, tag `r1116w9`) had a bundle in
@@ -742,7 +763,8 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | ~~148 MB PLY over HTTP~~ | `public/splats/` | Resolved 2026-10-24: served as 12.5 MB `.spz`. |
 | Small fixture markers | `Viewer3D/SplatCanvas.tsx` | Markers are 4.5 cm spheres, so clicking one in 3D needs a close view; the list in Scan Layers is the reliable way. |
 | Scan #8 bundle exists only on the Ubuntu PC | `mockData.ts` (`scan-008`) | `public/scans/scan_008_7b486c855ed6_r1116w9/` is gitignored (D-061), so on any other machine `/viewer/scan-008` cannot load the scan. The scan #8 layout also covers two small rooms next to the main one (see `plan.png`). |
-| Missing project thumbnails | `public/thumbnails/` | All pre-existing fixtures point at `/thumbnails/card*.jpg`, which do not exist (folder was absent until this step added `newroom_v6.jpg`). |
+| Auto-listed scans need a Node server | `src/lib/scanBundles.ts`, `src/app/api/scans/` | The list is read from disk on each request, so it works with `next dev` / `next start`, not a static export. Each machine lists only its own bundles (gitignored, D-061). Cards say "Scan #N · tag" because room names are not recorded anywhere yet. `/viewer/run-<unknown>` answers 200 first and then shows the not-found page on the client. |
+| Missing project thumbnails | `public/thumbnails/` | All pre-existing fixtures point at `/thumbnails/card*.jpg`, which do not exist. `newroom_v6.jpg` (the Living Room card) is not on the Ubuntu PC either (2026-11-19: only `scan_008_plan.png` is there). |
 
 ---
 
@@ -765,6 +787,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-11-19** — Projects tab lists every processed scan bundle in `public/scans/` (`/api/scans`, `/viewer/run-<folder>`).
 - **2026-11-18** — Scan #8 (R-039) added as its own project `scan-008`; the plan image is its thumbnail.
 - **2026-11-12** — Fixture size card in Scan Layers (width, height, area, heights above floor, wall) and clickable fixture markers (FR10).
 - **2026-11-06** — `newroom-scan` no longer points at the unused `/splats/newroom_v6.spz`; the file is out of git (CI 10 MB limit).
