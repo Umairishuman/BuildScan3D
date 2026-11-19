@@ -50,12 +50,12 @@ only runs from the command line.
 
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2.1 | Run the upload server from a checkout that includes PR #4 (local `master` is behind; the server runs from `exp/first-linux-run`) | `/health` answers from the updated code; a v0.3.5 upload keeps all files | — | Must | W1 |  |  |
-| 2.2 | Port `server/pipeline.py` to Linux (last part of STATUS 7.1 1f) | Server starts a job on this PC without Windows paths | — | Must | W1 |  |  |
-| 2.3 | Server jobs run the v9/v10 pipeline (`scripts/run_full.sh`) instead of v3 (OD-7) | An uploaded recording produces splat, layout, semantics, mesh and web bundle | 2.2, OD-7 | Must | W1 |  |  |
-| 2.4 | Job progress and results go back to the app and the dashboard (stage, percent, model link) | App shows progress; the finished scan opens in the dashboard | 2.3, 5.3 | Must | W2 |  |  |
+| 2.1 | Run the upload server from a checkout that includes PR #4 (local `master` is behind; the server runs from `exp/first-linux-run`) | `/health` answers from the updated code; a v0.3.5 upload keeps all files | — | Must | W1 |  | Issue #31 (2026-11-19). |
+| 2.2 | Port `server/pipeline.py` to Linux (last part of STATUS 7.1 1f) | Server starts a job on this PC without Windows paths | — | Must | W1 |  | Issue #31 (2026-11-19). |
+| 2.3 | Server jobs run the v9/v10 pipeline (`scripts/run_full.sh`) instead of v3 (OD-7) | An uploaded recording produces splat, layout, semantics, mesh and web bundle | 2.2, OD-7 | Must | W1 |  | Issue #31 (+ #32 auto-publish) (2026-11-19). |
+| 2.4 | Job progress and results go back to the app and the dashboard (stage, percent, model link) | App shows progress; the finished scan opens in the dashboard | 2.3, 5.3 | Must | W2 |  | Issue #33 (2026-11-19). |
 | 2.5 | Final-1 exit gate (a): a 60 s capture uploads and triggers processing end to end | One logged run (TRAINING R-NNN) from phone to model | 2.3, 1.3 | Must | W2 |  |  |
-| 2.6 | Back up the release signing key `~/.buildscan3d-keys/` off this PC | Copy stored in an agreed safe place | — | Should | W1 |  |  |
+| 2.6 | Back up the release signing key `~/.buildscan3d-keys/` off this PC | Copy stored in an agreed safe place | — | Should | W1 |  | Issue #34 (2026-11-19). |
 | 2.7 | Docker image from `scripts/setup_linux.sh` (2a), built on GitHub Actions (2b), tested (2c) | Image runs the v9 pipeline on RunPod | 2.3 | Should | W2 |  |  |
 | 2.8 | RunPod end to end: create pod, process, download, terminate; find why it works poorly | One logged RunPod run with every error | 2.7 | Should | W2 |  |  |
 | 2.9 | Run the pipeline on the friend's PC (owner, GPU, OS in STATUS §6) | One logged run there | — | Could | W2 |  |  |
@@ -72,10 +72,10 @@ The v9 recipe gives the best model (R-023) but has been tested on one room only 
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 3.1 | Machine agreement: copy newRoomAttemptSadness here, run v9, compare with R-020 / R-023 | Logged run; PSNR / SSIM / scale within run-to-run noise of the 3070 | — | Must | W1 |  | Partly done: R-037 (R-023 recipe, all frames, 103.0 min, no errors, 2026-11-12): room 6.63 × 4.37 m vs R-023 6.60 × 4.36 m; height 2.81 vs 2.72 m (D-072 took a higher plane, open); 18 vs 15 fixtures (unchecked); PSNR / SSIM need the R-014 split from Tayyab; scale vs R-023 not measured |
 | 3.2 | Process roomAttemptSadness2 and every new room (1.4) with the full v9 pipeline | One logged run per room, models kept in `saved_models/` | 1.4 | Must | W1 |  | scan #3 done (R-031, 2026-11-12, `saved_models/2026-11-12_r1112_scan003/`); new rooms to be recorded 2026-11-13 |
-| 3.3 | Optimise the processing time end to end; measure every change with the stage times | Before / after stage table for each change in TRAINING | 3.1 | Must | W2 |  | Baseline stage times from R-031; Tayyab is doing it on the 3070 PC (SfM, priors I/O, photometric PatchMatch, training; LOG 2026-11-12); check his recipe on scan #3 vs R-031; runs on scan #3 (D-069) |
+| 3.3 | Optimise the processing time end to end; measure every change with the stage times | Before / after stage table for each change in TRAINING | 3.1 | Must | W2 |  | Baseline stage times from R-031; Tayyab is doing it on the 3070 PC (SfM, priors I/O, photometric PatchMatch, training; LOG 2026-11-12); check his recipe on scan #3 vs R-031; runs on scan #3 (D-069) Issue #36 (2026-11-19). |
 | 3.4 | Speed ideas to test in 3.3: blur only in the last third, photometric-only PatchMatch, ViT-S depth prior, faster `fast_mvs` (photometric or every 10th frame), faster `plane_seg` (~11 min CPU) | Each tried and kept or rejected with numbers | 3.3 | Must | W2 |  |  |
 | 3.5 | Time the pipeline on a cloud RTX 4090 (NFR3 is stated for a 4090) | Measured total and stage times on a 4090 | 2.8 | Should | W2 |  |  |
-| 3.6 | Repeat runs of one setting to measure run-to-run noise | ≥ 3 runs, spread of PSNR / SSIM / scale reported | 3.1 | Should | W2 |  | Prepared: held-out split for scan #3 (D-070, `make_split.py`); the 3 repeats not started |
+| 3.6 | Repeat runs of one setting to measure run-to-run noise | ≥ 3 runs, spread of PSNR / SSIM / scale reported | 3.1 | Should | W2 |  | Prepared: held-out split for scan #3 (D-070, `make_split.py`); the 3 repeats not started Issue #36 (2026-11-19). |
 | 3.7 | Ceiling and upper walls are the weakest surfaces: capture guidance to look up, or stronger planar priors | Ceiling quality improved on one room, measured | 3.2 | Should | W2 |  |  |
 | 3.8 | IMU fallback (the stated novelty): decide whether v9 uses it (OD-6) | Decision recorded with a reason for the report | OD-6 | Should | W1 |  |  |
 | 3.9 | IMU fallback: tune BA pass 2 so it keeps PnP accuracy (8.2 → 15.1 px today); use bridged frames with per-frame pose refinement | Accuracy kept after BA; bridged frames used in training | 3.8 | Should | W2 |  |  |
@@ -87,7 +87,7 @@ The v9 recipe gives the best model (R-023) but has been tested on one room only 
 | 3.15 | Anti-aliasing (Mip-Splatting idea, gsplat `antialiased`) with an antialiased-aware viewer | Zoomed views compared | 5.10 | Could | W3 |  |  |
 | 3.16 | Faster 3DGS methods with their own CUDA rasterizer (FastGS, Taming-3DGS budget), cloud only | Tried on RunPod, or recorded as future work | 2.8 | Could | W3 |  |  |
 | 3.17 | Legacy own-trainer items (block-wise training, `diagnose.py`, Census + SGM, PocketGS, `--near_cam`, 7.4% floaters): confirm obsolete | Each marked obsolete in STATUS with the reason | — | Could | W3 |  |  |
-| 3.18 | Optional: SfM memory for long recordings. Add COLMAP `hierarchical_mapper` (images in overlapping groups, solved one group at a time, then merged) as a `sfm_colmap.py --mapper` choice; test it on newRoomAttemptSadness against R-037 (registered frames 1157 / 1166, Sim3 median 3.3 cm, room 6.63 × 4.37 m, PSNR / SSIM where a split exists) and on scan_008; also compare `--max_features 4096` | Peak RAM, time and quality measured for each option against R-037; kept or rejected in DECISIONS (follows D-073) | — | Could | W1 | Umair | Planned for Thursday 2026-11-19 (Umair). Why: R-038 killed by OOM in `global_mapper` (26.1 GB, 16.2 M observations); scan_008 gives ~4–6× more observations per frame than earlier rooms (R-038 9,877 per frame, R-039 9,638; R-037 1,523, scan #3 `r1112` 2,380); R-039 (window 9, 10.8 M) passed with ~2 GB RAM to spare, global positioning 28.3 min vs 1.7 min in R-037 |
+| 3.18 | Optional: SfM memory for long recordings. Add COLMAP `hierarchical_mapper` (images in overlapping groups, solved one group at a time, then merged) as a `sfm_colmap.py --mapper` choice; test it on newRoomAttemptSadness against R-037 (registered frames 1157 / 1166, Sim3 median 3.3 cm, room 6.63 × 4.37 m, PSNR / SSIM where a split exists) and on scan_008; also compare `--max_features 4096` | Peak RAM, time and quality measured for each option against R-037; kept or rejected in DECISIONS (follows D-073) | — | Could | W1 | Umair | Planned for Thursday 2026-11-19 (Umair). Why: R-038 killed by OOM in `global_mapper` (26.1 GB, 16.2 M observations); scan_008 gives ~4–6× more observations per frame than earlier rooms (R-038 9,877 per frame, R-039 9,638; R-037 1,523, scan #3 `r1112` 2,380); R-039 (window 9, 10.8 M) passed with ~2 GB RAM to spare, global positioning 28.3 min vs 1.7 min in R-037 Issue #35 (2026-11-19). |
 
 ## Step 4 · Room layout, semantics and mesh
 
@@ -106,8 +106,8 @@ layout picked a wrong ceiling in R-030 (1.50 m in a room ~3.1 m tall).
 | 4.8 | Small switch plates need ~30 confirming frames: lower the need or add capture guidance | A fast walk past a switch still finds it | 4.2 | Should | W3 |  |  2026-11-19 measured (#15): accepted plates have 19–82 frames, only 2 dropped for < 6; blocked on #21 |
 | 4.9 | Right-angle priors and an as-built floor-plan export (format agreed) | Plan exported for each room | 4.1 | Should | W2 |  |  2026-11-19 built (#12): `plan_export.py`, plan.json / .svg / .dxf per run (stage 16), `--square` optional; format to agree |
 | 4.10 | Layout for spaces that are not rooms (R-029 corridor end: 1 wall, 0 corners) | Corridor gives sensible walls or a clear warning | 4.1 | Could | W3 |  |  2026-11-19 built (#10): `room_closed` + warnings; floor area only for a closed outline (scan #3's was a triangle); `--infer_gap` optional |
-| 4.11 | Edge-based corner and blank-wall detection (gravity-aware lines, wall–floor boundary) | Plain walls found on one room | 4.1 | Could | W3 |  |  2026-11-19 (#11): scan #7's plank faces analysed; `--raised_max` optional (R-055) |
-| 4.12 | Mesh: wall 3 and the ceiling stay rough (> 2.5 cm); mark `structure.py` superseded by `layout.py` | Roughness reduced and measured; STATUS updated | — | Could | W3 |  |  2026-11-19 (#18): roughness measured; `--clean_ceiling 0.04` optional (ceilings 4.3 → 0.04 cm); `structure.py` marked obsolete |
+| 4.11 | Edge-based corner and blank-wall detection (gravity-aware lines, wall–floor boundary) | Plain walls found on one room | 4.1 | Could | W3 |  |  2026-11-19 (#11): scan #7's plank faces analysed; `--raised_max 1.5` on in `run_full.sh` (D-075); R-057: scans #7 / #8 closed 4-wall rooms; #11 closed |
+| 4.12 | Mesh: wall 3 and the ceiling stay rough (> 2.5 cm); mark `structure.py` superseded by `layout.py` | Roughness reduced and measured; STATUS updated | — | Could | W3 |  |  2026-11-19 (#18): roughness measured; `--clean_ceiling 0.04` on (D-075), R-057 ceilings 4.35 / 4.31 → 0.04 cm; `structure.py` marked obsolete; #18 closed; rough walls left |
 
 ### Step 4: what is blocked, and on whom (2026-11-19)
 
@@ -123,9 +123,9 @@ Code changes that alter results are on, only where they fix a plain bug; new heu
 | Room names on the web cards | Umair | #23 |
 | Splats / start view / size card in a real browser | Umair | #24 |
 | Merge `origin/master` (Tayyab's ceiling rule `d052301` next to D-072 / #8) | Umair + Tayyab: numbering (OD-12) | #25 |
-| Scans #5 / #6 processed | Umair: close the finished `run-r1118` screen session (`scripts/buildscan stop run-r1118`) | #19 |
-| ~~Defaults to confirm~~ (no-roof thresholds, view-through minimum, `--infer_gap`, `--raised_max`, `--clean_ceiling 0.04`, `--square`, plan format) | **Settled 2026-11-19 by D-075 (Umair: all on).** Left: R-057 checks them together on four rooms | OD-13 |
-| Floor platform on scan #3 (fit the dominant floor level only?) | Umair: is there a raised platform, how high | #17 (`--floor_win 0.06` now on by D-075; the tape check still open) |
+| ~~Scans #5 / #6 processed~~ | Unblocked 2026-11-19 (`run-r1118` closed by Umair): scan #6 R-058 running, scan #5 R-059 next | #19 |
+| ~~Defaults to confirm~~ (no-roof thresholds, view-through minimum, `--infer_gap`, `--raised_max`, `--clean_ceiling 0.04`, `--square`, plan format) | **Settled 2026-11-19 by D-075 (Umair: all on).** Checked together in R-057 (four rooms; scan #8's lost plate was on furniture, Umair) | OD-13 |
+| Floor platform on scan #3 (fit the dominant floor level only?) | Umair: is there a raised platform, how high | #17 (`--floor_win 0.06` now on by D-075; R-057: semantic ceiling 2.582 m vs layout 2.525 m on scan #3; the tape check still open) |
 
 ## Step 5 · Compression and web delivery
 
@@ -135,12 +135,12 @@ visually lossless); the `.ksplat` converter itself is not in the repo.
 
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 5.1 | Decide `.spz` (in use) or `.ksplat` (proposal) for delivery (OD-1) | Decision in DECISIONS.md with sizes and quality of both | 5.4 | Must | W1 |  |  |
-| 5.2 | Merge or close `feat/splat-compress` and `exp/trainer-arkitscenes` (OD-4); if kept, add the `.ksplat` converter or its install step | Branches merged through a PR or closed with a note | 5.1 | Must | W1 |  |  |
-| 5.3 | Every processed scan appears in the dashboard without hand-editing `mockData.ts` | A new run's bundle shows up and opens | 2.3 | Must | W2 | Umair | Done on this PC 2026-11-19 (D-074): Projects tab lists every bundle in `public/scans/` (`/api/scans`), opens at `/viewer/run-<folder>`; splats not yet seen in a real browser. Bundles from server jobs follow once 2.3 runs `run_full.sh` |
+| 5.1 | Decide `.spz` (in use) or `.ksplat` (proposal) for delivery (OD-1) | Decision in DECISIONS.md with sizes and quality of both | 5.4 | Must | W1 |  | Issue #37 (2026-11-19). |
+| 5.2 | Merge or close `feat/splat-compress` and `exp/trainer-arkitscenes` (OD-4); if kept, add the `.ksplat` converter or its install step | Branches merged through a PR or closed with a note | 5.1 | Must | W1 |  | Issue #37 (2026-11-19). |
+| 5.3 | Every processed scan appears in the dashboard without hand-editing `mockData.ts` | A new run's bundle shows up and opens | 2.3 | Must | W2 | Umair | Done on this PC 2026-11-19 (D-074): Projects tab lists every bundle in `public/scans/` (`/api/scans`), opens at `/viewer/run-<folder>`; splats not yet seen in a real browser. Bundles from server jobs follow once 2.3 runs `run_full.sh`. 2026-11-19: online site decided (D-076: Vercel `https://build-scan-3d.vercel.app/` + Cloudflare R2, one prefix per person); code for #27 – #29 on `feature/vercel-deploy`; waits for Umair's bucket and keys (#26), then deploy + browser check (#30) |
 | 5.4 | Measure compression quality: render original and compressed at the same views (PSNR / SSIM) on a real GPU, for `.spz` and `.ksplat` | Table of size and quality for both formats on 2 scans | — | Must | W1 |  |  |
-| 5.5 | Web UI step 8: empty and error states (S9) | All pages handle no data and failed loads | — | Must | W2 |  |  |
-| 5.6 | Fix the web UI known issues: list view toggle, `globals.css` conflicts, stub buttons, every floor-plan room opens the same model, inert measurement types, missing thumbnails | Each issue closed in `prototype/web-ui/STATUS.md` §6 | — | Should | W2 |  |  |
+| 5.5 | Web UI step 8: empty and error states (S9) | All pages handle no data and failed loads | — | Must | W2 |  | Issue #38 (2026-11-19). |
+| 5.6 | Fix the web UI known issues: list view toggle, `globals.css` conflicts, stub buttons, every floor-plan room opens the same model, inert measurement types, missing thumbnails | Each issue closed in `prototype/web-ui/STATUS.md` §6 | — | Should | W2 |  | Issue #38 (2026-11-19). |
 | 5.7 | Try Zaid's opacity pruning + colour reduction before the `.spz` export; check quality (D-040 found floater pruning hurt) | Kept or rejected with numbers | 5.4 | Should | W2 |  |  |
 | 5.8 | Adaptive splat budget / level of detail for weak devices (FR9, NFR5) | Viewer holds ≥ 30 FPS on the target phone | E5 | Should | W2 |  |  |
 | 5.9 | Measuring: snap clicks to corners and edges (removes the endpoint bias) | Snapping on; tape comparison repeated | 4.1 | Should | W2 |  |  |

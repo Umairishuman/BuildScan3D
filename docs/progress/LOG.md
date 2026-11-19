@@ -607,3 +607,52 @@ sheet `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/semantic_v10/fi
   finished `run-r1118` screen session was refused to the agent a second time: Umair closes it.
 - Next: R-057 = the four rooms (scans #7, #3, #8, newRoom) layout → plan with the D-075 defaults (new tag), check the
   ceiling mesh and floor fits, then scans #6 and #5 (#19) once `run-r1118` is closed.
+
+## 2026-11-19 (R-057, online site) · Umair · `feature/step4-layout`, `feature/vercel-deploy`
+- Did: R-057 (the D-075 defaults on scans #7, #3, #8, newRoom, tag `r1119c`) compared with R-056 by a read-only script
+  (layout / semantic JSON + `mesh.py`'s shell flatness on `mesh_clean.ply`). The `r1119b` bundles moved to
+  `prototype/web-ui/scans_archive/` (README row). Closed #11 and #18 on GitHub; #17 stays open for the tape. Umair had
+  closed `run-r1118`, so scan #6 started (R-058). Online site: Umair chose Vercel + Cloudflare R2 (D-076), deployed
+  the Vercel project himself (`https://build-scan-3d.vercel.app/`, from `master`) and decided every scan so far may be
+  public and that Tayyab may publish his too (D-076 addendum). Issues #26 (Umair: accounts) – #30. Code on the new
+  branch `feature/vercel-deploy` (a git worktree at `../BuildScan3D-vercel`, so the running pipeline is not touched):
+  `src/lib/remoteBundles.ts`, `mergeProjects.ts`, `scripts/publish_scan.py`, `buildscan publish|unpublish|published`,
+  `tests/test_publish_scan.py`, `.env.example` keys; MAP and web-ui STATUS there.
+- Runs: R-057 (16.7 min, no errors): scans #7 / #8 closed 4-wall rooms (17.99 / 26.44 m²), scan #3 tilt 1.95° → 0.29°,
+  ceilings 4.3 → 0.04 cm; scan #8 lost a switch + socket plate on the dropped corner surface → asked Umair: furniture,
+  so the option stays. R-058 scan #6 started 15:29:08 (`run-r1119`); R-059 scan #5 after it.
+- Decisions: D-076 + addendum (Umair). Not a decision: scan #8's corner is furniture (Umair's answer, in R-057).
+- Problems: with `--square`, `plan_export.py` writes `plan_square.*` and no `plan.svg` (by design; first read as missing
+  output). The plan thumbnail of re-run tags (`work_r1118_sfm/gs_r1119c/`) was not found by `scanBundles.ts` (cards
+  showed the logo) nor at first by `publish_scan.py`: both fixed on `feature/vercel-deploy`. `gh` from the scratch
+  folder failed ("not a git repository"), rerun with `-R`. Turbopack refused a `node_modules` symlink in the worktree
+  (hard-linked copy instead). No pytest / ruff in the project envs: the earlier session's scratch venv ran them (95
+  passed on the relevant tests; 5 test files need `cv2` / `fastapi` / `requests` that venv lacks, as on the main checkout).
+- Next: R-058 / R-059 write-ups and their check sheets; Umair: #26 (bucket, keys, `SCANS_BASE_URL` on Vercel, OK to
+  push), then #30 (deploy, CORS, browser check); `pip install boto3` in `bs-server` before the first upload; ask
+  Tayyab about publishing from the 3070 PC.
+- Later (online site): Umair created the R2 bucket `build-scan-3d-scans` (public `https://pub-bb143f8a2567472b944c2c4f06f1f08c.r2.dev`) and an
+  API token (later with admin read/write, needed to set CORS). The agent wrote the S3 keys into `.env` (new file,
+  gitignored, mode 600; the Cloudflare API token value is not stored: not needed), installed boto3 in `bs-server`, set
+  the bucket CORS (GET/HEAD, any origin) and published scan #7 `r1119c` as the first real upload (45.4 MB); the
+  worktree site listed it from the bucket (3 of 3 requests). One `fetch failed` on the first try → one retry in
+  `remoteBundles.ts` (`663f5d3`). Problem: `pkill -f "next dev -p 3006"` again matched the agent's own shell (as earlier
+  on 2026-11-19); stopped by the port's PID afterwards. The keys were pasted into the chat: rolling the token later is
+  Umair's choice.
+- Later (Umair): "publish all always", never past 10 GB (**D-077**; cap 9.5 GB enforced in `publish_scan.py` `f948495`,
+  rule in CLAUDE.md §6 Umair). Published: scans #4 (newRoom) `r1119c`, #1 `umair`, #2 `r1106lev`, #3 `r1119c`, #8
+  `r1119c` and `r1116w9` (with #7: 7 bundles, 0.24 GB). Umair: deployed site lists only published scans, a local run
+  lists local + published (`b7d3c86`); `prototype/web-ui/.env.local` holds `SCANS_BASE_URL` on this PC (gitignored).
+  Umair allowed the agent to close `run-r1119` once its log says "all done", then start scan #5.
+- Later still: **R-058 (scan #6) failed**: COLMAP `global_mapper` killed by the OOM killer at 16:14:39 (26.4 GB,
+  12.56 M observations, the same size as scan #7 which passed alone); the agent's web work in parallel (dev servers,
+  `next build`, tests, uploads) most likely tipped it; the OOM also killed VS Code helpers (ending that agent session)
+  and the `run-r1119` / `viewer` screen sessions. Umair chose "same recipe, PC kept quiet": **R-059** (`r1119b6`)
+  started 16:33:50; the agent logs free RAM each minute (`mem_r1119b6.log` in its scratch folder) and runs nothing
+  heavy during SfM. Scan #5 becomes R-060. Umair added `SCANS_BASE_URL` in Vercel and allowed the push:
+  `feature/vercel-deploy` pushed (86 commits ahead of `master`, CI passed); #26 closed. Umair keeps the R2 token for
+  now. New issues **#31 – #38** for the next steps (STATUS §7.10, COMPLETION_PLAN rows 2.1 – 5.6); labels `step-2`,
+  `step-3`.
+- Next (agent): finish R-059 (close `run-r1119b6` once "all done", stage times, layout, fixtures, check sheet, publish
+  within the cap), then R-060 scan #5 (`--window 9`, quiet PC); #30 Vercel preview check → PR to `master` only when
+  Umair asks; #31 options for OD-7. Next free IDs: R-061, D-078. Umair: his items #16, #20 – #25 wait.
