@@ -75,7 +75,8 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 | R-040 | 2026-11-18 | scan #7 `scan_007_e6d4f090f88e` (269 s), R-023 recipe, default window 6 (`r1118`) | this PC (Ubuntu, RTX 4000 Ada) | 200.6 min (run_v8 175.4) | 1159/1160 frames; gravity 0.00°; 6 walls, floor 19.66 m², ceiling 3.40 m; **0 fixtures (29 rejected)** | Inconclusive (fixtures) |
 | R-053 | 2026-11-19 | Layout re-runs on six rooms, no-roof check (#8), scratch output | this PC (Ubuntu, RTX 4000 Ada) | 8.8 min | scan #7: no roof, walls 3.12 m (was ceiling 3.435 m); 5 other rooms unchanged | Kept (#8) |
 | R-054 | 2026-11-19 | scans #7 / #3: layout (#8 #9 #10) → semantics → mesh labels → web, tag `r1119a` | this PC (Ubuntu, RTX 4000 Ada) | 8.1 min | #7 no roof, 1 doorway + 3 window openings, open outline; #3 open outline flagged, triangle area gone, 4 false openings | Superseded (#9 fixed after it) |
-| R-055 | 2026-11-19 | Layout on six rooms, `--debug`, default vs `--raised_max 1.5 --infer_gap 6` | this PC (Ubuntu, RTX 4000 Ada) | running | pending | Running |
+| R-055 | 2026-11-19 | Layout on six rooms, `--debug`, default vs `--raised_max 1.5 --infer_gap 6` | this PC (Ubuntu, RTX 4000 Ada) | 16.9 min | scan #3 no false openings; `--raised_max` closes #7 and #8 (4 walls, 88–90°), drops nothing real | Kept (findings) |
+| R-056 | 2026-11-19 | Four rooms, layout → web → plan with the 2026-11-19 defaults, tag `r1119b` | this PC (Ubuntu, RTX 4000 Ada) | running | pending | Running |
 
 ## Runs
 
@@ -805,6 +806,35 @@ have them. All backfilled runs were on the Windows RTX 3070 PC (8 GB) unless sta
 - **Goal:** (a) the view-through minimum leaves no openings on finished rooms and keeps scan #7's doorway / big
   window opening; (b) which real walls start > 0.5 m above the floor (would `--raised_max` drop them?); (c) what
   `--infer_gap 6` closes; (d) scan #7's plank faces gone with the options.
+- **Start → end:** 09:07:45 → 09:24:41 (16.9 min, 12 layout runs; before it the scan #7 `--debug` run, ~2.5 min)
+- **Errors during the run:** none (all exit 0).
+- **Result (default):** heights / walls / corners as R-053. Wall-gap openings: scan #7 doorway 0.80 m (41 Gaussians
+  behind per open cell) + window opening 2.10 m (19); scan #3 **none** (R-054's four false ones gone); scan #8 doorway
+  1.0 m (13), window opening 2.0 m (23), doorway 1.3 m (365); newRoom doorway 0.8 m (24), window opening 0.4 m at
+  0.5–0.9 m (17); scans #1 / #2 none. Closed outline: none of the six (#1 / #2 one wall; #3 / #7 / #8 a real gap;
+  **newRoom wrongly**: its 0.78 m jog is 16° off its neighbour, no corner by design, ends 0.42 m apart → fixed in
+  `8b7f7f2`, checked in R-056).
+- **Result (`--raised_max 1.5 --infer_gap 6`):** scan #7: both plank faces dropped (1.06 m from 1.21 m up, 0.57 m from
+  0.60 m up) → **4 walls, 4 corners 87.7–89.7°**, the real north wall now meets both neighbours (closed rectangle).
+  Scan #8: one surface dropped (0.67 m from 0.58 m up; the slanted 1.88 m "wall" with a 70.6° corner) → **4 walls,
+  corners 88.6–89.5°**, 6.03 × 4.48 m. newRoom / #2 / #1: nothing dropped (newRoom's only raised wall is 4.97 m long,
+  0.62 m up; its 0.67 m jog starts 0.11 m up). Scan #3: `--infer_gap` infers nothing: the missing corner (gaps
+  1.49 / 3.61 m) lies 3 m beyond the last reconstructed floor (z ≈ −7.6 vs −4.43), so the floor check refuses it.
+- **Verdict:** view-through minimum kept (no openings on scan #3). `--raised_max 1.5` fixed scans #7 and #8 and
+  touched no real wall on six rooms → recommended as default (Umair's decision, #11). `--infer_gap`: no effect on
+  these rooms; stays off.
+
+### R-056 · 2026-11-19 · Four rooms: layout → semantics → mesh labels → web → plan with the defaults of 2026-11-19 (tag `r1119b`)
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada).
+- **Branch / commit:** `fix/11-wall-behind-boards` @ `8b7f7f2` (defaults: no-roof rule, wall-gap openings with the
+  view-through minimum, closed-room check with step joins, floor plan; `--raised_max`, `--infer_gap`,
+  `--clean_ceiling`, `--square` off).
+- **Dataset:** trained models of scans #7 (`r1118`), #3 (`r1112lev`), #8 (`r1116w9`), newRoom (`r1112nr`), not
+  retrained; new tag `r1119b` as in R-054 (links to the model and mesh, 2D masks reused).
+- **Command(s):** `<scratchpad>/r056.sh`: the `run_full.sh` stages layout, sem3d, verify, sem3d2, meshlabels, web,
+  plan, then `fixture_checklist.py --rejected`; bundles in `prototype/web-ui/public/scans/<scan>_r1119b/`.
+- **Goal:** final outputs for Umair to check (sheets, plans, web bundles); newRoom's outline closed again (`8b7f7f2`)
+  with its floor area; no regressions in the semantics chain.
 - **Start → end:** (running)
 - **Errors during the run:** none so far.
 - **Result:** pending.

@@ -565,3 +565,26 @@ sheet `dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr/semantic_v10/fi
 - Next: Umair looks at `/projects` in a browser (does an auto-listed scan render?); decide OD-12 with Tayyab, then
   merge `origin/master`; Step 4 Musts: tape (4.1), fixture sheets for scans #3, #8, #4 (4.2), why scan #7 has 0
   fixtures, FR10 size card vs tape (4.3); scans #5 / #6 still unprocessed.
+
+## 2026-11-19 (Step 4 issues) · Umair · `feature/step4-layout` + one branch per issue
+- Asked by Umair: turn every Step 4 item into an issue, work through the ones that do not need him, leave his for
+  later, blockers into COMPLETION_PLAN. GitHub issues **#8 – #25** (labels `step-4`, `needs-umair` on #20 – #25).
+- Branches (stacked, none pushed, none merged into `master`): `feature/13-fixture-sheets` (fast-forwarded into
+  `feature/step4-layout`) → `fix/8-open-ceiling` → `feature/18-mesh-ceiling` → `fix/10-room-closed` →
+  `feature/9-wall-openings` → `feature/12-plan-export` → `fix/11-wall-behind-boards` (tip; also carries the #9
+  follow-up fixes and the records).
+- Found: **scan #7 is a building under construction** (bare brick, no roof, empty openings, planks): its 0 fixtures
+  (R-040) are most likely right; it exposed a false "ceiling" (sky), missing empty openings and plank faces taken
+  as walls. Scan #3's 32.27 m² "floor area" was a triangle (4 walls, 3 corners), about half the room. Scan #3's
+  1.95° floor tilt is a step (a raised platform?), not a tilt.
+- Done: #13 (sheets with rejected candidates for scans #7 / #8), #8 (no-roof rule, R-053), #10 (closed-room check,
+  floor area only for a closed outline, optional `--infer_gap`), #9 (wall-gap doorways / window openings, view-through
+  minimum after R-054 showed 4 false ones on scan #3), #12 (plan.json / .svg / .dxf, stage 16), #18 (roughness
+  measured, `--clean_ceiling` optional), #11 (`--debug`, optional `--raised_max`); measured and blocked on Umair's
+  sheets: #14 (CLIP margins), #15 (switch frames); blocked: #16 (3070 PC file), #19 (`run-r1118` session open).
+- Runs: R-053 (layout, six rooms, #8), R-054 (scans #7 / #3 layout → web, tag `r1119a`), R-055 (layout, six rooms,
+  `--debug`, default vs options). Numbered from R-053: R-041 … R-051 exist on Tayyab's side (OD-12).
+- Problems: the agent was not allowed to close the finished `run-r1118` screen session, so scans #5 / #6 could not
+  start; twice wrote a guessed number into TRAINING (a splat count, an end time), both replaced by measured values
+  before committing; `pkill -f` once matched its own shell; switched to an older stacked branch to commit and moved
+  back (no rebase, per CLAUDE.md).
