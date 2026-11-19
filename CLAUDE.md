@@ -125,6 +125,9 @@ and changes need agreement.
 - **Branches:** wants to use (and try out) the feature-branch flow: a new branch per piece of work, tested before it is
   merged.
 - **Decisions:** do not decide for him. Bring every choice to him with options and a recommendation; record his answer in DECISIONS.md.
+- **Online storage (R2) never above 10 GB** (2026-11-19, D-077): no money for more than the free tier. Never upload
+  scans if the bucket total would pass 10 GB; `scripts/publish_scan.py` enforces a 9.5 GB cap and refuses otherwise.
+  Do not raise or work around the cap; if a publish is refused, tell him and let him choose what to free.
 - **His machine:** this Ubuntu PC (`gpu-lab-Precision-3680`, RTX 4000 Ada). Git identity configured (2026-11-06); GitHub
   over SSH. Do not install Docker on this PC for now (2026-11-06). The capture app is in `android/` (MAP.md §6); this
   PC has no Android SDK, so app changes are compiled by CI on push. `adb` (for USB uploads) is installed by Umair

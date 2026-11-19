@@ -9,7 +9,8 @@ import { JobStatusModal } from "@/components/JobStatusModal";
 import { NewCaptureModal } from "@/components/NewCaptureModal";
 import { ProjectsBackdrop } from "@/components/ProjectsBackdrop";
 import Link from "next/link";
-import { BuildingPlan, MOCK_PROJECTS, Project } from "@/lib/mockData";
+import { BuildingPlan, Project } from "@/lib/mockData";
+import { useAllProjects } from "@/lib/useAllProjects";
 import { deleteUserPlan, loadUserPlans } from "@/lib/userPlans";
 import {
   Plus,
@@ -45,7 +46,8 @@ const FILTERS: { id: StatusFilter; label: string }[] = [
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const [projects] = useState<Project[]>(MOCK_PROJECTS);
+  // Hand-written projects + every processed scan bundle in public/scans/ (COMPLETION_PLAN 5.3)
+  const { projects } = useAllProjects();
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");

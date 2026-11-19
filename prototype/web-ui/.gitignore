@@ -40,8 +40,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# per-run web bundles written by export_web.py / run_full.sh (D-061); only demo bundles such as newroom/ are tracked
-/public/scans/scan_*/
+# per-run web bundles written by export_web.py / run_full.sh (D-061); only demo bundles such as newroom/ are tracked.
+# Every folder is ignored, not only scan_*/, so datasets with other names (newRoomAttemptSadness_r1112nr/) are covered.
+/public/scans/*/
+!/public/scans/newroom/
+
+# older scan bundles moved out of the Projects tab (not served, not listed), D-075
+/scans_archive/
 # local model copies for the viewer: over CI's 10 MB file limit (D-055), copied from saved_models/ or a run on each machine
 /public/splats/*.spz
-/public/scans/roomAttemptSadness2_v9pgsr8/

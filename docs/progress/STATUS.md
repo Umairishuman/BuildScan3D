@@ -1,6 +1,8 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-15 by Tayyab (agent, on `exp/overnight-2026-11-14`): scan_009 runs R-045 / R-046, `--pose_free` keyframes, layout no-floor fix, app feature-point map + coverage dots per frame + depth/pose pairing, 7 real models in the web viewer. Before that: 2026-11-14 by Tayyab (agent, overnight session on `exp/overnight-2026-11-14`): roomAttemptSadness2 v9 run (R-039), newRoom technique tests (R-040 – R-043), layout ceiling fix, server v9 option, tape script, capture checks in the app and on the PC, coverage 45%. Before that: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-032 – R-038 (renumbered from R-029 – R-035 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
+Last updated: 2026-11-19 by Umair (merged with `master`: Tayyab's records to 2026-11-15, his runs renumbered R-062 – R-070, D-079; R-058 scan #6 OOM in SfM, R-059 rerun running; issues #31 – #38 for the next steps; feature/vercel-deploy pushed; R-057: D-075 defaults on four rooms; R-058 scan #6 running; D-076 online site on Vercel + R2, issues #26 – #30, code on `feature/vercel-deploy`; earlier D-075: Step 4 options on in run_full.sh, older web bundles moved to prototype/web-ui/scans_archive/; before that Step 4 issues #8 – #25, runs R-053 – R-056)
+Before that on `master`: 2026-11-15 by Tayyab (agent, on `exp/overnight-2026-11-14`): scan_009 runs R-045 / R-046, `--pose_free` keyframes, layout no-floor fix, app feature-point map + coverage dots per frame + depth/pose pairing, 7 real models in the web viewer. Before that: 2026-11-14 by Tayyab (agent, overnight session on `exp/overnight-2026-11-14`): roomAttemptSadness2 v9 run (R-069), newRoom technique tests (R-070 – R-043), layout ceiling fix, server v9 option, tape script, capture checks in the app and on the PC, coverage 45%. Before that: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-062 – R-068 (renumbered from R-029 – R-065 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
+
 
 This file is the single place for **where the project stands: what is done and what is left**. It absorbed the old
 `TODO.md` on 2026-11-06 (archived unchanged in [archive/TODO.md](archive/TODO.md)); every open item from it is in
@@ -83,8 +85,13 @@ Older recordings (before numbering) are on the RTX 3070 PC and keep their names.
 |---|---|---|---|---|---|---|
 | **scan #1** | `dataset/scan_001_056fe94d3399` | 2026-11-06 | Umair, Infinix X6833B, app ≤ v0.3.4 | Umair's first Linux test (LOG 2026-11-06: "Umair's room"; the layout found only 1 wall, like a corridor end, plan 4.10); room to fill in | 46 s | R-028 (stopped), R-029 |
 | **scan #2** | `dataset/scan_002_646070948603` | 2026-11-06 | Umair, Infinix X6833B, app ≤ v0.3.4 | Computer lab: desks, red chairs, glass partition; room number to fill in | 97 s | R-030 (ceiling 1.50 m, wrong) |
-| **scan #3** | `dataset/scan_003_6de634cbb8b2` | 2026-11-12 (uploaded 14:53 over USB) | Umair, Infinix X6833B, **v0.3.6** | Classroom: rows of wooden desks with red seats, projector screen, wooden door, blue curtains, ceiling AC units; room number to fill in | 185 s | R-031 (running) |
-| newRoomAttemptSadness | 3070 PC: `dataset/newRoomAttemptSadness` | by 2026-10-10 (first run R-007) | realme RMX5111; who recorded it not written down | Room of the best model (R-023) and semantics v10 | 240 s | R-007 … R-025 |
+| **scan #3** | `dataset/scan_003_6de634cbb8b2` | 2026-11-12 (uploaded 14:53 over USB) | Umair, Infinix X6833B, **v0.3.6** | Classroom: rows of wooden desks with red seats, projector screen, wooden door, blue curtains, ceiling AC units; room number to fill in | 185 s | R-031 (2.74 m, kept; `saved_models/2026-11-12_r1112_scan003/`) |
+| scan #4 | (number 4 = `newRoomAttemptSadness`, registered when it was copied here, `dataset/.scan_numbers.tsv`) | | | | | |
+| **scan #5** | `dataset/scan_005_4aadb16181d9` | on this PC 2026-11-16 (folder 12:05) | Umair, Infinix X6833B | room to fill in | 352.5 s | R-059 (window 9) after R-058 |
+| **scan #6** | `dataset/scan_006_1e457a214ce1` | on this PC 2026-11-16 (folder 12:06) | Umair, Infinix X6833B | room to fill in | 259.8 s | R-058 (tag `r1119`, started 2026-11-19 15:29) |
+| **scan #7** | `dataset/scan_007_e6d4f090f88e` | on this PC 2026-11-16 (folder 12:06) | Umair, Infinix X6833B | room to fill in | 269.2 s | R-040 (finished 2026-11-18; 0 fixtures); a building under construction (no roof); R-057 `r1119c`: 4 walls, closed, 17.99 m² |
+| **scan #8** | `dataset/scan_008_7b486c855ed6` | on this PC 2026-11-16 (folder 12:27) | Umair, Infinix X6833B | room to fill in | 366.5 s | R-038 (OOM in SfM), R-039 (window 9, finished, 11 fixtures); R-057 `r1119c`: 4 walls, closed, 26.44 m² (corner furniture dropped, Umair) |
+| newRoomAttemptSadness | 3070 PC; **this PC since 2026-11-12** (raw recording only): `dataset/newRoomAttemptSadness` | by 2026-10-10 (first run R-007) | realme RMX5111; who recorded it not written down | Room of the best model (R-023) and semantics v10 | 240 s | R-007 … R-025; here R-037 |
 | roomAttemptSadness2 | 3070 PC | by 2026-10-09 (first run R-002) | realme RMX5111; who recorded it not written down | Second room of the mid report | not recorded here | R-002, R-004, R-010 |
 
 ## 3. Module status
@@ -100,7 +107,7 @@ Older recordings (before numbering) are on the RTX 3070 PC and keep their names.
 | 3DGS training | Done | `geo_splatfacto.py` (splatfacto subclass) | DashGaussian schedule, priors, planar, blur, PGSR-lite, checkpoints + resume. `train.py` (own trainer) kept for experiments |
 | End-to-end driver | Done | `run_v8.py` | Times every stage; v9 flags in section 5 |
 | Evaluation tools | Done | `eval_offpath.py`, `fair_compare.py`, `compare_models.py`, `fit_diag.py`, `diagnose.py` | Off-path split, pose-refined comparison, flatness metric |
-| Room layout | Done on one room | `layout.py` (v9), `structure.py` (older) | Walls (any number), floor, ceiling, corners, dimensions, `plan.png` |
+| Room layout | Done; needs a levelled model (D-071) | `layout.py` (v9), `structure.py` (older) | Walls (any number), floor, ceiling, corners, dimensions, `plan.png` |
 | Semantic labelling | v10 done on one room | `semantic2d.py`, `semantic3d.py`, `verify_fixtures.py` | Grounding DINO + SAM + decoys, 3D votes + class geometry rules, CLIP crop check. Needs room 2. **Umair's next focus** |
 | Mesh | Done | `mesh.py`, `mesh_labels.py` | TSDF of rendered depth, PGSR unbiased depth, shell denoising, labelled `.glb` |
 | Web viewer / dashboard | Working with a real scan | `prototype/web-ui` | Spark splat rendering, `.spz`, Scan Layers panel, mesh mode, measure tool. Many dashboard screens are mock data (see its STATUS) |
@@ -220,6 +227,12 @@ pipeline step, with done-when, dependencies, priority (Must / Should / Could), t
 
 ### 7.1 Organisation, environments and infrastructure
 
+- [ ] **[new 2026-11-19] Merge `origin/master` into the Step 4 work (OD-12).** `origin/master` has 43 commits that
+      `feature/step4-layout` does not (Tayyab's PR #7: fast pipeline, `tape_check.py`, server v9 runner, layout ceiling
+      rule `d052301`, plan.png fix `a098711`, real models in `mockData.ts`, app v0.3.8). A dry run conflicts in MAP,
+      COMPLETION_PLAN, LOG, STATUS, TRAINING, web-ui `.gitignore` / STATUS / `mockData.ts` and `sfm_colmap.py`;
+      `layout.py` merges as text but has two ceiling rules. Run IDs R-032 … R-040 and D-069 mean different things on
+      the two sides; `origin/docs/featureless-tracking-plan` goes on to R-051. Team decision on the numbering first.
 - [x] **[new 2026-11-12] Update the server checkout on this PC** — done 2026-11-12: `origin/master` (PR #4) merged into `exp/first-linux-run`. Was: run the server from a branch that includes PR #4 (local `master` is
       behind `origin/master`; the server runs from `exp/first-linux-run`), so v0.3.5 uploads keep the new files.
 
@@ -256,6 +269,13 @@ script, step 3 RunPod and the friend's PC.**
       `scan_056fe94d3399` through `scripts/run_full.sh`, all 15 stages, 34.7 min, no errors after the `imu.npz` fix (R-028).
 - [ ] **[new] 1h(b). Machine agreement:** copy `newRoomAttemptSadness` from the RTX 3070 PC, run the v9 pipeline, log it in
       TRAINING.md (every setup and run error), and compare with R-020 / R-023 to confirm the machines agree.
+      **2026-11-12: R-037 done** (R-023 recipe, 103.0 min, no errors): room 6.63 × 4.37 m vs R-023 6.60 × 4.36 m, so
+      the size agrees. Still open: PSNR / SSIM (needs the R-014 split from Tayyab), scale vs R-023 (R-023's scale is
+      not on this PC), 18 vs 15 fixtures (sheet for Umair), height 2.81 vs 2.72 m (next item).
+- [ ] **[new 2026-11-12] D-072 may overshoot the ceiling on newRoom (R-037):** the strongest horizontal plane was 2.69 m
+      above the floor but below the wall tops, so the rule took 2.81 m (R-023: 2.72 m). Tape the newRoom height, or
+      look at what sits above 2.69 m in the model (floaters above the ceiling?), before keeping or changing D-072
+      (Umair's decision).
 
 **Remote access and moving between lab PCs** (D-053)
 
@@ -360,29 +380,39 @@ Now: 96 min on the RTX 3070 (select 1.9, SfM 22.4, priors 8.1, fast init 20.4, t
 of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3: 15 min on a 4090; FYP-2 target
 < 35 min on a 4090 (projection).
 
+- [ ] **[new 2026-11-12] Speed baseline on this PC (R-031, scan #3, 885 frames):** run_v8 64.7 min (SfM 12.1, prior 3.6,
+      init 14.8, train 33.6) + sem2d 13.7 min; 81.0 min in total. Tayyab is doing the speed work on the RTX 3070 PC
+      (2026-11-12: SfM without retriangulation, threaded priors I/O, photometric PatchMatch, training loss / colour-grid
+      fixes; expected ~65 min vs 96 on newRoom, not yet measured; LOG 2026-11-12). Check his recipe on scan #3 vs R-031.
+- [ ] **[new 2026-11-16] SfM memory and time on long recordings (plan 3.18, Thursday 2026-11-19):** scan #8 (366.5 s,
+      10,255 frames) ran out of RAM in COLMAP `global_mapper` with 1,639 frames (R-038, 26.1 GB, OOM kill); with
+      `--window 9` (1,118 frames, D-073) it passed with ~2 GB to spare and global positioning took 28.3 min (R-037:
+      1.7 min). Test `hierarchical_mapper` and `--max_features 4096` against R-037; consider a RAM line / low-memory
+      warning in `run_full.sh` and a clear "killed: out of memory" message in `buildscan watch` (today the cause is only in
+      `journalctl -k`). Ceres here has no cuDSS, so bundle adjustment runs on the CPU.
 - [ ] **[new] Optimise the processing pipeline** end to end; measure each change with `run_v8.py`'s stage times and log it.
   - **2026-11-12 (Tayyab's session, branch `exp/fast-pipeline`):** training 42.5 → 28.2 min and dense init 20.1 → 7.5 min
-    at equal quality on newRoom (TRAINING R-032, R-033); Metric3D 8.1 → 6.8 min (identical output). Normal SfM + these:
-    ~67 min end to end on newRoom (estimate from the measured stages), 48.8 min on the new lecture hall (R-036). The SfM
-    shortcut `--skip_retriangulation` lost quality (R-035, rejected). Adoption: DECISIONS OD-10.
-  - **[new 2026-11-12] SfM can shrink part of a room (GLOMAP).** R-036's lecture-hall model had a "mini room": ~175
+    at equal quality on newRoom (TRAINING R-062, R-063); Metric3D 8.1 → 6.8 min (identical output). Normal SfM + these:
+    ~67 min end to end on newRoom (estimate from the measured stages), 48.8 min on the new lecture hall (R-066). The SfM
+    shortcut `--skip_retriangulation` lost quality (R-065, rejected). Adoption: DECISIONS OD-10.
+  - **[new 2026-11-12] SfM can shrink part of a room (GLOMAP).** R-066's lecture-hall model had a "mini room": ~175
     frames (ARCore lost after frame ~2200, so `--pairs arcore` matched the wrong neighbours) were placed by GLOMAP at
-    ~0.38× scale. The incremental mapper (`--mapper mapper`, R-037) keeps the main part correct (581/842 frames) and
-    splits off the rest; R-038 trained on it (no mini room, right-side walk missing). To do: a per-frame scale check
+    ~0.38× scale. The incremental mapper (`--mapper mapper`, R-067) keeps the main part correct (581/842 frames) and
+    splits off the rest; R-068 trained on it (no mini room, right-side walk missing). To do: a per-frame scale check
     after SfM (SfM depth / Metric3D depth, a block of frames < 0.5× = shrunken part) that warns or falls back to the
     incremental mapper; and do not trust ARCore neighbours after tracking loss. Adoption: DECISIONS OD-11.
 - [ ] **[new 2026-11-13] Speed-ups not tested with `--pgsr`** (the best model's recipe, R-023, now a `run_v8.py` flag
       from master) **nor on Linux**: one run of each before adopting OD-10.
   - **2026-11-14:** tested on newRoom (R-041): training 33.0 min vs R-021's 46 min, PSNR 25.02 / SSIM 0.8232 /
     sharpness 0.87 vs 25.09 / 0.8254 / 0.88 (one run each); off-path flatness of R-021 still to measure. Also used in
-    R-039 (roomAttemptSadness2, 36.2 min). Linux still not tested.
+    R-069 (roomAttemptSadness2, 36.2 min). Linux still not tested.
 - [ ] **[new 2026-11-13] Batched Grounding DINO tiles in `semantic2d.py`** are committed but have never run: compare the
       2D labels with the unbatched output on newRoom and time it (the 38-min semantics stage is the next big cost).
-  - **2026-11-14:** first real run (R-039, roomAttemptSadness2) was ~3× slower (~12 s per frame): batching all tiles
+  - **2026-11-14:** first real run (R-069, roomAttemptSadness2) was ~3× slower (~12 s per frame): batching all tiles
     filled the 8 GB GPU and Windows spilled GPU memory to RAM. Now `--tile_batch` (default 1 = the old per-tile calls).
     Batching only helps on a larger GPU; not measured there.
-- [ ] **[new 2026-11-13] Fast recipe vs v9e2e on the lecture hall is not known** (R-036/R-038 have no baseline; Tayyab
-      is not sure R-038 is better than v9e2e). Umair's R-031 (scan #3, Ubuntu PC, old recipe + PGSR) looks like the
+- [ ] **[new 2026-11-13] Fast recipe vs v9e2e on the lecture hall is not known** (R-066/R-068 have no baseline; Tayyab
+      is not sure R-068 is better than v9e2e). Umair's R-031 (scan #3, Ubuntu PC, old recipe + PGSR) looks like the
       same hall with a steadier capture (6.7 px vs 25 px blur): compare the two models side by side once R-031 has a result
       (not checked that it is the same room).
 - [ ] **[new 2026-11-13] Clean up the speed-up experiment folders on the 3070 PC** (`work_v9e2e_sfm/_mapper_exp`,
@@ -402,12 +432,28 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.3 Reconstruction quality
 
+- [ ] **[new 2026-11-12] scan #3 (classroom): check the levelled layout against the tape.** R-031's 2.74 m / 2 walls
+      came from a model tilted 12.1° from gravity (R-032). Levelled (R-034 / R-035): **2.52 m, 4 walls, 3 corners at
+      89–90°, 7.23 × 9.05 m, floor 32.27 m², 18 fixtures**. Tape not measured yet; Umair checks the 18 fixtures with
+      `gs_r1112lev/semantic_v10/fixture_check.md` (COMPLETION_PLAN 4.2).
+- [x] ~~R-030 (scan #2, lab): room height 1.50 m cannot be right.~~ **Cause found 2026-11-12 (R-032):** the model was
+      9.1° off gravity and its white ceiling was reconstructed 0.4 m above the camera (plus a reflection in the door
+      glass). Levelled + D-072: 2.41 m (R-036), still 1 wall. See the next item.
+  - [ ] (from `master`, Tayyab's open copy of this item, merged here 2026-11-19)
+      check which plane the layout took as the ceiling and whether the scale is off; measure one length with a tape.
+  - **2026-11-14:** `layout.py` fix (`exp/overnight-2026-11-14`): the ceiling is now the strongest horizontal cluster
+    above the cameras with < 3% of the opaque splats above it, not just the strongest one (an AC unit or cabinet
+    underside can win). newRoom unchanged (2.72 m); roomAttemptSadness2 2.78 m (R-069). **To do (Umair, Linux PC):**
+    rerun `layout` on R-030 (`buildscan`, `--from layout`) and check the height against the tape.
+    Both ceiling rules now run in sequence (D-072 after `--above_frac`, OD-12): rerun the four R-057 rooms and R-030.
+- [ ] **[new 2026-11-12] Re-record the computer lab (scan #2) with the capture protocol** (§7.8): the camera stayed
+      within 0.8 × 0.7 m, so the ceiling and most walls never got a baseline (R-032 / R-036).
 - [ ] **[new 2026-11-15] Frames without an ARCore pose (`--pose_free`) and ALIKED SfM** (R-045, R-046,
       `exp/overnight-2026-11-14`): on scan_009 (ARCore lost tracking 63.7% of the time) the default recipe kept 87 frames
       (R-045); `select_sharp.py --pose_free` keeps frames without a pose (894 vs 238), and `--feature aliked` joined 761 of
       them in one SfM component (SIFT: largest 234 / 409). After the jump filter 535 frames trained (R-046, inconclusive):
       misplaced cameras remain, scale unreliable (26 ARCore inliers). **Re-opens D-022 (ALIKED rejected 2026-10-26) with
-      new evidence on another capture: Tayyab's call.** To do: run `--pose_free` + ALIKED on newRoom against R-032 before
+      new evidence on another capture: Tayyab's call.** To do: run `--pose_free` + ALIKED on newRoom against R-062 before
       any default change; a stricter mis-registration filter (only jumps > 30 cm are dropped now).
 - [ ] **[new 2026-11-15] Scale fallback when ARCore poses are poor:** Metric3D ÷ ARCore scale measured 0.83 (newRoom),
       0.93 (room2), 0.52 (lecture hall), so Metric3D is not a usable fallback; ARCore depth on scan_009: 17 maps, mutually
@@ -415,19 +461,13 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 - [ ] **[new 2026-11-15] Re-record scan_009's room** (bedroom with cabinets / AC / curtains): `check_capture.py` FAIL on
       tracking lost 63.7% and median blur 21.7 px; the walk looked mostly at upper walls, the floor is barely in view.
 
-- [ ] **[new 2026-11-14] Techniques tried on newRoom** (one run each, off-path 79 frames, baseline R-032 25.14 / 0.8251):
-      MCMC densification 620k / 1M (R-040, R-042: 24.65 / 24.74, visibly softer, **rejected**), revised opacity (R-043:
+- [ ] **[new 2026-11-14] Techniques tried on newRoom** (one run each, off-path 79 frames, baseline R-062 25.14 / 0.8251):
+      MCMC densification 620k / 1M (R-070, R-042: 24.65 / 24.74, visibly softer, **rejected**), revised opacity (R-043:
       25.02, −10% size, inconclusive), lower densify threshold 0.0004 (R-044: 25.07, sharper score, +40% size,
       inconclusive). None beats the current recipe; the off-path softness is more likely the capture (motion blur,
       coverage) than densification. Untried: residual camera-pose refinement and exposure correction (LighthouseGS,
       WACV 2026), longer training, measuring run-to-run noise first (3.6).
 
-- [ ] **[new 2026-11-12] R-030 (`scan_646070948603`, lab room): room height 1.50 m cannot be right.** View the model,
-      check which plane the layout took as the ceiling and whether the scale is off; measure one length with a tape.
-  - **2026-11-14:** `layout.py` fix (`exp/overnight-2026-11-14`): the ceiling is now the strongest horizontal cluster
-    above the cameras with < 3% of the opaque splats above it, not just the strongest one (an AC unit or cabinet
-    underside can win). newRoom unchanged (2.72 m); roomAttemptSadness2 2.78 m (R-039). **To do (Umair, Linux PC):**
-    rerun `layout` on R-030 (`buildscan`, `--from layout`) and check the height against the tape.
 
 - [ ] **Second room** (roomAttemptSadness2): full v9 pipeline + semantics (~2 h GPU), then a room check by the user. The
       real test of v9/v10. *(from TODO 2026-10-24 / 2026-10-27)*
@@ -437,6 +477,8 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       Check whether "Gaussian Splatting on the Move" code ports to nerfstudio 1.1.5 / gsplat 1.4. *(from TODO step 3, 2026-10-12)*
 - [ ] Planar + blur together on v6's SfM (only tested together inside the e2e run). *(from TODO 2026-10-26)*
 - [ ] Repeat runs to measure run-to-run noise on the hardest off-path frame (one run per setting so far). *(from TODO 2026-10-26)*
+      [2026-11-12] For new rooms: 3 repeats of the default recipe on scan #3 with the held-out split (D-069, D-070);
+      `dataset/scan_003_6de634cbb8b2/offpath_test.txt` (87 / 875 frames) is ready, runs not started.
 - [ ] Anti-aliasing (Mip-Splatting idea / gsplat `antialiased`) for zooming in the viewer; needs an antialiased-aware viewer. *(from TODO step 5)*
 - [ ] Reflective surfaces (glossy floor, glass): mask them out of SfM / depth / evaluation, e.g. points below the floor plane. *(from TODO 2026-10-11)*
 - [ ] Ceiling and upper walls are the weakest surfaces: capture guidance to look up, or stronger planar priors. *(from TODO 2026-10-10 / 2026-10-27)*
@@ -468,16 +510,25 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.5 Semantic labelling (Umair's next focus)
 
+- [ ] **[new 2026-11-19] scan #7 (R-040): 0 fixtures accepted, all 29 candidates rejected by the geometry rules**
+      (14 sockets "small, on a wall", 6 doors, 6 windows, 3 ceiling lights), while the layout found 6 walls and a
+      3.40 m ceiling. Not investigated: look at the model and `semantic_v10/semantic.json` `rejected` (wrong walls?
+      scale? a real room without fixtures?). Needs Umair to say what is in the room.
+      2026-11-19: scan #7 is a building under construction (bare brick, no roof, empty openings, planks): 0 fixtures is most likely right; candidates listed in `gs_r1118/semantic_v10/fixture_check.md` (`--rejected`, #13) for Umair to confirm (#21). The layout bugs it showed: #8 (no roof, fixed), #9 (openings), #11 (plank faces).
 - [ ] Test v10 semantics on a second room (the real test); the user confirms the 3 new detections (`door_1`, `door_6`, `tube_light_1`). *(from TODO 2026-11-03)*
 - [ ] Open doorways (no door leaf) from gaps in the layout walls; windows on room 2. *(from TODO 2026-10-27)*
+      **2026-11-19 (#9):** `openings.py` + `layout.py`: gaps in a wall's surface with ≥ 10 Gaussians seen behind per open cell → doorway / window opening; in `semantic.json`, net wall area, viewer, plan export. R-054 / R-055; not checked against the real rooms (#21).
 - [ ] Still missed on newRoom: the socket under the ironing table (never a good candidate) and round light #14 (the
       "clock" decoy wins its votes). [P&S §4.18]
+      **2026-11-19 (#16):** blocked: their positions are in `audit_ground_truth.json` on the 3070 PC.
 - [ ] Thin margins: false sockets scored 0.45–0.47 in the CLIP check against a 0.5 threshold (real plates 0.69–0.88);
       the 25% switchboard rule rests on 3 plates. [P&S §4.18]
+      **2026-11-19 (#14):** 17 of 80 crop-check candidates on 5 rooms score within ±0.1 of 0.5; blocked on the filled check sheets (#21) to choose a threshold.
 - [ ] Switch plates (8–14 cm) need ~30 confirming frames, so a fast walk past a switch can miss it. [P&S §4.17]
+      **2026-11-19 (#15):** accepted switches / sockets have 19–82 confirming frames on 4 rooms; only 2 candidates (scan #8) were dropped for < 6 frames. The frame minimum is not the limit; blocked on #21 for `--min_views 4`.
 - [ ] Rules were tuned on the same room they are scored on: get an independent score (room 2, then precision / recall
       as in proposal contribution 3). [P&S §4.17–4.18]
-- [ ] Per-element dimensions for fixtures in the viewer (FR10). [proposal v4]
+- [ ] Per-element dimensions for fixtures in the viewer (FR10). [proposal v4] **Built 2026-11-12:** a fixture row or marker opens a size card (width, height, area, centre / bottom / top above floor, wall); not checked in a browser or against tape yet (COMPLETION_PLAN 4.3).
 
 ### 7.6 Room layout, structure and mesh
 
@@ -485,8 +536,22 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       wall's position). *(from TODO 2026-10-23)*
 - [ ] Right-angle priors and an as-built floor plan export (layout.py has walls, corners, `plan.png`; no right-angle
       snapping or plan export format yet). *(from TODO, Novelty)*
+      **2026-11-19 (#12):** `plan_export.py` writes `plan.json` / `.svg` / `.dxf` (R12) per run (stage 16 `plan`); `--square` turns walls within 5° (off by default; moves wall ends 1–5 cm on newRoom). Format to be agreed by the team.
 - [ ] `structure.py` ceiling height (2.555 m was probably cupboard tops); `layout.py` supersedes it. *(from TODO, Parked)*
+      **2026-11-19 (#18): obsolete** — `layout.py` supersedes `structure.py` (MAP §3 marks it [exp]); its ceiling height is not used anywhere.
 - [ ] Wall 3 and the ceiling stay rough in the mesh (> 2.5 cm, untouched by shell denoising). [P&S §4.17]
+      **2026-11-19 (#18):** measured (`mesh.py --eval_only`): ceilings 4.28–4.34 cm (newRoom, scan #8), walls 2.86–4.98 cm (newRoom wall 3, scan #8 wall 4, scan #3 wall 2). `mesh_labels.py --clean_ceiling 0.04` brings the ceilings to 0.04 cm; on in `run_full.sh` (D-075). **Ceiling part done 2026-11-19 (R-057, #18 closed):** scan #8 4.35 → 0.04 cm, newRoom 4.31 → 0.04 cm. Rough walls not addressed (may be real relief): stays open for the walls.
+- [ ] **[new 2026-11-12] Floor still fits 1.95° tilted on levelled scan #3** (1.57° on scan #2), while the ceiling fits
+      0.05°: not explained (glossy floor reflection, or a bend in the model). Look at the floor residual map. (R-035)
+      **2026-11-19 (#17): cause found:** not a tilt but a step: one half fits 0.30°, the far end is 8–14 cm higher over ~2 m (a raised platform?); 29 % as many Gaussians below the floor as on it (glossy floor). Umair to confirm the platform (#20).
+      **2026-11-19 (R-057):** with `--floor_win 0.06` (on, D-075) scan #3 fits 0.29°, but `semantic.json` ceiling height goes 2.504 → 2.582 m while `layout.json` stays 2.525 m (5.7 cm apart): tape decides which floor level is the room's (#17, #20).
+- [ ] **[new 2026-11-12] scan #3's fourth corner is missing:** walls 2 and 3 stop > 2.5 m short of each other (door /
+      cupboards on that side?). Check in the model; then 4.5 (doorways from wall gaps). (R-035)
+- [ ] **[new 2026-11-12] Merge note for Tayyab:** `sfm_colmap.py` export now levels with ARCore gravity (D-071,
+      `--gravity centres` restores the old Sim3); his Step 3 changes are in the mapper part of the same file.
+- [ ] **[new 2026-11-12] Re-check older models for tilt:** any model exported before D-071 can be off gravity;
+      `level_model.py` levels it without retraining (R-034). Not checked for newRoom (R-023); R-037 prints it.
+      2026-11-12: newRoom was nearly level anyway (old export would have been 0.57° off, R-037); R-023 itself not checked.
 
 ### 7.7 Android app
 
@@ -571,6 +636,25 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 - [ ] `.spz` (in use) vs `.ksplat` (proposal, Zaid's branch): team decision. If `.ksplat` stays: finish v2-B/v2-C/scan-2
       renders, quality vs photos, FPS on the target laptop. [feat/splat-compress README]
+- [x] **[new 2026-11-16] Show every processed scan in the viewer with its semantics** — done 2026-11-19 (D-074, moved to §8):
+      the Projects tab lists every bundle in `public/scans/` (`/api/scans`). The FR10 size card is still not checked in a browser.
+- [ ] **[new 2026-11-19] Check an auto-listed scan in a real browser** (`/viewer/run-<folder>`): splats, Scan Layers,
+      camera start (middle of the fixtures, 1.5 m above the floor; ARCore origin when there are no fixtures). Headless
+      software rendering was still loading after 60 s.
+- [ ] **[new 2026-11-19] Online site (D-076): web UI on Vercel (`https://build-scan-3d.vercel.app/`), bundles on Cloudflare R2**,
+      one prefix and index per person so Tayyab can publish too. #26 Umair: bucket, public URL, keys in `.env`, Vercel
+      env `SCANS_BASE_URL`, OK to push. #27 / #28 / #29 code done on `feature/vercel-deploy` (not pushed; tested with
+      a local folder bucket only). #30: bucket CORS, first deploy, browser check on a second machine. Then: `pip install
+      boto3` in `bs-server`; Tayyab's own token and `PUBLISH_OWNER=tayyab` on the 3070 PC (needs Tayyab).
+- [ ] **[new 2026-11-19] Next steps as issues** (#31 – #38): server runs `run_full.sh` (#31, OD-7 for Umair), auto-publish
+      finished jobs within the 10 GB cap (#32), job progress to app / dashboard (#33), signing key backup (#34, Umair),
+      SfM memory on long recordings (#35, R-038 / R-058), processing-time table and repeat runs (#36), `.spz` vs
+      `.ksplat` + unmerged branches (#37, team), web UI empty / error states and known issues (#38).
+- [ ] **[new 2026-11-19] Hand-written `scan-008` card on Vercel** opens only once `scan_008_…_r1116w9` is published
+      (or the card is retired for the auto-listed one): Umair's choice.
+- [ ] **[new 2026-11-19] Room names on the auto-listed cards** (they say "Scan #N · tag"): e.g. a small names file next
+      to the scan register, once the rooms are written down in "Which recording is which". Published cards take a room
+      name already (`scripts/buildscan publish <scan> <tag> --room "<name>"`).
 - [ ] Adaptive splat budget / level of detail (FR9, NFR5). [proposal v4]
 - [ ] Web-UI step 8 (S9 empty and error states) and the known issues in `prototype/web-ui/STATUS.md` §6 (list view toggle,
       `globals.css` conflicts, stub buttons, every floor-plan room opens the same model, inert measurement types, missing thumbnails).
@@ -635,7 +719,33 @@ Dated milestones; details in [LOG.md](LOG.md), reasons in [DECISIONS.md](DECISIO
   tab, upload checks and Stop (D-064). `exp/first-linux-run` and `feature/usb-upload` merged to `master`.
 - **2026-11-12: ARCore depth bug closed** (Umair, D-067): scan #3 (classroom, 2026-11-12) has 782 distinct depth maps, 87% valid; the stale
   maps of newRoomAttemptSadness (realme, older app) did not come back.
+- **2026-11-12: app v0.3.7** (Umair, PR #6): update prompt at start and on return with the release notes, "What's new"
+  after an update, changelog per release (D-068), numbered scans (D-065), `iqa_ms` (NFR2), single quality banner.
+  Released by CD with the changelog as notes; not tested on a device.
 
+- **2026-11-12: scan #3 processed** (Umair, R-031): first v0.3.6 room, full pipeline in 81.0 min on this PC, 875 / 885
+  frames, layout height 2.74 m, 21 fixtures; model in `saved_models/2026-11-12_r1112_scan003/`. Held-out split tool
+  `make_split.py` for scoring speed runs (D-070).
+- **2026-11-12: layout fixed for tilted models** (Umair, Step 4 session): the Sim3 to ARCore took its rotation from camera
+  centres only and left scans #2 / #3 9.1° / 12.1° off gravity (R-032). `sfm_colmap.py` now levels with ARCore gravity
+  (D-071, R-033); `level_model.py` levels trained models (R-034); the ceiling may not lie below the wall tops (D-072).
+  scan #3: 2 → 4 walls, 0 → 3 corners (89–90°), 2.74 → 2.52 m (R-035); scan #2: 1.50 → 2.41 m (R-036). Viewer:
+  fixture size card (FR10). `fixture_checklist.py` for the per-room fixture check.
+
+- **2026-11-19: every processed scan in the web Projects tab** (Umair, D-074): `/api/scans` lists the bundles in
+  `public/scans/` with their numbers, run IDs and layout plans; `/viewer/run-<folder>` opens them. `feature/step4-layout`
+  fast-forwarded to `feature/viewer-scan-008`; work on `feature/viewer-all-scans`. R-039 / R-040 written up.
+
+- **2026-11-19: Step 4 issues** (Umair, agent; R-053 – R-056): no-roof detection (#8), doorways / window openings
+  from wall gaps (#9), closed-room check and floor area only for a closed outline (#10), floor plan .svg / .dxf /
+  .json as stage 16 (#12), check sheets with rejected candidates (#13); optional `--raised_max`, `--clean_ceiling`,
+  `--floor_win`, `--infer_gap`, `--square`: **on in `run_full.sh` since 2026-11-19 (D-075, Umair)**; first full run with them: R-057 (next session).
+
+- **2026-11-19: R-057, the D-075 defaults on four rooms** (agent for Umair, tag `r1119c`, 16.7 min, no errors):
+  scans #7 and #8 become closed 4-wall rooms (17.99 / 26.44 m², corners 87.7–89.7°), scan #3 floor tilt 1.95° → 0.29°,
+  ceilings 4.3 → 0.04 cm rough; newRoom unchanged. Scan #8 lost a switch + socket plate that sat on corner furniture
+  (Umair: furniture, so right). `r1119b` bundles archived; #11 and #18 closed. With `--square` the plan files are
+  `layout/plan_square.*`.
 ## 9. Known limits
 
 - **One room.** Every v9/v10 result is on newRoomAttemptSadness; the semantics rules were tuned on it.

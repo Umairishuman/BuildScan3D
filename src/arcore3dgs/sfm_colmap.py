@@ -28,7 +28,7 @@ ap.add_argument("--colmap", default=toolpaths.colmap(), help="COLMAP 4.2 executa
 ap.add_argument("--mapper", default="global_mapper", choices=["global_mapper", "mapper"])
 ap.add_argument("--skip_retriangulation", action="store_true",
                 help="global_mapper: skip the final retriangulation + refinement (6.5 of 14.3 min on newRoom; poses stay "
-                     "within the mapper's own run-to-run differences, TRAINING R-034)")
+                     "within the mapper's own run-to-run differences, TRAINING R-064)")
 ap.add_argument("--extract_gpu", type=int, default=1, help="0 = CPU SIFT (e.g. while the GPU is training)")
 ap.add_argument("--pairs", default="exhaustive", choices=["exhaustive", "arcore"],
                 help="arcore = match only temporal + ARCore-pose neighbours (much faster than exhaustive)")
@@ -45,6 +45,10 @@ ap.add_argument("--vocab", default="", help="faiss vocabulary tree (default: too
 ap.add_argument("--bridge", type=int, default=1,
                 help="if mapping splits into several components, match the frames outside the largest one against "
                      "a sample of it and map again (up to N rounds)")
+ap.add_argument("--gravity", default="arcore", choices=["arcore", "centres"],
+                help="export: 'arcore' (D-071) levels the world with ARCore's camera orientations, then fits scale, "
+                     "yaw and translation to the camera centres; 'centres' = the old full Sim3 from centres only "
+                     "(can leave the model tilted: 9-12 deg on scans #2 / #3, R-032)")
 args = ap.parse_args()
 MATCH_TYPE = "ALIKED_LIGHTGLUE" if args.feature == "aliked" else "SIFT_BRUTEFORCE"
 TOOLS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tools")
@@ -215,6 +219,38 @@ def umeyama(src, dst):
     return sc, Rm, md - sc * Rm @ ms
 
 
+def umeyama_yaw(src, dst):
+    """Sim3 with the rotation about +Y only (both point sets already have +Y = up): scale, yaw, translation."""
+    ms, md = src.mean(0), dst.mean(0); S, D = src - ms, dst - md
+    th = np.arctan2((D[:, 0] * S[:, 2] - D[:, 2] * S[:, 0]).sum(), (D[:, 0] * S[:, 0] + D[:, 2] * S[:, 2]).sum())
+    c, s_ = np.cos(th), np.sin(th); Ry = np.array([[c, 0, s_], [0, 1, 0], [-s_, 0, c]])
+    sc = (D * (S @ Ry.T)).sum() / (S ** 2).sum()
+    return sc, Ry, md - sc * Ry @ ms
+
+
+def level_rotation(u):
+    """smallest rotation taking unit vector u onto +Y"""
+    Y = np.array([0.0, 1.0, 0.0]); v = np.cross(u, Y); s_, c = np.linalg.norm(v), float(u @ Y)
+    if s_ < 1e-9:
+        return np.eye(3) if c > 0 else np.diag([1.0, -1.0, -1.0])
+    K = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+    return np.eye(3) + K + K @ K * ((1 - c) / s_ ** 2)
+
+
+def arcore_up(frames, rot_of):
+    """ARCore's up direction (+Y of its gravity-aligned world) expressed in another world, from every frame's two
+    camera orientations (OpenGL camera axes in both); robust mean. rot_of(frame) = that frame's c2w rotation there."""
+    Y = np.array([0.0, 1.0, 0.0]); U = []
+    for x in frames:
+        Ra = np.array(x.get("c2w_arcore", x["c2w"]))[:3, :3]
+        U.append(rot_of(x) @ (Ra.T @ Y))
+    U = np.array(U); U /= np.linalg.norm(U, axis=1, keepdims=True); keep = np.ones(len(U), bool)
+    for _ in range(3):
+        u = U[keep].mean(0); u /= np.linalg.norm(u)
+        dev = np.degrees(np.arccos(np.clip(U @ u, -1, 1))); keep = dev < max(2.0, 3 * np.median(dev))
+    return u, float(np.median(dev)), int(keep.sum())
+
+
 if run("export"):
     cams0, imgs0, _ = read_model(os.path.join(OUT, "sparse", "0"))
     cams, imgs, pts = read_model(os.path.join(OUT, "undist", "sparse"))
@@ -226,14 +262,28 @@ if run("export"):
     trust = [n for n in names if np.isfinite(arcore_c2w(fr[idx[n]])).all()]    # frames with an ARCore pose
     A = np.array([imgs[n][0][:3, 3] for n in trust])
     B = np.array([arcore_c2w(fr[idx[n]])[:3, 3] for n in trust])
+    # Gravity (D-071): camera centres alone leave the rotation about the walk's main direction weakly fixed (a short or
+    # nearly straight walk), so the world is first levelled with ARCore's orientations (gravity-aligned in every frame,
+    # also across re-anchors); then only scale, yaw and translation come from the centres.
+    up_col, up_spread, up_n = arcore_up([fr[idx[n]] for n in trust], lambda x: imgs[x["name"]][0][:3, :3] @ G[:3, :3])
+    Rl = level_rotation(up_col) if args.gravity == "arcore" else np.eye(3)
+    fit = umeyama_yaw if args.gravity == "arcore" else umeyama
+    A0 = A; A = A @ Rl.T
     rng = np.random.default_rng(0); best = None
     for _ in range(2000):
-        k = rng.choice(len(A), 4, replace=False); s, Rm, t = umeyama(A[k], B[k])
+        k = rng.choice(len(A), 4, replace=False); s, Rm, t = fit(A[k], B[k])
         inl = np.linalg.norm((s * (Rm @ A.T)).T + t - B, axis=1) < 0.10
         if best is None or inl.sum() > best.sum():
             best = inl
-    s, Rm, t = umeyama(A[best], B[best])
+    s, Rm, t = fit(A[best], B[best])
     res = np.linalg.norm((s * (Rm @ A.T)).T + t - B, axis=1)
+    Rm = Rm @ Rl                                             # COLMAP world -> levelled -> ARCore metric world
+    tilt = float(np.degrees(np.arccos(np.clip((Rm @ up_col)[1], -1, 1))))
+    R0 = umeyama(A0[best], B[best])[1]      # a full-rotation Sim3 on the same inliers, for comparison only (the old
+    tilt_centres = float(np.degrees(np.arccos(np.clip((R0 @ up_col)[1], -1, 1))))   # RANSAC picked other inliers)
+    print(f"for comparison: a full-rotation Sim3 on these inliers would be {tilt_centres:.2f} deg off gravity")
+    print(f"Sim3 ({args.gravity}): scale {s:.4f}, {best.sum()} / {len(A)} centre inliers, median {np.median(res[best]) * 100:.1f} cm; "
+          f"ARCore gravity {tilt:.2f} deg from the model's +Y (per-frame spread {up_spread:.2f} deg, {up_n} frames)")
     T = np.eye(4); T[:3, :3] = s * Rm; T[:3, 3] = t
     cam = cams[list(cams)[0]]; fx, fy, cx, cy = cam[3][:4]
     out_frames = []
@@ -261,6 +311,8 @@ if run("export"):
                                sfm=dict(source="colmap " + args.mapper, registered=len(out_frames), total=len(fr),
                                         sim3_scale=float(s), align_inliers=int(best.sum()), align_trusted=len(trust),
                                         align_median_cm=float(np.median(res[best]) * 100), dropped_jumps=jumps,
+                                        gravity=args.gravity, gravity_tilt_deg=tilt, gravity_spread_deg=up_spread,
+                                        gravity_tilt_full_sim3_same_inliers_deg=tilt_centres,
                                         distorted_camera=dict(model=cams0[list(cams0)[0]][0], params=cams0[list(cams0)[0]][3])))
     m2.pop("ba", None); m2.pop("fusion_dropped", None)
     json.dump(m2, open(os.path.join(OUT, "frames.json"), "w"), indent=1)
