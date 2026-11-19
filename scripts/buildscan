@@ -11,7 +11,7 @@
 #   scripts/buildscan check  <scan>              capture check (check_capture.py)
 #   scripts/buildscan run    <scan> [tag] [--from STAGE] [-- run_v8 args]
 #                                                full pipeline, best recipe by default             session: run-<tag>
-#   scripts/buildscan watch  <scan> [tag] [--raw] live view of a run: stage n of 15, what it does, training step,
+#   scripts/buildscan watch  <scan> [tag] [--raw] live view of a run: stage n of 16, what it does, training step,
 #                                                GPU (--raw: the raw logs). Ctrl+C stops watching only
 #   scripts/buildscan results <scan> [tag]       where the outputs are + stage times
 #

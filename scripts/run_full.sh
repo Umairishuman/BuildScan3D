@@ -15,6 +15,7 @@
 #   verify                                   verify_fixtures.py, CLIP check    (semantic-env)
 #   sem3d2                                   semantic3d.py again with verdicts (bs-ns)
 #   mesh meshlabels web                      mesh.py, mesh_labels.py, export_web.py (bs-ns; Node for .spz)
+#   plan                                     plan_export.py: plan.json / .svg / .dxf in layout/ (CPU, #12)
 # Every GPU_EVERY seconds (default 30) a status line shows GPU use, memory, temperature, power and, while training,
 # the step and time left (training itself writes only to train.log); also saved to gpu.csv. GPU_EVERY=0 turns it off.
 # A run that dies in training continues with: --from train (geo_splatfacto checkpoints every 2500 steps; see R-023
@@ -39,7 +40,7 @@ S="$D/work_${TAG}_sfm"; M="$S/gs_${TAG}"
 NAME="$(basename "$D")_${TAG}"
 WEB_OUT="prototype/web-ui/public/scans/$NAME"
 
-ALL=(select sfm export prior init train ply layout sem2d sem3d verify sem3d2 mesh meshlabels web)
+ALL=(select sfm export prior init train ply layout sem2d sem3d verify sem3d2 mesh meshlabels web plan)
 idx() { local i; for i in "${!ALL[@]}"; do [[ "${ALL[$i]}" == "$1" ]] && { echo "$i"; return; }; done; echo "unknown stage: $1" >&2; exit 1; }
 FROM_I=$(idx "$FROM")
 
@@ -104,6 +105,7 @@ DEPTH=(); [[ " ${V8_ARGS[*]} " == *" --pgsr "* ]] && DEPTH=(--depth unbiased)
 stage mesh       ns  "$HERE/mesh.py" --ply "$M/splat.ply" --work "$S" --out "$M/mesh" "${DEPTH[@]}"
 stage meshlabels ns  "$HERE/mesh_labels.py" --mesh "$M/mesh/mesh.ply" --ply "$M/splat.ply" --semantic "$M/semantic_v10" --layout "$M/layout/layout.json" --clean 0.01 --glb 400000
 stage web        ns  "$HERE/export_web.py" --ply "$M/splat.ply" --semantic "$M/semantic_v10" --glb "$M/mesh/mesh_web.glb" --out "$WEB_OUT"
+stage plan       ns  "$HERE/plan_export.py" --layout "$M/layout/layout.json" --semantic "$M/semantic_v10/semantic.json" --out "$M/layout" --title "$(basename "$D") $TAG"
 
 echo; echo "=== all done $(date '+%F %T'): model $M, web bundle $WEB_OUT"
 cat "$M/stages.tsv"
