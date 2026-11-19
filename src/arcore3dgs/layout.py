@@ -324,13 +324,25 @@ for w in final:
         print(f"  {op['kind']} on a wall: {op['width']:.2f} m wide, {op['bottom']:.2f}-{op['top']:.2f} m above the floor")
 # #10: is this a closed room? Each wall meets its neighbour in a corner (measured or inferred), >= 3 walls.
 n_inf = sum(1 for cn in corners if cn.get("inferred"))
-room_closed = len(final) >= 3 and len(corners) == len(final)
+# Neighbours in angular order are joined by a corner, or, when nearly parallel (a step: no corner by design, see
+# above), by ends within 0.5 m (R-055: newRoom's 0.78 m jog, 16 deg off, ends 0.42 m apart; scan #8's open side,
+# 21 deg, 2.31 m apart).
+_pairs = {tuple(sorted(cn["walls"])) for cn in corners}
+_idx = lambda w: next(i for i, x in enumerate(final) if x is w)
+_ends = lambda w: [w["cen"] + w["dir"] * w["t0"], w["cen"] + w["dir"] * w["t1"]]
+def _joined(a, b):
+    if tuple(sorted((_idx(a), _idx(b)))) in _pairs:
+        return True
+    return abs(a["dir"] @ b["dir"]) > np.cos(np.radians(30)) and \
+        min(np.linalg.norm(p - q) for p in _ends(a) for q in _ends(b)) < 0.5
+room_closed = len(final) >= 3 and all(_joined(order[k], order[(k + 1) % len(order)]) for k in range(len(order)))
 n_warn = len(warnings)
 if len(final) < 3:
     warnings.append(f"only {len(final)} wall(s) found: not a closed room (corridor end, open space or a partial "
                     f"recording); floor area and room size are not known")
 elif not room_closed:
-    warnings.append(f"outline not closed: {len(corners)} corners for {len(final)} walls; floor area is not computed")
+    warnings.append(f"outline not closed: {len(corners)} corners for {len(final)} walls and a gap between neighbouring "
+                    f"walls; floor area is not computed")
 if n_inf:
     warnings.append(f"{n_inf} corner(s) inferred where the walls stop short (not seen)")
 for w_ in warnings[n_warn:]:
