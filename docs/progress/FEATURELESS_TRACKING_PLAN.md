@@ -475,3 +475,9 @@ since held-out poses are not refined, new `eval_align.py` aligns each held-out p
 78 – 81 s the pose is nearly right and the gap stays 4 dB (geometry / coverage, 10.e). Next: 10.c (no training, no
 disk needed until its model is trained); training needs disk space first (2.7 GB free).
 
+**10.c (R-085, 2026-11-20):** two rounds from R-080's model: 647 → 676 → 656 cameras, 3D obs median 120 → 91 → 109,
+45 – 60 s median 1 → 3 → 1. The loop oscillates (weakly supported cameras come and go) and never beats R-080;
+rejected, not trained. Where §10 stands: 10.a measured; 10.f, 10.d, 10.c gave no held-out gain. What is left: 10.e
+(geometry / floaters, for the 78 – 81 s coverage gap and blank-wall floaters), 10.b (rolling shutter, a full SfM
+re-run) and 10.g (a re-recording of 45 – 60 s, which no tool has fixed). Training needs disk first.
+

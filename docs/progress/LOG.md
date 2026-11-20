@@ -850,5 +850,8 @@ reach a break through point … plan ahead what will give us best gains".
   trained on. R-084, 10.d `--pose_opt` without gyro blur: held-out 20.20 vs 20.80. New `src/arcore3dgs/eval_align.py`
   (test-pose alignment): aligned R-082 22.64, R-083 22.51, R-084 22.39, so no gain; held-out SfM poses ~2° off.
   Disk down to 2.7 GB (each run ~2.3 GB); nothing deleted.
-- Runs: R-084. Decisions: none.
-- Next: free disk (Tayyab's choice), 10.c track loop (SfM side, no training needed to see its effect).
+- R-085, 10.c track loop from R-080's model: 647 → 676 → 656 cameras, support thinner, 45 – 60 s unchanged;
+  oscillates, rejected, not trained.
+- Runs: R-084, R-085. Decisions: none.
+- Next (Tayyab to choose): free disk; then 10.e (geometry / floaters), 10.b (rolling shutter) or a re-recording of
+  45 – 60 s (10.g).

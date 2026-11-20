@@ -131,6 +131,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-082 | 2026-11-20 | scan_009: plan 10.a baseline, R-081 recipe with 69 frames held out (`v9pfh`) | 3070 | 28.3 min | held-out (69 frames) PSNR 20.80, SSIM 0.874, flatness 8.18 cm, 573,257 splats; R-081 on the same frames (seen in training) 23.98 / 0.909 / 5.98 cm | Kept as the §10 baseline |
 | R-083 | 2026-11-20 | scan_009: plan 10.f, R-082 plus gyro motion blur (`v9pfi`) | 3070 | 34.4 min | held-out PSNR 20.86 (R-082 20.80), SSIM 0.871 (0.874), sharpness 0.43 (0.28), flatness 9.85 cm (8.18), 586,509 splats; train 28.0 min (21.9) | Inconclusive |
 | R-084 | 2026-11-20 | scan_009: plan 10.d, R-082 plus pose refinement in training (`v9pfj`) | 3070 | 29.3 min | held-out PSNR 20.20 (R-082 20.80), flatness 7.40 cm (8.18); after test-pose alignment (`eval_align.py`) 22.39 vs R-082 22.64, R-083 22.51 | Rejected (no gain once poses are aligned) |
+| R-085 | 2026-11-20 | scan_009: plan 10.c, tracks ↔ path loop from R-080's model (`track_loop_r085`) | 3070 | 18.2 min | cameras 647 → 676 → 656, 3D obs median 120 → 91 → 109, < 10 obs 110 → 144 → 123; stopped after round 2 | Rejected (R-080 stays the best model) |
 
 ## Runs
 
@@ -2150,3 +2151,34 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   22 – 25 s), so pose error is real but has to be fixed in SfM (10.c / 10.b), not in training; (2) at 78 – 81 s the
   pose is nearly right (1.1°) yet aligned PSNR stays 4 dB below the seen model (27.56), a coverage / geometry gap
   (10.e); (3) 134 – 137 s stays poor even aligned (17.5) and even when trained on (18.9).
+
+### R-085 · 2026-11-20 · scan_009_057ed3beb4fc: 10.c tracks ↔ path loop (`track_loop_r085`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 5765e1d
+- **Dataset:** scan_009; keyframes `work_v9pfl`, calibration `work_v9pfm_sfm`, start model R-080's
+  `work_v9pfy_sfm/sparse_vt_pba_adapt` (647 cameras), pair-direction cache `work_v9pfl_sfm/pair_directions_dt300_par1_bg.json`
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r085.sh` (log `r085.log`): `track_loop.py $S $S/work_v9pfl
+  $S/work_v9pfm_sfm $S/work_v9pfy_sfm/sparse_vt_pba_adapt $S/track_loop_r085 --pair_cache … --bg_json
+  gyro_loop_bias.json --rounds 3 --colmap COLMAP.bat` (defaults: `--extra_w 30 --extra_min_inliers 8 --adapt_n 150`,
+  BA `--loose_t0 2 --loose_t1 30 --iters 150`, stop when kept cameras rise by < 5)
+- **Goal:** plan §10.c: repeat R-079 / R-080 (tracks → `rot_sfm.py` → adaptive BA → tracks → BA) until the kept
+  cameras stop rising. R-084's alignment showed held-out SfM poses ~2° off, so the pose fix has to come from SfM.
+  No training in this run (disk 2.7 GB).
+- **Start → end:** 20:50 → 21:08 (7.8 min per round)
+- **Errors during the run:** none.
+- **Result:** `track_loop.json`; per-stretch numbers from scratchpad `stretch_stats.py` (cameras, 3D obs median, cameras
+  with < 10 obs):
+
+  | Model | All | 45 – 60 s | 90 – 105 s | Reprojection |
+  |---|---|---|---|---|
+  | start (R-080) | 647, 120, 110 | 41, 1, 23 | 37, 23, 12 | 1.13 px |
+  | round 1 | 676, 91, 144 | 48, 3, 30 | 43, 16, 17 | 1.13 px |
+  | round 2 | 656, 109, 123 | 38, 1, 22 | 37, 21, 13 | 1.12 px |
+
+  Round 1 brought back 29 cameras (7 of them in 45 – 60 s) but with thinner support everywhere; round 2 dropped 20 of
+  them again and support went back towards the start; `--min_gain 5` stopped the loop. The loop oscillates instead
+  of converging: the extra cameras are the weakly supported ones, kept or dropped by small changes in the path.
+- **Verdict:** rejected: no round beats R-080's model on support, and 45 – 60 s is unchanged (median 1 → 3 → 1). Not
+  trained (no gain to test, and 2.7 GB disk). R-080 (`work_v9pfy_sfm/sparse_vt_pba_adapt`) stays the best scan_009
+  camera model. Output `dataset/scan_009_057ed3beb4fc/track_loop_r085/` (two rounds) kept.
