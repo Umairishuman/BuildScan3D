@@ -130,6 +130,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-081 | 2026-11-20 | scan_009: train on R-080's camera model (`v9pfz`, R-071's training recipe) for the web viewer | 3070 | 28.8 min | 622 frames, 542,469 splats; training-view PSNR median 19.59 vs R-071 19.52 on 607 common frames, better on 61%; scale check ok | Kept (best scan_009 model so far, in the web viewer) |
 | R-082 | 2026-11-20 | scan_009: plan 10.a baseline, R-081 recipe with 69 frames held out (`v9pfh`) | 3070 | 28.3 min | held-out (69 frames) PSNR 20.80, SSIM 0.874, flatness 8.18 cm, 573,257 splats; R-081 on the same frames (seen in training) 23.98 / 0.909 / 5.98 cm | Kept as the §10 baseline |
 | R-083 | 2026-11-20 | scan_009: plan 10.f, R-082 plus gyro motion blur (`v9pfi`) | 3070 | 34.4 min | held-out PSNR 20.86 (R-082 20.80), SSIM 0.871 (0.874), sharpness 0.43 (0.28), flatness 9.85 cm (8.18), 586,509 splats; train 28.0 min (21.9) | Inconclusive |
+| R-084 | 2026-11-20 | scan_009: plan 10.d, R-082 plus pose refinement in training (`v9pfj`) | 3070 | 29.3 min | held-out PSNR 20.20 (R-082 20.80), flatness 7.40 cm (8.18); after test-pose alignment (`eval_align.py`) 22.39 vs R-082 22.64, R-083 22.51 | Rejected (no gain once poses are aligned) |
 
 ## Runs
 
@@ -2082,3 +2083,70 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Verdict:** inconclusive: sharper held-out renders but no PSNR gain and less flat walls. The blur fix does not
   address the main held-out failures (entrance, far door), which look like pose / geometry errors. Whether to keep
   `--blur_gyro` in the next steps is Tayyab's choice.
+
+### R-084 · 2026-11-20 · scan_009_057ed3beb4fc: 10.d pose refinement in training (`v9pfj`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 7b56e5c
+- **Dataset:** scan_009; copies `work_v9pfj` / `work_v9pfj_sfm` made as in R-083 (from `work_v9pfz` and
+  `work_v9pfh_sfm`, without the model, the eval folder and the `undist_fast/images` junction)
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r084.sh` (log `r084.log`): as R-082 plus `--pose_opt` (nerfstudio
+  SO3xR3 camera optimizer); no `--blur_gyro` (R-083 inconclusive, so 10.d is compared with R-082 alone); then
+  `eval_offpath.py` and the per-frame check (scratchpad `perframe.py`)
+- **Goal:** plan §10.d. Why now: the per-frame check of R-082 (`work_v9pfh_sfm/eval_r082/perframe.csv`, below)
+  points at pose error in 22 – 25 s and 51 – 53 s and at frames that do not fit even when trained on (134 – 137 s).
+  Caveat: held-out frames keep their unrefined SfM poses, so if refinement moves the training cameras as a whole the
+  held-out score can drop even when the model is better; the sheet is checked as well.
+- **Per-frame check of R-082 / R-083 (before this run):** mean colour-fit PSNR per held-out stretch; "seen" = R-081,
+  which trained on these frames:
+
+  | Stretch | Frames | 3D obs median | R-082 held | R-083 held | R-081 seen | Gap seen − R-082 |
+  |---|---|---|---|---|---|---|
+  | still 0 – 17 s | 6 | 521 | 24.55 | 24.22 | 24.58 | 0.03 |
+  | 22 – 25 s | 14 | 144 | 23.87 | 24.27 | 26.67 | 2.80 |
+  | 51 – 53 s | 6 | 0 | 20.01 | 19.75 | 24.52 | 4.51 |
+  | 78 – 81 s | 14 | 746 | 21.63 | 22.27 | 27.56 | 5.93 |
+  | 106 – 107 s | 2 | 4 | 28.37 | 26.27 | 27.83 | −0.54 |
+  | 134 – 137 s | 15 | 171 | 15.73 | 15.63 | 18.93 | 3.20 |
+  | 162 – 165 s | 11 | 75 | 20.41 | 20.28 | 22.28 | 1.87 |
+  | 186 s | 1 | 1094 | 13.90 | 14.28 | 16.40 | 2.50 |
+
+  Reading (not proven): still frames with good support generalise (gap 0); 51 – 53 s has no image support (pose from
+  sensors); 78 – 81 s has good support but the largest gap; the stretch contains the whole 79.5 – 80.7 s still hold, so
+  that view direction is in no training frame (coverage / geometry, not pose); 134 – 137 s is poor even when trained
+  on (frames inconsistent with their neighbours: pose or blur; gyro blur did not change it). An ECC homography warp of
+  render onto photo was also tried as a rotation-error measure; it is unreliable on blank walls (fitted shifts of
+  thousands of px), so it is not used.
+- **Start → end:** 19:52 → 20:21 (export 0.01, prior 3.56, init 2.13, train 23.09, ply 0.54 min; total 29.3 min)
+- **Errors during the run:** none. Training log shows `CameraOptimizerConfig(mode='SO3xR3')`. Not an error but a
+  gap: `run_v8.py` deletes `nerfstudio_models/` after the export (disk), so the refined poses are lost and how far
+  they moved was not measured.
+- **Disk:** 2.7 GB free on C: after this run (each §10 training copy is ~2.3 GB: `work_v9pfh_sfm` 1.8 GB,
+  `work_v9pfi_sfm` 2.2 GB, mostly `mono_prior` 1.2 GB). No further training fits without freeing space; nothing was
+  deleted (Tayyab's choice).
+- **Result:** split 553 / 69; `→ work_v9pfj_sfm/gs_v9pfj/splat.ply`, 555,219 splats. `eval_offpath.py` (`eval_r084/`):
+  R-082 20.80 / 0.874 / sharpness 0.28 / flatness 8.18 cm; **R-084 20.20 / 0.861 / 0.30 / 7.40 cm**. Per stretch
+  (`perframe.csv`) R-084 is lower on 6 of 8, including the still frames at 0 – 17 s (24.55 → 22.97), which have good
+  support: the pattern expected when the training cameras move and the held-out poses do not. Sheet: the far-door
+  edge and the entrance smear look cleaner, other views similar.
+  New `src/arcore3dgs/eval_align.py` (test-pose alignment: per held-out frame, model frozen, 6-DoF correction plus
+  colour gain / bias by L1, 1/8 → 1/4 → 1/2 res, 150 / 75 / 50 iterations; the correction is dropped if it lowers
+  PSNR), same 69 frames, 23.7 min for three models (`eval_r084/aligned.csv`):
+
+  | Model | PSNR | PSNR aligned | SSIM | SSIM aligned | Correction median |
+  |---|---|---|---|---|---|
+  | R-082 baseline | 20.80 | **22.64** | 0.874 | 0.885 | 2.02°, 0.154 units |
+  | R-083 gyro blur | 20.86 | 22.51 | 0.871 | 0.876 | 2.11°, 0.149 units |
+  | R-084 pose refinement | 20.20 | 22.39 | 0.861 | **0.888** | 1.60°, 0.159 units |
+
+  Aligned PSNR per stretch (R-082 / R-083 / R-084; median correction R-082): still 0 – 17 s 24.89 / 24.64 / 25.13
+  (0.12°); 22 – 25 s 26.44 / 26.13 / 26.44 (1.81°); 51 – 53 s 21.59 / 22.06 / 22.47 (15.9°); 78 – 81 s 23.63 / 23.90 /
+  23.90 (1.10°); 106 – 107 s 29.12 / 28.23 / 27.65; 134 – 137 s 17.53 / 17.37 / 16.66 (2.61°); 162 – 165 s 22.38 /
+  21.82 / 21.32; 186 s 14.88 / 15.45 / 14.92. Corrections above ~5° are on blank walls (51 – 53 s, 106 s, 162 s), where
+  the alignment can slide along a featureless surface; not trusted.
+- **Verdict:** rejected for now: once each model gets its best held-out pose, the three models are within 0.25 dB, so
+  pose refinement in training does not make a better model here (one run, one split). What the alignment shows:
+  (1) held-out SfM poses are off by about 2° on textured stretches (aligning gains 1.8 dB on average, 2.6 dB at
+  22 – 25 s), so pose error is real but has to be fixed in SfM (10.c / 10.b), not in training; (2) at 78 – 81 s the
+  pose is nearly right (1.1°) yet aligned PSNR stays 4 dB below the seen model (27.56), a coverage / geometry gap
+  (10.e); (3) 134 – 137 s stays poor even aligned (17.5) and even when trained on (18.9).

@@ -845,4 +845,10 @@ reach a break through point … plan ahead what will give us best gains".
   (`v9pfi`): all 622 frames get gyro motion; held-out PSNR 20.86 vs 20.80, SSIM 0.871 vs 0.874, sharpness 0.43 vs
   0.28, flatness 9.85 vs 8.18 cm, training +6 min. Inconclusive (TRAINING R-083).
 - Runs: R-083. Decisions: none (keeping `--blur_gyro` is open for Tayyab).
-- Next: Tayyab's choice on `--blur_gyro`, then 10.b (rolling-shutter rectification) on the same split.
+- Then (Tayyab: "what are the next best steps", then "ok start work"): per-frame check of R-082 / R-083 (scratchpad
+  `perframe.py`): pose-like gaps at 22 – 25 s and 51 – 53 s, a coverage gap at 78 – 81 s, 134 – 137 s poor even when
+  trained on. R-084, 10.d `--pose_opt` without gyro blur: held-out 20.20 vs 20.80. New `src/arcore3dgs/eval_align.py`
+  (test-pose alignment): aligned R-082 22.64, R-083 22.51, R-084 22.39, so no gain; held-out SfM poses ~2° off.
+  Disk down to 2.7 GB (each run ~2.3 GB); nothing deleted.
+- Runs: R-084. Decisions: none.
+- Next: free disk (Tayyab's choice), 10.c track loop (SfM side, no training needed to see its effect).

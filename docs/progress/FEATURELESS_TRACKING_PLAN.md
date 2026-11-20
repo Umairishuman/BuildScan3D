@@ -466,3 +466,12 @@ scores 23.98 / 0.909 / 5.98 cm, so an unseen view loses about 3.2 dB. Every late
 (0.874), sharpness 0.43 (0.28), flatness 9.85 cm (8.18), training 28.0 min (21.9). Sharper, not more accurate; the
 entrance and far-door failures are unchanged. Inconclusive; keeping it for 10.b onwards is open (Tayyab).
 
+**Per-frame check and 10.d (R-084, 2026-11-20):** per held-out stretch, the gap between R-082 and R-081 (which saw
+the frames) is ~0 on the still frames, 2.8 dB at 22 – 25 s, 4.5 dB at 51 – 53 s (no image support), 5.9 dB at 78 – 81 s
+(good support) and 3.2 dB at 134 – 137 s, which is poor even when seen (18.9). `--pose_opt` (R-084): 20.20 held out;
+since held-out poses are not refined, new `eval_align.py` aligns each held-out pose to the frozen model first: R-082
+22.64, R-083 22.51, R-084 22.39, so no model is better. The alignment itself is the finding: held-out SfM poses are
+~2° off on textured stretches (+1.8 dB when corrected), so the pose fix has to come from SfM (10.c, 10.b); at
+78 – 81 s the pose is nearly right and the gap stays 4 dB (geometry / coverage, 10.e). Next: 10.c (no training, no
+disk needed until its model is trained); training needs disk space first (2.7 GB free).
+
