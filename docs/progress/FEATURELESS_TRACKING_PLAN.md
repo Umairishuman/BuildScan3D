@@ -310,7 +310,8 @@ Written for Tayyab after `master` (Umair's Step 4 work, the online site, app v0.
 
 ### 9.1 What changed on `master` that matters here
 
-- **Week 2 (2026-11-20 → 11-26) is the evaluation week**; gate G2 on 11-26 wants every evaluation number measured
+- **Correction 2026-11-20 (Tayyab): this week is not the evaluation week.** The line below was read from
+  COMPLETION_PLAN.md and is kept as written. Week 2 (2026-11-20 → 11-26) is the evaluation week; gate G2 on 11-26 wants every evaluation number measured
   ([COMPLETION_PLAN.md](COMPLETION_PLAN.md)). **E1** ("COLMAP with vs without ARCore priors on low-texture captures:
   ATE, track completion", Must, no owner yet) is the evaluation this work answers. So the featureless work should go
   into E1 first and into new methods second.
@@ -353,3 +354,70 @@ Written for Tayyab after `master` (Umair's Step 4 work, the online site, app v0.
   with an empty "Unreleased"), so CI may be red for a reason that is not this branch's.
 - **Disk on the 3070 PC** (Tayyab): ~9 GB free; scan_009's `work_v9pfb*` / `work_v9pfl*` hold ~4 GB. Keep R-071's
   folders, and ask before removing the rest.
+
+## 10. Video tracks and the road to a usable scan_009 (2026-11-20)
+
+Written for Tayyab after R-073 – R-081. **A proposal, not a decision.** §9's steps still stand; this section ranks
+what should improve the scan_009 model the most from here.
+
+### 10.1 What R-073 – R-081 showed
+
+- **Video point tracks** (`video_tracks.py`): corners tracked through every 30 fps frame (KLT, forward-backward check),
+  checked against the gyro rotation (2-point RANSAC on the travel direction). A probe at 45 – 60 s: about 260 points
+  survive one keyframe gap (0.2 s), median over 9 starts.
+- **newRoom (truth known):** the R-071 recipe's position priors were too tight (31.1 cm median → 14.8 cm with them
+  nearly off, R-075). **Adaptive priors** (`prior_ba.py --adapt_n 150`, R-078): tight where a keyframe pair has few
+  3D observations, loose where it has many: 16.2 cm median, **p90 29.6 cm** (R-071 recipe 68.4).
+- **scan_009:** the tracks agree with the image-supported path to 2.4 – 2.9°, and disagree by 47° / 73° in the two
+  low-texture stretches: the sensor path there was wrong, not the tracks (R-078 side check). Weighting the tracks ×30
+  in `rot_sfm.py` (R-079) and re-triangulating them (R-080): 3D observations per camera median 54 → 120, cameras
+  with < 10: 202 → 110, 90 – 105 s fixed (3 → 23), reprojection 1.27 → 1.13 px. **45 – 60 s is not fixed:** the video
+  has too little texture there for tracks to last to the next keyframe.
+- **R-081** (trained on R-080): training-view PSNR median 19.52 → 19.59, better on 61 % of frames; Tayyab, looking at
+  it in the web viewer (2026-11-20): "much better than the old one … from the proper camera angles from where the
+  pictures were taken the room is finally looking like the real thing".
+
+### 10.2 What is still wrong
+
+1. **Views away from the recorded path** look worse than views from it (what Tayyab's remark implies; not measured):
+   the likely cause is that the splats fit each photo but the geometry between photos is not tight (floaters, wall
+   "fog"; not checked). This is what decides whether the room
+   reads as a room in the viewer.
+2. **We measure only training views.** A gain off the path cannot be seen in the current numbers.
+3. **Rolling shutter** is not modelled anywhere: shear median 8 px, p90 17 px per keyframe (`camera.csv`, 19.5 ms
+   readout), against a reprojection error of 1.13 px. It is the largest known per-pixel error left.
+4. **Motion blur** median 10.5 px (predicted from the gyro); the training's blur model (`--blur 0.0222`) is a global
+   exposure, not the measured per-frame motion.
+5. **45 – 60 s** rests on the sensors (no texture); **scale** is ~2× too large (§9.b).
+
+### 10.3 Steps, ranked by expected gain per day
+
+| # | Step | Why it should help | Effort | Done when |
+|---|---|---|---|---|
+| 10.a | **Measure novel views.** Hold out every 8th keyframe (`run_v8.py --split`), retrain R-081 as the baseline; plus a fixed set of off-path virtual cameras (orbit around the room centre, 1 m above the floor) rendered the same way for every model, as a sheet | Without it no later step can be judged; Tayyab's observation (10.2.1) becomes a number | 0.5 day + 1 training (30 min) | held-out PSNR / SSIM for R-081 in TRAINING, orbit sheet |
+| 10.b | **Rolling-shutter rectification from the gyro.** Each image row has its own time; the gyro gives the rotation per row. Warp every keyframe to one instant (per-row rotation homography `K R_row K⁻¹`) before SfM, tracks and training, so all stages see consistent images | Removes an 8 – 17 px shear that differs between views and blurs the 3D fit; rotation-only is enough at 17°/s and room distances | 1 day + full re-run (tracks → rot_sfm → BA → train ≈ 45 min) | held-out PSNR up and orbit sheet sharper than 10.a's baseline; reprojection below 1.13 px |
+| 10.c | **Iterate tracks ↔ path.** Re-extract tracks on R-080's path (better rotations and positions), feed back into `rot_sfm.py`, re-triangulate; repeat until the kept cameras stop rising (647 now, 698 in R-071) | Each round so far gave more points (R-076 6,398 → R-080 7,263) and fixed 90 – 105 s; the 51 cameras lost in R-079 are likely recoverable | 0.5 day, ~15 min per round + 1 training | more cameras kept; held-out PSNR not worse |
+| 10.d | **Pose refinement during training** (`train.py --pose_opt`, off by default because on newRoom the BA poses were already better, 73 mm drift). scan_009's poses are worse, so the photometric loss may correct them, especially in 45 – 60 s | Cheap to try; directly targets the remaining pose error | 1 training run | held-out PSNR (with test-pose alignment) and orbit sheet vs 10.a |
+| 10.e | **Geometry for off-path views:** stronger planar prior (`--planar` 0.2 → 0.5 / 1.0), Metric3D depth and normal supervision weight, and floater pruning; then wall planes from `layout.py` as a constraint | Targets 10.2.1 directly: flat walls and no fog between the photos | 1 – 1.5 days, 3 – 4 trainings | orbit sheet cleaner, wall flatness (`eval_offpath.py`-style) better, held-out PSNR not worse |
+| 10.f | **Per-frame motion blur from the gyro** in the blur model (the measured blur path per keyframe instead of one global exposure) | Sharper texture; matters more after 10.b | 1 day | held-out PSNR / sharpness up |
+| 10.g | **45 – 60 s with planes** (= §9.e, lines and planes with the gyro rotation fixed) or a **re-recording** (§9.c) | The only ways to fix a stretch without texture | 3 – 4 days, or 1 h recording | that stretch has points; or a new capture replaces it |
+
+**Recommended order:** 10.a → 10.b → 10.c → 10.d → 10.e, one variable per training run, each against 10.a's
+baseline. 10.b and 10.e are where a "breakthrough" in how the room looks is most likely; 10.c and 10.d are cheap
+and safe. 10.f and 10.g come after, or 10.g as the re-recording if the room is reachable.
+
+**Cost against the schedule:** 10.a – 10.d are about 3 working days. Tayyab (2026-11-20): this week is not the
+evaluation week, so §10 goes first; 10.a's held-out numbers can still go into the report.
+
+**Still frames (Tayyab, 2026-11-20):** during the scan_009 recording he held the camera still at several points along
+the room, so there are sharp frames there. They show up in the gyro as stretches of near-zero rotation and help
+three steps: 10.b (no rolling-shutter shear when still), 10.f (no blur), and 10.e (sharp reference views for the
+geometry). `select_sharp.py` already prefers low-motion frames; `still_frames.py` (10.f) lists the still stretches
+so they can be weighted up in training.
+
+### 10.4 Decisions needed (none taken here)
+
+- ~~Order and time~~: answered 2026-11-20 by Tayyab: §10 first (not the evaluation week); code 10.a – 10.f, no
+  training until he says so.
+- **Re-recording scan_009's room** (Tayyab / whoever has access): the cheapest fix for 45 – 60 s and for blur.
+- Still open from §9.3: OD-15, the E1 owner, VGGT, the merge to `master`, disk.

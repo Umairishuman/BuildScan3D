@@ -803,3 +803,25 @@ Asked by Tayyab: "commit these stuff, also pull the latest stuff ... also plan f
   numbers. Nothing pushed.
 - Next: Tayyab decides OD-15, the E1 owner, VGGT, and the PR of this branch to `master`; Umair should hear about the
   renumbering and the changelog test; then plan §9.a (E1 table).
+
+## 2026-11-20 · Tayyab (agent) · `docs/featureless-tracking-plan`
+Asked by Tayyab: "start featureless tracking we need to somehow get the scan_009 working", later "keep refining it and
+reach a break through point … plan ahead what will give us best gains".
+- Did: new `src/arcore3dgs/video_tracks.py` (KLT tracks through every video frame, checked against the gyro rotation,
+  triangulated into a model; `--pairs_out` for keyframe-pair directions); `rot_sfm.py --extra_pairs / --extra_w /
+  --extra_min_inliers`; `prior_ba.py --adapt_n / --loose_t0 / --loose_t1` (adaptive position priors). newRoom: tracks
+  alone do not help (R-073); the position priors were the limit (R-074, R-075); adaptive priors keep the gain (R-078:
+  16.2 cm median, p90 29.6 vs 31.1 / 68.4). scan_009: tracks on the old path do not triangulate (R-076); as directions
+  at normal weight they are outvoted (R-077); a check showed the tracks are right and the path in the low-texture
+  stretches is wrong; ×30 weight (R-079) and re-triangulation (R-080) fix 90 – 105 s, not 45 – 60 s. R-081 trained on
+  R-080: slightly better than R-071 on training views (better on 61 % of frames); in the web viewer as
+  `scan-009-tracks`, which Tayyab looked at and found "much better than the old one". Plan for the next steps:
+  [FEATURELESS_TRACKING_PLAN.md §10](FEATURELESS_TRACKING_PLAN.md) (novel-view measurement, rolling-shutter
+  rectification, iterate tracks ↔ path, pose refinement in training, geometry priors). Records: TRAINING R-073 –
+  R-081, web-ui STATUS. Dev server started on 127.0.0.1:3000 and closed again at Tayyab's request.
+- Runs: R-073 – R-081. Decisions: none.
+- Problems: COLMAP GUI first launch from the background shell closed without a window (relaunched with
+  `Start-Process`); `work_v9pfx_sfm` already existed (R-079 used `v9pfy` instead); `render_compare.py` needs
+  `nerfstudio-env`'s Python (plyfile). Nothing committed or pushed (not asked this session).
+- Next: Tayyab decides the order of §10 against E1 (§9.a) and whether the room can be re-recorded; then 10.a
+  (held-out baseline for R-081). `video_tracks.py` still needs a MAP.md entry when committed.

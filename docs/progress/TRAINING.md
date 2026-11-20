@@ -119,6 +119,15 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-070 | 2026-11-14 | newRoom: MCMC densification at the baseline budget (`mcmc620`) | 3070 | 35.0 min train | 24.65 / 0.8216, sharpness 0.64 (softer) | Rejected |
 | R-071 | 2026-11-19 | scan_009: loop closure (gyro bias from far-apart pairs, rot_sfm with all pairs, prior BA; `v9pfl`) | 3070 | 55 min | 680 frames, loop closed (> 120 s pairs 15.6° → 3.5°), scale check ok; PSNR ≈ R-047 / R-052; scale ~2× too large (not applied) | Kept (most complete) |
 | R-072 | 2026-11-19 | newRoom: validation of the R-071 recipe against the trusted SfM path | 3070 | 34 min | position error median 72 → 31 cm (p90 166 → 68 cm), scale 0.89; still far worse than normal SfM | Validation |
+| R-073 | 2026-11-19 | newRoom: video point tracks (`video_tracks.py`) added to the R-071 recipe, against the trusted SfM path | 3070 | 11.6 min | position error median 31.1 → 37.5 cm (p90 68.4 → 74.2); 3D obs per image 370 → 682 | Rejected (as is) |
+| R-074 | 2026-11-19 | newRoom: prior BA with loose position priors, with and without video tracks (are the priors the bottleneck?) | 3070 | 28 min | loose priors: 31.1 → 21.9 cm median (p90 68.4 → 48.3); with video tracks 22.9 cm | Kept (finding) |
+| R-075 | 2026-11-19 | newRoom: prior BA with position priors nearly off (`--s_t1 30`), 150 iterations | 3070 | 20 min | **14.8 cm median, p90 35.9** (R-072: 31.1 / 68.4); cost still falling slowly at 142 iterations | Kept (finding) |
+| R-076 | 2026-11-20 | scan_009: video tracks + prior BA with default / loose / nearly-off position priors (no training) | 3070 | 10 min | tracks fill little: 45 – 60 s still 0 points per camera; cameras < 10 points 202 → 173; priors nearly off → path jumps (max step 69× median) | Rejected (finding) |
+| R-077 | 2026-11-20 | scan_009: video-track pair directions into `rot_sfm.py` (`--extra_pairs`), then prior BA (`v9pfv`, no training yet) | 3070 | 4 min | +1,321 directions from tracks, but 641 cameras kept (R-071: 698); 45 – 60 s: 36 cameras, still 0 points median | Rejected (as is) |
+| R-078 | 2026-11-20 | Adaptive position priors in `prior_ba.py` (`--adapt_n 150`): tight where a keyframe pair has few 3D observations, loose where it has many; newRoom + scan_009 | 3070 | 21 min | newRoom 16.2 cm median, p90 29.6 (R-075 free: 14.8 / 35.9; R-071 recipe 31.1 / 68.4); scan_009 no jumps (max step 9.2× median), empty stretches unchanged | Kept (recipe for the BA step) |
+| R-079 | 2026-11-20 | scan_009: track directions with more weight (`--extra_w 10` / `30`, `--extra_min_inliers 8`) into `rot_sfm.py`, then the R-078 adaptive BA (`v9pfw`, `v9pfy`, no training yet) | 3070 | 11 min | path now agrees with the tracks in 45 – 60 s (4.3° vs 46.9°); 647 cameras (×30), empty stretches still 0 points median | Kept as input for R-080 (×30) |
+| R-080 | 2026-11-20 | scan_009: video tracks re-triangulated on R-079's path (`v9pfy`), then the adaptive BA (no training yet) | 3070 | 3.5 min | 7,263 track points; 90 – 105 s median 3D obs 3 → 23; 45 – 60 s still 1 (video has no trackable texture there); reprojection 1.13 px | Kept (best scan_009 SfM so far, not trained) |
+| R-081 | 2026-11-20 | scan_009: train on R-080's camera model (`v9pfz`, R-071's training recipe) for the web viewer | 3070 | 28.8 min | 622 frames, 542,469 splats; training-view PSNR median 19.59 vs R-071 19.52 on 607 common frames, better on 61%; scale check ok | Kept (best scan_009 model so far, in the web viewer) |
 
 ## Runs
 
@@ -1736,3 +1745,267 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Verdict:** the R-071 recipe more than halves the position error of the sensor-based path (72 → 31 cm median) and
   makes the steps far more regular, but it is still much worse than normal SfM where normal SfM works (the trusted
   path). Use only for captures where SfM fails. One capture only; tuned settings are the defaults.
+
+### R-073 · 2026-11-19 · newRoomAttemptSadness: video point tracks added to the R-071 recipe (no training)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 45de8b5 (uncommitted: new `src/arcore3dgs/video_tracks.py`)
+- **Dataset:** newRoomAttemptSadness, keyframes `work_v9e2e`, input model `work_rotsfm_loop/sparse/0` (R-072's
+  rot_sfm with loop bias, before prior BA); trusted path `work_v9e2e_sfm/sparse/0` (0.668 m per unit)
+- **Command(s):** `dataset/newRoomAttemptSadness/r073.sh` (log `r073.log`): `video_tracks.py` → `work_rotsfm_loop/
+  sparse_vt`; `prior_ba.py` → `sparse_vt_pba`; scratchpad `eval_rot.py` against the trusted path, next to R-072's
+  `sparse_pba` (31.1 cm median)
+- **Goal:** FEATURELESS_TRACKING_PLAN §10 technique 1: do KLT tracks through every video frame lower the position
+  error of the sensor-based path? Must be checked here before scan_009.
+- **Start → end:** 23:00 → 23:12 (tracking 100 s for 7,177 video frames; RANSAC + triangulation ~1.5 min; prior BA
+  593 s; eval 10 s)
+- **Errors during the run:** none. Before it: seeking in the mp4 (`CAP_PROP_POS_FRAMES`) is not frame-exact (keyframe
+  vs sought frame mean difference 14 – 48 grey levels); decoding in order matches `video_index` exactly (0.12 – 0.19).
+  `video_tracks.py` decodes in order.
+- **Result:**
+  - Tracks: 305,892 started (≤ 300 new corners per keyframe, half resolution, CLAHE, forward-backward < 0.7 px);
+    994,328 keyframe observations; rotation-fixed RANSAC rejected 40,954 of 688,431 tested pair observations (5.9%).
+    Triangulated 47,240 new points (308,429 observations); rejected: 168,196 seen in one keyframe only, 72,843 parallax
+    < 1°, 17,023 reprojection > 10 px, 590 behind a camera.
+  - 3D observations per image: median 370 → 682; images with < 20: 94 → 74; < 50: 149 → 106.
+  - `prior_ba.py`: 858,595 observations; reprojection median 0.73 px (p90 1.85); position change median 0.288 units.
+  - Against the trusted path (Sim3 fitted): R-072's `sparse_pba` 31.1 cm median / 68.4 cm p90 / step spread 1.89×;
+    **with video tracks 37.5 / 74.2 cm / 2.24×** (scale 0.901).
+- **Verdict:** rejected as is: more local observations made the path slightly worse. newRoom already had 370 points
+  per frame and fits them at 0.73 px, so its 31 cm error is not missing matches but a smooth bend of the whole path.
+  Suspected cause: the relative position priors (`--s_t1 0.3` of the sensor step) hold the path near the noisy sensor
+  solution. Checked next in R-074. One capture only; scan_009 not run.
+
+### R-074 · 2026-11-19 · newRoomAttemptSadness: prior BA with loose position priors (no training)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 45de8b5 (uncommitted: `video_tracks.py`)
+- **Dataset:** as R-073 (input `work_rotsfm_loop/sparse/0` and R-073's `sparse_vt`)
+- **Command(s):** `dataset/newRoomAttemptSadness/r074.sh` (log `r074.log`): `prior_ba.py --s_t0 0.2 --s_t1 3.0
+  --iters 60` (position priors 10× looser) on both models; scratchpad `eval_rot.py`
+- **Goal:** is R-072's 31 cm error held in place by the sensor position priors? If yes, loosening them moves the path
+  toward the trusted one, and the video tracks may help after all.
+- **Start → end:** 23:12 → 23:40 (820 s + 836 s; eval 15 s)
+- **Errors during the run:** none. The log filter dropped the per-iteration lines, so whether 60 iterations were all
+  used is not known (round 1 took ~580 s, consistent with all 60).
+- **Result:** against the trusted path, median / p90 / step spread:
+
+  | Model | Default priors (R-072 / R-073) | Loose priors (`--s_t0 0.2 --s_t1 3.0`) |
+  |---|---|---|
+  | rot_sfm with loop bias | 31.1 / 68.4 cm / 1.89× | **21.9 / 48.3 cm / 1.63×** (scale 0.912) |
+  | same + video tracks | 37.5 / 74.2 cm / 2.24× | 22.9 / 50.4 cm / 1.71× |
+
+  Reprojection 0.66 / 0.73 px; relative rotation vs the gyro prior still 0.09 – 0.11° median.
+- **Verdict:** the position priors were holding the path near the noisy sensor solution: loosening them cuts the error
+  by 30%. The video tracks still add nothing on newRoom (it is not short of matches). Next: priors almost off and more
+  iterations (R-075).
+
+### R-075 · 2026-11-19 · newRoomAttemptSadness: prior BA with position priors nearly off (no training)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 45de8b5 (uncommitted: `video_tracks.py`)
+- **Dataset:** as R-074, input `work_rotsfm_loop/sparse/0` only
+- **Command(s):** `dataset/newRoomAttemptSadness/r075.sh` (log `r075.log`, iterations kept): `prior_ba.py --s_t0 2
+  --s_t1 30 --iters 150` → `sparse_pba_free_t`; scratchpad `eval_rot.py`
+- **Goal:** how far do the images alone (rotations still tied to the gyro) move the path toward the trusted one, and
+  does the solver stop by convergence or by the iteration limit?
+- **Start → end:** 2026-11-19 23:41 → 2026-11-20 00:01 (round 1: 142 iterations, 982 s; round 2: 13, 186 s)
+- **Errors during the run:** none.
+- **Result:** round 1 cost 797,683 → 333,113 (iteration 100: 333,202; 140: 333,113: still falling slowly, a flat
+  valley, so not fully converged); reprojection 0.66 px median after round 2; rotations stay with the gyro (relative
+  rotation vs prior 0.097° median); position change median 0.581 units. Against the trusted path: **14.8 cm median,
+  35.9 cm p90**, step spread 1.65×, Sim3 scale 0.946 (R-074 loose: 21.9 / 48.3; R-072: 31.1 / 68.4).
+- **Verdict:** on a capture with enough matches the images alone (rotation tied to the gyro) bring the sensor path to
+  ~15 cm; the default position priors (`--s_t1 0.3`) were the main limit of the R-071 recipe. Not yet tested on
+  scan_009, where two stretches have no image points and only the priors hold the cameras: there the video tracks
+  (R-073) should take over. One capture only.
+
+### R-076 · 2026-11-20 · scan_009_057ed3beb4fc: video tracks + prior BA with looser position priors (no training)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 45de8b5 (uncommitted: `video_tracks.py`)
+- **Dataset:** scan_009, keyframes `work_v9pfl`, input `work_v9pfl_sfm/sparse_tri` (R-071's rot_sfm model before
+  prior BA: 698 cameras, 23,490 points, 138,270 observations)
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r076.sh` (log `r076.log`): `video_tracks.py` → `sparse_vt`;
+  `prior_ba.py` on `sparse_vt` with default priors (`sparse_vt_pba`), `--s_t0 0.2 --s_t1 3` (`sparse_vt_pba_loose`),
+  `--s_t0 2 --s_t1 30 --iters 150` (`sparse_vt_pba_free`), and on `sparse_tri` with `--s_t0 0.2 --s_t1 3`
+  (`sparse_pba_loose`); scratchpad `loop_rot2.py` (start / end rotation check) and `cam_reproj.py` (points per camera)
+- **Goal:** R-073 – R-075 on scan_009: do the video tracks fill the two stretches without image points
+  (45 – 60 s, 90 – 105 s), and can the position priors be loosened there without the cameras floating?
+- **Start → end:** 00:02 → 00:12 (tracking 57 s; prior BA 97 / 100 / 207 / 84 s)
+- **Errors during the run:** none.
+- **Result:** tracks: 209,330 started, 320,229 keyframe observations, 13,610 of 110,772 tested rejected by the
+  rotation RANSAC; only 6,398 triangulated (174,624 reach one keyframe only, 24,225 parallax < 1°); 3D observations per
+  image median 56 → 82, images < 20: 244 → 206. Per model (scratchpad `stretch_stats.py`; cameras with < 10 3D points;
+  fastest step / median step):
+
+  | Model | All 698 cams: < 10 pts, max step | 45 – 60 s (50 cams): pts median, < 10 | 90 – 105 s (45 cams): pts median, < 10 |
+  |---|---|---|---|
+  | R-071 `sparse/0` | 202, 8.7× | 0, 43 | 3, 29 |
+  | tracks + default priors | 173, 9.1× | 0, 37 | 4, 28 |
+  | tracks + loose (`0.2 / 3`) | 173, 10.2× | 0, 37 | 4, 28 |
+  | tracks + nearly off (`2 / 30`, 150 it) | 173, **69.1×** | 0, 37 | 4, 28 |
+  | no tracks + loose | 201, 10.5× | 0, 43 | 3, 29 |
+
+  Per-stage count (`--debug_window`) for tracks starting in the window: 45 – 60 s: 15,000 started → 1,286 reach a
+  second keyframe → 875 pass the RANSAC → **95 triangulated**; 90 – 105 s: 13,500 → 2,009 → 1,630 → **6**;
+  120 – 140 s (has matches): 21,000 → 4,721 → 3,726 → 1,029. Keyframes 0.20 s apart (median) in all three.
+- **Verdict:** the tracks survive and agree with the gyro in the empty stretches but are lost at triangulation with
+  the current (wrong) positions there. With the position priors nearly off the path jumps (69× max step): on scan_009
+  the priors are what holds the empty stretches. Not trained. Next: give the tracks to `rot_sfm.py` as directions
+  (R-077).
+
+### R-077 · 2026-11-20 · scan_009_057ed3beb4fc: video-track pair directions into rot_sfm (`v9pfv`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 45de8b5 (uncommitted: `video_tracks.py --pairs_out`,
+  `rot_sfm.py --extra_pairs / --extra_w`)
+- **Dataset:** scan_009, keyframes `work_v9pfl`, calibration `work_v9pfm_sfm` (as R-071), tracks on R-071's
+  `sparse_tri` (698 cameras)
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r077.sh` (log `r077.log`): `video_tracks.py … --pairs_out
+  work_v9pfv_sfm/vt_pairs.npz`; R-071's pair-direction cache copied; `rot_sfm.py … work_v9pfv_sfm --max_dt 300
+  --bg_json gyro_loop_bias.json --triangulate_only --extra_pairs vt_pairs.npz`; `prior_ba.py` (defaults) →
+  `work_v9pfv_sfm/sparse_pba`; scratchpad `stretch_stats.py` against R-071's `sparse/0`
+- **Goal:** R-076 showed the tracks in the empty stretches pass the gyro check (875 at 45 – 60 s, 1,630 at 90 – 105 s)
+  but cannot be triangulated with the wrong positions there (95 and 6 points). With the rotation fixed they give the
+  direction of travel between keyframes directly, which is what `rot_sfm.py` solves positions from.
+- **Start → end:** 00:17 → 00:22 (tracking 62 s; rot_sfm 2.3 min; prior BA 84 s)
+- **Errors during the run:** none.
+- **Result:** `vt_pairs.npz`: 4,124 keyframe pairs, median 27 correspondences, 2,688 with ≥ 15. `rot_sfm.py`: 9,015
+  image directions (R-071's cache) + **1,321 from tracks**; all 894 keyframes connected; **641 kept** with median edge
+  residual < 10° (R-071: 698). After `prior_ba.py`: reprojection 1.27 px; 45 – 60 s: 36 cameras (R-071: 50), 3D points
+  median 0, 28 with < 10; 90 – 105 s: 37 cameras (45), median 7, 21 with < 10; max step 9.6× median (R-071 8.7×).
+- **Verdict:** rejected as is: the track directions disagree with the rest of the path often enough that more cameras
+  fail the 10° consistency test, and the empty stretches lose cameras instead of gaining points. Not looked into yet:
+  whether the track directions are noisy (short 0.2 s baselines, parallax near the 1° limit) or the sensor path is
+  wrong there (then the 10° test drops the right cameras). Not trained. Paused here at Tayyab's request. **Answered in
+  R-078 (side check): the path is wrong there, the tracks are accurate.**
+
+### R-078 · 2026-11-20 · Adaptive position priors (`prior_ba.py --adapt_n`), newRoom + scan_009
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 45de8b5 (uncommitted: `prior_ba.py --adapt_n / --loose_t0 /
+  --loose_t1`, plus the R-076/R-077 tools)
+- **Dataset:** newRoomAttemptSadness (`work_rotsfm_loop/sparse/0`, truth `work_v9e2e_sfm`, as R-075) and scan_009
+  (R-071's `work_v9pfl_sfm/sparse_tri`)
+- **Command(s):** `dataset/newRoomAttemptSadness/r078.sh` and `dataset/scan_009_057ed3beb4fc/r078.sh` (logs
+  `r078.log`): `prior_ba.py … --adapt_n 150 --loose_t0 2 --loose_t1 30 --iters 150` (tight end = defaults
+  0.02 / 0.3); newRoom scored with scratchpad `eval_rot.py`, scan_009 with `stretch_stats.py` against R-071's `sparse/0`
+- **Goal:** R-075 showed the position priors limit newRoom (31.1 → 14.8 cm with priors nearly off), R-076 that scan_009
+  needs them in its empty stretches (path jumps without). Support per camera (3D observations) before the run: newRoom
+  median 370, 122 of 1,022 under 30; scan_009 median 56, 277 of 698 under 30. A prior strength that follows the
+  support should keep both gains.
+- **Start → end:** 02:02 → 02:23 (newRoom BA 18.5 min for 2 × 150 iterations; scan_009 BA 2.8 min)
+- **Errors during the run:** none.
+- **Result:** newRoom: 704 of 1,021 pairs fully loose, 95 tight; reprojection 0.66 px. Against the truth
+  (`eval_rot.py`): **16.2 cm median, p90 29.6 cm**, Sim3 scale 0.941 (R-075 priors nearly off: 14.8 / 35.9; R-074
+  loose: 21.9 / 48.3; R-071 recipe: 31.1 / 68.4). scan_009: 192 of 697 pairs fully loose, 247 tight; reprojection
+  1.27 px; path as smooth as R-071 (max step 9.2× median, R-071 8.7×, R-076 priors off 69×); cameras moved median 0.010
+  units against R-071; 45 – 60 s and 90 – 105 s unchanged (3D points median 0 and 3, a BA adds no points).
+- **Verdict:** kept as the BA recipe: on newRoom it keeps most of the R-075 gain (median 16.2 vs 14.8 cm) with a
+  better p90 (29.6 vs 35.9 cm), and on scan_009 it does not make the path jump. Not measured: whether scan_009's
+  textured parts got more accurate (no truth for scan_009). Tuned on these two scans only (`adapt_n` 150 not swept).
+- **Side check (same day, CPU, scratchpad `track_dir_check.py`):** the R-077 track directions against R-071's path
+  (`sparse/0`), 1,254 pairs with ≥ 15 inliers and ≥ 1° parallax. Pairs whose cameras have ≥ 50 3D observations:
+  angle median 2.4 – 2.9°, about 90 % under 10°; with only 1 – 2° parallax still 3.6°. 45 – 60 s: 23 pairs, median
+  46.9°, 43 % reversed; 90 – 105 s: 10 pairs, median 72.9°. So the tracks are accurate and the sensor-held path in the
+  empty stretches is wrong: R-077's 10° test removed the right directions. Few track pairs reach those stretches.
+
+### R-079 · 2026-11-20 · scan_009_057ed3beb4fc: track directions weighted up in rot_sfm (`v9pfw`, `v9pfy`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 45de8b5 (uncommitted: as R-078, plus `rot_sfm.py
+  --extra_min_inliers`)
+- **Dataset:** scan_009, keyframes `work_v9pfl`, calibration `work_v9pfm_sfm`, track pairs from R-077
+  (`work_v9pfv_sfm/vt_pairs.npz`, tracks on R-071's `sparse_tri`)
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r079.sh` (log `r079.log`): for `extra_w` 10 (`work_v9pfw_sfm`) and 30
+  (`work_v9pfy_sfm`): R-071's pair-direction cache copied; `rot_sfm.py … --max_dt 300 --bg_json gyro_loop_bias.json
+  --triangulate_only --extra_pairs vt_pairs.npz --extra_w W --extra_min_inliers 8`; `prior_ba.py … --adapt_n 150
+  --loose_t0 2 --loose_t1 30 --iters 150` → `sparse_pba_adapt`; scratchpad `stretch_stats.py` against R-071's
+  `sparse/0` and `track_dir_check.py` on the result
+- **Goal:** R-078's side check showed the track directions are accurate (2.4 – 2.9° against the path where the images
+  support it) and the path in the empty stretches is wrong. In R-077 they entered with weight inliers × parallax / 10
+  (small at 1.5° parallax) against the accelerometer term, and were outvoted. With more weight they should pull the path
+  there into line, so that the cameras survive and points can be triangulated.
+- **Start → end:** 02:25 → 02:36 (per variant: rot_sfm 2.8 min, prior BA 1.2 – 1.5 min, checks 1.3 min)
+- **Errors during the run:** none.
+- **Result:** 1,734 track directions (R-077: 1,321 at 15 inliers); all 894 keyframes connected.
+
+  | | R-071 | ×10 (`v9pfw`) | ×30 (`v9pfy`) |
+  |---|---|---|---|
+  | cameras kept (median edge residual < 10°) | 698 | 619 | 647 |
+  | 3D observations per camera, median | 54 | 72 | 70 |
+  | 45 – 60 s: cameras, 3D obs median | 50, 0 | 35, 0 | 41, 0 |
+  | 90 – 105 s: cameras, 3D obs median | 45, 3 | 36, 10 | 37, 10 |
+  | max step / median step | 8.7 | 10.7 | 9.4 |
+  | track direction vs path, 45 – 60 s (median) | 46.9° (23 pairs) | 4.2° (18) | 4.3° (17) |
+  | track direction vs path, 90 – 105 s | 72.9° (10) | 8.7° (4) | 4.6° (8) |
+  | track direction vs path, support ≥ 150 | 2.9° | 2.2° | 1.9° |
+
+  (after `prior_ba.py --adapt_n 150`; reprojection 1.27 px in both). Cameras in 45 – 60 s moved 0.85 units median
+  against R-071 (×30).
+- **Verdict:** ×30 kept as the input for R-080: the path in the empty stretches now follows the tracks, and the
+  agreement also improved where the images support the path (1.9° vs 2.9°), which the tracks did not force by
+  themselves. Caveat: the agreement inside the empty stretches is partly circular (the tracks were weighted in);
+  the independent test is whether the tracks now triangulate there (R-080). Still fewer cameras than R-071 (647 vs 698)
+  and no points in 45 – 60 s, because `--triangulate_only` uses the image matches only.
+
+### R-080 · 2026-11-20 · scan_009_057ed3beb4fc: video tracks on R-079's path (`v9pfy`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 45de8b5 (uncommitted, as R-079)
+- **Dataset:** scan_009, keyframes `work_v9pfl`; model `work_v9pfy_sfm/sparse_pba_adapt` (R-079, ×30, 647 cameras)
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r080.sh` (log `r080.log`): `video_tracks.py … work_v9pfy_sfm/sparse_pba_adapt
+  work_v9pfy_sfm/sparse_vt` (defaults, as R-076); `prior_ba.py … --adapt_n 150 --loose_t0 2 --loose_t1 30 --iters 150`
+  → `sparse_vt_pba_adapt`; scratchpad `stretch_stats.py` against R-071's `sparse/0`
+- **Goal:** R-076 found the tracks in 45 – 60 s and 90 – 105 s survive the gyro check but do not triangulate (95 and
+  6 points) because the positions there were wrong. R-079 moved those positions to agree with the tracks; if they are
+  now right, the tracks should triangulate within the 10 px reprojection limit and give those cameras points.
+- **Start → end:** 02:36 → 02:40 (tracking 77 s, prior BA 2.0 min)
+- **Errors during the run:** none.
+- **Result:** `video_tracks.py`: 194,030 tracks, 281,760 of 302,947 keyframe observations kept by the rotation-fixed
+  RANSAC; **7,263 new points** (R-076 on R-071's path: 6,398); rejected: 159,848 seen in one keyframe only, 24,613
+  parallax, 1,785 reprojection (R-076's main loss), 521 behind. Live tracks at video frames 2,000 and 3,000 (≈ 67 and 100 s, 30 fps): 1 and 0. After `prior_ba.py --adapt_n 150`: reprojection median **1.13 px** (R-071 1.27), p90 2.60.
+
+  | | R-071 | R-079 ×30 | R-080 |
+  |---|---|---|---|
+  | cameras | 698 | 647 | 647 |
+  | 3D observations per camera, median | 54 | 70 | **120** |
+  | cameras with < 10 | 202 | 162 | **110** |
+  | 45 – 60 s: cameras, median, < 10 | 50, 0, 43 | 41, 0, 33 | 41, 1, 23 |
+  | 90 – 105 s: cameras, median, < 10 | 45, 3, 29 | 37, 10, 18 | 37, **23**, 12 |
+  | max step / median step | 8.7 | 9.4 | 9.3 |
+- **Verdict:** kept, best scan_009 SfM so far by these counts: the reprojection limit no longer throws the tracks away
+  (1,785 rejected), so R-079's path agrees with the images it was not fitted on. 90 – 105 s now has points; 45 – 60 s
+  does not, and the reason is the video itself: most tracks die before reaching the next keyframe (159,848 single-keyframe
+  tracks overall; the live-track counts are snapshots at frames 2,000 / 3,000 ≈ 67 / 100 s, not inside 45 – 60 s;
+  R-076's per-stretch count: 1,286 of 15,000 started tracks reach a second keyframe in 45 – 60 s). Point-based methods cannot fill that stretch; it needs
+  texture-free constraints (planes from depth) or a new recording. Not trained, no render check yet; no truth for
+  scan_009, so accuracy is not measured.
+
+### R-081 · 2026-11-20 · scan_009_057ed3beb4fc: training on R-080's cameras (`v9pfz`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 45de8b5 (uncommitted, as R-079)
+- **Dataset:** scan_009; keyframes `work_v9pfl` copied to `work_v9pfz`; R-080's `work_v9pfy_sfm/sparse_vt_pba_adapt`
+  (647 cameras, 31,331 points) copied to `work_v9pfz_sfm/sparse/0`
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r081.sh` (log `r081.log`): as R-071: `sfm_colmap.py --work … work_v9pfz
+  --out … work_v9pfz_sfm --feature aliked --sim3 none --stage {undistort, export}`; `run_v8.py --tag v9pfz --from_stage
+  export --pose_free --init fmvs --planar 0.2 --blur 0.0222 --pgsr`; then `to_spz.mjs` for the web viewer
+- **Goal:** Tayyab asked to see R-080 in the web viewer (`npm run dev`), which needs a trained model. Same recipe as
+  R-071, so the two can be compared directly.
+- **Start → end:** 12:38 → 13:07 (export 0.02, prior 3.8, init 2.2, train 22.2, ply 0.6 min)
+- **Errors during the run:** none fatal. `Error caught was: No module named 'triton'` printed during the prior stage
+  (also in R-071's log; the stage finished normally).
+- **Result:** export: 25 frames dropped by the jump filter (> 30 cm from temporal neighbours), 622 frames; Sim3 to
+  ARCore not applied (`--sim3 none`; for reference scale 0.4824, 23 / 157 inliers). `sfm_scale_check`: ratio median
+  2.134 model units per Metric3D metre, **verdict "ok"** (R-071: 2.25). `→ work_v9pfz_sfm/gs_v9pfz/splat.ply`, 542,469
+  splats. Training-view PSNR (half res, scratchpad `render_compare.py`, R-071 vs R-081 on the 607 frames both kept):
+  median 19.52 → **19.59**, mean 19.65 → **19.90**, R-081 better on **61 %** of frames (median +0.54 dB on those).
+  Photo | R-071 | R-081 sheet (scratchpad `cmp_r071_r081_compare.jpg`): sharper at 0 s and 23 s (door, lamp), 44 s (less
+  colour noise), 106 s (wall corner line visible), 187 s (AC unit and curtain much cleaner); worse at 137 s (white
+  smear over a door corner); 160 s about equal. Not held out. Web viewer: `scan-009-tracks`
+  (`prototype/web-ui/public/splats/scan009_v9pfz.spz`, 10.3 MB).
+- **Verdict:** kept: the best scan_009 model so far (slightly better than R-071 on training views, scale check ok).
+  45 – 60 s still rests on the sensors (R-080). Scale still ~2× too large (not corrected). Training-view PSNR only;
+  not held out.
