@@ -681,8 +681,12 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       unchanged; oscillates, rejected; R-080's model stays best.
     - [x] 10.d `--pose_opt` on scan_009 (2026-11-20, R-084): held-out 20.20 vs 20.80; with test-pose alignment
       (`eval_align.py`) 22.39 vs R-082 22.64: no gain, rejected for now. Alignment shows held-out SfM poses ~2° off.
-    - [ ] Free disk on the 3070 PC before more §10 training (2.7 GB left; each run ~2.3 GB, mostly `mono_prior`
-      copies in `work_v9pfh_sfm` / `work_v9pfi_sfm` / `work_v9pfj_sfm`). Tayyab to choose what goes.
+    - [x] Free disk on the 3070 PC (2026-11-21, Tayyab chose): all 19 `mono_prior/` folders under `dataset/` (17.9 GB;
+      rebuilt by `run_v8.py`'s prior stage in ~3.5 min), the R-083 / R-084 work folders (evaluations kept in
+      `scan_009_057ed3beb4fc/s10_eval/`), and the checkpoints + TensorBoard logs of the three `outputs/` runs that
+      have an exported `export/splat.ply` (room2 baseline, roomAttemptSadness run1, roomAttemptSadness_fast run2).
+      Freed 22.8 GB, 23.9 GB free. Kept: the 17 other `outputs/` checkpoints (no exported copy; ~8 GB of TensorBoard
+      logs there too), older experiment folders.
     - [ ] `run_v8.py`: option to keep the checkpoint / write the refined poses when `--pose_opt` is on (R-084 lost them).
     - [ ] 10.e geometry for off-path views (planar / depth weights, floaters, layout planes).
     - [x] 10.f per-frame motion blur from the gyro (2026-11-20, R-083): held-out PSNR 20.86 vs 20.80, sharpness 0.43 vs

@@ -2084,6 +2084,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Verdict:** inconclusive: sharper held-out renders but no PSNR gain and less flat walls. The blur fix does not
   address the main held-out failures (entrance, far door), which look like pose / geometry errors. Whether to keep
   `--blur_gyro` in the next steps is Tayyab's choice.
+- **Cleanup 2026-11-21 (Tayyab):** the work folders `work_v9pfi` / `work_v9pfi_sfm` and the model were deleted to free disk; the evaluation folder moved to `dataset/scan_009_057ed3beb4fc/s10_eval/eval_r083/` (with `timing_r083.json`, `blur_motion_r083.log`).
 
 ### R-084 · 2026-11-20 · scan_009_057ed3beb4fc: 10.d pose refinement in training (`v9pfj`)
 
@@ -2151,6 +2152,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   22 – 25 s), so pose error is real but has to be fixed in SfM (10.c / 10.b), not in training; (2) at 78 – 81 s the
   pose is nearly right (1.1°) yet aligned PSNR stays 4 dB below the seen model (27.56), a coverage / geometry gap
   (10.e); (3) 134 – 137 s stays poor even aligned (17.5) and even when trained on (18.9).
+- **Cleanup 2026-11-21 (Tayyab):** the work folders `work_v9pfj` / `work_v9pfj_sfm` and the model were deleted to free disk; the evaluation folder moved to `dataset/scan_009_057ed3beb4fc/s10_eval/eval_r084/` (with `timing_r084.json`).
 
 ### R-085 · 2026-11-20 · scan_009_057ed3beb4fc: 10.c tracks ↔ path loop (`track_loop_r085`)
 

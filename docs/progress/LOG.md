@@ -855,3 +855,15 @@ reach a break through point … plan ahead what will give us best gains".
 - Runs: R-084, R-085. Decisions: none.
 - Next (Tayyab to choose): free disk; then 10.e (geometry / floaters), 10.b (rolling shutter) or a re-recording of
   45 – 60 s (10.g).
+
+## 2026-11-21 · Tayyab (agent)
+
+Asked by Tayyab: "why is FYP taking up 125 gb", then "ok do those 3".
+- Did: measured disk use (FYP ~125 GB: `dataset/` 97 GB, `outputs/` 17 GB; `mono_prior/` 18.8 GB and keyframe copies
+  17.8 GB across the work folders). Deleted, after checking for junctions and that only pipeline stages read
+  `mono_prior/`: all 19 `mono_prior/` folders, R-083 / R-084 work folders (evaluations moved to
+  `scan_009_057ed3beb4fc/s10_eval/`), checkpoints + TensorBoard logs of the three `outputs/` runs with an exported
+  `splat.ply`. Freed 22.8 GB, 23.9 GB free (STATUS §7).
+- Runs: none. Decisions: none (what to delete was Tayyab's choice).
+- Next: Tayyab's choice of the next §10 step (re-record 45 – 60 s, 10.e or 10.b).
+
