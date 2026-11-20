@@ -481,3 +481,21 @@ rejected, not trained. Where §10 stands: 10.a measured; 10.f, 10.d, 10.c gave n
 (geometry / floaters, for the 78 – 81 s coverage gap and blank-wall floaters), 10.b (rolling shutter, a full SfM
 re-run) and 10.g (a re-recording of 45 – 60 s, which no tool has fixed). Training needs disk first.
 
+**2026-11-21: 10.e first part, 10.b-1 and the noise check (R-086 – R-088).** All on R-082's split, scored with
+`eval_offpath.py` and `eval_align.py`:
+
+| Run | Change | Aligned PSNR | Flatness cm | Notes |
+|---|---|---|---|---|
+| R-082 | baseline | 22.65 | 8.18 | |
+| R-088 | none (repeat) | 22.55 | 6.65 | noise: ~0.1 – 0.25 dB overall, ≤ 0.9 dB per stretch, 1.5 cm flatness |
+| R-083 | gyro blur | 22.51 | 9.85 | within noise |
+| R-084 | pose refinement | 22.39 | 7.40 | within / near noise |
+| R-086 | planar 0.5, depth / normal 0.1 | 21.85 | 4.98 | flat sheet blocks the 134 s view |
+| R-087 | rolling-shutter rectified keyframes | 22.22 | 4.18 | 51 – 53 s +1.6 dB; sheet at 134 s, blank 186 s |
+
+No step so far gives a clear held-out gain. The rectified keyframes (10.b-1) are the most promising: the only
+stretch-level gain above the noise, in the stretch with no image support, and flatter walls; their losses come from
+views blocked by a sheet of Gaussians close to the camera, which a floater / near-camera pruning step (10.e, not yet
+coded) would target. The flatness metric counts such a sheet as flat, so it needs a guard (e.g. ignore frames whose
+render is one surface close to the camera) before flatness can be compared.
+

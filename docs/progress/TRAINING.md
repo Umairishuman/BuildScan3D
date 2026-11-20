@@ -132,6 +132,9 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-083 | 2026-11-20 | scan_009: plan 10.f, R-082 plus gyro motion blur (`v9pfi`) | 3070 | 34.4 min | held-out PSNR 20.86 (R-082 20.80), SSIM 0.871 (0.874), sharpness 0.43 (0.28), flatness 9.85 cm (8.18), 586,509 splats; train 28.0 min (21.9) | Inconclusive |
 | R-084 | 2026-11-20 | scan_009: plan 10.d, R-082 plus pose refinement in training (`v9pfj`) | 3070 | 29.3 min | held-out PSNR 20.20 (R-082 20.80), flatness 7.40 cm (8.18); after test-pose alignment (`eval_align.py`) 22.39 vs R-082 22.64, R-083 22.51 | Rejected (no gain once poses are aligned) |
 | R-085 | 2026-11-20 | scan_009: plan 10.c, tracks ↔ path loop from R-080's model (`track_loop_r085`) | 3070 | 18.2 min | cameras 647 → 676 → 656, 3D obs median 120 → 91 → 109, < 10 obs 110 → 144 → 123; stopped after round 2 | Rejected (R-080 stays the best model) |
+| R-086 | 2026-11-21 | scan_009: plan 10.e, R-082 with stronger geometry weights (`v9pfk`) | 3070 | 30.5 min | held-out PSNR 20.75 (R-082 20.80), **flatness 4.98 cm (8.18)**; aligned PSNR 21.85 (22.64); a flat sheet blocks the 134 s view | Inconclusive (flatter walls, lower PSNR) |
+| R-087 | 2026-11-21 | scan_009: plan 10.b-1, rolling-shutter-rectified keyframes on R-080's cameras (`v9pfs`) | 3070 | 29.7 min | held-out PSNR 20.69 vs R-082 20.81 (rectified photos), flatness 3.55 vs 8.87 cm; aligned 22.22 vs 22.66; 51 – 53 s +1.6 dB aligned; views at 134 s and 186 s blocked | Inconclusive (run-to-run spread not known) |
+| R-088 | 2026-11-21 | scan_009: R-082 repeated unchanged, run-to-run spread (`v9pfn`) | 3070 | 28.8 min | vs R-082: held-out PSNR 21.05 vs 20.80, flatness 6.65 vs 8.18 cm, aligned 22.55 vs 22.65; per stretch up to ±0.9 dB, per frame median 0.70 dB | Kept (noise reference) |
 
 ## Runs
 
@@ -2184,3 +2187,107 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Verdict:** rejected: no round beats R-080's model on support, and 45 – 60 s is unchanged (median 1 → 3 → 1). Not
   trained (no gain to test, and 2.7 GB disk). R-080 (`work_v9pfy_sfm/sparse_vt_pba_adapt`) stays the best scan_009
   camera model. Output `dataset/scan_009_057ed3beb4fc/track_loop_r085/` (two rounds) kept.
+
+### R-086 · 2026-11-21 · scan_009_057ed3beb4fc: 10.e stronger geometry weights (`v9pfk`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ a008f5b
+- **Dataset:** scan_009; `work_v9pfz` copied to `work_v9pfk`; `work_v9pfh_sfm` copied to `work_v9pfk_sfm` without
+  `gs_v9pfh`, `eval_r082` and the `undist_fast/images` junction (R-082's cameras and split; `mono_prior/` was
+  deleted on 2026-11-21 and is rebuilt by the prior stage)
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r086.sh` (log `r086.log`): as R-082 with `--planar 0.5`
+  (R-082: 0.2) and `--train_args "--depth_lambda 0.1 --normal_lambda 0.1"` (defaults 0.05 / 0.05); no gyro blur, no
+  pose refinement; then `eval_offpath.py` and `eval_align.py` against R-082
+- **Goal:** plan §10.e, first part: the per-frame check found the largest held-out gap at 78 – 81 s with the pose
+  nearly right (R-084's alignment: 1.1°), plus floaters on blank walls, which points at geometry. Stronger
+  depth / normal / planar priors should hold the surfaces in place for views the training did not see. The three
+  weights change together (the plan's 10.e setting); if it helps, a later run can separate them.
+- **Start → end:** 01:09 → 02:01 (training 01:09 → 01:40: export 0.02, prior 3.82, init 2.24, train 23.73, ply 0.71 min,
+  total 30.5 min; then both evaluations 21 min)
+- **Errors during the run:** none.
+- **Result:** `→ work_v9pfk_sfm/gs_v9pfk/splat.ply`, 588,175 splats. `eval_offpath.py` (`eval_r086/`):
+
+  | Model | PSNR | SSIM | Sharpness | Flatness cm | PSNR aligned | SSIM aligned | Correction median |
+  |---|---|---|---|---|---|---|---|
+  | R-082 | 20.80 | 0.874 | 0.28 | 8.18 | **22.64** | **0.884** | 2.02° |
+  | R-086 | 20.75 | 0.871 | 0.22 | **4.98** | 21.85 | 0.877 | 1.32° |
+
+  Aligned PSNR per stretch (R-082 → R-086, `eval_r086/aligned.csv`): still 0 – 17 s 24.89 → 24.17; 22 – 25 s 26.44 →
+  24.98; 51 – 53 s 21.59 → 21.52; **78 – 81 s 23.63 → 24.10**; 106 s 29.17 → 27.25; 134 – 137 s 17.55 → 16.13;
+  162 – 165 s 22.39 → 21.41; 186 s 14.88 → 14.46. Sheet `eval_r086/offpath_frames.jpg`: the blank-wall view has no
+  rainbow floaters; at 134 s (the far door) the render is one flat brown surface: a flattened sheet of Gaussians
+  sits in front of that camera; the entrance smear is narrower but still there.
+- **Verdict:** inconclusive: the walls are 39 % flatter and the 78 – 81 s coverage gap improves a little, but
+  aligned PSNR drops 0.8 dB and one view is blocked. The planar weight 0.5 is the likely cause of the sheet (not
+  separated: the three weights changed together). Next if pursued: depth / normal 0.1 with planar back at 0.2, or
+  planar 0.35.
+
+### R-087 · 2026-11-21 · scan_009_057ed3beb4fc: 10.b-1 rolling-shutter rectified keyframes (`v9pfs`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ a008f5b (records for R-086 / R-087 uncommitted at start)
+- **Dataset:** scan_009; keyframes `work_v9pfz` rectified into `work_v9pfs`; R-080's model (`work_v9pfz_sfm/sparse/0`)
+  copied to `work_v9pfs_sfm/sparse/0` (only that, so the export takes the rectified images); split `s10_test.txt`
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r087.sh` (log `r087.log`): `rs_rectify.py $S work_v9pfz work_v9pfz_sfm
+  work_v9pfs --bg_json gyro_loop_bias.json --axis cols --sign 1` (the probe's choice, plan §10.5); `sfm_colmap.py …
+  --stage {undistort, export}`; `run_v8.py --tag v9pfs` with R-082's recipe; `eval_offpath.py` twice (ground truth =
+  rectified photos `work_v9pfs_sfm`, and raw photos `work_v9pfh_sfm`, both models each time) and `eval_align.py` on
+  the rectified photos
+- **Goal:** plan §10.b, first part: same cameras as R-082, only the images change (rolling-shutter shear removed with
+  the gyro). The full 10.b-2 (features, matching and SfM on rectified keyframes) only if this helps.
+- **Start → end:** 02:01 → 02:59 (rectify + undistort + export 10 min; export 0.01, prior 3.81, init 2.28, train 22.92,
+  ply 0.63 min, total 29.7; evaluations 17 min)
+- **Errors during the run:** none.
+- **Result:** `rs_rectify.py`: 894 keyframes rectified (readout along columns, sign +1), per-frame shift (p95 of the
+  pixels) median 4.6 px, max 21.5 px. Split 553 / 69 (same 622 frames as R-082). `→ work_v9pfs_sfm/gs_v9pfs/splat.ply`,
+  596,688 splats.
+
+  | Ground truth | Model | PSNR | SSIM | Sharpness | Flatness cm |
+  |---|---|---|---|---|---|
+  | rectified photos (`eval_r087_gt_pfs/`) | R-082 | 20.81 | 0.875 | 0.32 | 8.87 |
+  | | R-087 | 20.69 | 0.867 | 0.28 | **3.55** |
+  | raw photos (`eval_r087_gt_pfh/`) | R-082 | 20.80 | 0.874 | 0.28 | 8.18 |
+  | | R-087 | 20.67 | 0.866 | 0.25 | **4.18** |
+
+  Aligned (`eval_align.py`, rectified photos): R-082 22.66 / 0.885, R-087 22.22 / 0.878 (correction medians 2.01° /
+  2.28°). Per stretch R-082 → R-087: still 0 – 17 s 24.93 → 25.27; 22 – 25 s 26.46 → 26.26; **51 – 53 s 21.74 →
+  23.33**; 78 – 81 s 23.64 → 23.51; 106 s 29.14 → 28.45; 134 – 137 s 17.52 → 15.87; 162 – 165 s 22.40 → 21.29;
+  186 s 14.87 → 15.40. Sheet: at 134 s a flat surface fills the view (as in R-086), the 186 s view is blank, the 162 s
+  view shows ceiling and AC structure that R-082 lost, the blank-wall floaters remain.
+- **Caution on flatness:** the metric is the rms around a fitted plane wherever the render is opaque; a sheet of
+  Gaussians filling a view (134 s here and in R-086) scores as perfectly flat, so part of the flatness gain in
+  R-086 / R-087 may be such sheets. Not separated.
+- **Verdict:** inconclusive: flatter (with the caveat above), better in the 51 – 53 s stretch with no image support,
+  worse aligned PSNR overall, blocked views. Differences of 0.4 – 0.8 dB cannot be judged until the run-to-run spread
+  of identical trainings is known (R-088).
+
+### R-088 · 2026-11-21 · scan_009_057ed3beb4fc: R-082 repeated, run-to-run spread (`v9pfn`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ a008f5b (R-086 – R-088 records uncommitted at start)
+- **Dataset:** as R-082: `work_v9pfz` → `work_v9pfn`, `work_v9pfh_sfm` → `work_v9pfn_sfm` (without the model, eval and
+  the `undist_fast/images` junction)
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r088.sh` (log `r088.log`): R-082's exact command with tag `v9pfn`;
+  then `eval_offpath.py` and `eval_align.py` with R-082
+- **Goal:** R-083 – R-087 differ from R-082 by 0.1 – 0.8 dB and in single blocked views; without knowing how much two
+  identical trainings differ none of that can be judged. Nerfstudio's seed is fixed (42), so this measures the
+  spread from GPU non-determinism with identical inputs (a lower bound of the seed-to-seed spread).
+- **Start → end:** 02:59 → 03:45 (export 0.0, prior 3.61, init 2.12, train 22.45, ply 0.61 min, total 28.8; evaluations 16 min)
+- **Errors during the run:** none.
+- **Result:** `→ work_v9pfn_sfm/gs_v9pfn/splat.ply`, 620,419 splats (R-082: 573,257). Same inputs, same command:
+
+  | | PSNR | SSIM | Sharpness | Flatness cm | PSNR aligned | SSIM aligned |
+  |---|---|---|---|---|---|---|
+  | R-082 | 20.80 | 0.874 | 0.28 | 8.18 | 22.65 | 0.885 |
+  | R-088 (repeat) | 21.05 | 0.873 | 0.27 | 6.65 | 22.55 | 0.880 |
+  | difference | +0.25 | −0.001 | −0.01 | **−1.53** | −0.10 | −0.004 |
+
+  Aligned per stretch (R-088 − R-082): still 0 – 17 s 0.00; 22 – 25 s −0.81; 51 – 53 s −0.13; 78 – 81 s +0.79;
+  106 s −0.22; 134 – 137 s +0.04; 162 – 165 s −0.61; 186 s +0.88. Per frame |difference| median 0.70 dB, p90 1.58,
+  max 3.89 (`eval_r088/aligned.csv`).
+- **Verdict:** kept as the noise reference (one repeat, so a rough estimate). Two identical trainings differ by ~0.1 –
+  0.25 dB overall, up to ~0.9 dB on a stretch and 1.5 cm in flatness. Against that: R-083 (+0.06 PSNR, −0.13 aligned)
+  and R-084 (−0.25 aligned) are within the noise; R-086 (−0.79 aligned) and R-087 (−0.44 aligned) are probably real
+  losses; R-086's and R-087's 134 – 137 s losses (−1.4, −1.65 dB; the repeat: +0.04) are real (the blocking sheet);
+  R-087's 51 – 53 s gain (+1.6 dB; repeat −0.13) is probably real; flatness gains of 3.2 cm (R-086) and 4.0 cm (R-087)
+  exceed the 1.5 cm spread but may partly be the sheets (R-087 caution).

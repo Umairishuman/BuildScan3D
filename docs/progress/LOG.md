@@ -865,5 +865,12 @@ Asked by Tayyab: "why is FYP taking up 125 gb", then "ok do those 3".
   `scan_009_057ed3beb4fc/s10_eval/`), checkpoints + TensorBoard logs of the three `outputs/` runs with an exported
   `splat.ply`. Freed 22.8 GB, 23.9 GB free (STATUS §7).
 - Runs: none. Decisions: none (what to delete was Tayyab's choice).
-- Next: Tayyab's choice of the next §10 step (re-record 45 – 60 s, 10.e or 10.b).
-
+- Then (Tayyab: "ok continue where we left on the past run due to running out of space"): R-086 (10.e: planar 0.5,
+  depth / normal 0.1): flatter walls (4.98 cm), aligned PSNR 21.85 vs 22.65, a sheet blocks the 134 s view.
+  R-087 (10.b-1: `rs_rectify.py`, columns +1, shift median 4.6 px, max 21.5 px; trained on R-080's cameras):
+  aligned 22.22, 51 – 53 s +1.6 dB, flatness 4.18 cm, blocked views at 134 / 186 s. R-088 (R-082 repeated):
+  noise ~0.1 – 0.25 dB overall, up to 0.9 dB per stretch, 1.5 cm flatness. Found: the flatness metric scores a
+  view-filling sheet as flat.
+- Runs: R-086, R-087, R-088. Decisions: none.
+- Next (Tayyab to choose): near-camera / floater pruning (10.e) on R-087's rectified keyframes, 10.b-2, or a
+  re-recording of 45 – 60 s.
