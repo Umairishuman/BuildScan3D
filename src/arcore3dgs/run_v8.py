@@ -33,6 +33,10 @@ ap.add_argument("--blur", type=float, default=0.0, help="> 0: motion-blur model 
 ap.add_argument("--init_args", default="", help='extra fast_mvs.py args, e.g. "--photometric" (7.5 vs 20 min, TRAINING R-063)')
 ap.add_argument("--pgsr", action="store_true", help="PGSR-lite in the same training (the best model's recipe, R-023)")
 ap.add_argument("--save_every", type=int, default=2500, help="checkpoint interval for --resume after a crash")
+ap.add_argument("--pose_opt", action="store_true", help="refine camera poses during training (sensor-path models)")
+ap.add_argument("--blur_gyro", default="", help="motion-blur velocities from the gyro where ARCore has no pose: path to "
+                "a gyro bias json (gyro_loop_bias.py) or 'nobias'; per-frame exposure from camera.csv (FEATURELESS 10.f)")
+ap.add_argument("--train_args", default="", help='extra geo_splatfacto.py args, e.g. "--depth_lambda 0.1"')
 args = ap.parse_args()
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -96,7 +100,9 @@ if STAGES.index(args.from_stage) <= STAGES.index("init"):
         side.append(subprocess.Popen([py, os.path.join(HERE, "plane_seg.py"), "--work", S], cwd=ROOT, env=env,
                                      stdout=open(os.path.join(OUT, "plane_seg.log"), "w"), stderr=subprocess.STDOUT))
     if args.blur > 0:
-        side.append(subprocess.Popen([py, os.path.join(HERE, "blur_motion.py"), "--work", S], cwd=ROOT, env=env,
+        bg = ([] if args.blur_gyro in ("", "nobias") else ["--bg_json", args.blur_gyro])
+        gy = (["--source", "gyro", "--gyro_calib", S, "--per_frame_exposure"] + bg) if args.blur_gyro else []  # ARCore vs gyro: 14 deg median apart on scan_009
+        side.append(subprocess.Popen([py, os.path.join(HERE, "blur_motion.py"), "--work", S] + gy, cwd=ROOT, env=env,
                                      stdout=open(os.path.join(OUT, "blur_motion.log"), "w"), stderr=subprocess.STDOUT))
 init_json = f"transforms_{args.init}.json"
 if args.init == "mono":
@@ -116,7 +122,8 @@ run("train", nspy + ["-W", "ignore", os.path.join(HERE, "geo_splatfacto.py"), "-
               "--name", NAME, "--iters", str(args.iters), "--dash_res_steps", half, "--stop_split_at", half, "--no_eval",
               "--prior", os.path.join(S, "mono_prior", f"train_{args.tag}.npz"),
               "--planar_lambda", str(args.planar), "--blur_exposure", str(args.blur),
-              "--save_every", str(args.save_every)] + (["--pgsr"] if args.pgsr else []), log=os.path.join(OUT, "train.log"))
+              "--save_every", str(args.save_every)] + (["--pgsr"] if args.pgsr else [])
+              + (["--pose_opt"] if args.pose_opt else []) + args.train_args.split(), log=os.path.join(OUT, "train.log"))
 cfg = os.path.join(ROOT, "outputs", "v8", "splatfacto", NAME, "config.yml")
 run("ply", toolpaths.ns_cmd("ns-export") + ["gaussian-splat", "--load-config", cfg, "--output-dir", OUT],
     log=os.path.join(OUT, "export.log"), extra_env={"PYTHONPATH": HERE})

@@ -126,7 +126,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 |---|---|---|
 | `mono_prior.py` | Metric3D depth + normals per frame, aligned to SfM points (fp16 default) | **[v9]** |
 | `plane_seg.py` | Per-frame planar regions for the planar prior | **[v9]** |
-| `blur_motion.py` | Per-frame camera motion during exposure for the blur model | **[v9]** |
+| `blur_motion.py` | Per-frame camera motion during exposure for the blur model; `--source gyro --gyro_calib --per_frame_exposure` for captures without ARCore (`run_v8.py --blur_gyro`, FEATURELESS 10.f) | **[v9]** |
 | `fast_mvs.py` | Fast dense init: PatchMatch on every 7th frame at 640 px | **[v9]** |
 | `mono_init.py` | Dense init from aligned mono depth (12 s, loses few-view detail) | [exp] option `--init mono` |
 | `mvs_init.py` | Dense init from a full COLMAP PatchMatch (v6, 2 h 15 min) | [exp] v6 recipe |
@@ -140,8 +140,8 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does | Status |
 |---|---|---|
-| `run_v8.py` | One-command driver for the v9 pipeline, times every stage. Finds the nerfstudio env through `toolpaths.py` | **[v9]** |
-| `geo_splatfacto.py` | Splatfacto subclass: DashGaussian, depth / normal / planar priors, blur model, PGSR-lite, checkpoints + `--resume` | **[v9]** |
+| `run_v8.py` | One-command driver for the v9 pipeline, times every stage. Finds the nerfstudio env through `toolpaths.py`; `--pose_opt`, `--train_args`, `--blur_gyro` (FEATURELESS 10.d – 10.f) | **[v9]** |
+| `geo_splatfacto.py` | Splatfacto subclass: DashGaussian, depth / normal / planar priors, blur model, PGSR-lite, checkpoints + `--resume`; `--pose_opt` (SO3xR3, applied once per view incl. blur / PGSR passes) | **[v9]** |
 | `export_nerfstudio.py` | Writes `transforms.json` for nerfstudio | **[v9]** [v3] |
 | `train.py` | Own gsplat trainer (experiments only, D-010) | [exp] |
 | `train_fixed2_backup.py`, `train_v3_backup.py` | Old copies of `train.py` | [dead] |
@@ -171,7 +171,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 |---|---|---|
 | `eval_offpath.py` | Off-path split metrics (PSNR, SSIM, sharpness, flatness) + sheets | [eval] current |
 | `fixture_checklist.py` | Fixture check sheet for one room from `semantic.json` (+ layout): every accepted fixture with height, size, wall, a real / wrong class / false column, a missed table and per-class summary; `--rejected` also lists the rule-rejected candidates (plan 4.2, E3) | [eval] current |
-| `make_split.py` | Writes the held-out list for `run_v8.py --split` / `eval_offpath.py`: 6 × 3 s stretches of the walk (D-070) | [eval] current |
+| `make_split.py` | Writes the held-out list for `run_v8.py --split` / `eval_offpath.py`: 6 × 3 s stretches of the walk (D-070); `--add` merges another held-out list (still frames) | [eval] current |
 | `sfm_scale_check.py` | Finds parts of an SfM model rebuilt at the wrong scale ("mini room"): per-frame SfM depth / Metric3D depth from `mono_prior` (TRAINING R-066, R-067) | [eval] diagnostic |
 | `texture_probe.py` | Per keyframe: SIFT keypoints, LSD long lines, faint / strong gradient share; grouped by ARCore pose state and by whether a model kept the frame (FEATURELESS_TRACKING_PLAN §1.1) | [eval] diagnostic |
 | `gyro_check.py` | Gyro rotation check of an SfM model: IMU→camera rotation + time offset from the model, per-frame rotation disagreement with the gyroscope; `fill_rotations` gives rotations for frames SfM could not place. Used by `sfm_colmap.py --gyro_thr` (FEATURELESS_TRACKING_PLAN step 1, R-047) | **[v9]** option, default off |
@@ -181,6 +181,9 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `rot_sfm.py` | SfM with gyro rotations + positions from pair directions and the accelerometer (one linear system), then COLMAP triangulation / BA (R-051: rejected on scan_009); `--bg_json` (bias from `gyro_loop_bias.py`), `--max_dt 300` for loop pairs (R-071); `--extra_pairs` / `--extra_w` / `--extra_min_inliers`: pair directions from `video_tracks.py` (R-077, R-079) | [experiment] |
 | `prior_ba.py` | Bundle adjustment of a COLMAP text model with soft gyro / accelerometer priors on consecutive keyframes (rotation 0.1° + 0.1°/s, position 0.02 + 30% of the step); same LM / Schur solver as `ba.py` (R-052, R-071, R-072); `--adapt_n`: position prior tight where a pair has few 3D observations, loose where it has many (R-078) | [experiment] |
 | `video_tracks.py` | KLT point tracks through every video frame, checked against the gyro rotation (2-point RANSAC), triangulated into a COLMAP text model; `--pairs_out` writes keyframe-pair correspondences for `rot_sfm.py` (R-073 – R-080) | [experiment] |
+| `rs_rectify.py` | Rolling-shutter rectification of keyframes with the gyro (per-row rotation, lens distortion kept); `--probe_only` finds the readout direction from the video; `rectify_points` used by `video_tracks.py --rs 1` (FEATURELESS 10.b, not trained yet) | [experiment] |
+| `track_loop.py` | Rounds of video tracks → `rot_sfm.py` → adaptive `prior_ba.py` until the kept cameras stop rising (FEATURELESS 10.c, not run yet) | [experiment] |
+| `still_frames.py` | Still stretches of a capture from the gyro; held-out list of sharp frames for `make_split.py --add` (FEATURELESS 10.a) | [experiment] |
 | `gyro_loop_bias.py` | Gyro bias from the 5-point rotations of all verified image pairs (far-apart pairs see the drift); writes the bias for `rot_sfm.py --bg_json` (R-071, R-072) | [experiment] |
 | `vggt_poses.py` | VGGT (learned poses) on chunks of keyframes, chained, checked against gyro / accelerometer / ARCore, written in the export layout. Needs VGGT outside the repo; **never run** (needs Tayyab's OK) | [experiment] not run |
 | `gap_test.py` | Cut-gap test: removes windows of keyframes from a trusted model and predicts their rotation from the gyro (plan step 0 / 3) | [eval] |

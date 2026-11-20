@@ -109,6 +109,15 @@ class GeoSplatfactoModel(SplatfactoModel):
     def populate_modules(self):
         super().populate_modules()
         self._geo_idx = None
+        # Pose refinement (--pose_opt, FEATURELESS_TRACKING_PLAN 10.d): the blur sub-renders and the PGSR geometry pass
+        # build their own cameras, so the correction is applied once in get_outputs and splatfacto's own call is
+        # turned into a no-op while that camera is in use (otherwise it would be skipped or applied twice).
+        self._camopt_apply = self.camera_optimizer.apply_to_camera
+        self._camopt_done = False
+
+        def _apply(camera, _orig=self._camopt_apply):
+            return camera.camera_to_worlds if self._camopt_done else _orig(camera)
+        self.camera_optimizer.apply_to_camera = _apply
         self.has_prior = bool(self.config.prior_file) and os.path.exists(self.config.prior_file)
         if self.has_prior:
             z = np.load(self.config.prior_file)
@@ -150,9 +159,20 @@ class GeoSplatfactoModel(SplatfactoModel):
         return super()._get_downscale_factor()
 
     def get_outputs(self, camera):
-        out = self._get_outputs(camera)
-        if self.training and self.config.pgsr and self.has_prior and self.step >= self.config.pgsr_start:
-            out["geo"] = self._render_geometry(camera)
+        if (self.training and self.config.camera_optimizer.mode != "off" and camera.metadata is not None
+                and "cam_idx" in camera.metadata):
+            from nerfstudio.cameras.cameras import Cameras
+            c2w = self._camopt_apply(camera)                           # corrected pose, differentiable
+            camera = Cameras(camera_to_worlds=c2w, fx=camera.fx, fy=camera.fy, cx=camera.cx, cy=camera.cy,
+                             width=camera.width, height=camera.height, camera_type=camera.camera_type,
+                             metadata=camera.metadata)
+            self._camopt_done = True
+        try:
+            out = self._get_outputs(camera)
+            if self.training and self.config.pgsr and self.has_prior and self.step >= self.config.pgsr_start:
+                out["geo"] = self._render_geometry(camera)
+        finally:
+            self._camopt_done = False
         return out
 
     @staticmethod
@@ -204,7 +224,8 @@ class GeoSplatfactoModel(SplatfactoModel):
                 c2w = camera.camera_to_worlds[0]                     # its info drives densification
                 # The bilateral grid models the camera's colour processing, which acts on the light integrated
                 # over the exposure: apply it once to the averaged render, not to every sub-render (a sub-render
-                # camera without cam_idx skips it; the camera optimizer is off). Saves ~2/3 of its cost.
+                # camera without cam_idx skips it; with --pose_opt the pose is already corrected in get_outputs).
+                # Saves ~2/3 of its cost.
                 meta = camera.metadata
                 if not cfg.blur_grid_per_sub and self.config.use_bilateral_grid:
                     meta = {k: v for k, v in camera.metadata.items() if k != "cam_idx"}
@@ -400,6 +421,8 @@ if __name__ == "__main__":
     ap.add_argument("--revised_opacity", action="store_true", help="opacity correction when Gaussians are cloned / split")
     ap.add_argument("--save_every", type=int, default=2500, help="checkpoint interval (only the latest is kept)")
     ap.add_argument("--resume", action="store_true", help="continue from this run name's latest checkpoint (power cut)")
+    ap.add_argument("--pose_opt", action="store_true",
+                    help="refine the training camera poses (SO3xR3); for sensor-path models (FEATURELESS 10.d)")
     args = ap.parse_args()
     from nerfstudio.configs.method_configs import method_configs
     from nerfstudio.data.dataparsers.nerfstudio_dataparser import NerfstudioDataParserConfig
@@ -434,6 +457,9 @@ if __name__ == "__main__":
               densify_grad_thresh=args.densify_grad, num_downscales=args.num_downscales,
               resolution_schedule=args.resolution_schedule, stop_split_at=args.stop_split_at,
               output_depth_during_training=not args.no_prior)
+    if args.pose_opt:
+        from nerfstudio.cameras.camera_optimizers import CameraOptimizerConfig
+        kw["camera_optimizer"] = CameraOptimizerConfig(mode="SO3xR3")
     # import this file under its module name so the saved config references geo_splatfacto.* (not __main__),
     # which ns-export can re-import with PYTHONPATH=src/arcore3dgs
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
