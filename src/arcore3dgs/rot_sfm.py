@@ -193,6 +193,9 @@ if __name__ == "__main__":
     ap.add_argument("--no_ba", action="store_true", help="stop after the initial model (rot_init), no triangulation / BA")
     ap.add_argument("--bg_json", default=None, help="gyro bias from gyro_loop_bias.py (replaces gyro_check's estimate)")
     ap.add_argument("--imu_max_gap", type=float, default=2.0, help="s; longer keyframe gaps get no accelerometer link")
+    ap.add_argument("--extra_pairs", default=None, help="npz from video_tracks.py --pairs_out: more pair directions")
+    ap.add_argument("--extra_w", type=float, default=1.0, help="weight multiplier of the video-track directions")
+    ap.add_argument("--extra_min_inliers", type=int, default=0, help="inlier minimum for the track directions (0 = --min_inliers)")
     a = ap.parse_args()
     OUT = os.path.abspath(a.out); os.makedirs(OUT, exist_ok=True)
     meta = json.load(open(os.path.join(a.work, "frames.json")))
@@ -245,6 +248,20 @@ if __name__ == "__main__":
         json.dump([(x[0], x[1], x[2].tolist(), x[3]) for x in edges_raw], open(cache, "w"))
     print(f"{len(edges_raw)} pair directions from {len(rows)} verified pairs (dt <= {a.max_dt} s, parallax >= "
           f"{a.min_parallax} deg)")
+    if a.extra_pairs:
+        # point tracks through the video (video_tracks.py --pairs_out): same direction estimate, own weight
+        z = np.load(a.extra_pairs)
+        n_ex = 0; mi = a.extra_min_inliers or a.min_inliers
+        for na, nb, o0, o1 in zip(z["a"], z["b"], z["off"][:-1], z["off"][1:]):
+            na, nb = str(na), str(nb)
+            if na not in pts or nb not in pts or o1 - o0 < mi:
+                continue
+            Ra, Rb = Rw(pts[na]), Rw(pts[nb])
+            t, inl, par = pair_direction(Rb.T @ Ra, z["b1"][o0:o1], z["b2"][o0:o1], a.thr, rng=rng)
+            if t is None or inl.sum() < mi or par < a.min_parallax:
+                continue
+            edges_raw.append((na, nb, Rb @ t, a.extra_w * float(inl.sum()) * min(par, 10.0) / 10.0)); n_ex += 1
+        print(f"{n_ex} more pair directions from video tracks ({len(z['a'])} keyframe pairs in {a.extra_pairs})")
     # largest connected set
     parent = {}
 

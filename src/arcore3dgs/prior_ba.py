@@ -29,6 +29,10 @@ ap.add_argument("--s_r1", type=float, default=0.1, help="deg/s, growth with the 
 ap.add_argument("--s_t0", type=float, default=0.02, help="model units, relative position prior sigma floor")
 ap.add_argument("--s_t1", type=float, default=0.3, help="fraction of the step length")
 ap.add_argument("--max_dt", type=float, default=3.0, help="s; no relative prior across longer gaps")
+ap.add_argument("--adapt_n", type=int, default=0,
+                help="0 = off. Else the position prior of a pair goes from s_t0/s_t1 (support 0) to loose_t0/loose_t1 "
+                     "(support >= adapt_n), support = min 3D observations of the two keyframes (log-sigma blend)")
+ap.add_argument("--loose_t0", type=float, default=2.0); ap.add_argument("--loose_t1", type=float, default=30.0)
 ap.add_argument("--s_abs_t", type=float, default=2.0); ap.add_argument("--s_abs_r", type=float, default=10.0)
 ap.add_argument("--huber", type=float, default=2.0)
 ap.add_argument("--drop_px", type=float, default=4.0, help="observations above this after round 1 are dropped")
@@ -114,6 +118,14 @@ dR0 = np.einsum("nij,nkj->nik", R0[1:], R0[:-1])
 link = (dt <= args.max_dt).astype(float)
 s_r = np.radians(args.s_r0 + args.s_r1 * dt)
 s_t = args.s_t0 + args.s_t1 * np.linalg.norm(dC0, axis=1)
+if args.adapt_n > 0:
+    n_obs = np.bincount(obs_cam, minlength=N)
+    sup = np.minimum(n_obs[1:], n_obs[:-1])
+    f = np.clip(sup / args.adapt_n, 0.0, 1.0)
+    s_loose = args.loose_t0 + args.loose_t1 * np.linalg.norm(dC0, axis=1)
+    s_t = np.exp((1 - f) * np.log(s_t) + f * np.log(s_loose))
+    print(f"adaptive position prior: support median {np.median(sup):.0f}, {int((f >= 1).sum())} pairs fully loose, "
+          f"{int((f < 0.1).sum())} pairs tight (<10% of adapt_n)", flush=True)
 print(f"relative priors on {int(link.sum())} of {N - 1} consecutive pairs; rotation sigma median "
       f"{np.degrees(np.median(s_r)):.2f} deg, position sigma median {np.median(s_t):.3f}", flush=True)
 wt = np.repeat(link / s_t, 3); wr = np.repeat(link / s_r, 3)
