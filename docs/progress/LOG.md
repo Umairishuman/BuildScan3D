@@ -835,3 +835,11 @@ reach a break through point … plan ahead what will give us best gains".
 - Runs: none (only CPU checks of the new tools, no pipeline outputs). Decisions: none; Tayyab's answers (not the
   evaluation week, §10 first) recorded in §10.3 / §10.4.
 - Next: when Tayyab says go, the run order in §10.5: 10.a baseline, 10.f, 10.b, 10.c, 10.d, 10.e.
+- Evening (Tayyab: "ok start 10a"): R-082, the §10.a baseline. `still_frames.py` → `still_test.txt` (8 still frames;
+  7 of the 9 still stretches are in the first 17.6 s), `make_split.py --add` → `s10_test.txt` (69 of 622 frames held
+  out). R-081's recipe on a copy (`v9pfh`): held-out PSNR 20.80, SSIM 0.874, flatness 8.18 cm; R-081 on the same
+  (seen) frames 23.98 / 0.909 / 5.98. Problem: `cp -r` turned the `undist_fast/images` junction into a real folder,
+  so `fast_mvs.py` failed at init; removed the copied folder, resumed from init (TRAINING R-082).
+- Runs: R-082. Decisions: none.
+- Next: 10.f (`--blur_gyro`) on the same split, scored against R-082.
+

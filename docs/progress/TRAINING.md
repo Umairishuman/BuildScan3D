@@ -128,6 +128,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-079 | 2026-11-20 | scan_009: track directions with more weight (`--extra_w 10` / `30`, `--extra_min_inliers 8`) into `rot_sfm.py`, then the R-078 adaptive BA (`v9pfw`, `v9pfy`, no training yet) | 3070 | 11 min | path now agrees with the tracks in 45 – 60 s (4.3° vs 46.9°); 647 cameras (×30), empty stretches still 0 points median | Kept as input for R-080 (×30) |
 | R-080 | 2026-11-20 | scan_009: video tracks re-triangulated on R-079's path (`v9pfy`), then the adaptive BA (no training yet) | 3070 | 3.5 min | 7,263 track points; 90 – 105 s median 3D obs 3 → 23; 45 – 60 s still 1 (video has no trackable texture there); reprojection 1.13 px | Kept (best scan_009 SfM so far, not trained) |
 | R-081 | 2026-11-20 | scan_009: train on R-080's camera model (`v9pfz`, R-071's training recipe) for the web viewer | 3070 | 28.8 min | 622 frames, 542,469 splats; training-view PSNR median 19.59 vs R-071 19.52 on 607 common frames, better on 61%; scale check ok | Kept (best scan_009 model so far, in the web viewer) |
+| R-082 | 2026-11-20 | scan_009: plan 10.a baseline, R-081 recipe with 69 frames held out (`v9pfh`) | 3070 | 28.3 min | held-out (69 frames) PSNR 20.80, SSIM 0.874, flatness 8.18 cm, 573,257 splats; R-081 on the same frames (seen in training) 23.98 / 0.909 / 5.98 cm | Kept as the §10 baseline |
 
 ## Runs
 
@@ -1381,7 +1382,8 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 - **Command(s):** `scripts/buildscan run 6 r1119b6 -- --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
 - **Goal:** first model of scan #6 (#19); SfM must pass in RAM like scan #7 (12.68 M observations, R-040). Then
   layout / fixtures / check sheet, publish within the 10 GB cap (D-077).
-- **Start → end:** (running)
+- **Start → end:** 17:16 → 17:20 (copy, undistort, export, prior; failed at init, below); resumed 17:20 → 17:45
+  (export 0.01, prior 3.55, init 2.21, train 21.93, ply 0.59 min; `timing.json` total 28.3 min)
 - **Errors during the run:** none so far.
 
 ### R-062 · 2026-11-12 · Training speed-up, phase 1: profiling + exact fixes + blur colour grid once (`fast_t1`)
@@ -2009,3 +2011,43 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Verdict:** kept: the best scan_009 model so far (slightly better than R-071 on training views, scale check ok).
   45 – 60 s still rests on the sensors (R-080). Scale still ~2× too large (not corrected). Training-view PSNR only;
   not held out.
+
+### R-082 · 2026-11-20 · scan_009_057ed3beb4fc: 10.a baseline with held-out frames (`v9pfh`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 04b9522
+- **Dataset:** scan_009; `work_v9pfz` copied to `work_v9pfh`, `work_v9pfz_sfm` (without `gs_v9pfz`) copied to
+  `work_v9pfh_sfm`, so the cameras are R-081's (R-080's model)
+- **Held-out list** `s10_test.txt`: `still_frames.py … work_v9pfz_sfm --bg_json gyro_loop_bias.json --split_out
+  still_test.txt --json_out still_frames.json` found 9 still stretches (< 6°/s for >= 0.4 s, 6.7 s of 187 s; one at
+  1.8 – 2.4 s has no keyframe), 8 held-out keyframes; 7 of the 9 stretches are in the first 17.6 s, one at 79.5 s, one
+  at 186.3 s. `make_split.py --work … work_v9pfz_sfm --out s10_test.txt --add still_test.txt`: 6 stretches of 3 s
+  plus the 8 still frames, **69 of 622 frames held out (11.1 %)**. Every later §10 model uses this list.
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r082.sh` (log `r082.log`): `sfm_colmap.py --work … work_v9pfh --out
+  … work_v9pfh_sfm --feature aliked --sim3 none --stage {undistort, export}`; `run_v8.py --tag v9pfh --from_stage
+  export --pose_free --init fmvs --planar 0.2 --blur 0.0222 --pgsr --split s10_test.txt`; then `eval_offpath.py`
+- **Goal:** plan §10.a: the held-out number every later step (10.f, 10.b, 10.c, 10.d, 10.e) is judged against. Same
+  recipe as R-081, only the split differs.
+- **Start → end:** 17:16 → 17:20 (copy, undistort, export, prior; failed at init, below); resumed 17:20 → 17:45
+  (export 0.01, prior 3.55, init 2.21, train 21.93, ply 0.59 min; `timing.json` total 28.3 min)
+- **Errors during the run:**
+  - 17:16 – 17:20, init stage (`fast_mvs.py`): `OSError: [WinError 145] The directory is not empty: …work_v9pfh_sfm\undist_fast\images`, `stage init failed (1)`. Cause: `r082.sh` copied `work_v9pfz_sfm` with `cp -r`, which followed the Windows junction `undist_fast/images` (→ `work_v9pfz_sfm/images`) and wrote a real 647-file folder; `fast_mvs.py` only unlinks junctions. Checked the original is still a junction (untouched). Fix: removed the copied real folder in `work_v9pfh_sfm/undist_fast/images` (a duplicate of `work_v9pfh_sfm/images`) and resumed with `run_v8.py … --from_stage init` (`r082b.sh`); export (split 553 train / 69 held out), prior (3.5 min, scale check ok, ratio 2.134) and blur were already done. Resolved: the resume ran to the end. Copy scripts should skip `undist_fast/images` from now on.
+- **Result:** split 553 train / 69 held out; scale check verdict "ok", ratio 2.134 (as R-081). `→
+  work_v9pfh_sfm/gs_v9pfh/splat.ply`, 573,257 splats. `eval_offpath.py --work work_v9pfh_sfm --out
+  work_v9pfh_sfm/eval_r082 --models r082=… r081_seen=work_v9pfz_sfm/gs_v9pfz/splat.ply` (69 frames, half res):
+
+  | Model | Splats | PSNR (colour-fit) | SSIM | Sharpness | Flatness cm |
+  |---|---|---|---|---|---|
+  | R-082 (frames held out) | 573,257 | **20.80** | **0.874** | 0.28 | **8.18** |
+  | R-081 (same frames, seen in training) | 542,469 | 23.98 | 0.909 | 0.32 | 5.98 |
+
+  The R-081 row is not a held-out score (it trained on these frames); it shows how much is lost when a view is not
+  seen: 3.2 dB PSNR, 0.035 SSIM, 2.2 cm flatness. Sheet `eval_r082/offpath_frames.jpg` (one frame per stretch plus
+  the still frames): the early door / AC views (0 – 17 s) are close to R-081; held-out views fail near the room
+  entrance (a red smear across the door frame), a door seen from further back (the wall around it breaks into
+  floaters) and a blank wall (rainbow-coloured floaters); the last frame (curtain, 186 s) is smeared in both models.
+  Sheets `crops.jpg`, `centre.jpg` in the same folder. One scan, one split; the per-stretch and still-frame-only
+  numbers were not computed separately.
+- **Verdict:** kept as the §10.a baseline: 10.f, 10.b, 10.c, 10.d and 10.e are scored on the same `s10_test.txt` with
+  `eval_offpath.py` against R-082 (20.80 dB / 0.874 / 8.18 cm).
+

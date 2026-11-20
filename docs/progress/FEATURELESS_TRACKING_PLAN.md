@@ -456,3 +456,9 @@ from `origin/master`'s TRAINING.md first):
    (CPU / GPU BA only, ~10 min per round), then train its last model.
 5. **10.d:** best of the above plus `--pose_opt`.
 6. **10.e:** best of the above with `--planar 0.5` / `1.0`, `--train_args "--depth_lambda 0.1 --normal_lambda 0.1"`.
+
+**10.a done (R-082, 2026-11-20):** 69 of 622 frames held out (`s10_test.txt`: 6 stretches of 3 s plus 8 still
+frames). Held-out PSNR **20.80**, SSIM **0.874**, flatness **8.18 cm**; R-081 on the same frames, which it trained on,
+scores 23.98 / 0.909 / 5.98 cm, so an unseen view loses about 3.2 dB. Every later step is compared with R-082. Next:
+10.f (`--blur_gyro`).
+
