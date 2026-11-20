@@ -462,3 +462,7 @@ frames). Held-out PSNR **20.80**, SSIM **0.874**, flatness **8.18 cm**; R-081 on
 scores 23.98 / 0.909 / 5.98 cm, so an unseen view loses about 3.2 dB. Every later step is compared with R-082. Next:
 10.f (`--blur_gyro`).
 
+**10.f run (R-083, 2026-11-20):** gyro motion for all 622 frames. Held-out PSNR 20.86 (R-082 20.80), SSIM 0.871
+(0.874), sharpness 0.43 (0.28), flatness 9.85 cm (8.18), training 28.0 min (21.9). Sharper, not more accurate; the
+entrance and far-door failures are unchanged. Inconclusive; keeping it for 10.b onwards is open (Tayyab).
+

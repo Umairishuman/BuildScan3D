@@ -841,5 +841,8 @@ reach a break through point … plan ahead what will give us best gains".
   (seen) frames 23.98 / 0.909 / 5.98. Problem: `cp -r` turned the `undist_fast/images` junction into a real folder,
   so `fast_mvs.py` failed at init; removed the copied folder, resumed from init (TRAINING R-082).
 - Runs: R-082. Decisions: none.
-- Next: 10.f (`--blur_gyro`) on the same split, scored against R-082.
-
+- Then (Tayyab: "ok start the next part"): committed R-082's records (`d013674`); R-083, 10.f gyro motion blur
+  (`v9pfi`): all 622 frames get gyro motion; held-out PSNR 20.86 vs 20.80, SSIM 0.871 vs 0.874, sharpness 0.43 vs
+  0.28, flatness 9.85 vs 8.18 cm, training +6 min. Inconclusive (TRAINING R-083).
+- Runs: R-083. Decisions: none (keeping `--blur_gyro` is open for Tayyab).
+- Next: Tayyab's choice on `--blur_gyro`, then 10.b (rolling-shutter rectification) on the same split.

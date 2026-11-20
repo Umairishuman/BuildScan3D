@@ -129,6 +129,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-080 | 2026-11-20 | scan_009: video tracks re-triangulated on R-079's path (`v9pfy`), then the adaptive BA (no training yet) | 3070 | 3.5 min | 7,263 track points; 90 – 105 s median 3D obs 3 → 23; 45 – 60 s still 1 (video has no trackable texture there); reprojection 1.13 px | Kept (best scan_009 SfM so far, not trained) |
 | R-081 | 2026-11-20 | scan_009: train on R-080's camera model (`v9pfz`, R-071's training recipe) for the web viewer | 3070 | 28.8 min | 622 frames, 542,469 splats; training-view PSNR median 19.59 vs R-071 19.52 on 607 common frames, better on 61%; scale check ok | Kept (best scan_009 model so far, in the web viewer) |
 | R-082 | 2026-11-20 | scan_009: plan 10.a baseline, R-081 recipe with 69 frames held out (`v9pfh`) | 3070 | 28.3 min | held-out (69 frames) PSNR 20.80, SSIM 0.874, flatness 8.18 cm, 573,257 splats; R-081 on the same frames (seen in training) 23.98 / 0.909 / 5.98 cm | Kept as the §10 baseline |
+| R-083 | 2026-11-20 | scan_009: plan 10.f, R-082 plus gyro motion blur (`v9pfi`) | 3070 | 34.4 min | held-out PSNR 20.86 (R-082 20.80), SSIM 0.871 (0.874), sharpness 0.43 (0.28), flatness 9.85 cm (8.18), 586,509 splats; train 28.0 min (21.9) | Inconclusive |
 
 ## Runs
 
@@ -2051,3 +2052,33 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Verdict:** kept as the §10.a baseline: 10.f, 10.b, 10.c, 10.d and 10.e are scored on the same `s10_test.txt` with
   `eval_offpath.py` against R-082 (20.80 dB / 0.874 / 8.18 cm).
 
+### R-083 · 2026-11-20 · scan_009_057ed3beb4fc: 10.f gyro motion blur (`v9pfi`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ d013674
+- **Dataset:** scan_009; `work_v9pfz` copied to `work_v9pfi`; `work_v9pfh_sfm` copied to `work_v9pfi_sfm` without
+  `gs_v9pfh`, `eval_r082` and the `undist_fast/images` junction (R-082's copy problem), so cameras and split are R-082's
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r083.sh` (log `r083.log`): `sfm_colmap.py … --stage {undistort,
+  export}` as R-082; `run_v8.py --tag v9pfi --from_stage export --pose_free --init fmvs --planar 0.2 --blur 0.0222
+  --pgsr --split s10_test.txt --blur_gyro gyro_loop_bias.json`; then `eval_offpath.py` with R-082
+- **Goal:** plan §10.f, one change against R-082: the blur model gets camera motion from the gyro for every frame
+  (before: 398 of 622 frames had none, ARCore lost). Compared on the same 69 held-out frames.
+- **Start → end:** 18:52 → 19:27 (export 0.01, prior 3.65, init 2.15, train 27.96, ply 0.6 min; total 34.4 min)
+- **Errors during the run:** none. (At 18:56 the copied `blur_motion.json` still showed R-082's ARCore motion; that was
+  the copy, `blur_motion.py` runs beside the init stage and rewrote it before training.)
+- **Result:** `blur_motion.log`: 622 frames, motion from ARCore 0, gyro 622, none 0 (3 frames zero), rotational blur
+  median 8.7 px, p90 17.6 px. Split 553 / 69 as R-082. `→ work_v9pfi_sfm/gs_v9pfi/splat.ply`, 586,509 splats.
+  `eval_offpath.py --work work_v9pfi_sfm --out work_v9pfi_sfm/eval_r083 --models r082=… r083_gyroblur=…` (69 frames):
+
+  | Model | Splats | PSNR (colour-fit) | SSIM | Sharpness | Flatness cm | Train min |
+  |---|---|---|---|---|---|---|
+  | R-082 (baseline) | 573,257 | 20.80 | 0.874 | 0.28 | 8.18 | 21.9 |
+  | R-083 (gyro blur) | 586,509 | 20.86 | 0.871 | **0.43** | 9.85 | 28.0 |
+
+  Sheet `eval_r083/offpath_frames.jpg`: the curtain / AC view at 186 s has visibly more detail (R-082 smeared it), the
+  blank-wall view has fewer coloured floaters; the far door view and the entrance red smear are as bad as in R-082.
+  PSNR +0.06 dB and SSIM −0.004 are within what one rerun could change (run-to-run spread not measured); sharpness
+  rose clearly; wall flatness got worse by 1.7 cm; training took 6 min longer (blur sub-renders on every frame).
+- **Verdict:** inconclusive: sharper held-out renders but no PSNR gain and less flat walls. The blur fix does not
+  address the main held-out failures (entrance, far door), which look like pose / geometry errors. Whether to keep
+  `--blur_gyro` in the next steps is Tayyab's choice.
