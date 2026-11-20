@@ -35,6 +35,8 @@ ap.add_argument("--only_weak", type=int, default=0,
                 help="if > 0: start tracks only in keyframes with fewer than this many 3D observations in the model")
 ap.add_argument("--pairs_out", default=None, help="also write the tracks as keyframe-pair correspondences (.npz) "
                 "for rot_sfm.py --extra_pairs")
+ap.add_argument("--rs", type=int, default=0, help="1: the keyframes in <work> were rectified by rs_rectify.py; move the "
+                "track positions (raw video) into those images with the same gyro readout model")
 ap.add_argument("--debug_window", type=float, nargs=2, default=None, help="t0 t1 (s): per-stage counts for tracks "
                 "starting in this window")
 args = ap.parse_args()
@@ -116,6 +118,17 @@ print(f"tracking done: {next_tid} tracks, {len(obs)} keyframe observations ({tim
 
 # ---------------- rotation-fixed RANSAC per keyframe pair ----------------
 O_t = np.array([o[0] for o in obs]); O_n = np.array([o[1] for o in obs]); O_uv = np.array([o[2:] for o in obs])
+if args.rs:                     # tracks come from the raw (rolling-shutter) video; the model's keyframes are rectified
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import rs_rectify
+    meta_rs = json.load(open(os.path.join(args.work, "frames.json"))); rb = meta_rs["rs_rectify"]
+    camrot, _, _ = rs_rectify.setup(args.dataset, meta_rs, rb["calib"], rb["bg_json"])
+    tref = np.array([pts_of[n] for n in O_n]) + meta_rs.get("pose_offset", 0.0)
+    new_uv = rs_rectify.rectify_points(O_uv, tref, camrot, K, dist, rb["axis"], rb["sign"], rb["skew_s"],
+                                       H_ if rb["axis"] == "rows" else W_)
+    print(f"rolling shutter: track positions moved median {np.median(np.linalg.norm(new_uv - O_uv, axis=1)):.1f} px, "
+          f"p95 {np.percentile(np.linalg.norm(new_uv - O_uv, axis=1), 95):.1f} px ({rb['axis']}, sign {rb['sign']:+d})")
+    O_uv = new_uv
 und = cv2.undistortPoints(O_uv.reshape(-1, 1, 2).astype(np.float64), K, dist).reshape(-1, 2)
 bear = np.c_[und, np.ones(len(und))]; bear /= np.linalg.norm(bear, axis=1, keepdims=True)
 Rw = np.stack([imgs[n]["R"] for n in O_n]); dw = np.einsum("nij,nj->ni", Rw, bear)     # world-frame rays
