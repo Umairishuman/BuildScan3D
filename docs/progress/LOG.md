@@ -823,5 +823,15 @@ reach a break through point … plan ahead what will give us best gains".
 - Problems: COLMAP GUI first launch from the background shell closed without a window (relaunched with
   `Start-Process`); `work_v9pfx_sfm` already existed (R-079 used `v9pfy` instead); `render_compare.py` needs
   `nerfstudio-env`'s Python (plyfile). Nothing committed or pushed (not asked this session).
-- Next: Tayyab decides the order of §10 against E1 (§9.a) and whether the room can be re-recorded; then 10.a
-  (held-out baseline for R-081). `video_tracks.py` still needs a MAP.md entry when committed.
+- Later the same day (Tayyab: "this week is NOT eval week … commit the current progress and merge accordingly … code the
+  stuff for these steps but dont start training yet"; he also held the camera still at points during the recording):
+  committed the R-073 – R-081 work (`5b26db3`, `d8678ae`, `666c74a`); `origin/master` had nothing new to merge.
+  Coded §10.a – 10.f ([FEATURELESS_TRACKING_PLAN.md §10.5](FEATURELESS_TRACKING_PLAN.md)): `rs_rectify.py` (probe:
+  readout along image columns, photometric error 4.52 → 4.09), `video_tracks.py --rs`, `track_loop.py`,
+  `still_frames.py` (9 still stretches, 6.7 s), `make_split.py --add`, `geo_splatfacto.py` / `run_v8.py --pose_opt`,
+  `run_v8.py --train_args / --blur_gyro`, `blur_motion.py --source gyro`. Found: the blur model had no motion for 398
+  of 622 scan_009 frames (ARCore lost), so R-071 / R-081 trained almost without it. Tests 288 passed, 1 failed (known
+  `test_changelog`). Probe frames cached in `work_v9pfz_rs/probe_frames.npz` (dataset, gitignored).
+- Runs: none (only CPU checks of the new tools, no pipeline outputs). Decisions: none; Tayyab's answers (not the
+  evaluation week, §10 first) recorded in §10.3 / §10.4.
+- Next: when Tayyab says go, the run order in §10.5: 10.a baseline, 10.f, 10.b, 10.c, 10.d, 10.e.

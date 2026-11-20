@@ -421,3 +421,38 @@ so they can be weighted up in training.
   training until he says so.
 - **Re-recording scan_009's room** (Tayyab / whoever has access): the cheapest fix for 45 – 60 s and for blur.
 - Still open from §9.3: OD-15, the E1 owner, VGGT, the merge to `master`, disk.
+
+### 10.5 Code for 10.a – 10.f (2026-11-20, written, no training run yet)
+
+Tayyab asked to code the steps but not start training. What exists now, and what was checked without training:
+
+| Step | Code | Checked so far |
+|---|---|---|
+| 10.a | `still_frames.py` (still stretches from the gyro, held-out list); `make_split.py --add` (off-path stretches + still frames in one list); `eval_offpath.py` (held-out PSNR / SSIM, wall flatness, room-centre views) already existed | scan_009 still stretches: 4 at < 4°/s for ≥ 0.5 s (2.2 s), **9 at < 6°/s for ≥ 0.4 s (6.7 s, the default)**, 15 at < 8°/s; rotation speed median 16.8°/s |
+| 10.b | `rs_rectify.py` (per-row gyro rotation, iterated remap, lens distortion kept; `--probe_only` picks the readout direction from the video); `video_tracks.py --rs 1` (moves the raw-video track points into the rectified images); unit test `tests/test_rs_rectify.py` | Probe on the 24 fastest-rotating keyframes (median 53°/s): photometric error without gyro warp 7.04, gyro warp without rectification 4.52, **columns +1: 4.09** (rows +1 4.17, rows −1 4.18, columns −1 4.32), so readout along the image columns; a 10 % margin, tentative. Shift on fast frames 7 – 8 px median, up to 24 px. Image map vs point correction round trip 0.06 px |
+| 10.c | `track_loop.py` (rounds of tracks → `rot_sfm.py` → adaptive BA → tracks → adaptive BA until the kept cameras stop rising) | compiles; not run |
+| 10.d | `geo_splatfacto.py --pose_opt` (nerfstudio SO3xR3; the correction is applied once per training view, also in the blur sub-renders and the PGSR geometry pass); `run_v8.py --pose_opt` | compiles; not trained. The refined poses are not written out; held-out frames are scored with their unrefined poses |
+| 10.e | `run_v8.py --train_args` passes `--depth_lambda`, `--normal_lambda` etc. to the trainer; `--planar` already existed | Floater pruning and layout-plane constraints **not coded** |
+| 10.f | `blur_motion.py --source gyro --gyro_calib --per_frame_exposure`; `run_v8.py --blur_gyro <bias json>` | **Found: on scan_009 the blur model had no motion for most frames** (ARCore lost: 398 of 622 frames none, 224 from ARCore; R-071 / R-081 trained like that). With the gyro: all 622 frames, blur median 8.7 px, p90 17.6 px. ARCore and gyro disagree on the 224 shared frames (direction 14° median, p90 90°), so `--blur_gyro` uses the gyro for every frame |
+
+Tests: 288 passed, 1 failed (`test_changelog`, the known v0.3.9 failure on `master`).
+
+**Run order when Tayyab says go** (S = `dataset/scan_009_057ed3beb4fc`; one change per training, ~30 min each; run IDs
+from `origin/master`'s TRAINING.md first):
+
+1. **10.a baseline:** `still_frames.py $S $S/work_v9pfz_sfm $S/work_v9pfz_sfm --bg_json $S/gyro_loop_bias.json
+   --split_out $S/still_test.txt`; `make_split.py --work $S/work_v9pfz_sfm --out $S/s10_test.txt --add
+   $S/still_test.txt`; copy `work_v9pfz` / `work_v9pfz_sfm/sparse/0` to a new tag (e.g. `v9pfh`); `sfm_colmap.py
+   --stage undistort / export --sim3 none`; `run_v8.py --tag v9pfh --from_stage export --pose_free --init fmvs
+   --planar 0.2 --blur 0.0222 --pgsr --split $S/s10_test.txt`; `eval_offpath.py --work $S/work_v9pfh_sfm --models
+   base=…`. Every later model uses the same `s10_test.txt`.
+2. **10.f** (cheapest, now known to be broken on this scan): as 1 plus `--blur_gyro $S/gyro_loop_bias.json`.
+3. **10.b-1** (rectified images, R-080's poses): `rs_rectify.py $S $S/work_v9pfz $S/work_v9pfz_sfm <new keyframe
+   dir> --bg_json $S/gyro_loop_bias.json`, then as 1 on that tag. **10.b-2** (full): ALIKED features and matching on
+   the rectified keyframes (`sfm_colmap.py --stage extract / match --feature aliked`), `gyro_loop_bias.py`,
+   `rot_sfm.py`, `track_loop.py --rs 1`, then train.
+4. **10.c:** `track_loop.py $S $S/work_v9pfl $S/work_v9pfm_sfm $S/work_v9pfy_sfm/sparse_vt_pba_adapt <out>
+   --pair_cache $S/work_v9pfl_sfm/pair_directions_dt300_par1_bg.json --bg_json $S/gyro_loop_bias.json --colmap …`
+   (CPU / GPU BA only, ~10 min per round), then train its last model.
+5. **10.d:** best of the above plus `--pose_opt`.
+6. **10.e:** best of the above with `--planar 0.5` / `1.0`, `--train_args "--depth_lambda 0.1 --normal_lambda 0.1"`.
