@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-11-19 (`scan-009-loop`: R-071, the loop-closed scan_009 model, added to the project list) Merged with `master` the same day; before that: 2026-11-19 (published scans from the R2 bucket listed for the Vercel site, D-076; earlier: wall-gap openings and no-roof / open-outline flags shown; earlier the same day: every scan bundle listed in the Projects tab); merged with `master`: 2026-11-15 (real models in the project list: bedroom, lecture hall, scan 009 + its pose-free model, newRoom v9e2e / v6 / v3; local-only files)
+Last updated: 2026-11-20 (`scan-009-tracks`: R-081, scan_009 with the track-corrected camera path, added to the project list); before that 2026-11-19 (`scan-009-loop`: R-071, the loop-closed scan_009 model, added to the project list) Merged with `master` the same day; before that: 2026-11-19 (published scans from the R2 bucket listed for the Vercel site, D-076; earlier: wall-gap openings and no-roof / open-outline flags shown; earlier the same day: every scan bundle listed in the Projects tab); merged with `master`: 2026-11-15 (real models in the project list: bedroom, lecture hall, scan 009 + its pose-free model, newRoom v9e2e / v6 / v3; local-only files)
 
 ---
 
@@ -219,6 +219,14 @@ real path.** Currently only `/dashboard` has a href.
 - **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` → 0 errors, 1 known warning
   (ExportModal.tsx:29); `npx next build` compiled + prerendered all routes (run through `micromamba run -n bs-ns`,
   where Node lives on the Ubuntu PC). **Not checked in a browser**, and no size checked against tape yet.
+
+### Track-corrected scan_009 model in the project list ✅ (2026-11-20, Tayyab's ask)
+- **Modified** `src/lib/mockData.ts`: `scan-009-tracks` (`/splats/scan009_v9pfz.spz`, R-081: R-080's camera path,
+  622 keyframes, 542,469 splats, 10.3 MB, status draft, start pose frame_00001 [-0.15, -0.03, -0.11] → [-0.22, -0.21,
+  0.87], computed from `transforms_fmvs.json` the same way that reproduces `scan-009-loop`'s pose; thumbnail reused
+  from `scan009_v9pgsr.jpg`). File local only (git-ignored), converted with `src/arcore3dgs/to_spz.mjs` (2.0 s).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src` → 0 errors, 1 known warning (ExportModal.tsx:29).
+  `next build` not re-run; dev server started for Tayyab to look at it (start pose not checked by me).
 
 ### Loop-closed scan_009 model in the project list ✅ (2026-11-19, night session for Tayyab)
 - **Modified** `src/lib/mockData.ts`: `scan-009-loop` (`/splats/scan009_v9pfl.spz`, R-071: gyro + accelerometer camera
@@ -865,6 +873,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-11-20** — `scan-009-tracks` (R-081, camera path corrected with video point tracks) added to the project list.
 - **2026-11-19** — Wall-gap openings (`doorway`, `window opening`) and no-roof / open-outline flags shown in cards and Scan Layers.
 - **2026-11-19** — Projects tab lists every processed scan bundle in `public/scans/` (`/api/scans`, `/viewer/run-<folder>`).
 - **2026-11-18** — Scan #8 (R-039) added as its own project `scan-008`; the plan image is its thumbnail.

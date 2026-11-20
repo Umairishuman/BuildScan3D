@@ -216,6 +216,28 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [0.09, -0.02, -0.11], target: [0.0, -0.19, 0.87] },
   },
   {
+    // R-081 (2026-11-20): R-080's camera path (video point tracks steer the sensor path in the low-texture stretches,
+    // bundle adjustment with adaptive priors), trained with R-071's recipe. File is local only (git-ignored).
+    id: "scan-009-tracks",
+    name: "Scan 009 · track-corrected camera path",
+    floor: "—",
+    block: "Residence",
+    area: "Not measured",
+    location: "scan_009_057ed3beb4fc • gyro + accelerometer + video tracks",
+    dateCaptured: "Nov 15, 2026",
+    status: "draft",
+    statusLabel: "Experimental · 622 of 894 keyframes · scale ~2× too large",
+    thumbnail: "/thumbnails/scan009_v9pgsr.jpg",
+    scansCount: 1,
+    gaussianCount: "542,469",
+    accuracy: "Scale unknown (estimates say the model is about 2× too large)",
+    captureDevice: "realme RMX5111 (ARCore)",
+    description:
+      "Same recording as Scan 009. The camera path from the phone's sensors is corrected with points tracked through every video frame, which fixes the stretch around 90–105 s; the stretch around 45–60 s has too little texture and still rests on the sensors (R-080, R-081). On the training views it is slightly sharper than the loop-closed model (better on 61% of frames): the start wall, the corner at 106 s and the AC and curtain at the end are cleaner; one door corner at 137 s is worse. Sizes are not reliable.",
+    splatUrl: "/splats/scan009_v9pfz.spz",
+    splatStart: { position: [-0.15, -0.03, -0.11], target: [-0.22, -0.21, 0.87] },
+  },
+  {
     // R-012 (2026-10-12), saved_models/2026-10-12_sharp_mvs_v6. File is local only (git-ignored, > 10 MB).
     id: "newroom-v6",
     name: "Living Room · v6 sharp frames + MVS (older)",
