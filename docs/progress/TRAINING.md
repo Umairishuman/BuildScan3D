@@ -143,6 +143,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-094 | 2026-11-21 | scan_009: plan 11.b, camera path scale drift corrected with the room height, then R-090's recipe (`v9psc`) | 3070 | 29.2 min | room height along the walk 5.0 – 6.0 units (before 4.6 – 7.6); aligned PSNR 22.59 vs R-090 22.63 on 66 common held-out frames (late walk +1.1 – 1.2 dB, 51 – 53 s −2.1 dB) | Kept (cameras for 11.c); no image gain by itself |
 | R-095 | 2026-11-21 | scan_009: plan 11.c, depth / normal priors rewritten from the room planes (`plane_prior.py`) on R-094's cameras (`v9ppl`) | 3070 | 24.8 min | neighbouring-frame depth disagreement 6.8 → 3.6 %; held-out PSNR 19.94 vs R-094 20.85, aligned 21.53 vs 22.59 (66 frames) | Rejected (the plane set is still fragmented) |
 | R-096 | 2026-11-22 | scan_009: plan 11.d, loops closed with the long-range image pairs (`loop_path.py`, `prior_ba.py --pair_priors`) on R-094's cameras (`v9plp`) | 3070 | 28.3 min (+7 min solve / BA) | held-out loop pairs >= 60 s: 7.0 → 2.5° median; **aligned 22.67 → 23.63 on the 63 common held-out frames**, every stretch equal or better; off-path views more coherent | **Kept** (first clear gain) |
+| R-097 | 2026-11-22 | scan_009: 11.d second round, loop pairs chosen with R-096's cameras and matched (`loop_match.py`, `v9plm`) | 3070 | 28.7 min (+3 min matching / solve) | aligned 22.93 vs R-096 23.63 (63 frames): four stretches better, 134 – 137 s broken (20.10 → 15.81) | Rejected (new pairs need a stricter check) |
 
 ## Runs
 
@@ -2708,3 +2709,43 @@ igs.txt`):
   … --pair_priors …/sparse_loop3/loop_pairs.json` → `sparse_loop3_pba`; then `r097.sh` as R-096 with tag `v9plm`
 - **Goal:** walls still thick in R-096 (several Z- wall offsets 3.1 – 4.8); more loop pairs where the walk revisits
   a surface; compared with R-096 (aligned 23.63 on 63 held-out frames).
+- **Start → end:** 02:34 (matching) → 03:17 (matching + directions 1.6 min; loop solve 10 s; BA 1.1 min; copy /
+  export 02:38; prior 3.55, init 1.38, train 22.64, ply 0.57 min, total 28.7; evaluations / views 10 min)
+- **Errors during the run:**
+  1. 02:34 `loop_match.py` stopped after matching: `TypeError: a bytes-like object is required, not 'NoneType'`
+     (keypoint rows without data for images with no keypoints) → skipped such rows; rerun (the first 482 pairs had
+     already been matched into the copy, so the second call chose 1,570 more with `--min_overlap 0.2 --voxel 0.4
+     --per_frame 12`). Logs `r097_match.log`, `r097_match2.log`.
+  2. 02:36 `loop_path.py --model_frame` stopped (`AxisError`: no short pairs to fit the rotation on) → the rotation
+     fit is skipped with `--model_frame`; rerun.
+- **Matching / solve result:** 3,425 candidate pairs not matched before; 482 + 1,570 matched; of the second call's
+  1,570, 1,095 verified, 1,031 with a direction. Directions >= 5 s in total (old + new, recomputed with R-096's
+  rotations): 3,161 (5 – 20 s 1,101; 20 – 60 s 696; >= 60 s 1,364). Loop solve on R-096's cameras: held-out pairs
+  >= 60 s median 2.35 → 0.94°, p75 5.22 → 1.91°; cameras moved median 0.114, max 0.267 units; 3,037 of 3,161 pairs
+  agree (< 15°). Prior BA: reprojection 1.07 px; position change median 0.059.
+- **Result:** `→ work_v9plm_sfm/gs_v9plm/splat.ply`, 568,732 splats; export 581 frames; 63 of 69 held-out frames.
+  `eval_offpath.py`: PSNR 20.80, SSIM 0.863, flatness 6.07, 0 blocked; `eval_align.py`: aligned **22.93**, SSIM
+  0.878, correction median 2.21°. On the 63 common frames, aligned R-094 / R-096 / R-097: 22.67 / **23.63** / 22.93.
+  Per stretch R-096 → R-097: still 25.79 → 25.75; 22 – 25 s 25.76 → 26.86; 51 – 53 s 21.56 → 22.11; 78 – 81 s 23.47 →
+  23.48; 106 s 30.36 → 28.80; **134 – 137 s 20.10 → 15.81** (corrections up to 12.4°, still 15 – 16 dB after
+  alignment: the area is built wrongly); 162 – 165 s 25.13 → 26.04; 186 s 20.12 → 19.65. 91 of the new pairs touch
+  125 – 145 s, 38 of them linked to 140 – 160 s. `room_planes.py`: 58 planes. Off-path views in
+  `offpath_views_r097/`.
+- **Verdict:** rejected. Better in four stretches but one stretch broken, most likely by wrong matches among the new
+  pairs (the loop pairs are not checked against anything but their own agreement); the second round needs a
+  stricter pair check before it can be used. R-096's cameras stay.
+
+### R-098 · 2026-11-22 · scan_009_057ed3beb4fc: 11.c second form, contradicted prior pixels dropped, on R-096's cameras (`v9pcs`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 7fdfc92 plus uncommitted `prior_consistency.py`
+- **Dataset:** `work_v9plp` → `work_v9pcs`, `work_v9plp_sfm` → `work_v9pcs_sfm` (without the model, eval and the
+  `undist_fast/images` junction): R-096's cameras, split and Metric3D priors
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r098.sh` (log `r098.log`): `prior_consistency.py --work
+  …/work_v9pcs_sfm --pairs …/work_v9pfy_sfm/sparse_loop2/loop_pairs.json` (3 time neighbours each side + up to 6 loop
+  partners; a prior pixel is switched off when other views see free space in front of it at least as often as they
+  agree, tolerance 10 %); `run_v8.py --tag v9pcs --from_stage init` with R-096's recipe; `eval_offpath.py`,
+  `eval_align.py` (own poses), `offpath_views.py` with R-096
+- **Goal:** depth guidance that does not contradict itself across time without forcing it onto planes (R-095).
+  Dry run on R-096's priors: depth disagreement loop partners 12.4 → 9.1 % median, time neighbours 3.5 → 2.9 %;
+  18.9 % of the valid prior pixels dropped (some frames ~50 – 58 %). Compared with R-096 (aligned 23.63, 63 frames).

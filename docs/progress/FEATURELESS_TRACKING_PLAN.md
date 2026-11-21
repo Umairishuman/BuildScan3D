@@ -566,3 +566,16 @@ between frames (6.8 → 3.6 %) but ties the frames to that fragmented plane set 
 rejected. **Order changes: 11.d first** (make the walls seen at different times coincide: horizontal drift), then
 11.c again on a one-room plane set.
 
+
+**11.d (R-096, night of 2026-11-22): the loops, not the planes, fixed the horizontal drift.** The wall planes were
+too noisy to measure it (normals of one frame scatter 6.6°). The image evidence was there all along: rot_sfm's
+cache holds 852 verified pairs >= 60 s apart, but R-094's model has almost no point tracks between distant times,
+so its bundle adjustment never saw them, and the room-height correction had bent the path against them (p75 angle
+11.4 → 28.6°). `loop_path.py` solves the camera centres again with those pair directions + the path's own steps
+(validated on 20 % held-out pairs: >= 60 s median 7.0 → 2.5°), and `prior_ba.py --pair_priors` keeps them in the
+bundle adjustment (without it the BA undid most of the closure). Trained with R-094's recipe: **aligned 22.67 →
+23.63 dB on the same 63 held-out frames, no stretch worse**; off-path views from the room centre coherent in 6 of 8
+directions; the far wall seen at 0 – 25 s now matches its later views. Walls still thick (several offsets within
+~1.5 units). Second round (R-097): pairs chosen with the corrected cameras and matched on purpose (`loop_match.py`,
++1,031 directions). Then 11.c in a safer form (`prior_consistency.py`, R-098): keep each frame's depth but drop
+the pixels other views contradict (loop partners disagree 12.4 % median vs 3.5 % for time neighbours).
