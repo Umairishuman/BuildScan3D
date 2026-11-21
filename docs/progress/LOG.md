@@ -895,4 +895,10 @@ Asked by Tayyab: "why is FYP taking up 125 gb", then "ok do those 3".
   attempt", asked to stop the server (stopped) and plan a significant quality uplift that fixes the depth. Plan
   written as FEATURELESS_TRACKING_PLAN §11 (one consistent room geometry first: VGGT test, room planes, depth guidance
   rendered from one geometry, cameras placed against the planes, off-path judging).
+- Then (Tayyab: "ok start 11.a"): D-081 (run the downloaded VGGT). New `src/arcore3dgs/vggt_chunk.py`. R-093: first
+  try spilled out of the 8 GB GPU (fp32 weights), fixed with bf16 weights; VGGT follows the camera on texture
+  (0.6 – 0.9° vs the gyro) but not on the blank wall (3.5 – 10°, max 92°), so it cannot place those frames; its depth
+  agrees across frames ~3× better than the per-frame Metric3D priors (5.3 % vs 15.1 %).
+- Runs: R-093. Decisions: D-081.
+- Next: 11.b (room planes), then 11.c (consistent depth guidance: VGGT depth on texture, planes elsewhere).
 

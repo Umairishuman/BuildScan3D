@@ -172,6 +172,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `eval_offpath.py` | Off-path split metrics (PSNR, SSIM, sharpness, flatness, blocked views) + sheets | [eval] current |
 | `eval_align.py` | Held-out PSNR / SSIM after test-pose alignment (model frozen, 6-DoF + colour per frame), for models trained with `--pose_opt` (R-084) | [eval] current |
 | `prune_near_path.py` | Removes Gaussians reaching within a radius of the camera path from a trained `splat.ply` (blocked views, R-087 / R-089); `path_points()` is also used by `geo_splatfacto.py --path_prune` | [eval] current |
+| `vggt_chunk.py` | VGGT (downloaded, outside the repo, D-081) on a chunk of keyframes or dense video frames: rotation vs the gyro / an SfM model, positions vs the model, depth consistency vs the Metric3D priors (R-093) | [experiment] |
 | `eval_perframe.py` | Per held-out frame: PSNR of a held-out model vs a model that saw the frame, 3D support, time (R-084's per-stretch table) | [eval] current |
 | `stretch_stats.py` | Per SfM model: 3D observations per camera, path smoothness, overall and in time stretches; movement vs a reference model | [eval] current |
 | `track_dir_check.py` | Agreement of video-track pair directions with a model's path, by support and time stretch (R-077 – R-079) | [eval] current |

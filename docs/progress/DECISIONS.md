@@ -74,6 +74,7 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | D-059 | 2026-11-06 | Release APKs signed with a private key kept in GitHub Secrets | Active |
 | D-060 | 2026-11-06 | App fixes ship by PR → merge → CD release | Active |
 | D-080 | 2026-11-18 | Featureless tracking: option 1 first (test set, gyro rotation check, app prompt), then continue with plan steps 2–5 if time allows (OD-14 closed) | Active |
+| D-081 | 2026-11-21 | Run the downloaded VGGT code and weights for FEATURELESS_TRACKING_PLAN §11.a (research licence, outside the repo) | Active |
 
 ---
 
@@ -744,6 +745,22 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   scan_009-type rooms unsolved).
 - **By:** Muhammad Tayyab (answer to the agent's question, 2026-11-18). Closes OD-14; touches D-022 (ALIKED, re-tested
   in step 2) and OD-6 (the gyro enters `sfm_colmap.py`).
+- **Status:** Active.
+
+## D-081 · 2026-11-21 · Run VGGT for the featureless test (§11.a)
+
+- **Decision:** run Meta's VGGT (`facebookresearch/vggt` at commit `a288dd0`, weights `model.pt` 4.7 GB) from
+  `C:/Users/tyb/.cache/buildscan/` (outside the repo, not committed) for FEATURELESS_TRACKING_PLAN §11.a: a
+  feasibility test on one scan_009 chunk across the textureless 45 – 60 s stretch. Weights loaded with
+  `torch.load(weights_only=True)`.
+- **Why:** no matching-based step in §10 gave the 45 – 60 s cameras image support (R-085, R-091); a learned
+  multi-view model may place them and give depth that agrees across views; re-recording is not possible.
+- **Evidence:** FEATURELESS_TRACKING_PLAN §10 / §11; TRAINING R-091, R-092.
+- **Rejected alternatives:** skipping VGGT (11.d with the room planes only).
+- **Licence:** VGGT License v1 (research materials, Meta): fine for this research use; any use in a shipped product
+  needs a licence check first (open, not decided here).
+- **By:** Muhammad Tayyab ("ok start 11.a", 2026-11-21, after the agent named the OK to run the downloaded code as
+  the step's requirement). Answers the open VGGT question in plan §9.3 / STATUS.
 - **Status:** Active.
 
 ## Open decisions (need the team; agents must not decide these)

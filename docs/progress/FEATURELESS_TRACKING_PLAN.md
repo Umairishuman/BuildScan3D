@@ -549,3 +549,10 @@ Order recommended: 11.a and 11.b first (both small, 11.a tells whether 11.d can 
 expected gain for the depth problem), then 11.d, judged with 11.e. About 3 working days. `--path_prune` stays on;
 `--fill_scale` stays off until 11.c replaces it.
 
+**11.a done (R-093, 2026-11-21, D-081): VGGT cannot place the blank-wall frames.** On dense video frames (every
+0.25 s) its step rotations follow the gyro to 0.6 – 0.9° on texture (44 – 48 s) but are 3.5 – 10° off (max 92°) on
+the blank wall (48 – 60 s), with its confidence at the floor. Useful by-product: its depth maps agree across frames
+to 2.5 – 5.3 %, against 15.1 % for the per-frame Metric3D priors with R-080's poses, which supports the diagnosis
+above. Consequence: 11.d uses the room planes only; 11.c takes VGGT depth where its confidence is high and the
+planes elsewhere. Next: 11.b.
+

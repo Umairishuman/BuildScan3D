@@ -139,6 +139,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-090 | 2026-11-21 | scan_009: R-082 plus path pruning in training (`v9pfq`) | 3070 | 28.2 min | blocked views 0 (R-082 7); PSNR 21.10, aligned 22.52 (R-082 22.64, R-088 22.54) | Kept: pruning costs nothing and removes the blocked views |
 | R-091 | 2026-11-21 | scan_009: plan 10.b-2, SfM chain (features, rot_sfm, adaptive BA, one track round) on the rectified keyframes (`v9pfs2`) | 3070 | ~1 h 40 min of work (plus a pause) | final 647 cameras, 3D obs median 100 (R-080 120); 45 – 60 s: 30 cameras, obs median 0 (R-080 41, 1) | Rejected (not trained) |
 | R-092 | 2026-11-21 | scan_009: R-090 plus depth priors for frames without SfM support (`--fill_scale`, `v9pfu`) | 3070 | 29.9 min | flatness 6.77 vs 9.92 cm (R-090), 0 blocked; aligned PSNR 22.26 vs 22.52, SSIM 0.880 vs 0.878; held-out pose correction 1.62° vs 2.02° | Kept for inspection (flatter, PSNR −0.26) |
+| R-093 | 2026-11-21 | scan_009: plan 11.a, VGGT on keyframes (42 – 63 s) and dense video frames (44 – 60 s) (feasibility, no training) | 3070 | 22 – 43 s per chunk | textured part: rotation steps within 0.6 – 0.9° of the gyro, depth consistent across frames (2.5 – 5.3 % vs Metric3D priors 15.1 %); blank wall (48 – 60 s): steps 3.5 – 10° off (max 92°), confidence at its floor | VGGT cannot place the blank-wall frames; its depth is far more consistent than the per-frame Metric3D priors |
 
 ## Runs
 
@@ -2467,4 +2468,51 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   run-to-run spread, and not a sheet artefact this time), held-out views need a smaller pose correction (1.62° vs
   2.02°), aligned SSIM is level, aligned PSNR is 0.26 dB lower (about the run-to-run spread). The geometry is better;
   the colour fit is not. One run.
+
+### R-093 · 2026-11-21 · scan_009_057ed3beb4fc: 11.a VGGT feasibility test (42 – 63 s)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC (8 GB)
+- **Branch / commit:** `docs/featureless-tracking-plan` @ cd1b566 plus uncommitted `src/arcore3dgs/vggt_chunk.py`,
+  D-081
+- **Software:** VGGT (`facebookresearch/vggt` @ a288dd0, weights `model.pt` 4.7 GB) from
+  `C:/Users/tyb/.cache/buildscan/` (outside the repo; D-081), run in `nerfstudio-env` (torch 2.1.2+cu121; VGGT lists
+  2.3.1) with its small helper packages from `vggt_deps`; bf16 autocast; weights loaded with `weights_only=True`.
+- **Dataset:** scan_009, undistorted training images of `work_v9pfu_sfm` (R-080's cameras), 32 of the 65 keyframes
+  between 42 and 63 s (37 lie in 45 – 60 s); reference model R-080 (`work_v9pfy_sfm/sparse_vt_pba_adapt`); Metric3D
+  priors of R-092 (`work_v9pfu_sfm/mono_prior`, filled scales)
+- **Command(s):** `nerfstudio-env/Scripts/python.exe src/arcore3dgs/vggt_chunk.py $S $S/work_v9pfu_sfm
+  $S/work_v9pfy_sfm/sparse_vt_pba_adapt $S/vggt_r093 --vggt_dir …/vggt --weights …/vggt_weights/model.pt --t0 42 --t1
+  63 --n 32 --bg_json $S/gyro_loop_bias.json --calib $S/work_v9pfz_sfm` (log `dataset/…/vggt_r093.log`)
+- **Goal:** plan §11.a: can VGGT place the textureless frames? Checks: its relative rotations against the gyro, its
+  camera centres against R-080 where R-080 has image support, and whether its depth maps agree across frames better
+  than the per-frame Metric3D priors (the suspected cause of the wrong off-path depth).
+- **Start → end:** about 20:10 → 21:05 (first try stopped after > 10 min, see errors; then 26 s, 22 s and 43 s runs)
+- **Errors during the run:**
+  - First try (32 keyframes): after > 10 min the GPU sat at 7.8 of 8 GB, 100 % busy, no output: the model was moved to
+    the GPU in fp32 (1.26 B parameters, ~5 GB of weights), so with the activations the Windows driver spilled into
+    system RAM. Stopped (TaskStop + the python process). Fix in `vggt_chunk.py`: weights in bf16, the unused point
+    and track heads dropped. Then 8 frames: 26 s, peak 3.3 GB; 32 frames: 22 s, 4.0 GB; 65 frames: 43 s, 5.7 GB.
+- **Result 1, 32 keyframes 42 – 63 s** (`vggt_r093/`, log `vggt_r093.log`):
+  - Per step against R-080 (whose rotations follow the gyro): 42 – 47.5 s (30 – 520 SfM observations per frame)
+    VGGT's step rotation is within 0.4 – 3.5° (confidence ~2.1); from 51 s (0 – 3 observations) 20 – 75° off per step
+    (confidence 1.0, its lowest) and the chunk never recovers (110 – 179° off frame 0 by the end). The keyframes are
+    sparse exactly in the blank stretch: 3.5 s gaps (47.5 → 51.0 s, 55.2 → 57.8 s) with 64° and 51° of turning
+    between neighbours, so this part was unfair to VGGT (hence result 2).
+  - Positions: Sim3 on 19 frames with ≥ 20 observations, residual median 0.52 units (R-080's step between these
+    frames 0.12): VGGT and R-080 do not agree well even where both have image support; on the 13 weak frames 2.0
+    units apart (not meaningful given result 2).
+  - **Depth consistency** (frame i's depth moved into frame j, 90 pairs 1 – 3 apart, median relative error): **VGGT
+    5.3 %** with its own poses; **Metric3D priors (R-092, per-frame scales) with R-080's poses 15.1 %** (75 pairs with
+    valid priors). Supports §11's diagnosis that the current depth guidance contradicts itself between frames.
+- **Result 2, 65 video frames every 0.25 s, 44 – 60 s** (`--video_step 0.25`, `vggt_r093_video/`, raw video frames):
+  VGGT step rotation vs the gyro, median / max per 2 s bin (gyro step ~4 – 7°): 44 – 46 s 0.63 / 1.2° (confidence
+  3.28); 46 – 48 s 0.91 / 1.5° (3.22); 48 – 50 s 3.50 / 8.6° (1.93); 50 – 52 s 3.55 / 6.6° (1.50); 52 – 54 s 4.16 /
+  10.2° (1.61); 54 – 56 s 4.87 / 61.4° (1.38); 56 – 58 s 9.90 / 18.0° (1.11); 58 – 60 s 10.00 / 91.8° (1.02). Depth
+  consistency 2.5 % (189 pairs). Even with dense, overlapping frames VGGT stops following the camera on the blank
+  wall (errors as large as the steps themselves) and says so (confidence at its floor).
+- **Verdict:** answers §11.a: **VGGT cannot place the blank-wall frames** (at 518 px on the 8 GB card): rotation is
+  better from the gyro, and nothing here supports its positions there. What it does give: depth maps that agree
+  across frames about 3× better than the per-frame Metric3D priors on the textured parts. So §11.d uses the room
+  planes only; §11.c can use VGGT depth (chunk-wise, scaled to the SfM points) where its confidence is high and the
+  planes elsewhere. Extra folder: `vggt_r093_try8/` (the 8-frame memory test).
 
