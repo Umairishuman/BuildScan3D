@@ -136,7 +136,8 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-087 | 2026-11-21 | scan_009: plan 10.b-1, rolling-shutter-rectified keyframes on R-080's cameras (`v9pfs`) | 3070 | 29.7 min | held-out PSNR 20.69 vs R-082 20.81 (rectified photos), flatness 3.55 vs 8.87 cm; aligned 22.22 vs 22.66; 51 – 53 s +1.6 dB aligned; views at 134 s and 186 s blocked | Inconclusive (run-to-run spread not known) |
 | R-088 | 2026-11-21 | scan_009: R-082 repeated unchanged, run-to-run spread (`v9pfn`) | 3070 | 28.8 min | vs R-082: held-out PSNR 21.05 vs 20.80, flatness 6.65 vs 8.18 cm, aligned 22.55 vs 22.65; per stretch up to ±0.9 dB, per frame median 0.70 dB | Kept (noise reference) |
 | R-089 | 2026-11-21 | scan_009: R-087 (rectified keyframes) plus path pruning in training (`v9pfo`) | 3070 | 29.4 min | blocked views 1 (R-087 16, R-082 7); PSNR 20.68, aligned 22.21 (R-087 22.18, R-082 22.64); 51 – 53 s aligned 24.18 (R-082 21.59) | Inconclusive (best in 51 – 53 s, not overall) |
-| R-090 | 2026-11-21 | scan_009: R-082 plus path pruning in training (`v9pfq`) | 3070 | running | | |
+| R-090 | 2026-11-21 | scan_009: R-082 plus path pruning in training (`v9pfq`) | 3070 | 28.2 min | blocked views 0 (R-082 7); PSNR 21.10, aligned 22.52 (R-082 22.64, R-088 22.54) | Kept: pruning costs nothing and removes the blocked views |
+| R-091 | 2026-11-21 | scan_009: plan 10.b-2, SfM chain (features, rot_sfm, adaptive BA, one track round) on the rectified keyframes (`v9pfs2`) | 3070 | running | | |
 
 ## Runs
 
@@ -2353,6 +2354,39 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Command(s):** `dataset/scan_009_057ed3beb4fc/r090.sh` (log `r090.log`): R-082's command with tag `v9pfq` and
   `--train_args "--path_prune 0.1"`; then `eval_offpath.py` and `eval_align.py` with R-082 and R-088
 - **Goal:** separate R-089's two changes: pruning alone on R-082's images.
-- **Start → end:** (running)
+- **Start → end:** 14:09 → 15:03 (export 0.01, prior 3.58, init 2.12, train 21.96, ply 0.55 min, total 28.2; evaluations 25 min)
+- **Errors during the run:** none. 11,052 Gaussians pruned over the run (29 pruning steps; 285 at step 14500).
+- **Result:** `eval_r090/` (raw photos):
+
+  | Model | PSNR | SSIM | Flatness cm (unblocked) | Blocked of 69 | PSNR aligned | SSIM aligned |
+  |---|---|---|---|---|---|---|
+  | R-082 | 20.80 | 0.874 | 9.59 | 7 | 22.64 | 0.884 |
+  | R-088 (repeat) | 21.05 | 0.873 | 6.75 | 5 | 22.54 | 0.880 |
+  | R-090 (pruned) | 21.10 | 0.868 | 9.41 | **0** | 22.52 | 0.878 |
+
+  Aligned per stretch R-082 / R-088 / R-090: still 24.89 / 24.89 / 24.87; 22 – 25 s 26.44 / 25.63 / 26.47; 51 – 53 s
+  21.59 / 21.46 / 22.72; 78 – 81 s 23.63 / 24.42 / 23.96; 106 s 29.17 / 28.95 / 28.49; 134 – 137 s 17.51 / 17.57 / 17.07;
+  162 – 165 s 22.40 / 21.78 / 21.21; 186 s 14.88 / 15.77 / 15.75.
+- **Verdict:** kept. Pruning alone is within the run-to-run spread on every score (R-088) and removes all blocked
+  views, so it can stay on. Separating R-089: the 51 – 53 s gain is mostly the rectification (pruning alone +1.1 dB,
+  rectification alone +1.6, both +2.6); R-089's lower still-frame score (23.73) appears with neither change alone
+  (R-087 25.24, R-090 24.87); not explained, one run each.
+
+### R-091 · 2026-11-21 · scan_009_057ed3beb4fc: 10.b-2 SfM chain on rectified keyframes (`work_v9pfs_cal`, `work_v9pfs2_sfm`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 1627653
+- **Dataset:** scan_009, the 894 rectified keyframes of R-087 (`work_v9pfs`); calibration model of R-048
+  (`work_v9pfm_sfm/sparse/0`, copied into `work_v9pfs_cal`); gyro bias `gyro_loop_bias.json` (R-071, reused)
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r091.sh` (log `r091.log`): `sfm_colmap.py --work work_v9pfs --out
+  work_v9pfs_cal --feature aliked --pairs arcore --temporal 30 --retrieval 30 --stage {extract, match}`; R-048's
+  bridge pairs (`pairs_bridge0.txt`) imported with `matches_importer`; `rot_sfm.py … --max_dt 300 --bg_json
+  --triangulate_only` → `work_v9pfs2_sfm`; `prior_ba.py --adapt_n 150 --loose_t0 2 --loose_t1 30 --iters 150`;
+  `track_loop.py … --rounds 1 --rs 1` (= R-079 + R-080 on the rectified images); `stretch_stats.py` against R-080
+- **Goal:** plan §10.b-2: the whole camera solve on rolling-shutter-free images (R-087 only swapped the images under
+  R-080's cameras). R-084's alignment says the held-out SfM poses are ~2° off; less shear should give cleaner
+  matches and pair directions. Training afterwards (R-092) only if the camera model is at least as complete as R-080
+  (647 cameras, 3D obs median 120).
+- **Start → end:** 15:03 → (running)
 - **Errors during the run:** (none so far)
 
