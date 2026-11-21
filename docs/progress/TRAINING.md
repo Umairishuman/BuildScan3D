@@ -2486,7 +2486,8 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Goal:** plan §11.a: can VGGT place the textureless frames? Checks: its relative rotations against the gyro, its
   camera centres against R-080 where R-080 has image support, and whether its depth maps agree across frames better
   than the per-frame Metric3D priors (the suspected cause of the wrong off-path depth).
-- **Start → end:** about 20:10 → 21:05 (first try stopped after > 10 min, see errors; then 26 s, 22 s and 43 s runs)
+- **Start → end:** start of the first try not recorded (stopped after > 10 min, see errors); the working runs finished at
+  18:17 (8 frames, 26 s), 18:18 (32 keyframes, 22 s) and 18:21 (65 video frames, 43 s) (file times)
 - **Errors during the run:**
   - First try (32 keyframes): after > 10 min the GPU sat at 7.8 of 8 GB, 100 % busy, no output: the model was moved to
     the GPU in fp32 (1.26 B parameters, ~5 GB of weights), so with the activations the Windows driver spilled into
