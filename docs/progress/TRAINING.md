@@ -140,6 +140,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-091 | 2026-11-21 | scan_009: plan 10.b-2, SfM chain (features, rot_sfm, adaptive BA, one track round) on the rectified keyframes (`v9pfs2`) | 3070 | ~1 h 40 min of work (plus a pause) | final 647 cameras, 3D obs median 100 (R-080 120); 45 – 60 s: 30 cameras, obs median 0 (R-080 41, 1) | Rejected (not trained) |
 | R-092 | 2026-11-21 | scan_009: R-090 plus depth priors for frames without SfM support (`--fill_scale`, `v9pfu`) | 3070 | 29.9 min | flatness 6.77 vs 9.92 cm (R-090), 0 blocked; aligned PSNR 22.26 vs 22.52, SSIM 0.880 vs 0.878; held-out pose correction 1.62° vs 2.02° | Kept for inspection (flatter, PSNR −0.26) |
 | R-093 | 2026-11-21 | scan_009: plan 11.a, VGGT on keyframes (42 – 63 s) and dense video frames (44 – 60 s) (feasibility, no training) | 3070 | 22 – 43 s per chunk | textured part: rotation steps within 0.6 – 0.9° of the gyro, depth consistent across frames (2.5 – 5.3 % vs Metric3D priors 15.1 %); blank wall (48 – 60 s): steps 3.5 – 10° off (max 92°), confidence at its floor | VGGT cannot place the blank-wall frames; its depth is far more consistent than the per-frame Metric3D priors |
+| R-094 | 2026-11-21 | scan_009: plan 11.b, camera path scale drift corrected with the room height, then R-090's recipe (`v9psc`) | 3070 | running | | |
 
 ## Runs
 
@@ -2516,4 +2517,49 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   across frames about 3× better than the per-frame Metric3D priors on the textured parts. So §11.d uses the room
   planes only; §11.c can use VGGT depth (chunk-wise, scaled to the SfM points) where its confidence is high and the
   planes elsewhere. Extra folder: `vggt_r093_try8/` (the 8-frame memory test).
+
+### R-094 · 2026-11-21 · scan_009_057ed3beb4fc: scale drift corrected with the room height (`v9psc`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 68b12e7 plus uncommitted `room_planes.py`, `scale_drift.py`
+- **Found while fitting the room planes (11.b, first try `room_planes_v1/`):** `room_planes.py` on `work_v9pfu_sfm`
+  gave 60 planes, among them 5 "floors" between −1.7 and −3.5 and ceilings between 0.3 and 4.1 units. Per 10 s
+  of the walk the camera's height in the model stays ~0.1 units, but its distance to the floor (from the depth
+  priors, scaled to the SfM points) falls from 4.85 (0 – 10 s) to 3.5 (30 – 40 s), 3.1 (70 – 80 s) and 2.3
+  (130 – 140 s); to the ceiling from 3.8 – 4.5 (0 – 40 s) to 2.0 – 2.7 (60 – 140 s). Floor + ceiling seen in the
+  same frame (room height): 8.3 / 7.6 units at 20 – 40 s, 4.6 at 130 – 140 s. Model units per Metric3D metre (raw
+  Metric3D depth is roughly metric): ~2.7 – 5.3 at 20 – 50 s, ~1.4 – 2.7 after 60 s (10 – 20 s and 180 – 190 s are
+  close-ups where Metric3D is known to fail). **The camera path's scale drifts ~2× along the walk** (positions from
+  the accelerometer + pair directions, R-071 → R-080), so each part of the room is built at its own size: views
+  agree only near where they were taken. This is a more direct explanation of the off-path look than §11's
+  per-frame depth-scale point.
+- **Code:** `scale_drift.py`: per well-fitted frame (>= 20 SfM inliers, prior residual < 15 %) the distances to its
+  horizontal planes (floor / ceiling); fit log distance = constant (floor or ceiling) + log s(t), s piecewise linear
+  (knots 10 s, smoothness 3, Huber); rescale every path step by 1 / s(t); re-triangulate every point; check the
+  model-units-per-Metric3D-metre ratio per 10 s bin before / after.
+- **Command(s):** `python src/arcore3dgs/scale_drift.py $S/work_v9pfy_sfm/sparse_vt_pba_adapt $S/work_v9pfu_sfm
+  $S/work_v9pfy_sfm/sparse_scalefix` (12 s); `prior_ba.py $S/work_v9pfy_sfm/sparse_scalefix $S/work_v9pfl
+  …/sparse_scalefix_pba --adapt_n 150 --loose_t0 2 --loose_t1 30 --iters 150 --colmap …` (as R-080, 2.1 min); then
+  `dataset/scan_009_057ed3beb4fc/r094.sh` (log `r094.log`): `work_v9pfz` → `work_v9psc`, `sparse_scalefix_pba` →
+  `work_v9psc_sfm/sparse/0`, `sfm_colmap.py --stage {undistort, export} --sim3 none`, `run_v8.py --tag v9psc
+  --from_stage export --pose_free --init fmvs --planar 0.2 --blur 0.0222 --pgsr --split s10_test.txt --train_args
+  "--path_prune 0.1"` (= R-090 on the corrected cameras); evaluations with R-082 and R-090; `room_planes.py` on the
+  new priors
+- **Scale correction result:** 339 floor / ceiling distances (149 / 190); s(t) at the knots 0 s 1.66, 10 s 1.55,
+  20 s 1.49, 30 s 1.39, 40 s 1.24, 50 s 1.10, 60 s 0.96, 70 s 0.98, 80 s 1.06, 90 s 1.03, 100 s 0.94, 110 s 0.83,
+  120 s 0.78, 130 s 0.82, 140 s 0.87, 150 s 0.80, 160 s 0.66, 170 s 0.69, 180 s 0.84, 190 s 1.00; residual median
+  16.2 % (log distance; includes the hand height changing). Path length 57.9 → 62.7 units. 29,587 points
+  re-triangulated, 1,541 dropped. Model units per Metric3D metre per 10 s bin, before → after: 0 – 10 s 2.77 → 1.90;
+  20 – 30 s 2.68 → 1.88; 30 – 40 s 5.13 → 3.83; 40 – 50 s 5.29 → 4.42; 60 – 70 s 1.79 → 1.84; 70 – 80 s 2.11 → 2.03;
+  80 – 90 s 1.34 → 1.28; 90 – 100 s 2.18 → 2.13; 100 – 110 s 2.67 → 3.07; 110 – 120 s 2.41 → 2.92; 120 – 130 s 1.48 →
+  1.85; 130 – 140 s 1.79 → 2.10; 140 – 150 s 2.06 → 2.44; 150 – 160 s 1.40 → 2.10; 160 – 170 s 1.36 → 2.02; 170 – 180 s
+  2.09 → 2.61; 180 – 190 s 1.79 → 1.97 (10 – 20 s 14.18 → 23.17 and 50 – 60 s 0.16 → 0.17: Metric3D unreliable there);
+  spread across bins (p90 / p10) **3.81 → 2.29**. 30 – 50 s stays high (3.8 – 4.4): not explained. Prior BA:
+  reprojection 1.11 → 1.10 px (R-080: 1.13), relative rotation vs the gyro prior median 0.062°, 622 cameras (3D obs
+  median 108; 45 – 60 s: 36 cameras, median 1).
+- **Goal:** one room size along the whole walk; then one set of room planes (11.b) and consistent depth (11.c).
+- **Start → end:** (training running)
+- **Errors during the run:** `prior_ba.py` first stopped at the end (`FileNotFoundError: …sparse_scalefixigs.txt`):
+  `scale_drift.py` wrote only cameras / images / points; fixed (it now copies `rigs.txt` and `frames.txt`), files
+  copied by hand, rerun ok.
 
