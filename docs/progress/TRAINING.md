@@ -145,6 +145,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-096 | 2026-11-22 | scan_009: plan 11.d, loops closed with the long-range image pairs (`loop_path.py`, `prior_ba.py --pair_priors`) on R-094's cameras (`v9plp`) | 3070 | 28.3 min (+7 min solve / BA) | held-out loop pairs >= 60 s: 7.0 → 2.5° median; **aligned 22.67 → 23.63 on the 63 common held-out frames**, every stretch equal or better; off-path views more coherent | **Kept** (first clear gain) |
 | R-097 | 2026-11-22 | scan_009: 11.d second round, loop pairs chosen with R-096's cameras and matched (`loop_match.py`, `v9plm`) | 3070 | 28.7 min (+3 min matching / solve) | aligned 22.93 vs R-096 23.63 (63 frames): four stretches better, 134 – 137 s broken (20.10 → 15.81) | Rejected (new pairs need a stricter check) |
 | R-098 | 2026-11-22 | scan_009: 11.c second form, prior pixels contradicted by other views dropped (`prior_consistency.py`) on R-096's cameras (`v9pcs`) | 3070 | 24.0 min | loop-partner depth disagreement 12.4 → 9.1 %; aligned 23.61 vs R-096 23.63 (63 frames), SSIM 0.892 vs 0.888, flatness 8.54 vs 6.57 | Inconclusive, not adopted |
+| R-099 | 2026-11-22 | scan_009: R-096's recipe on all frames, for the viewer (`v9plf`, `scan-009-loops`) | 3070 | 27.9 min | no held-out score (all frames); off-path views as R-096 | Kept (viewer) |
 
 ## Runs
 
@@ -2772,3 +2773,11 @@ igs.txt`):
   `--split`** (no held-out frames); `offpath_views.py` with R-096
 - **Goal:** the model Tayyab looks at in the viewer: R-096's cameras and recipe with every frame in training
   (R-096 held out 69 frames). No held-out score possible.
+- **Start → end:** 03:51 → 04:20 (copy / undistort / export 03:51 – 03:52; prior 3.36, init 1.64, train 22.16, ply
+  0.58 min, total 27.9; views 4 s)
+- **Errors during the run:** none.
+- **Result:** `→ work_v9plf_sfm/gs_v9plf/splat.ply`, 513,603 splats; export 581 frames (19 dropped by the jump filter,
+  as R-096), all used for training. No held-out score (no split). Off-path views (`offpath_views_r099/`): the same
+  room-centre views as R-096. In the viewer as `scan-009-loops` (`prototype/web-ui/public/splats/scan009_v9plf.spz`,
+  9.8 MB, local only). Free disk on C: after the run: 4.2 GB (`df`).
+- **Verdict:** kept as the scan_009 model to look at; not yet inspected by Tayyab.
