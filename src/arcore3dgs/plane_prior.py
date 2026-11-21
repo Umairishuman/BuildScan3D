@@ -75,6 +75,13 @@ def main():
         region = (L > 0) if L is not None else np.zeros((h, w), bool)
         agree = has & region & ((Nm * Np).sum(-1) > cosA) & (Dm > 0)
         s_f = float(np.median(Dp[agree] / Dm[agree])) if agree.sum() > 200 else 1.0
+        # the plane set can hold parallel duplicates of a wall (residual drift, R-094): refit the scale on the pixels
+        # whose depth already agrees with the hit plane within 30 %, twice, so a wrong ("ghost") plane cannot pull it
+        for _ in range(2):
+            close = agree & (np.abs(Dm * s_f - Dp) < 0.3 * Dp)
+            if close.sum() > 200:
+                s_f = float(np.median(Dp[close] / Dm[close]))
+        agree &= np.abs(Dm * s_f - Dp) < 0.3 * Dp
         Dn = Dm * s_f
         trusted = agree & (np.abs(Dn - Dp) < a.agree_rel * Dp)
         Dn[trusted] = Dp[trusted]

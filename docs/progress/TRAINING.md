@@ -140,7 +140,8 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-091 | 2026-11-21 | scan_009: plan 10.b-2, SfM chain (features, rot_sfm, adaptive BA, one track round) on the rectified keyframes (`v9pfs2`) | 3070 | ~1 h 40 min of work (plus a pause) | final 647 cameras, 3D obs median 100 (R-080 120); 45 – 60 s: 30 cameras, obs median 0 (R-080 41, 1) | Rejected (not trained) |
 | R-092 | 2026-11-21 | scan_009: R-090 plus depth priors for frames without SfM support (`--fill_scale`, `v9pfu`) | 3070 | 29.9 min | flatness 6.77 vs 9.92 cm (R-090), 0 blocked; aligned PSNR 22.26 vs 22.52, SSIM 0.880 vs 0.878; held-out pose correction 1.62° vs 2.02° | Kept for inspection (flatter, PSNR −0.26) |
 | R-093 | 2026-11-21 | scan_009: plan 11.a, VGGT on keyframes (42 – 63 s) and dense video frames (44 – 60 s) (feasibility, no training) | 3070 | 22 – 43 s per chunk | textured part: rotation steps within 0.6 – 0.9° of the gyro, depth consistent across frames (2.5 – 5.3 % vs Metric3D priors 15.1 %); blank wall (48 – 60 s): steps 3.5 – 10° off (max 92°), confidence at its floor | VGGT cannot place the blank-wall frames; its depth is far more consistent than the per-frame Metric3D priors |
-| R-094 | 2026-11-21 | scan_009: plan 11.b, camera path scale drift corrected with the room height, then R-090's recipe (`v9psc`) | 3070 | running | | |
+| R-094 | 2026-11-21 | scan_009: plan 11.b, camera path scale drift corrected with the room height, then R-090's recipe (`v9psc`) | 3070 | 29.2 min | room height along the walk 5.0 – 6.0 units (before 4.6 – 7.6); aligned PSNR 22.59 vs R-090 22.63 on 66 common held-out frames (late walk +1.1 – 1.2 dB, 51 – 53 s −2.1 dB) | Kept (cameras for 11.c); no image gain by itself |
+| R-095 | 2026-11-21 | scan_009: plan 11.c, depth / normal priors rewritten from the room planes (`plane_prior.py`) on R-094's cameras (`v9ppl`) | 3070 | 24.8 min | neighbouring-frame depth disagreement 6.8 → 3.6 %; held-out PSNR 19.94 vs R-094 20.85, aligned 21.53 vs 22.59 (66 frames) | Rejected (the plane set is still fragmented) |
 
 ## Runs
 
@@ -2570,4 +2571,48 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 igs.txt`):
   `scale_drift.py` wrote only cameras / images / points; fixed (it now copies `rigs.txt` and `frames.txt`), files
   copied by hand, rerun ok.
+- **Resumed 2026-11-21 (Tayyab: "ok claude you can resume").** Errors: `eval_offpath.py` and `eval_align.py` stopped
+  with `KeyError: 'frame_01537'`: the export dropped 3 held-out frames (jump filter); both tools now skip held-out
+  names not in the model and say how many.
+- **Result:** `eval_offpath.py` (own poses, 66 of 69 held-out frames): PSNR 20.85, SSIM 0.865, 0 blocked, flatness
+  11.98 "cm" (model units × 100: not comparable with the uncorrected models, whose scale differs); `eval_align.py`:
+  aligned **22.59**, SSIM 0.874, correction median 2.36°. R-090 on the same 66 frames (its own poses): aligned 22.63.
+  Per stretch R-090 → R-094: still 0 – 17 s 24.87 → 25.09; 22 – 25 s 26.47 → 25.75; 51 – 53 s 22.99 → 20.84; 78 – 81 s
+  23.96 → 23.23; 106 s 28.49 → 27.73; 134 – 137 s 17.07 → 18.29; 162 – 165 s 21.65 → 22.76; 186 s 15.75 → 15.85.
+  `room_planes.py` on `work_v9psc_sfm` (`room_planes_v9psc/`): 57 planes; floor / ceiling height per 20 s: floor
+  −2.35 … −3.39 and ceiling 2.6 … 3.4 for 20 – 160 s (before: floor −2.2 … −3.4, ceiling 2.0 … 4.2; room height
+  5.0 – 6.0 units instead of 4.6 – 7.6); 0 – 20 s still large (floor −4.63, only 7 floor measurements) and 40 – 60 s
+  meaningless (floor −10); walls still split into parallel copies (horizontal drift, which the room height cannot see).
+- **Verdict:** kept as the camera model for 11.c; the vertical scale is more uniform, the image scores are unchanged
+  overall (better late in the walk, worse in 22 – 25 s / 51 – 53 s / 78 – 81 s). One run.
+
+### R-095 · 2026-11-21 · scan_009_057ed3beb4fc: 11.c priors from the room planes (`v9ppl`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 6408fae plus uncommitted eval fixes and `plane_prior.py`
+  (ghost-plane guard)
+- **Dataset:** `work_v9psc` → `work_v9ppl`, `work_v9psc_sfm` → `work_v9ppl_sfm` (without the model, eval and the
+  `undist_fast/images` junction); R-094's cameras, split, Metric3D priors; room planes `room_planes_v9psc/room_planes.json`
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r095.sh` (log `r095.log`): `plane_prior.py --work …/work_v9ppl_sfm
+  --planes …/room_planes_v9psc/room_planes.json --min_frames 15`; `run_v8.py --tag v9ppl --from_stage init` with
+  R-094's recipe (so the rewritten priors are not recomputed); `eval_offpath.py`, `eval_align.py` on its own poses
+- **Goal:** plan §11.c: depth guidance that agrees across frames (R-093: neighbouring Metric3D priors disagree by
+  15.1 %); compared with R-094 (same cameras, per-frame priors).
+- **Start → end:** 20:00 → 20:36 (plane priors 1.8 min; init 1.39, train 22.23, ply 0.55 min; evaluations 17 min)
+- **Errors during the run:** none.
+- **Result:** `plane_prior.py`: 31 planes with >= 15 frames; 600 frames; scale change median 0.866 (p10 0.346, p90
+  1.005); trusted (plane) pixels median 21 %; no frame without a prior gained one. **Depth disagreement between
+  neighbouring frames (every 3rd frame, 1 – 2 apart, median): 6.8 % → 3.6 %.** Scale change per 20 s (median / p10):
+  0 – 20 s 0.74 / 0.56; 20 – 40 s 0.70 / 0.37; **40 – 60 s 0.14 / 0.05**; 60 – 80 s 0.80 / 0.45; 80 – 100 s 1.00 / 0.77
+  (0 % trusted); 100 – 120 s 0.85 / 0.58; 120 – 140 s 0.66 / 0.26; 140 – 160 s 1.00 / 0.77; 160 – 180 s 0.99 / 0.80;
+  180 – 200 s 1.00 / 0.96. `→ work_v9ppl_sfm/gs_v9ppl/splat.ply`, 542,994 splats. `eval_r095/`: PSNR 19.94 (R-094
+  20.85), SSIM 0.850 (0.865), 0 blocked; aligned **21.53** (R-094 22.59 on the same 66 frames), SSIM 0.869.
+  Aligned per stretch R-094 → R-095: still 25.09 → 25.09; 22 – 25 s 25.75 → 24.01; **51 – 53 s 20.84 → 22.90**;
+  78 – 81 s 23.23 → 20.75; 106 s 27.73 → 28.46; 134 – 137 s 18.29 → 17.12; 162 – 165 s 22.76 → 22.21; 186 s 15.85 →
+  15.59.
+- **Verdict:** rejected. The priors agree better between frames, but with a fragmented plane set: R-094's model
+  still has parallel copies of walls (horizontal drift), each frame takes the nearest plane its rays hit, and many
+  frames were shrunk towards planes in front of the real wall (40 – 60 s by 0.14, where the poses rest on the
+  sensors; 20 – 40 s and 120 – 140 s by ~0.7). Consistent guidance only helps once the room is one room: 11.c needs
+  the horizontal drift fixed first (11.d).
 

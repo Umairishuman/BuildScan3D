@@ -556,3 +556,13 @@ to 2.5 – 5.3 %, against 15.1 % for the per-frame Metric3D priors with R-080's 
 above. Consequence: 11.d uses the room planes only; 11.c takes VGGT depth where its confidence is high and the
 planes elsewhere. Next: 11.b.
 
+**11.b / 11.c (R-094, R-095, 2026-11-21).** Fitting the room planes showed the real fault: **the sensor camera path's
+scale drifts ~2× along the walk** (room height 8.3 → 4.6 model units; camera-to-floor 4.85 → 2.3), so each part of the
+room is built at its own size. `scale_drift.py` corrects it with the room height (room height now 5.0 – 6.0 units
+over 20 – 160 s; Metric3D-ratio spread 3.81 → 2.29); R-094 trained on it scores like R-090 overall (aligned 22.59 vs
+22.63), better late in the walk, worse in 22 – 25 s / 51 – 53 s. The walls are still split into parallel copies
+(horizontal drift, which the room height cannot see). 11.c (`plane_prior.py`, R-095) halves the depth disagreement
+between frames (6.8 → 3.6 %) but ties the frames to that fragmented plane set and loses 1 dB (aligned 21.53):
+rejected. **Order changes: 11.d first** (make the walls seen at different times coincide: horizontal drift), then
+11.c again on a one-room plane set.
+

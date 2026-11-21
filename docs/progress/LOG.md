@@ -907,7 +907,9 @@ Asked by Tayyab: "why is FYP taking up 125 gb", then "ok do those 3".
   rescales the path with the room height (s(t) 1.66 → 0.66), re-triangulates; Metric3D-ratio spread 3.81 → 2.29;
   prior BA 1.10 px. R-094 trained on it (R-090's recipe); paused by Tayyab before the evaluation. `plane_prior.py`
   (11.c) written, not run.
-- Runs: R-094 (trained, not evaluated). Decisions: none.
-- Next: evaluate R-094 on its own poses; `room_planes.py` on `work_v9psc_sfm` (should now be one room); 11.c
-  (`plane_prior.py` on a copy, retrain, evaluate).
-
+- Resumed (Tayyab: "ok claude you can resume"): R-094 evaluated (aligned 22.59 = R-090); its planes are more
+  consistent vertically but walls still come in parallel copies. Eval tools now skip held-out frames the export
+  dropped. R-095 (11.c, `plane_prior.py`): depth disagreement 6.8 → 3.6 % but −1 dB aligned: rejected.
+- Runs: R-094, R-095. Decisions: none.
+- Next (Tayyab to choose): 11.d (fix the horizontal drift by making walls seen at different times coincide), then
+  11.c again; or stop §11 here.

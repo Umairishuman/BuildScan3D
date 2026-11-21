@@ -28,7 +28,10 @@ ap.add_argument("--blocked_depth", type=float, default=0.2,
 args = ap.parse_args()
 dev = "cuda"; os.makedirs(args.out, exist_ok=True); G = np.diag([1, -1, -1, 1.0])
 meta = json.load(open(os.path.join(args.work, "frames.json"))); by = {f["name"]: f for f in meta["frames"]}
-test = open(os.path.join(args.work, "offpath_test.txt")).read().split()
+test_all = open(os.path.join(args.work, "offpath_test.txt")).read().split()
+test = [n for n in test_all if n in by]          # the export can drop held-out frames (jump filter, R-094)
+if len(test) < len(test_all):
+    print(f"{len(test_all) - len(test)} held-out frames are not in this model (export dropped them): skipped")
 W, H = meta["W"], meta["H"]
 Kh = torch.tensor([[[meta["fx"] / 2, 0, meta["cx"] / 2], [0, meta["fy"] / 2, meta["cy"] / 2], [0, 0, 1]]], dtype=torch.float32, device=dev)
 Kf = torch.tensor([[[meta["fx"], 0, meta["cx"]], [0, meta["fy"], meta["cy"]], [0, 0, 1]]], dtype=torch.float32, device=dev)

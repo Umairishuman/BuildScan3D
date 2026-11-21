@@ -33,7 +33,10 @@ ap.add_argument("--csv", default=None)
 a = ap.parse_args()
 dev = "cuda"; G = np.diag([1, -1, -1, 1.0])
 meta = json.load(open(os.path.join(a.work, "frames.json"))); by = {f["name"]: f for f in meta["frames"]}
-test = sorted(open(os.path.join(a.work, "offpath_test.txt")).read().split(), key=lambda n: by[n]["pts"])
+test_all = open(os.path.join(a.work, "offpath_test.txt")).read().split()
+test = sorted([n for n in test_all if n in by], key=lambda n: by[n]["pts"])   # export may drop some (R-094)
+if len(test) < len(test_all):
+    print(f"{len(test_all) - len(test)} held-out frames are not in this model (export dropped them): skipped")
 t0 = min(f["pts"] for f in meta["frames"])
 W, H = meta["W"], meta["H"]
 
