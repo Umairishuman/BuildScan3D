@@ -913,3 +913,28 @@ Asked by Tayyab: "why is FYP taking up 125 gb", then "ok do those 3".
 - Runs: R-094, R-095. Decisions: none.
 - Next (Tayyab to choose): 11.d (fix the horizontal drift by making walls seen at different times coincide), then
   11.c again; or stop §11 here.
+
+## 2026-11-22 · Tayyab (agent, night on `docs/featureless-tracking-plan`)
+
+Tayyab: "what are the next steps, plan accordingly you have the entire night to train and run it".
+
+- 11.d, first by the wall planes: per-frame wall offsets showed the parallel copies, but plane normals of a single
+  frame scatter 6.6°, too noisy to solve for drift. Found instead: R-094's camera model has almost no point tracks
+  between distant times (1,327 of 29,207 points span >= 60 s, nearly all start ↔ end), while rot_sfm's pair cache
+  holds 852 verified pairs >= 60 s apart; R-094's path agrees with them worse than R-080's (p75 28.6° vs 11.4°).
+- New `loop_path.py` (camera centres re-solved with the path's steps + pair directions, validated on held-out pairs:
+  >= 60 s median 7.0 → 2.5°). The prior BA undid most of it; new `prior_ba.py --pair_priors` keeps the loop pairs.
+  `scale_drift.py` re-triangulation moved into `read_model` / `write_model` (output checked byte-identical).
+  **R-096: aligned 22.67 → 23.63 dB on the same 63 held-out frames, every stretch equal or better**; new
+  `offpath_views.py` (11.e): room-centre views coherent in 6 of 8 directions (R-094 / R-090 mostly blank walls), top
+  view without wall slabs across the walked area. Residual room-height drift small (s(t) 0.85 – 1.18), not corrected.
+- New `loop_match.py` (pairs chosen with the corrected cameras, ALIKED + LightGlue on a copy of the database):
+  +1,031 directions. R-097: four stretches better, 134 – 137 s broken (20.10 → 15.81): rejected.
+- New `prior_consistency.py` (11.c, second form: drop prior pixels other views contradict; loop partners disagreed
+  12.4 % vs 3.5 % for time neighbours). R-098: aligned 23.61 = R-096: inconclusive, not adopted.
+- R-099: R-096's recipe on all frames (no held-out) for the viewer.
+- Problems: `loop_match.py` crash on images without keypoints, `loop_path.py --model_frame` crash without short pairs
+  (both fixed, TRAINING R-097); gsplat `backgrounds` shape assertion in `offpath_views.py` (composited white by hand).
+- Runs: R-096 – R-099. Decisions: none (OD-15 evidence added).
+- Next (Tayyab to choose): look at R-099 in the viewer; R-096's loop step into the sensor-path recipe (OD-15); retry
+  the second loop round with a pair check; free disk (~2.7 GB left after R-099, estimated).

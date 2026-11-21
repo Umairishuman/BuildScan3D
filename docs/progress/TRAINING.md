@@ -144,6 +144,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-095 | 2026-11-21 | scan_009: plan 11.c, depth / normal priors rewritten from the room planes (`plane_prior.py`) on R-094's cameras (`v9ppl`) | 3070 | 24.8 min | neighbouring-frame depth disagreement 6.8 → 3.6 %; held-out PSNR 19.94 vs R-094 20.85, aligned 21.53 vs 22.59 (66 frames) | Rejected (the plane set is still fragmented) |
 | R-096 | 2026-11-22 | scan_009: plan 11.d, loops closed with the long-range image pairs (`loop_path.py`, `prior_ba.py --pair_priors`) on R-094's cameras (`v9plp`) | 3070 | 28.3 min (+7 min solve / BA) | held-out loop pairs >= 60 s: 7.0 → 2.5° median; **aligned 22.67 → 23.63 on the 63 common held-out frames**, every stretch equal or better; off-path views more coherent | **Kept** (first clear gain) |
 | R-097 | 2026-11-22 | scan_009: 11.d second round, loop pairs chosen with R-096's cameras and matched (`loop_match.py`, `v9plm`) | 3070 | 28.7 min (+3 min matching / solve) | aligned 22.93 vs R-096 23.63 (63 frames): four stretches better, 134 – 137 s broken (20.10 → 15.81) | Rejected (new pairs need a stricter check) |
+| R-098 | 2026-11-22 | scan_009: 11.c second form, prior pixels contradicted by other views dropped (`prior_consistency.py`) on R-096's cameras (`v9pcs`) | 3070 | 24.0 min | loop-partner depth disagreement 12.4 → 9.1 %; aligned 23.61 vs R-096 23.63 (63 frames), SSIM 0.892 vs 0.888, flatness 8.54 vs 6.57 | Inconclusive, not adopted |
 
 ## Runs
 
@@ -2749,3 +2750,25 @@ igs.txt`):
 - **Goal:** depth guidance that does not contradict itself across time without forcing it onto planes (R-095).
   Dry run on R-096's priors: depth disagreement loop partners 12.4 → 9.1 % median, time neighbours 3.5 → 2.9 %;
   18.9 % of the valid prior pixels dropped (some frames ~50 – 58 %). Compared with R-096 (aligned 23.63, 63 frames).
+- **Start → end:** 03:17 → 03:51 (copy + consistency filter 1.2 min; init 1.63, train 21.81, ply 0.56 min, total
+  24.0; evaluations / views 8 min)
+- **Errors during the run:** none.
+- **Result:** filter as the dry run: 11,597,123 of 61,268,191 valid prior pixels dropped (18.9 %); disagreement
+  time neighbours 3.5 → 2.9 %, loop partners 12.4 → 9.1 %. `→ work_v9pcs_sfm/gs_v9pcs/splat.ply`, 521,335 splats.
+  `eval_offpath.py` (63 frames): PSNR 21.59 (R-096 21.27), SSIM 0.871 (0.871), sharpness 0.41 (0.34), flatness 8.54
+  (6.57), 0 blocked. `eval_align.py`: aligned **23.61** (R-096 23.63 on the same 63 frames), SSIM 0.892 (0.888),
+  correction median 1.22° (1.57°). Per stretch R-096 → R-098: still 25.79 → 25.85; 22 – 25 s 25.76 → 26.27; 51 – 53 s
+  21.56 → 21.86; 78 – 81 s 23.47 → 23.76; 106 s 30.36 → 29.69; 134 – 137 s 20.10 → 19.82; 162 – 165 s 25.13 → 24.02;
+  186 s 20.12 → 19.54. Off-path views (`offpath_views_r098/`): nearly the same as R-096.
+- **Verdict:** inconclusive, not adopted: aligned PSNR equal within noise, small gains in raw PSNR / SSIM, flatter
+  walls lost; R-096's recipe (no filter) stays the simpler one. One run.
+
+### R-099 · 2026-11-22 · scan_009_057ed3beb4fc: R-096's recipe on all frames, for the viewer (`v9plf`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 6f4a003 (records uncommitted)
+- **Dataset:** `work_v9pfz` → `work_v9plf`; R-096's cameras `work_v9pfy_sfm/sparse_loop2_pba` → `work_v9plf_sfm/sparse/0`
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r099.sh` (log `r099.log`): as `r096.sh` with tag `v9plf` and **no
+  `--split`** (no held-out frames); `offpath_views.py` with R-096
+- **Goal:** the model Tayyab looks at in the viewer: R-096's cameras and recipe with every frame in training
+  (R-096 held out 69 frames). No held-out score possible.
