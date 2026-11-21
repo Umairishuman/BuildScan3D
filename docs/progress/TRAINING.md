@@ -142,6 +142,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-093 | 2026-11-21 | scan_009: plan 11.a, VGGT on keyframes (42 – 63 s) and dense video frames (44 – 60 s) (feasibility, no training) | 3070 | 22 – 43 s per chunk | textured part: rotation steps within 0.6 – 0.9° of the gyro, depth consistent across frames (2.5 – 5.3 % vs Metric3D priors 15.1 %); blank wall (48 – 60 s): steps 3.5 – 10° off (max 92°), confidence at its floor | VGGT cannot place the blank-wall frames; its depth is far more consistent than the per-frame Metric3D priors |
 | R-094 | 2026-11-21 | scan_009: plan 11.b, camera path scale drift corrected with the room height, then R-090's recipe (`v9psc`) | 3070 | 29.2 min | room height along the walk 5.0 – 6.0 units (before 4.6 – 7.6); aligned PSNR 22.59 vs R-090 22.63 on 66 common held-out frames (late walk +1.1 – 1.2 dB, 51 – 53 s −2.1 dB) | Kept (cameras for 11.c); no image gain by itself |
 | R-095 | 2026-11-21 | scan_009: plan 11.c, depth / normal priors rewritten from the room planes (`plane_prior.py`) on R-094's cameras (`v9ppl`) | 3070 | 24.8 min | neighbouring-frame depth disagreement 6.8 → 3.6 %; held-out PSNR 19.94 vs R-094 20.85, aligned 21.53 vs 22.59 (66 frames) | Rejected (the plane set is still fragmented) |
+| R-096 | 2026-11-22 | scan_009: plan 11.d, loops closed with the long-range image pairs (`loop_path.py`, `prior_ba.py --pair_priors`) on R-094's cameras (`v9plp`) | 3070 | 28.3 min (+7 min solve / BA) | held-out loop pairs >= 60 s: 7.0 → 2.5° median; **aligned 22.67 → 23.63 on the 63 common held-out frames**, every stretch equal or better; off-path views more coherent | **Kept** (first clear gain) |
 
 ## Runs
 
@@ -2616,3 +2617,94 @@ igs.txt`):
   sensors; 20 – 40 s and 120 – 140 s by ~0.7). Consistent guidance only helps once the room is one room: 11.c needs
   the horizontal drift fixed first (11.d).
 
+
+### R-096 · 2026-11-22 · scan_009_057ed3beb4fc: 11.d loops closed with the long-range image pairs (`v9plp`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ a0a6c7f plus uncommitted `loop_path.py` and
+  `scale_drift.py` (re-triangulation moved into `read_model` / `write_model`; output on R-094's input checked
+  byte-identical)
+- **Found before the run (2026-11-22):** R-094's camera model has almost no point tracks between distant times: of
+  29,207 points, 1,327 span >= 60 s (1,198 of them 0 – 20 s ↔ 180 – 200 s, the start / end loop), 262 span 20 – 60 s.
+  The bundle adjustment never sees the places the walk revisits. The evidence exists in rot_sfm's pair-direction
+  cache (`work_v9pfy_sfm/pair_directions_dt300_par1_bg.json`): 6,148 pairs in the model, of them 905 at 5 – 20 s,
+  432 at 20 – 60 s and 852 at >= 60 s apart (e.g. 142 pairs 100 – 120 s ↔ 140 – 160 s). Angle between each pair's
+  direction and the camera path, dt >= 60 s (median / p75): R-080's path 5.17 / 11.39°, **R-094's path 7.20 /
+  28.56°** (the room-height correction bent the path against the loops), rot_sfm's initial path 5.65 / 15.75°
+  (scratchpad `loop_resid.py`). The wall planes (`room_planes.py`) were tried first as the drift signal and judged
+  too noisy: plane normals of one frame scatter by 6.6° (median, 303 frames with >= 2 walls).
+- **Code:** `loop_path.py`: camera centres solved again (rotations kept) with the input path's steps as the shape
+  (sigma 0.01 + 0.05 × step), the pairs >= 5 s apart as direction constraints (sigma 5°, Cauchy), a rotation from
+  rot_sfm's world to the model's fitted on the < 5 s pairs; 20 % of the loop pairs held out for a validation solve;
+  points re-triangulated.
+- **Command(s):** `python src/arcore3dgs/loop_path.py $S/work_v9pfy_sfm/sparse_scalefix_pba $S/work_v9psc_sfm
+  $S/work_v9pfy_sfm/pair_directions_dt300_par1_bg.json $S/work_v9pfy_sfm/sparse_loop2`; `prior_ba.py
+  $S/work_v9pfy_sfm/sparse_loop2 $S/work_v9pfl $S/work_v9pfy_sfm/sparse_loop2_pba --pair_priors …/sparse_loop2/loop_pairs.json --adapt_n 150 --loose_t0 2
+  --loose_t1 30 --iters 150 --colmap …` (as R-080 / R-094); then `dataset/scan_009_057ed3beb4fc/r096.sh` (log
+  `r096.log`): `work_v9pfz` → `work_v9plp`, `sparse_loop2_pba` (see below) → `work_v9plp_sfm/sparse/0`, `sfm_colmap.py --stage
+  {undistort, export} --sim3 none`, `run_v8.py --tag v9plp` with R-094's recipe; `eval_offpath.py`, `eval_align.py`
+  (own poses), `room_planes.py`
+- **Goal:** plan §11.d: the walls seen at different times coincide (one room instead of parallel copies); compared
+  with R-094 (aligned 22.59) and R-090 (22.63) on the same held-out frames.
+- **Start → end:** 01:43 (loop solve) → 02:30 (loop solve + BA 7 min incl. the failed first BA; copy / undistort /
+  export 01:52 – 01:53; prior 3.45, init 1.67, train 22.46, ply 0.63 min, total 28.3; evaluations + room planes 9 min)
+- **Errors / changes during the run:**
+  1. 01:45 prior BA: no error, but it **undid most of the loop closure**: `sparse_loop` → `sparse_loop_pba`, angle of
+     the >= 60 s pairs median 1.96 → 5.96°, p75 4.50 → 13.03° (it sees only short tracks and drifts again). Fix:
+     `prior_ba.py --pair_priors` (new): the loop pairs the solved path agrees with (< 15°, 2,036 of 2,189, written by
+     `loop_path.py` as `loop_pairs.json`) keep their relative position as a prior, sigma 0.02 + 0.1 × distance.
+     Rerun as `sparse_loop2` (same solve) → `sparse_loop2_pba` (2.9 min). Also tried `--loop_s1 0.05`
+     (`sparse_loop2_pba05`): about the same (median 3.22°, p75 7.16°), rotations moved more (median 1.55° vs 1.17°);
+     not used. Logs `r096_loop.log`, `r096_pba.log`, `r096_loop2.log`, `r096_pba2.log`, `r096_pba3.log`.
+- **Loop solve result (`loop_path.py`, 10 s):** rotation rot_sfm world → model 90.57° (fitted on 3,940 short
+  pairs); 2,189 pairs >= 5 s apart. Validation (20 % of them held out of the solve, never fitted), held-out pairs
+  input → solved, median / p75: 5 – 20 s 6.47 / 10.47 → 2.88 / 5.66°; 20 – 60 s 3.28 / 7.77 → 2.07 / 3.90°;
+  **>= 60 s 7.02 / 30.29 → 2.49 / 4.63°** (pairs < 5°: 42 → 78 %). Cameras moved median 0.51, p90 1.03, max 1.48
+  units; path length 61.1 → 56.2; largest shifts at 10 – 40 s (z −0.5 … −0.9) and 110 – 120 s / 150 – 160 s (z +0.7 …
+  +1.0). 26,997 points re-triangulated, 2,571 dropped.
+- **After the prior BA with loop priors (`sparse_loop2_pba`):** reprojection median 1.08 px, p90 2.51 (R-094's BA
+  1.10 px); pose change vs the solve: position median 0.159, p95 0.232; rotation median 1.17° (relative rotation vs
+  the gyro prior median 0.050°); angle of all pairs, median / p75 (R-094 → R-096): 5 – 20 s 6.34 / 12.10 → 4.31 /
+  9.05°; 20 – 60 s 3.33 / 8.50 → 2.21 / 4.69°; **>= 60 s 7.20 / 28.56 → 3.49 / 7.05°** (scratchpad `loop_resid.py`,
+  one global rotation fitted on the short pairs per model).
+
+- **Result:** `→ work_v9plp_sfm/gs_v9plp/splat.ply`, 544,401 splats. Export kept 581 frames (19 dropped by the
+  jump filter, spread over 47 – 176 s; the loop solve used R-094's 600). `eval_offpath.py` (own poses, 63 of 69
+  held-out frames; 6 dropped by the export): PSNR 21.27, SSIM 0.871, sharpness 0.34, flatness 6.57 "cm" (model
+  units × 100; R-094 11.98, path ~15 % shorter in R-096), 0 blocked. `eval_align.py`: **aligned 23.63**, SSIM 0.888,
+  correction median **1.57°** (R-094 2.36°: the held-out poses fit the model better). **On the 63 held-out frames
+  both models have** (each on its own poses): raw PSNR 20.93 → 21.27, **aligned 22.67 → 23.63 (+0.96 dB)**,
+  correction median 2.31 → 1.57°. Per stretch, aligned R-094 → R-096: still 0 – 17 s 25.09 → 25.79; 22 – 25 s
+  25.75 → 25.76; 51 – 53 s 21.18 → 21.56; 78 – 81 s 23.23 → 23.47; 106 s 27.73 → 30.36; **134 – 137 s 18.29 →
+  20.10; 162 – 165 s 23.12 → 25.13**; 186 s 15.85 → 20.12 (1 frame). No stretch worse. Run-to-run noise (R-088)
+  ~0.1 – 0.25 dB overall, so the gain is well beyond it (one run).
+  Wall offsets (scratchpad `wall_obs.py` / `plot_obs.py`, per axis / side the number of 0.15-unit offset bins that
+  hold 80 % of the trusted wall pixels, R-094 → R-096): X+ 12 → 9, X- 13 → 16, Z+ 14 → 11, Z- 24 → 17, floor 8 → 9,
+  ceiling 7 → 8. The far Z- wall seen at 0 – 25 s moved from 5.3 – 7.7 to 3.3 – 4.3 units, matching the later views
+  (3.8 – 4.8); 40 – 47 s still 5.5 – 7.3. `room_planes.py` (`room_planes_v9plp/`): 54 planes (R-094 57). Residual
+  scale drift (`scale_drift.py` measurement only, nothing written into the run): s(t) 0.85 – 1.18 over 0 – 180 s
+  (R-094's own: 0.83 – 1.46), model units per Metric3D metre spread across 10 s bins 2.04 (R-094 2.42); applying
+  the room-height correction again would raise it to 2.58, so it was not applied.
+  Off-path views (new `offpath_views.py`, `offpath_views_r096/`: 8 views from the room centre + a top view of the
+  slice camera height −1 … +0.5): R-096 shows a coherent room in 6 of 8 directions (doors, walls, corridor), R-094 /
+  R-090 mostly blank close walls there (each model's own centre, so not the identical point); in the top view the
+  walked area of R-090 / R-094 is crossed by wall slabs (ghost copies), R-096's is mostly clear; walls still thick.
+- **Verdict:** **kept: first clear gain of the featureless work** (+0.96 dB aligned on the same frames, every stretch
+  equal or better, off-path views more coherent). Not yet in the viewer. Next: a second matching round with these
+  cameras (R-097).
+
+### R-097 · 2026-11-22 · scan_009_057ed3beb4fc: 11.d second round, loop pairs chosen and matched with R-096's cameras (`v9plm`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ a0a6c7f plus uncommitted R-096 code and new `loop_match.py`,
+  `loop_path.py --model_frame`
+- **Dataset:** R-096's cameras (`work_v9pfy_sfm/sparse_loop2_pba`) and depth priors (`work_v9plp_sfm/mono_prior`);
+  ALIKED database of the keyframes `work_v9pfm_sfm/database.db` (copied, not changed)
+- **Command(s):** `python src/arcore3dgs/loop_match.py $S/work_v9pfy_sfm/sparse_loop2_pba $S/work_v9plp_sfm
+  $S/work_v9pfm_sfm/database.db $S/work_v9pfy_sfm/loop_match2` (pairs >= 5 s apart whose depth-prior cells overlap
+  >= 30 %, viewing directions within 60°, not matched before, <= 8 per keyframe, <= 4,000; ALIKED + LightGlue with
+  `matches_importer`; directions of all verified pairs in the model's world); `loop_path.py
+  …/sparse_loop2_pba $S/work_v9plp_sfm …/loop_match2/pair_directions.json …/sparse_loop3 --model_frame`; `prior_ba.py
+  … --pair_priors …/sparse_loop3/loop_pairs.json` → `sparse_loop3_pba`; then `r097.sh` as R-096 with tag `v9plm`
+- **Goal:** walls still thick in R-096 (several Z- wall offsets 3.1 – 4.8); more loop pairs where the walk revisits
+  a surface; compared with R-096 (aligned 23.63 on 63 held-out frames).

@@ -37,6 +37,70 @@ def lines(p):
     return [l.rstrip("\n") for l in open(p) if not l.startswith("#")]
 
 
+def read_model(model_in, pts_of):
+    """OPENCV camera and the images of a COLMAP text model, in time order (images without a time are left out)"""
+    cam = lines(os.path.join(model_in, "cameras.txt"))[0].split(); assert cam[1] == "OPENCV"
+    fx, fy, cx, cy, k1, k2, p1, p2 = map(float, cam[4:12])
+    K = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1.0]]); dist = np.array([k1, k2, p1, p2])
+    L = lines(os.path.join(model_in, "images.txt"))
+    imgs = []
+    for i in range(0, len(L), 2):
+        h = L[i].split(); q = list(map(float, h[1:5])); t = np.array(list(map(float, h[5:8])))
+        Rcw = Rot.from_quat([q[1], q[2], q[3], q[0]]).as_matrix()
+        imgs.append(dict(id=int(h[0]), name=h[9], key=os.path.splitext(h[9])[0], h=h, Rcw=Rcw, C=-Rcw.T @ t, pts2d=L[i + 1]))
+    imgs.sort(key=lambda d: pts_of.get(d["key"], 1e18))
+    imgs = [d for d in imgs if d["key"] in pts_of]
+    return K, dist, fx, fy, imgs
+
+
+def write_model(model_in, model_out, imgs, C1, K, dist, fx, fy, max_px):
+    """write imgs with new camera centres C1 (rotations kept) and every point of model_in re-triangulated from its
+    observations (linear, normalised undistorted coordinates); points behind a camera or > max_px dropped"""
+    os.makedirs(model_out, exist_ok=True)
+    id2k = {d["id"]: k for k, d in enumerate(imgs)}
+    uv = {d["id"]: (np.array(d["pts2d"].split(), float).reshape(-1, 3) if d["pts2d"].strip() else np.zeros((0, 3)))
+          for d in imgs}
+    P = [np.c_[d["Rcw"], -d["Rcw"] @ c] for d, c in zip(imgs, C1)]
+    rows = lines(os.path.join(model_in, "points3D.txt")); out_pts, kept, dropped = [], set(), 0
+    for row in rows:
+        s = row.split(); pid = int(s[0]); tr = np.array(s[8:], int).reshape(-1, 2)
+        tr = np.array([t_ for t_ in tr if t_[0] in id2k])
+        if len(tr) < 2:
+            dropped += 1; continue
+        xy = np.array([uv[i][j, :2] for i, j in tr])
+        nrm = cv2.undistortPoints(xy.reshape(-1, 1, 2), K, dist).reshape(-1, 2)
+        Am = []
+        for (i, _), (u_, v_) in zip(tr, nrm):
+            Pm = P[id2k[i]]; Am += [u_ * Pm[2] - Pm[0], v_ * Pm[2] - Pm[1]]
+        _, _, Vt = np.linalg.svd(np.array(Am)); Xh = Vt[-1]
+        if abs(Xh[3]) < 1e-12:
+            dropped += 1; continue
+        Xw = Xh[:3] / Xh[3]
+        zc = np.array([(P[id2k[i]] @ np.r_[Xw, 1])[2] for i, _ in tr])
+        proj = np.array([P[id2k[i]] @ np.r_[Xw, 1] for i, _ in tr]); pr = proj[:, :2] / proj[:, 2:]
+        err = np.linalg.norm((pr - nrm) * [fx, fy], axis=1)
+        if (zc <= 0).any() or np.median(err) > max_px:
+            dropped += 1; continue
+        kept.add(pid)
+        out_pts.append(f"{pid} {Xw[0]} {Xw[1]} {Xw[2]} {' '.join(s[4:7])} {np.median(err):.3f} " + " ".join(f"{i} {j}" for i, j in tr))
+    with open(os.path.join(model_out, "points3D.txt"), "w") as f:
+        f.write(f"# Number of points: {len(out_pts)}\n" + "\n".join(out_pts) + "\n")
+    with open(os.path.join(model_out, "images.txt"), "w") as f:
+        f.write(f"# Number of images: {len(imgs)}\n")
+        for d, c in zip(imgs, C1):
+            q = Rot.from_matrix(d["Rcw"]).as_quat(); t = -d["Rcw"] @ c
+            f.write(f"{d['id']} {q[3]} {q[0]} {q[1]} {q[2]} {t[0]} {t[1]} {t[2]} {' '.join(d['h'][8:])}\n")
+            a2 = np.array(d["pts2d"].split()).reshape(-1, 3) if d["pts2d"].strip() else np.zeros((0, 3), str)
+            for r_ in a2:
+                if r_[2] != "-1" and int(r_[2]) not in kept:
+                    r_[2] = "-1"
+            f.write(" ".join(" ".join(r_) for r_ in a2) + "\n")
+    for fn in ("cameras.txt", "rigs.txt", "frames.txt"):                 # COLMAP 4 text model (prior_ba.py copies them)
+        if os.path.exists(os.path.join(model_in, fn)):
+            shutil.copy(os.path.join(model_in, fn), os.path.join(model_out, fn))
+    return out_pts, dropped, rows, uv
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("model_in"); ap.add_argument("sfm"); ap.add_argument("model_out")
@@ -50,18 +114,7 @@ def main():
     st = json.load(open(os.path.join(a.sfm, "planes", "stats.json")))
     ms = json.load(open(os.path.join(a.sfm, "mono_prior", "stats.json")))
 
-    # ---- model ----
-    cam = lines(os.path.join(a.model_in, "cameras.txt"))[0].split(); assert cam[1] == "OPENCV"
-    fx, fy, cx, cy, k1, k2, p1, p2 = map(float, cam[4:12])
-    K = np.array([[fx, 0, cx], [0, fy, cy], [0, 0, 1.0]]); dist = np.array([k1, k2, p1, p2])
-    L = lines(os.path.join(a.model_in, "images.txt"))
-    imgs = []
-    for i in range(0, len(L), 2):
-        h = L[i].split(); q = list(map(float, h[1:5])); t = np.array(list(map(float, h[5:8])))
-        Rcw = Rot.from_quat([q[1], q[2], q[3], q[0]]).as_matrix()
-        imgs.append(dict(id=int(h[0]), name=h[9], key=os.path.splitext(h[9])[0], h=h, Rcw=Rcw, C=-Rcw.T @ t, pts2d=L[i + 1]))
-    imgs.sort(key=lambda d: pts_of.get(d["key"], 1e18))
-    imgs = [d for d in imgs if d["key"] in pts_of]
+    K, dist, fx, fy, imgs = read_model(a.model_in, pts_of)
     T = np.array([pts_of[d["key"]] - t_first for d in imgs])
 
     # ---- 1. floor / ceiling distances ----
@@ -118,49 +171,8 @@ def main():
           flush=True)
 
     # ---- 4. re-triangulate ----
-    id2k = {d["id"]: k for k, d in enumerate(imgs)}
-    uv = {d["id"]: (np.array(d["pts2d"].split(), float).reshape(-1, 3) if d["pts2d"].strip() else np.zeros((0, 3)))
-          for d in imgs}
-    P = [np.c_[d["Rcw"], -d["Rcw"] @ c] for d, c in zip(imgs, C1)]
-    rows = lines(os.path.join(a.model_in, "points3D.txt")); out_pts, kept, dropped = [], set(), 0
-    for row in rows:
-        s = row.split(); pid = int(s[0]); tr = np.array(s[8:], int).reshape(-1, 2)
-        tr = np.array([t_ for t_ in tr if t_[0] in id2k])
-        if len(tr) < 2:
-            dropped += 1; continue
-        xy = np.array([uv[i][j, :2] for i, j in tr])
-        nrm = cv2.undistortPoints(xy.reshape(-1, 1, 2), K, dist).reshape(-1, 2)
-        Am = []
-        for (i, _), (u_, v_) in zip(tr, nrm):
-            Pm = P[id2k[i]]; Am += [u_ * Pm[2] - Pm[0], v_ * Pm[2] - Pm[1]]
-        _, _, Vt = np.linalg.svd(np.array(Am)); Xh = Vt[-1]
-        if abs(Xh[3]) < 1e-12:
-            dropped += 1; continue
-        Xw = Xh[:3] / Xh[3]
-        zc = np.array([(P[id2k[i]] @ np.r_[Xw, 1])[2] for i, _ in tr])
-        proj = np.array([P[id2k[i]] @ np.r_[Xw, 1] for i, _ in tr]); pr = proj[:, :2] / proj[:, 2:]
-        err = np.linalg.norm((pr - nrm) * [fx, fy], axis=1)
-        if (zc <= 0).any() or np.median(err) > a.max_px:
-            dropped += 1; continue
-        kept.add(pid)
-        out_pts.append(f"{pid} {Xw[0]} {Xw[1]} {Xw[2]} {' '.join(s[4:7])} {np.median(err):.3f} " + " ".join(f"{i} {j}" for i, j in tr))
+    out_pts, dropped, rows, uv = write_model(a.model_in, a.model_out, imgs, C1, K, dist, fx, fy, a.max_px)
     print(f"re-triangulated {len(out_pts)} points, dropped {dropped}", flush=True)
-
-    with open(os.path.join(a.model_out, "points3D.txt"), "w") as f:
-        f.write(f"# Number of points: {len(out_pts)}\n" + "\n".join(out_pts) + "\n")
-    with open(os.path.join(a.model_out, "images.txt"), "w") as f:
-        f.write(f"# Number of images: {len(imgs)}\n")
-        for d, c in zip(imgs, C1):
-            q = Rot.from_matrix(d["Rcw"]).as_quat(); t = -d["Rcw"] @ c
-            f.write(f"{d['id']} {q[3]} {q[0]} {q[1]} {q[2]} {t[0]} {t[1]} {t[2]} {' '.join(d['h'][8:])}\n")
-            a2 = np.array(d["pts2d"].split()).reshape(-1, 3) if d["pts2d"].strip() else np.zeros((0, 3), str)
-            for r_ in a2:
-                if r_[2] != "-1" and int(r_[2]) not in kept:
-                    r_[2] = "-1"
-            f.write(" ".join(" ".join(r_) for r_ in a2) + "\n")
-    for fn in ("cameras.txt", "rigs.txt", "frames.txt"):                 # COLMAP 4 text model (prior_ba.py copies them)
-        if os.path.exists(os.path.join(a.model_in, fn)):
-            shutil.copy(os.path.join(a.model_in, fn), os.path.join(a.model_out, fn))
 
     # ---- 5. check against Metric3D's raw (roughly metric) depth ----
     def ratio_bins(Cs, Xd):

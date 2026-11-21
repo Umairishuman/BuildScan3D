@@ -38,6 +38,10 @@ ap.add_argument("--huber", type=float, default=2.0)
 ap.add_argument("--drop_px", type=float, default=4.0, help="observations above this after round 1 are dropped")
 ap.add_argument("--iters", type=int, default=30)
 ap.add_argument("--colmap", default=None, help="COLMAP executable, to also write .bin")
+ap.add_argument("--pair_priors", default=None,
+                help="json list of [name_a, name_b] (loop_path.py's loop_pairs.json): their relative position in the "
+                     "input model is kept as a prior too, sigma = loop_s0 + loop_s1 * distance (11.d)")
+ap.add_argument("--loop_s0", type=float, default=0.02); ap.add_argument("--loop_s1", type=float, default=0.1)
 args = ap.parse_args()
 dev = "cuda" if torch.cuda.is_available() else "cpu"
 torch.set_default_dtype(torch.float64)
@@ -137,7 +141,20 @@ pr_rows = np.concatenate([np.arange(nr), np.arange(nr), nr + np.arange(nr), nr +
                           2 * nr + np.arange(3 * N), 2 * nr + 3 * N + np.arange(3 * N)])
 pr_cols = np.concatenate([6 * (k + 1) + 3 + a3, 6 * k + 3 + a3, 6 * (k + 1) + a3, 6 * k + a3, 6 * kk + 3 + aa, 6 * kk + aa])
 pr_vals = np.concatenate([wt, -wt, wr, -wr, np.full(3 * N, 1 / s_at), np.full(3 * N, 1 / s_ar)])
-Jpr = coo_matrix((pr_vals, (pr_rows, pr_cols)), shape=(2 * nr + 6 * N, n_cam_p)).tocsr()
+# loop pairs (--pair_priors): relative position of two distant keyframes as in the input model
+la = lb = np.zeros(0, int); dCl = np.zeros((0, 3)); wl = np.zeros(0)
+if args.pair_priors:
+    k_of = {os.path.splitext(d["name"])[0]: k for k, d in enumerate(imgs)}
+    pp = [(k_of[x], k_of[y]) for x, y in json.load(open(args.pair_priors)) if x in k_of and y in k_of]
+    la = np.array([p[0] for p in pp], int); lb = np.array([p[1] for p in pp], int)
+    dCl = C0[lb] - C0[la]
+    wl = np.repeat(1.0 / (args.loop_s0 + args.loop_s1 * np.linalg.norm(dCl, axis=1)), 3)
+    print(f"loop pair priors: {len(pp)} pairs, sigma median {1 / np.median(wl):.3f}", flush=True)
+nl = 3 * len(la); r0l = 2 * nr + 6 * N; l3 = np.tile(np.arange(3), len(la))
+pr_rows = np.concatenate([pr_rows, r0l + np.arange(nl), r0l + np.arange(nl)])
+pr_cols = np.concatenate([pr_cols, 6 * np.repeat(lb, 3) + 3 + l3, 6 * np.repeat(la, 3) + 3 + l3])
+pr_vals = np.concatenate([pr_vals, wl, -wl])
+Jpr = coo_matrix((pr_vals, (pr_rows, pr_cols)), shape=(2 * nr + 6 * N + nl, n_cam_p)).tocsr()
 JtJ_pr = (Jpr.T @ Jpr).toarray()
 HUBER = args.huber
 
@@ -148,7 +165,8 @@ def prior_res(cp):
     r_t = ((C[1:] - C[:-1]) - dC0).ravel() * wt
     dR = np.einsum("nij,nkj->nik", Rn[1:], Rn[:-1])
     r_r = Rot.from_matrix(np.einsum("nij,nkj->nik", dR, dR0)).as_rotvec().ravel() * wr
-    return np.concatenate([r_t, r_r, (cp[:, 3:] / s_at).ravel(), (cp[:, :3] / s_ar).ravel()])
+    r_l = ((C[lb] - C[la]) - dCl).ravel() * wl
+    return np.concatenate([r_t, r_r, (cp[:, 3:] / s_at).ravel(), (cp[:, :3] / s_ar).ravel(), r_l])
 
 
 def huber_cost(e):
