@@ -124,7 +124,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does | Status |
 |---|---|---|
-| `mono_prior.py` | Metric3D depth + normals per frame, aligned to SfM points (fp16 default) | **[v9]** |
+| `mono_prior.py` | Metric3D depth + normals per frame, aligned to SfM points (fp16 default); `--fill_scale`: frames with < 5 SfM points get a time-interpolated scale instead of no prior (R-092) | **[v9]** |
 | `plane_seg.py` | Per-frame planar regions for the planar prior | **[v9]** |
 | `blur_motion.py` | Per-frame camera motion during exposure for the blur model; `--source gyro --gyro_calib --per_frame_exposure` for captures without ARCore (`run_v8.py --blur_gyro`, FEATURELESS 10.f) | **[v9]** |
 | `fast_mvs.py` | Fast dense init: PatchMatch on every 7th frame at 640 px | **[v9]** |
@@ -140,7 +140,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does | Status |
 |---|---|---|
-| `run_v8.py` | One-command driver for the v9 pipeline, times every stage. Finds the nerfstudio env through `toolpaths.py`; `--pose_opt`, `--train_args`, `--blur_gyro` (FEATURELESS 10.d – 10.f) | **[v9]** |
+| `run_v8.py` | One-command driver for the v9 pipeline, times every stage. Finds the nerfstudio env through `toolpaths.py`; `--pose_opt`, `--train_args`, `--blur_gyro`, `--prior_args` (FEATURELESS 10.d – 10.f) | **[v9]** |
 | `geo_splatfacto.py` | Splatfacto subclass: DashGaussian, depth / normal / planar priors, blur model, PGSR-lite, checkpoints + `--resume`; `--pose_opt` (SO3xR3, applied once per view incl. blur / PGSR passes); `--path_prune <r>` (removes Gaussians reaching into the camera path every 500 steps) | **[v9]** |
 | `export_nerfstudio.py` | Writes `transforms.json` for nerfstudio | **[v9]** [v3] |
 | `train.py` | Own gsplat trainer (experiments only, D-010) | [exp] |

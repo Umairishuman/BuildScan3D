@@ -31,6 +31,7 @@ ap.add_argument("--init", default="fmvs", choices=["mono", "fmvs", "fmvs_mono"],
 ap.add_argument("--planar", type=float, default=0.0, help="> 0: planar prior weight (plane_seg.py runs on the CPU during init)")
 ap.add_argument("--blur", type=float, default=0.0, help="> 0: motion-blur model with this exposure (s)")
 ap.add_argument("--init_args", default="", help='extra fast_mvs.py args, e.g. "--photometric" (7.5 vs 20 min, TRAINING R-063)')
+ap.add_argument("--prior_args", default="", help='extra mono_prior.py args, e.g. "--fill_scale" (FEATURELESS §10)')
 ap.add_argument("--pgsr", action="store_true", help="PGSR-lite in the same training (the best model's recipe, R-023)")
 ap.add_argument("--save_every", type=int, default=2500, help="checkpoint interval for --resume after a crash")
 ap.add_argument("--pose_opt", action="store_true", help="refine camera poses during training (sensor-path models)")
@@ -87,7 +88,7 @@ if args.split and STAGES.index(args.from_stage) <= STAGES.index("export"):
     json.dump(tj, open(os.path.join(S, data), "w"), indent=1)
     shutil.copy(args.split, os.path.join(S, "offpath_test.txt"))
     print(f"   split: {len(tj['train_filenames'])} train / {len(tj['test_filenames'])} held out")
-mono = [py, os.path.join(HERE, "mono_prior.py"), "--work", S, "--model", args.mono_model] + ([] if args.no_fp16 else ["--fp16"])
+mono = [py, os.path.join(HERE, "mono_prior.py"), "--work", S, "--model", args.mono_model] + ([] if args.no_fp16 else ["--fp16"]) + args.prior_args.split()
 run("prior", mono)
 # warn when SfM placed part of the room at a different scale ("mini room", TRAINING R-066 / R-067); warning only
 if STAGES.index(args.from_stage) <= STAGES.index("prior") and os.path.exists(os.path.join(S, "sparse", "0", "points3D.txt")):
