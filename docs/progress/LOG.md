@@ -871,6 +871,9 @@ Asked by Tayyab: "why is FYP taking up 125 gb", then "ok do those 3".
   aligned 22.22, 51 – 53 s +1.6 dB, flatness 4.18 cm, blocked views at 134 / 186 s. R-088 (R-082 repeated):
   noise ~0.1 – 0.25 dB overall, up to 0.9 dB per stretch, 1.5 cm flatness. Found: the flatness metric scores a
   view-filling sheet as flat.
-- Runs: R-086, R-087, R-088. Decisions: none.
-- Next (Tayyab to choose): near-camera / floater pruning (10.e) on R-087's rectified keyframes, 10.b-2, or a
-  re-recording of 45 – 60 s.
+- Then (Tayyab: "continue", later "keep working on it complete all the work"): the blocked views are Gaussians
+  0.01 – 0.04 units in front of the lens. New `src/arcore3dgs/prune_near_path.py` and `geo_splatfacto.py
+  --path_prune` (every 500 steps), `eval_offpath.py` blocked-view count. R-089 (rectified + pruning): 1 blocked
+  view, 51 – 53 s +2.6 dB, aligned 22.21. R-090 (pruning only): 0 blocked, aligned 22.52 (= baseline): pruning is
+  free. R-091 (10.b-2: features, rot_sfm, adaptive BA, one track round on the rectified keyframes) started.
+- Runs: R-086 – R-091. Decisions: none.

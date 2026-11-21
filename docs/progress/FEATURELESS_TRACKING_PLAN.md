@@ -499,3 +499,20 @@ views blocked by a sheet of Gaussians close to the camera, which a floater / nea
 coded) would target. The flatness metric counts such a sheet as flat, so it needs a guard (e.g. ignore frames whose
 render is one surface close to the camera) before flatness can be compared.
 
+**Blocked views and path pruning (R-089, R-090, 2026-11-21).** The "flat sheets" were Gaussians right in front of
+the lens (rendered depth 0.01 – 0.04 units): 7 of 69 held-out views in R-082, 16 in R-087. New
+`geo_splatfacto.py --path_prune 0.1` removes Gaussians reaching within ~5 cm of the camera path every 500 steps
+(the phone was carried there, so it is free space); `eval_offpath.py` now reports blocked views and leaves them out
+of flatness. Results (aligned PSNR; blocked views of 69):
+
+| Run | Images | Pruning | Aligned PSNR | 51 – 53 s | Blocked |
+|---|---|---|---|---|---|
+| R-082 / R-088 | raw | no | 22.64 / 22.54 | 21.59 / 21.46 | 7 / 5 |
+| R-090 | raw | yes | 22.52 | 22.72 | 0 |
+| R-087 | rectified | no | 22.18 | 23.23 | 16 |
+| R-089 | rectified | yes | 22.21 | **24.18** | 1 |
+
+Pruning is free (within the run-to-run spread, no blocked views): keep it on. Rectification consistently helps the
+stretch with no image support (+1.6 / +2.6 dB) and costs ~0.4 dB overall; 10.b-2 (R-091) re-solves the cameras on
+the rectified images to see whether the overall loss is the old cameras not matching the new images.
+
