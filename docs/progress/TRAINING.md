@@ -135,6 +135,8 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-086 | 2026-11-21 | scan_009: plan 10.e, R-082 with stronger geometry weights (`v9pfk`) | 3070 | 30.5 min | held-out PSNR 20.75 (R-082 20.80), **flatness 4.98 cm (8.18)**; aligned PSNR 21.85 (22.64); a flat sheet blocks the 134 s view | Inconclusive (flatter walls, lower PSNR) |
 | R-087 | 2026-11-21 | scan_009: plan 10.b-1, rolling-shutter-rectified keyframes on R-080's cameras (`v9pfs`) | 3070 | 29.7 min | held-out PSNR 20.69 vs R-082 20.81 (rectified photos), flatness 3.55 vs 8.87 cm; aligned 22.22 vs 22.66; 51 – 53 s +1.6 dB aligned; views at 134 s and 186 s blocked | Inconclusive (run-to-run spread not known) |
 | R-088 | 2026-11-21 | scan_009: R-082 repeated unchanged, run-to-run spread (`v9pfn`) | 3070 | 28.8 min | vs R-082: held-out PSNR 21.05 vs 20.80, flatness 6.65 vs 8.18 cm, aligned 22.55 vs 22.65; per stretch up to ±0.9 dB, per frame median 0.70 dB | Kept (noise reference) |
+| R-089 | 2026-11-21 | scan_009: R-087 (rectified keyframes) plus path pruning in training (`v9pfo`) | 3070 | 29.4 min | blocked views 1 (R-087 16, R-082 7); PSNR 20.68, aligned 22.21 (R-087 22.18, R-082 22.64); 51 – 53 s aligned 24.18 (R-082 21.59) | Inconclusive (best in 51 – 53 s, not overall) |
+| R-090 | 2026-11-21 | scan_009: R-082 plus path pruning in training (`v9pfq`) | 3070 | running | | |
 
 ## Runs
 
@@ -2291,3 +2293,66 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   losses; R-086's and R-087's 134 – 137 s losses (−1.4, −1.65 dB; the repeat: +0.04) are real (the blocking sheet);
   R-087's 51 – 53 s gain (+1.6 dB; repeat −0.13) is probably real; flatness gains of 3.2 cm (R-086) and 4.0 cm (R-087)
   exceed the 1.5 cm spread but may partly be the sheets (R-087 caution).
+
+### R-089 · 2026-11-21 · scan_009_057ed3beb4fc: rectified keyframes + path pruning (`v9pfo`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 84c4b4c plus uncommitted `geo_splatfacto.py --path_prune`,
+  `prune_near_path.py`, `eval_offpath.py` blocked-view guard
+- **Before this run (no training):** in R-087 the blocked held-out views had median rendered depth 0.01 – 0.04 model
+  units (R-082 / R-088 at the same frames 0.7 – 2.4). New `prune_near_path.py` removes Gaussians whose extent
+  (centre distance − 2 × largest scale) comes within 0.1 units (~5 cm) of the camera path (all keyframe centres, gaps
+  > 0.5 units skipped). On the trained models: R-082 −4.15 %, R-087 −2.62 %, R-088 −4.34 % of the Gaussians.
+  `eval_offpath.py` now counts views with median rendered depth < 0.2 units as blocked and leaves them out of
+  flatness (`s10_eval/eval_blocked/`):
+
+  | Model | PSNR | SSIM | Flatness cm (unblocked) | Blocked views of 69 |
+  |---|---|---|---|---|
+  | R-082 | 20.80 | 0.874 | 9.59 | 7 |
+  | R-082 pruned after training | 20.53 | 0.868 | 9.43 | 1 |
+  | R-088 (repeat of R-082) | 21.05 | 0.873 | 6.75 | 5 |
+  | R-086 | 20.75 | 0.871 | 7.73 | 13 |
+  | R-087 | 20.67 | 0.866 | 9.01 | 16 |
+  | R-087 pruned after training | 20.63 | 0.866 | 9.28 | 1 |
+
+  Pruning after training opens the blocked views (sheet `s10_eval/eval_prune/offpath_frames.jpg`: the 134 s door
+  view, the 162 s AC view and the 186 s curtain reappear) but the geometry behind the sheets is messy, and a flat
+  beige sheet matches the beige walls well under colour-fit PSNR, so PSNR drops. Hence pruning during training.
+- **Dataset:** `work_v9pfs` (rectified keyframes, R-087) copied to `work_v9pfo`; `work_v9pfs_sfm` copied to
+  `work_v9pfo_sfm` without the model, evaluations and the `undist_fast/images` junction
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r089.sh` (log `r089.log`): R-087's command with tag `v9pfo` plus
+  `--train_args "--path_prune 0.1"` (every 500 steps); then `eval_offpath.py` (raw photos, `work_v9pfh_sfm`) and
+  `eval_align.py` with R-082 and R-087
+- **Goal:** keep R-087's gain in 51 – 53 s without the blocked views; make the model explain those views with real
+  geometry instead of a sheet in front of the lens.
+- **Start → end:** 13:14 → 14:09 (export 0.01, prior 3.89, init 2.16, train 22.7, ply 0.68 min, total 29.4; evaluations 25 min)
+- **Errors during the run:** none. Pruning log (`gs_v9pfo/train.log`): 660 removed at step 500, 100 at 1000, 244 at
+  1500, 491 at 2000, …, 496 at 7500, 390 at 14500; 14,050 in total (2.4 % of the final 581,354).
+- **Result:** raw photos (`work_v9pfh_sfm`), `eval_r089/`:
+
+  | Model | PSNR | SSIM | Flatness cm (unblocked) | Blocked of 69 | PSNR aligned | SSIM aligned |
+  |---|---|---|---|---|---|---|
+  | R-082 | 20.80 | 0.874 | 9.59 | 7 | **22.64** | **0.884** |
+  | R-087 | 20.67 | 0.866 | 9.01 | 16 | 22.18 | 0.877 |
+  | R-089 | 20.68 | 0.870 | 8.92 | **1** | 22.21 | 0.875 |
+
+  Aligned per stretch R-082 / R-087 / R-089: still 0 – 17 s 24.89 / 25.24 / 23.73; 22 – 25 s 26.44 / 26.25 / 25.59;
+  **51 – 53 s 21.59 / 23.23 / 24.18**; 78 – 81 s 23.63 / 23.52 / 22.73; 106 s 29.17 / 28.47 / 28.87; **134 – 137 s
+  17.54 / 15.66 / 17.39**; 162 – 165 s 22.38 / 21.41 / 21.31; 186 s 14.88 / 15.57 / 15.72.
+- **Verdict:** inconclusive. Pruning during training removes the blocked views without the PSNR drop of pruning
+  afterwards (R-087 → R-089: 16 → 1 blocked, 134 – 137 s back to R-082's level) and the 51 – 53 s gain grows to
+  +2.6 dB over R-082 (noise ≤ 0.9 dB per stretch, R-088); but the still frames (−1.2 dB), 22 – 25 s and 78 – 81 s are
+  lower and the overall aligned score stays 0.4 dB below R-082. R-090 (pruning without rectification) separates
+  the two changes.
+
+### R-090 · 2026-11-21 · scan_009_057ed3beb4fc: R-082 plus path pruning (`v9pfq`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 84c4b4c plus uncommitted `--path_prune` code (as R-089)
+- **Dataset:** as R-088 (`work_v9pfz` → `work_v9pfq`, `work_v9pfh_sfm` → `work_v9pfq_sfm`, unrectified keyframes)
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r090.sh` (log `r090.log`): R-082's command with tag `v9pfq` and
+  `--train_args "--path_prune 0.1"`; then `eval_offpath.py` and `eval_align.py` with R-082 and R-088
+- **Goal:** separate R-089's two changes: pruning alone on R-082's images.
+- **Start → end:** (running)
+- **Errors during the run:** (none so far)
+
