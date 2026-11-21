@@ -2388,5 +2388,17 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   matches and pair directions. Training afterwards (R-092) only if the camera model is at least as complete as R-080
   (647 cameras, 3D obs median 120).
 - **Start → end:** 15:03 → (running)
-- **Errors during the run:** (none so far)
+- **Errors during the run:**
+  - 15:24, bridge-pair import (`r091.sh` step 1): `matches_importer` exited 3221226505 (0xC0000409);
+    `matches_importer_bridge.log`: `Error loading "…\colmap-4.2.0in\onnxruntime_providers_cuda.dll" which
+    depends on "cublasLt64_12.dll" which is missing`. Cause: the script called COLMAP directly, without the PATH
+    entries (`tools/cudnn9`, torch's `lib`) that `sfm_colmap.py` adds for the ALIKED / LightGlue ONNX models.
+    Extraction and the 29,186 guided + retrieval matches had finished. Fix: `r091b.sh` repeats the import with that
+    PATH and continues the chain. Resolved: the import ran (15:25) and the chain continued.
+  - Paused at Tayyab's request (2026-11-21, "can you pause it") during the first `prior_ba.py` (iteration 9 of 150,
+    reprojection 1.89 → 1.35 px): the processes (`bash r091b.sh` ×2, `python prior_ba.py`) were suspended with
+    `NtSuspendProcess`, not killed; their PIDs are in `%TEMP%091_paused_pids.txt`. Resume with `NtResumeProcess` on
+    the same PIDs (or rerun `r091b.sh` from the `prior_ba.py` line if the PC restarts). Progress so far: rot_sfm on the
+    rectified keyframes kept **695 cameras**, 23,494 points, 135,406 observations (R-071 on raw keyframes: 698
+    cameras, 23,490 points).
 
