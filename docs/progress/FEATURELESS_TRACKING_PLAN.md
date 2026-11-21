@@ -524,3 +524,28 @@ views); rectification helps how 51 – 53 s renders (+1.6 / +2.6 dB) but costs ~
 tried here gives the 45 – 60 s cameras image support. What remains: a re-recording of that part of the room
 (10.g) or layout-plane constraints for it (not coded).
 
+## 11. Plan after §10: one consistent geometry first (2026-11-21)
+
+**Why.** Tayyab (2026-11-21), after looking at R-081 and R-092 in the viewer: the room is coherent only from the
+recorded angles, the depth looks wrong off-path, and R-092 looks almost worse than R-081. A re-recording is not
+possible (far-away site). Reading of the evidence (not proven):
+1. The depth guidance contradicts itself: every frame's Metric3D depth is scaled on its own (5.9 % median alignment
+   error, 16.9 % p90 for filled frames), so overlapping frames disagree about where a wall is; 3DGS then satisfies
+   each view separately (correct from the recorded angles, wrong between them). R-092 added 77 more such frames.
+2. The cameras are off: held-out SfM poses ~2° (R-084 alignment) on textured stretches; 45 – 60 s rests on the
+   sensors (0 – 1 SfM observations per camera, R-091).
+3. R-092 trained on 553 frames (69 held out) against R-081's 622, so the viewer comparison was not like for like.
+§10 patched the training; §11 builds one room geometry that all views agree on, then fixes the cameras against it.
+
+| Step | What | Expected gain | Cost | Needs |
+|---|---|---|---|---|
+| 11.a | **VGGT feasibility test** on one chunk (~40 keyframes) across 45 – 60 s: do its poses agree with the gyro (rotation) and its depth maps with each other? | Decides whether a learned multi-view model can place the blank-wall frames at all | 1 – 2 h | **Tayyab's OK to run the downloaded code** (`C:/Users/tyb/.cache/buildscan/vggt`, research licence) |
+| 11.b | **Room planes**: fit walls / floor / ceiling from the well-tracked frames (SfM points + plane_seg regions + Metric3D normals), robust plane fit, Manhattan check | Fixed surfaces for the blank walls | 0.5 day | separate code, or Umair's `layout.py` read-only (his module) |
+| 11.c | **Consistent depth guidance**: render depth / normals for every training view from one fused geometry (planes for wall / floor / ceiling pixels; fused Metric3D or VGGT depth elsewhere) and train on that instead of per-frame Metric3D | Views stop disagreeing about depth: the core fix for the off-path look | 0.5 day + 1 training | 11.b (11.a optional) |
+| 11.d | **Cameras against the geometry**: place the 45 – 60 s / 60 – 90 s frames by aligning their depth (and VGGT pose, if 11.a works) to the planes; then a joint refinement of all poses with the plane constraints | Fixes the stretch no image-matching step could | 1 day + 1 training | 11.b |
+| 11.e | **Judge off-path**: final models on all 622 frames (no hold-out) for the viewer; a fixed set of off-path cameras (orbit + room centre) rendered for every model; a depth-agreement score (rendered depth vs the room planes) next to held-out PSNR | Measures what Tayyab sees instead of only near-path PSNR | 0.5 day | — |
+
+Order recommended: 11.a and 11.b first (both small, 11.a tells whether 11.d can use VGGT), then 11.c (largest
+expected gain for the depth problem), then 11.d, judged with 11.e. About 3 working days. `--path_prune` stays on;
+`--fill_scale` stays off until 11.c replaces it.
+

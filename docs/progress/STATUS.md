@@ -703,6 +703,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
     - [x] Depth priors for frames without SfM support (2026-11-21, R-092, `mono_prior.py --fill_scale`): 77 frames
       had no depth / normal prior at all; filled with a time-interpolated scale (5.3 % leave-one-out error).
       Flatness 9.92 → 6.77 cm, aligned PSNR −0.26 dB; kept for Tayyab's inspection.
+    - [ ] §11 plan (2026-11-21, FEATURELESS_TRACKING_PLAN §11): one consistent room geometry first. 11.a VGGT test on
+      45 – 60 s (needs Tayyab's OK to run the downloaded code), 11.b room planes, 11.c depth guidance rendered from one
+      geometry, 11.d cameras placed against the planes, 11.e off-path judging (orbit renders, depth agreement, final
+      models on all frames). Tayyab: R-092 looks almost worse than R-081 in the viewer.
     - [ ] 10.g planes for 45 – 60 s (a re-recording is not possible: the site is far away, Tayyab 2026-11-21).
       Next candidates: layout planes from the tracked walls, and placing the featureless frames by matching their
       depth maps to those planes; or leaving the untrackable frames out of training (Tayyab's idea).

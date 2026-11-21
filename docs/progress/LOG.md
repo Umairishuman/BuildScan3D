@@ -891,4 +891,8 @@ Asked by Tayyab: "why is FYP taking up 125 gb", then "ok do those 3".
   cleaner room-centre views. Problem: `--prior_args "--fill_scale"` is parsed as an option (use
   `--prior_args=--fill_scale`).
 - Runs: R-092. Decisions: none (re-recording ruled out by Tayyab: noted in STATUS §7).
+- Later: `scan-009-depthfill` (R-092) added to the viewer (`598ec14`); Tayyab: "it looks almost worse than the prev
+  attempt", asked to stop the server (stopped) and plan a significant quality uplift that fixes the depth. Plan
+  written as FEATURELESS_TRACKING_PLAN §11 (one consistent room geometry first: VGGT test, room planes, depth guidance
+  rendered from one geometry, cameras placed against the planes, off-path judging).
 
