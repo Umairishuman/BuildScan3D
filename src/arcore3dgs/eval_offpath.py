@@ -4,7 +4,9 @@ training cameras -- where far walls and corners break).
 
 Metrics on the held-out frames (half res): colour-fit PSNR, SSIM, render sharpness / photo sharpness, and
 (if plane_seg.py has run) flatness: median rms (cm) of the rendered surface around its best-fit plane inside
-each planar region (walls, floor, ceiling, doors) -- "walls are not flat from off-path views".
+each planar region (walls, floor, ceiling, doors) -- "walls are not flat from off-path views". Views whose median
+rendered depth is below --blocked_depth (Gaussians in front of the lens) are counted as "blocked" and left out of
+flatness (2026-11-21: such a sheet scored as perfectly flat, R-087).
 Sheets: one held-out frame per stretch (photo | models), full-res centre crops, room-centre views (never
 visited by the camera) in 4 directions.
 
@@ -21,6 +23,8 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--work", required=True); ap.add_argument("--out", required=True)
 ap.add_argument("--models", nargs="+", required=True)
 ap.add_argument("--times", nargs="*", default=[], help="name=minutes (training time) for the table")
+ap.add_argument("--blocked_depth", type=float, default=0.2,
+                help="median rendered depth (model units) below which a view counts as blocked (left out of flatness)")
 args = ap.parse_args()
 dev = "cuda"; os.makedirs(args.out, exist_ok=True); G = np.diag([1, -1, -1, 1.0])
 meta = json.load(open(os.path.join(args.work, "frames.json"))); by = {f["name"]: f for f in meta["frames"]}
@@ -29,6 +33,7 @@ W, H = meta["W"], meta["H"]
 Kh = torch.tensor([[[meta["fx"] / 2, 0, meta["cx"] / 2], [0, meta["fy"] / 2, meta["cy"] / 2], [0, 0, 1]]], dtype=torch.float32, device=dev)
 Kf = torch.tensor([[[meta["fx"], 0, meta["cx"]], [0, meta["fy"], meta["cy"]], [0, 0, 1]]], dtype=torch.float32, device=dev)
 times = dict(t.split("=") for t in args.times)
+BLOCKED_DEPTH = args.blocked_depth
 
 
 def load(path):
@@ -90,12 +95,17 @@ for spec in args.models:
     models.append((name, load(path)))
 res = {}
 print(f"{len(test)} off-path test frames")
-print(f"{'model':16s} {'splats':>8s} {'PSNR(cf)':>9s} {'SSIM':>7s} {'sharp':>6s} {'flat cm':>7s} {'train min':>9s}")
+print(f"{'model':16s} {'splats':>8s} {'PSNR(cf)':>9s} {'SSIM':>7s} {'sharp':>6s} {'flat cm':>7s} {'blocked':>7s} {'train min':>9s}")
 for name, g in models:
-    ps, ss, sh, fl = [], [], [], []
+    ps, ss, sh, fl, blocked = [], [], [], [], 0
     for n in test:
         gt = photo(n); r, Dr, Ar = render(g, by[n]["c2w"], depth=True)
-        fl += flatness(n, Dr, Ar)
+        # a view filled by Gaussians right in front of the lens (R-087: depth 0.01 - 0.04) would score as perfectly
+        # flat: count it as blocked and leave it out of the flatness median
+        if (Ar > 0.5).any() and float(Dr[Ar > 0.5].median()) < BLOCKED_DEPTH:
+            blocked += 1
+        else:
+            fl += flatness(n, Dr, Ar)
         A = torch.cat([r.reshape(-1, 3), torch.ones(r.shape[0] * r.shape[1], 1, device=dev)], 1)
         ra = (A @ torch.linalg.lstsq(A, gt.reshape(-1, 3)).solution).reshape(gt.shape).clamp(0, 1)
         ps.append(float(-10 * torch.log10(((ra - gt) ** 2).mean())))
@@ -103,8 +113,8 @@ for name, g in models:
         sh.append(lap(r.cpu().numpy()) / max(lap(gt.cpu().numpy()), 1e-6))
     flat = 100 * float(np.median(fl)) if fl else float("nan")
     res[name] = dict(splats=g["n"], psnr_cf=float(np.mean(ps)), ssim=float(np.mean(ss)), sharpness=float(np.mean(sh)),
-                     flat_cm=flat, train_min=float(times[name]) if name in times else None)
-    print(f"{name:16s} {g['n']:8d} {np.mean(ps):9.2f} {np.mean(ss):7.4f} {np.mean(sh):6.2f} {flat:7.2f} {times.get(name, '-'):>9s}", flush=True)
+                     flat_cm=flat, blocked=blocked, train_min=float(times[name]) if name in times else None)
+    print(f"{name:16s} {g['n']:8d} {np.mean(ps):9.2f} {np.mean(ss):7.4f} {np.mean(sh):6.2f} {flat:7.2f} {blocked:7d} {times.get(name, '-'):>9s}", flush=True)
 json.dump(res, open(os.path.join(args.out, "metrics.json"), "w"), indent=1)
 
 
