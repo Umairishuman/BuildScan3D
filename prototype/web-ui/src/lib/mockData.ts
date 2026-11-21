@@ -238,6 +238,29 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [-0.15, -0.03, -0.11], target: [-0.22, -0.21, 0.87] },
   },
   {
+    // R-092 (2026-11-21): R-081's cameras, Gaussians reaching into the camera path pruned during training, and depth
+    // priors for the 77 frames without SfM points (mono_prior.py --fill_scale). Trained with 69 held-out frames.
+    // File is local only (git-ignored).
+    id: "scan-009-depthfill",
+    name: "Scan 009 · depth priors filled + path pruning",
+    floor: "—",
+    block: "Residence",
+    area: "Not measured",
+    location: "scan_009_057ed3beb4fc • gyro + accelerometer + video tracks",
+    dateCaptured: "Nov 15, 2026",
+    status: "draft",
+    statusLabel: "Experimental · 553 of 894 keyframes · scale ~2× too large",
+    thumbnail: "/thumbnails/scan009_v9pgsr.jpg",
+    scansCount: 1,
+    gaussianCount: "591,387",
+    accuracy: "Scale unknown (estimates say the model is about 2× too large)",
+    captureDevice: "realme RMX5111 (ARCore)",
+    description:
+      "Same camera path as the track-corrected model. Two changes aimed at the depth seen from off-path angles: frames that had no depth guidance (no tracked points, mostly the low-texture stretches) now get one, and splats floating in the camera's own path are removed during training. On frames held out from training the walls are flatter (6.8 vs 9.9 cm) and no view is blocked; colour match is about the same. 69 frames were held out, so a few views have less detail. Sizes are not reliable.",
+    splatUrl: "/splats/scan009_v9pfu.spz",
+    splatStart: { position: [-0.15, -0.03, -0.11], target: [-0.22, -0.21, 0.87] },
+  },
+  {
     // R-012 (2026-10-12), saved_models/2026-10-12_sharp_mvs_v6. File is local only (git-ignored, > 10 MB).
     id: "newroom-v6",
     name: "Living Room · v6 sharp frames + MVS (older)",
