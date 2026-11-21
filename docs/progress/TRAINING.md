@@ -137,7 +137,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-088 | 2026-11-21 | scan_009: R-082 repeated unchanged, run-to-run spread (`v9pfn`) | 3070 | 28.8 min | vs R-082: held-out PSNR 21.05 vs 20.80, flatness 6.65 vs 8.18 cm, aligned 22.55 vs 22.65; per stretch up to ±0.9 dB, per frame median 0.70 dB | Kept (noise reference) |
 | R-089 | 2026-11-21 | scan_009: R-087 (rectified keyframes) plus path pruning in training (`v9pfo`) | 3070 | 29.4 min | blocked views 1 (R-087 16, R-082 7); PSNR 20.68, aligned 22.21 (R-087 22.18, R-082 22.64); 51 – 53 s aligned 24.18 (R-082 21.59) | Inconclusive (best in 51 – 53 s, not overall) |
 | R-090 | 2026-11-21 | scan_009: R-082 plus path pruning in training (`v9pfq`) | 3070 | 28.2 min | blocked views 0 (R-082 7); PSNR 21.10, aligned 22.52 (R-082 22.64, R-088 22.54) | Kept: pruning costs nothing and removes the blocked views |
-| R-091 | 2026-11-21 | scan_009: plan 10.b-2, SfM chain (features, rot_sfm, adaptive BA, one track round) on the rectified keyframes (`v9pfs2`) | 3070 | running | | |
+| R-091 | 2026-11-21 | scan_009: plan 10.b-2, SfM chain (features, rot_sfm, adaptive BA, one track round) on the rectified keyframes (`v9pfs2`) | 3070 | ~1 h 40 min of work (plus a pause) | final 647 cameras, 3D obs median 100 (R-080 120); 45 – 60 s: 30 cameras, obs median 0 (R-080 41, 1) | Rejected (not trained) |
 
 ## Runs
 
@@ -2387,7 +2387,8 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   R-080's cameras). R-084's alignment says the held-out SfM poses are ~2° off; less shear should give cleaner
   matches and pair directions. Training afterwards (R-092) only if the camera model is at least as complete as R-080
   (647 cameras, 3D obs median 120).
-- **Start → end:** 15:03 → (running)
+- **Start → end:** 15:03 → 16:42 (extraction + matching 15:03 → 15:24; `r091b.sh` 15:25 → 16:42, including the pause in the
+  first `prior_ba.py`)
 - **Errors during the run:**
   - 15:24, bridge-pair import (`r091.sh` step 1): `matches_importer` exited 3221226505 (0xC0000409);
     `matches_importer_bridge.log`: `Error loading "…\colmap-4.2.0in\onnxruntime_providers_cuda.dll" which
@@ -2397,8 +2398,25 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
     PATH and continues the chain. Resolved: the import ran (15:25) and the chain continued.
   - Paused at Tayyab's request (2026-11-21, "can you pause it") during the first `prior_ba.py` (iteration 9 of 150,
     reprojection 1.89 → 1.35 px): the processes (`bash r091b.sh` ×2, `python prior_ba.py`) were suspended with
-    `NtSuspendProcess`, not killed; their PIDs are in `%TEMP%091_paused_pids.txt`. Resume with `NtResumeProcess` on
-    the same PIDs (or rerun `r091b.sh` from the `prior_ba.py` line if the PC restarts). Progress so far: rot_sfm on the
+    `NtSuspendProcess`, not killed; their PIDs are in `%TEMP%
+091_paused_pids.txt`. Resume with `NtResumeProcess` on
+    the same PIDs (or rerun `r091b.sh` from the `prior_ba.py` line if the PC restarts). Resumed the same day (`NtResumeProcess`, all three processes found). Progress so far: rot_sfm on the
     rectified keyframes kept **695 cameras**, 23,494 points, 135,406 observations (R-071 on raw keyframes: 698
     cameras, 23,490 points).
+- **Result:** (`r091.log`, `r091b.log`; per-stretch numbers from `stretch_stats.py`: cameras, 3D obs median, cameras
+  with < 10 obs)
+
+  | Model | All | 45 – 60 s | 90 – 105 s | Reprojection |
+  |---|---|---|---|---|
+  | R-071 raw keyframes, `rot_sfm` | 698, 54, 202 | 50, 0, 43 | 45, 3, 29 | |
+  | R-080 (best so far) | 647, 120, 110 | 41, 1, 23 | 37, 23, 12 | 1.13 px |
+  | R-091 `rot_sfm` + adaptive BA (rectified) | 695, 53, 211 | 45, 0, 42 | 41, 5, – | 1.27 px |
+  | R-091 + one track round (`--rs 1`) | 647, 100, 115 | 30, 0, 17 | 37, 22, – | 1.13 px |
+
+  `rot_sfm` on the rectified keyframes: 695 cameras, 23,494 points (R-071 on raw keyframes: 698, 23,490), so the
+  rectified images match about as well as the raw ones; the adaptive BA moved positions by a median 0.17 units. The
+  track round kept 647 cameras (−48) and fewer in 45 – 60 s (30 vs R-080's 41).
+- **Verdict:** rejected; not trained (R-092 not run). Removing the rolling-shutter shear does not give more matches
+  or tracks in the textureless stretch: 45 – 60 s stays at a median of 0 – 1 3D observations per camera. R-080
+  stays the best camera model. Folders kept: `work_v9pfs_cal` (database), `work_v9pfs2_sfm`.
 

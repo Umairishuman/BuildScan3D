@@ -877,3 +877,11 @@ Asked by Tayyab: "why is FYP taking up 125 gb", then "ok do those 3".
   view, 51 – 53 s +2.6 dB, aligned 22.21. R-090 (pruning only): 0 blocked, aligned 22.52 (= baseline): pruning is
   free. R-091 (10.b-2: features, rot_sfm, adaptive BA, one track round on the rectified keyframes) started.
 - Runs: R-086 – R-091. Decisions: none.
+- Later the same day: moved `stretch_stats.py`, `track_dir_check.py`, `render_compare.py` and `perframe.py` (as
+  `eval_perframe.py`) from the scratchpad into `src/arcore3dgs/`. R-091 (10.b-2): the bridge-pair import first
+  failed (cuBLAS DLL missing when COLMAP was called without `sfm_colmap.py`'s PATH), fixed in `r091b.sh`; paused and
+  resumed at Tayyab's request; result: no gain in 45 – 60 s (0 – 1 obs per camera), rejected, not trained.
+- Runs: R-089 – R-091. Decisions: none.
+- Next (Tayyab to choose): re-record 45 – 60 s of scan_009, or code layout-plane constraints (10.e / 10.g); whether
+  to make `--path_prune 0.1` the default in `run_v8.py` (a recipe choice, his).
+

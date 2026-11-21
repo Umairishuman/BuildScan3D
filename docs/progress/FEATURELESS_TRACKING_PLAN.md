@@ -516,3 +516,11 @@ Pruning is free (within the run-to-run spread, no blocked views): keep it on. Re
 stretch with no image support (+1.6 / +2.6 dB) and costs ~0.4 dB overall; 10.b-2 (R-091) re-solves the cameras on
 the rectified images to see whether the overall loss is the old cameras not matching the new images.
 
+**10.b-2 (R-091, 2026-11-21) and where §10 ends.** The full camera solve on rectified keyframes matches as well as on
+the raw ones (695 cameras, 23,494 points) but does not add tracking in 45 – 60 s (median 0 – 1 3D observations per
+camera, 30 – 45 cameras there vs R-080's 41); rejected, not trained. Summary of §10 on scan_009: measured
+(held-out split, test-pose alignment, run-to-run spread, blocked-view guard); kept: path pruning (no cost, no blocked
+views); rectification helps how 51 – 53 s renders (+1.6 / +2.6 dB) but costs ~0.4 dB overall; no software step
+tried here gives the 45 – 60 s cameras image support. What remains: a re-recording of that part of the room
+(10.g) or layout-plane constraints for it (not coded).
+
