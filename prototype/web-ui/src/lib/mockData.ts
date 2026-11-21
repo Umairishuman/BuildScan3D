@@ -238,6 +238,29 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [-0.15, -0.03, -0.11], target: [-0.22, -0.21, 0.87] },
   },
   {
+    // R-099 (2026-11-22): R-096's recipe (camera-path loops closed with image pairs that see the same place at
+    // different times, loop_path.py + prior_ba.py --pair_priors) trained on all 581 frames. File is local only
+    // (git-ignored).
+    id: "scan-009-loops",
+    name: "Scan 009 · loops closed (featureless 11.d)",
+    floor: "—",
+    block: "Residence",
+    area: "Not measured",
+    location: "scan_009_057ed3beb4fc • sensors + loop-closing image pairs",
+    dateCaptured: "Nov 15, 2026",
+    status: "draft",
+    statusLabel: "Experimental · 581 of 894 keyframes · scale not measured",
+    thumbnail: "/thumbnails/scan009_v9pgsr.jpg",
+    scansCount: 1,
+    gaussianCount: "513,603",
+    accuracy: "Scale not measured",
+    captureDevice: "realme RMX5111 (ARCore)",
+    description:
+      "Same recording as Scan 009. The camera path drifted along the walk, so walls seen early and late were built in different places. Here the path is corrected with image pairs that see the same place at different times. With the same recipe and 63 frames held out, the held-out frames match the photos better (+0.96 dB after pose alignment, R-096), and views from the room centre show one room instead of overlapping walls. This model uses every frame. Walls are still somewhat thick and sizes are not reliable.",
+    splatUrl: "/splats/scan009_v9plf.spz",
+    splatStart: { position: [-0.47, 0.06, -0.41], target: [-0.51, -0.12, 0.57] },
+  },
+  {
     // R-092 (2026-11-21): R-081's cameras, Gaussians reaching into the camera path pruned during training, and depth
     // priors for the 77 frames without SfM points (mono_prior.py --fill_scale). Trained with 69 held-out frames.
     // File is local only (git-ignored).
