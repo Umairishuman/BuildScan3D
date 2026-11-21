@@ -901,4 +901,13 @@ Asked by Tayyab: "why is FYP taking up 125 gb", then "ok do those 3".
   agrees across frames ~3× better than the per-frame Metric3D priors (5.3 % vs 15.1 %).
 - Runs: R-093. Decisions: D-081.
 - Next: 11.b (room planes), then 11.c (consistent depth guidance: VGGT depth on texture, planes elsewhere).
+- Then (Tayyab: "ok do that, and also complete 11.c afterwards"): 11.b. New `room_planes.py`: on R-080's model it
+  found 60 planes (5 "floors" at different heights): **the camera path's scale drifts ~2× along the walk** (camera to
+  floor 4.85 → 2.3 units, room height 8.3 → 4.6 units, Metric3D ratio 2.7 – 5.3 → 1.4 – 2.7). New `scale_drift.py`
+  rescales the path with the room height (s(t) 1.66 → 0.66), re-triangulates; Metric3D-ratio spread 3.81 → 2.29;
+  prior BA 1.10 px. R-094 trained on it (R-090's recipe); paused by Tayyab before the evaluation. `plane_prior.py`
+  (11.c) written, not run.
+- Runs: R-094 (trained, not evaluated). Decisions: none.
+- Next: evaluate R-094 on its own poses; `room_planes.py` on `work_v9psc_sfm` (should now be one room); 11.c
+  (`plane_prior.py` on a copy, retrain, evaluate).
 

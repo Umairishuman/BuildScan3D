@@ -2558,8 +2558,16 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   reprojection 1.11 → 1.10 px (R-080: 1.13), relative rotation vs the gyro prior median 0.062°, 622 cameras (3D obs
   median 108; 45 – 60 s: 36 cameras, median 1).
 - **Goal:** one room size along the whole walk; then one set of room planes (11.b) and consistent depth (11.c).
-- **Start → end:** (training running)
-- **Errors during the run:** `prior_ba.py` first stopped at the end (`FileNotFoundError: …sparse_scalefixigs.txt`):
+- **Start → end:** 18:37 → 19:06 (export 0.01, prior 3.56, init 1.43, train 23.05, ply 0.58 min, total 29.2);
+  `→ work_v9psc_sfm/gs_v9psc/splat.ply` (129 MB). Export kept 600 frames (R-090: 622). sfm_scale_check: ratio median
+  2.381 units per Metric3D metre, verdict "ok", close-up blocks frame_00395 (5.07×) and frame_05554 (7.30×).
+- **Paused** at Tayyab's request ("pause at the next stopping point") right after the export: the script was stopped
+  as `eval_offpath.py` started (19:06), so **no evaluation yet**. Not run: `eval_offpath.py` / `eval_align.py`
+  (note: the script compared R-082 / R-090 on R-094's corrected poses, which is wrong, since those models live in the
+  uncorrected coordinates; when resumed, R-094 is scored on its own and against R-090's own numbers: 21.10 / aligned
+  22.52) and `room_planes.py` on `work_v9psc_sfm`. Then 11.c (`plane_prior.py`, written, not run).
+- **Errors during the run:** `prior_ba.py` first stopped at the end (`FileNotFoundError: …sparse_scalefix
+igs.txt`):
   `scale_drift.py` wrote only cameras / images / points; fixed (it now copies `rigs.txt` and `frames.txt`), files
   copied by hand, rerun ok.
 

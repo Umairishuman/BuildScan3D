@@ -710,6 +710,9 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       11.a done 2026-11-21 (R-093, D-081): VGGT cannot place the blank-wall frames (rotation 3.5 – 10° off per step
       on the blank wall, 0.6 – 0.9° on texture); its depth is ~3× more consistent across frames than the Metric3D
       priors (5.3 % vs 15.1 %). Next 11.b.
+      11.b (2026-11-21): the sensor camera path's scale drifts ~2× along the walk (room height 8.3 → 4.6 units);
+      `scale_drift.py` corrects it with the room height; R-094 trained on the corrected path, paused before its
+      evaluation. 11.c: `plane_prior.py` written, not run.
     - [ ] 10.g planes for 45 – 60 s (a re-recording is not possible: the site is far away, Tayyab 2026-11-21).
       Next candidates: layout planes from the tracked walls, and placing the featureless frames by matching their
       depth maps to those planes; or leaving the untrackable frames out of training (Tayyab's idea).

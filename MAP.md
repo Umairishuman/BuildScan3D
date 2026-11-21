@@ -173,6 +173,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `eval_align.py` | Held-out PSNR / SSIM after test-pose alignment (model frozen, 6-DoF + colour per frame), for models trained with `--pose_opt` (R-084) | [eval] current |
 | `prune_near_path.py` | Removes Gaussians reaching within a radius of the camera path from a trained `splat.ply` (blocked views, R-087 / R-089); `path_points()` is also used by `geo_splatfacto.py --path_prune` | [eval] current |
 | `room_planes.py` | Room planes (walls / floor / ceiling) from plane_seg regions lifted with the depth priors + SfM points, before training; top-view `room_plan.png` (FEATURELESS §11.b, R-094) | [v9] experiment |
+| `plane_prior.py` | Rewrites the depth / normal priors from the room planes: per-frame scale tied to the planes, plane depth + normal on agreeing planar pixels; before / after cross-frame consistency (FEATURELESS §11.c) | [v9] experiment |
 | `scale_drift.py` | Corrects the scale drift of a sensor camera path with the room height (floor / ceiling distances per frame), re-triangulates the points (R-094) | [v9] experiment |
 | `vggt_chunk.py` | VGGT (downloaded, outside the repo, D-081) on a chunk of keyframes or dense video frames: rotation vs the gyro / an SfM model, positions vs the model, depth consistency vs the Metric3D priors (R-093) | [experiment] |
 | `eval_perframe.py` | Per held-out frame: PSNR of a held-out model vs a model that saw the frame, 3D support, time (R-084's per-stretch table) | [eval] current |
