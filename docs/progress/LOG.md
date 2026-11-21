@@ -884,4 +884,11 @@ Asked by Tayyab: "why is FYP taking up 125 gb", then "ok do those 3".
 - Runs: R-089 – R-091. Decisions: none.
 - Next (Tayyab to choose): re-record 45 – 60 s of scan_009, or code layout-plane constraints (10.e / 10.g); whether
   to make `--path_prune 0.1` the default in `run_v8.py` (a recipe choice, his).
+- Evening: viewer started on 127.0.0.1:4173 (port 3000 is in a Windows-reserved range now). Tayyab inspected R-081:
+  coherent only from the recorded angles, wrong depth off-path; no re-recording possible (far-away site). Found 77
+  training frames with no depth / normal prior (< 5 SfM points), mostly in the featureless stretches. New
+  `mono_prior.py --fill_scale` + `run_v8.py --prior_args`; R-092: flatness 9.92 → 6.77 cm, aligned PSNR −0.26 dB,
+  cleaner room-centre views. Problem: `--prior_args "--fill_scale"` is parsed as an option (use
+  `--prior_args=--fill_scale`).
+- Runs: R-092. Decisions: none (re-recording ruled out by Tayyab: noted in STATUS §7).
 

@@ -138,6 +138,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-089 | 2026-11-21 | scan_009: R-087 (rectified keyframes) plus path pruning in training (`v9pfo`) | 3070 | 29.4 min | blocked views 1 (R-087 16, R-082 7); PSNR 20.68, aligned 22.21 (R-087 22.18, R-082 22.64); 51 – 53 s aligned 24.18 (R-082 21.59) | Inconclusive (best in 51 – 53 s, not overall) |
 | R-090 | 2026-11-21 | scan_009: R-082 plus path pruning in training (`v9pfq`) | 3070 | 28.2 min | blocked views 0 (R-082 7); PSNR 21.10, aligned 22.52 (R-082 22.64, R-088 22.54) | Kept: pruning costs nothing and removes the blocked views |
 | R-091 | 2026-11-21 | scan_009: plan 10.b-2, SfM chain (features, rot_sfm, adaptive BA, one track round) on the rectified keyframes (`v9pfs2`) | 3070 | ~1 h 40 min of work (plus a pause) | final 647 cameras, 3D obs median 100 (R-080 120); 45 – 60 s: 30 cameras, obs median 0 (R-080 41, 1) | Rejected (not trained) |
+| R-092 | 2026-11-21 | scan_009: R-090 plus depth priors for frames without SfM support (`--fill_scale`, `v9pfu`) | 3070 | 29.9 min | flatness 6.77 vs 9.92 cm (R-090), 0 blocked; aligned PSNR 22.26 vs 22.52, SSIM 0.880 vs 0.878; held-out pose correction 1.62° vs 2.02° | Kept for inspection (flatter, PSNR −0.26) |
 
 ## Runs
 
@@ -2419,4 +2420,51 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Verdict:** rejected; not trained (R-092 not run). Removing the rolling-shutter shear does not give more matches
   or tracks in the textureless stretch: 45 – 60 s stays at a median of 0 – 1 3D observations per camera. R-080
   stays the best camera model. Folders kept: `work_v9pfs_cal` (database), `work_v9pfs2_sfm`.
+
+### R-092 · 2026-11-21 · scan_009_057ed3beb4fc: depth priors for unsupported frames (`--fill_scale`, `v9pfu`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ b4949cb plus uncommitted `mono_prior.py --fill_scale`,
+  `run_v8.py --prior_args`
+- **Why:** Tayyab inspected R-081 in the viewer: coherent only from the recorded angles, off-path the splat depth
+  looks wrong. `mono_prior.py` aligns Metric3D to each frame's SfM points and gives frames with < 5 points **no**
+  depth / normal prior (`valid` all false): 77 of 622 training frames of `work_v9pfq_sfm`, 19 of 37 at 45 – 60 s, 25
+  of 104 at 60 – 90 s, 17 of 132 at 150 – 190 s, i.e. no geometry guidance exactly where tracking failed. Plan step
+  chosen by Tayyab ("ok try 1."): give those frames a scale interpolated in time from well-fitted neighbours.
+- **Code:** `mono_prior.py --fill_scale`: after the normal pass, frames with < 5 SfM points get scale =
+  exp(interp over time of log median(z_sfm / z_mono) of frames with >= 20 inliers and residual < 15 %), shift 0,
+  normals from that depth, `valid` set; the leave-one-out error of the interpolation is printed. `run_v8.py
+  --prior_args` passes it.
+- **Dataset:** as R-090 (`work_v9pfz` → `work_v9pfu`, `work_v9pfh_sfm` → `work_v9pfu_sfm`, raw keyframes, split
+  `s10_test.txt`)
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r092.sh` (log `r092.log`): R-090's command with tag `v9pfu` and
+  `--prior_args "--fill_scale"`; then `eval_offpath.py` and `eval_align.py` with R-082 and R-090
+- **Goal:** better depth off-path (Tayyab's observation) without losing the training views; judged by aligned
+  held-out PSNR, the blocked-view count and the room-centre sheet (`centre.jpg`), plus Tayyab in the viewer.
+- **Start → end:** 16:55 → 17:50 (`r092b.sh`: export 0.01, prior 3.66, init 2.18, train 23.33, ply 0.67 min, total 29.9;
+  evaluations 25 min)
+- **Errors during the run:**
+  - First start: `run_v8.py: error: argument --prior_args: expected one argument`: argparse takes a value that starts
+    with `--` and has no space (`--fill_scale`) for an option (`--train_args "--path_prune 0.1"` passes because of
+    the space). Failed before any processing (copies done). Fix: `--prior_args=--fill_scale`, rerun from the
+    undistort step (`r092b.sh`). Resolved: `r092b.sh` ran to the end.
+- **Result:** `fill_scale: 77 frames without SfM support got a time-interpolated scale from 434 well-fitted frames;
+  leave-one-out scale error on those: median 5.3 %, p90 16.9 %` (the fitted frames' own alignment error: median
+  5.9 %). 14,477 Gaussians path-pruned; `→ work_v9pfu_sfm/gs_v9pfu/splat.ply`, 591,387 splats. `eval_r092/`:
+
+  | Model | PSNR | SSIM | Flatness cm (unblocked) | Blocked | PSNR aligned | SSIM aligned | Correction median |
+  |---|---|---|---|---|---|---|---|
+  | R-082 | 20.80 | 0.874 | 9.65 | 7 | 22.65 | 0.885 | 2.02° |
+  | R-090 (pruning) | 21.10 | 0.868 | 9.92 | 0 | 22.52 | 0.878 | 2.02° |
+  | R-092 (pruning + fill) | 20.64 | 0.872 | **6.77** | 0 | 22.26 | 0.880 | **1.62°** |
+
+  Aligned per stretch R-082 / R-090 / R-092: still 24.90 / 24.87 / 24.35; 22 – 25 s 26.44 / 26.47 / 25.91; 51 – 53 s
+  21.59 / 22.72 / 21.97; 78 – 81 s 23.63 / 23.96 / 23.81; 106 s 29.12 / 28.49 / 28.79; 134 – 137 s 17.55 / 17.07 /
+  16.91; 162 – 165 s 22.40 / 21.20 / 21.50; 186 s 14.88 / 15.75 / 14.15. Room-centre views (`eval_r092/centre.jpg`,
+  never visited by the camera): at 90° and 180° R-092's walls have fewer streaks / floaters and a straighter door
+  edge than R-082 / R-090; the 0° and 270° views are a plain wall in all three.
+- **Verdict:** kept for Tayyab's inspection. Flatness improves by 3.1 cm with no blocked views (twice the 1.5 cm
+  run-to-run spread, and not a sheet artefact this time), held-out views need a smaller pose correction (1.62° vs
+  2.02°), aligned SSIM is level, aligned PSNR is 0.26 dB lower (about the run-to-run spread). The geometry is better;
+  the colour fit is not. One run.
 
