@@ -172,6 +172,10 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `eval_offpath.py` | Off-path split metrics (PSNR, SSIM, sharpness, flatness, blocked views) + sheets | [eval] current |
 | `eval_align.py` | Held-out PSNR / SSIM after test-pose alignment (model frozen, 6-DoF + colour per frame), for models trained with `--pose_opt` (R-084) | [eval] current |
 | `prune_near_path.py` | Removes Gaussians reaching within a radius of the camera path from a trained `splat.ply` (blocked views, R-087 / R-089); `path_points()` is also used by `geo_splatfacto.py --path_prune` | [eval] current |
+| `eval_perframe.py` | Per held-out frame: PSNR of a held-out model vs a model that saw the frame, 3D support, time (R-084's per-stretch table) | [eval] current |
+| `stretch_stats.py` | Per SfM model: 3D observations per camera, path smoothness, overall and in time stretches; movement vs a reference model | [eval] current |
+| `track_dir_check.py` | Agreement of video-track pair directions with a model's path, by support and time stretch (R-077 – R-079) | [eval] current |
+| `render_compare.py` | Two models on their common training views: PSNR per model and a photo / A / B sheet (R-081) | [eval] current |
 | `fixture_checklist.py` | Fixture check sheet for one room from `semantic.json` (+ layout): every accepted fixture with height, size, wall, a real / wrong class / false column, a missed table and per-class summary; `--rejected` also lists the rule-rejected candidates (plan 4.2, E3) | [eval] current |
 | `make_split.py` | Writes the held-out list for `run_v8.py --split` / `eval_offpath.py`: 6 × 3 s stretches of the walk (D-070); `--add` merges another held-out list (still frames) | [eval] current |
 | `sfm_scale_check.py` | Finds parts of an SfM model rebuilt at the wrong scale ("mini room"): per-frame SfM depth / Metric3D depth from `mono_prior` (TRAINING R-066, R-067) | [eval] diagnostic |
