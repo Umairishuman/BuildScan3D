@@ -942,3 +942,5 @@ Tayyab: "what are the next steps, plan accordingly you have the entire night to 
 Tayyab, after viewing R-099 (`scan-009-loops`): "this model is miles better ... MUCH more like the real room". Issues
 he saw: off-angle views, splats detached from walls / doors, floating splats in the bathroom doorway blocking the view
 inside, missing floor splats in the middle of the room ("maybe because of the video"). Next plan proposed, his choice.
+Disk clean-up (Tayyab chose option 1): regenerable bulk of six rejected / inconclusive scan_009 runs and four rejected
+folders deleted, 3.8 -> 14 GB free; list in `dataset/scan_009_057ed3beb4fc/cleanup_2026-11-22.txt`, STATUS §7.

@@ -730,8 +730,14 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
     - [ ] Tayyab to decide: R-096's loop closure as part of the sensor-path recipe (OD-15); which scan_009 model the
       viewer shows (R-099 proposed); whether to retry the second loop round with a pair check (e.g. reject pairs whose
       direction disagrees with R-096's path by > 10° before solving).
-    - [ ] Disk on the RTX 3070 PC: 4.2 GB free after R-099 (`df`, 2026-11-22 04:20); the scan_009 work folders
-      `work_v9plm*`, `work_v9pcs*`, `work_v9ppl*` (rejected / inconclusive runs, ~1.4 GB each) could go, Tayyab's call.
+    - [x] Free disk on the 3070 PC (2026-11-22, Tayyab chose option 1): 3.8 → 14 GB free (`df`). Deleted the
+      regenerable bulk (`mono_prior/`, `images/`, `undist/`, `undist_fast/`) of six rejected / inconclusive scan_009
+      runs (R-086 `v9pfk`, R-087 `v9pfs`, R-089 `v9pfo`, R-095 `v9ppl`, R-097 `v9plm`, R-098 `v9pcs`; their
+      `splat.ply`, `sparse/`, eval folders and logs kept) and four rejected folders not used by later runs
+      (`track_loop_r085`, `work_v9pfs2_sfm`, `work_v9pfv_sfm`, `work_v9pfw_sfm`). Exact list with sizes:
+      `dataset/scan_009_057ed3beb4fc/cleanup_2026-11-22.txt`. Not touched: the other room datasets
+      (newRoomAttemptSadness 36 GB, roomAttemptSadness2 17 GB, roomAttemptSadness 6.8 GB: could move to an external
+      drive) and ~14 older scan_009 folders (~8 GB, verdicts not checked). The project uses ~110 GB of the 931 GB C:.
     - [ ] 10.g planes for 45 – 60 s (a re-recording is not possible: the site is far away, Tayyab 2026-11-21).
       Next candidates: layout planes from the tracked walls, and placing the featureless frames by matching their
       depth maps to those planes; or leaving the untrackable frames out of training (Tayyab's idea).
