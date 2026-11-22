@@ -731,8 +731,15 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       evidence) on R-096. See-through rule alone: aligned 23.54 vs 23.63 (clears mid-air splats above head height);
       the camera-path radius rule removes real wall (−0.23 dB). The bathroom doorway (125 s) is a smear even from its
       own training pose and is unchanged: the 100 – 150 s stretch fits worst (cameras), not floaters. Not adopted.
-    - [ ] Plan step 4, pose refinement in training on R-096 (R-101, running 2026-11-22), then step 3, second loop
-      round with a pair check against R-096's path (R-102) (Tayyab, D-082).
+    - [x] Plan step 4, pose refinement in training on R-096 (2026-11-22, R-101): aligned 23.96 vs 23.63, SSIM 0.896 vs
+      0.888, +1.8 min training. Kept.
+    - [x] Plan step 3, second loop round with a pair check (`loop_path.py --gate 10`, 2026-11-22, R-102): 30 – 90 s
+      +1.6 – 1.8 dB but 134 – 140 s broken again (15.83, as R-097). Cause: the camera model has a hole at 125.4 – 133.2 s
+      (35 keyframes, none placed: blur 12 – 42 px, no ARCore pose); the bathroom doorway (125 s) is at its start.
+      Rejected. The doorway is a limit of the video there (fast blurred pan), not of the method.
+    - [ ] Tayyab to decide: viewer model with R-101's recipe (R-096 cameras + `--pose_opt`) on all frames (~30 min);
+      whether to try a hole-aware second loop round; or move to the analyzer (D-082) now. Analyzer must detect path
+      holes (unplaced keyframes, blur, no ARCore pose).
     - [ ] Analyzer-driven pipeline (D-082, [PIPELINE_ANALYZER_PLAN.md](PIPELINE_ANALYZER_PLAN.md)), after steps 4 / 3:
       analyzer `analysis.json` on the four test recordings; route decision and the sensor-path chain inside
       `run_v8.py` with per-step checks; test bench vs the reference results; frame weighting by camera trust.

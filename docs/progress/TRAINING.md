@@ -148,7 +148,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-099 | 2026-11-22 | scan_009: R-096's recipe on all frames, for the viewer (`v9plf`, `scan-009-loops`) | 3070 | 27.9 min | no held-out score (all frames); off-path views as R-096 | Kept (viewer) |
 | R-100 | 2026-11-22 | scan_009: floater clean-up (`clean_splats.py --mono`) on R-096's model, no retraining | 3070 | 37 min (3 cleanings 20 s, evaluations 36 min) | aligned on 63 held-out frames: both rules 23.31, see-through rule only 23.54, camera-path rule only 23.40 (R-096 23.63); bathroom doorway (125 s) unchanged | Rejected as the doorway fix; see-through rule neutral, camera-path rule harmful |
 | R-101 | 2026-11-22 | scan_009: R-096 plus camera refinement in training (`--pose_opt`, `v9plo`) | 3070 | 30.4 min (train 24.3, R-096 22.5) | aligned 23.96 vs R-096 23.63 (63 frames), SSIM 0.896 vs 0.888; 35 frames > 0.5 dB better, 13 worse; doorway (125 s) unchanged | Kept (modest gain, +1.8 min training) |
-| R-102 | 2026-11-22 | scan_009: second loop round with a pair check (`loop_path.py --gate 10`), R-096's recipe (`v9plg`) | 3070 | planned (after R-101) | | |
+| R-102 | 2026-11-22 | scan_009: second loop round with a pair check (`loop_path.py --gate 10`), R-096's recipe (`v9plg`) | 3070 | 28.5 min + 1.5 min solve / BA | aligned 22.91 vs R-096 23.58 on 60 common frames; 30 – 90 s +1.6 – 1.8 dB, 134 – 140 s broken again (20.10 → 15.83); path hole 125.4 – 133.2 s found | Rejected (the hole, not the pairs, breaks 134 – 140 s) |
 
 ## Runs
 
@@ -2872,7 +2872,24 @@ igs.txt`):
 - **Goal:** plan step 3 (Tayyab, D-082). R-097 used the extra pairs without a check: four stretches better, 134 – 137 s
   broken (20.10 → 15.81). Here pairs that disagree with R-096's path by > 10° are left out before solving (the check
   is meant to be generic: PIPELINE_ANALYZER_PLAN §2.3).
-- **Start → end:**
-- **Errors during the run:**
-- **Result:**
-- **Verdict:**
+- **Start → end:** 14:52 → 15:32 (loop solve 9 s, prior BA 1.3 min, copy / export 14:54; export 0.01, prior 3.21,
+  init 1.78, train 22.91, ply 0.60 min, total 28.5; evaluation 10 min)
+- **Errors during the run:** none.
+- **Result:** pair check: 322 of 3,161 pairs > 10° off R-096's path left out (their frames mostly at 0 – 30 s and
+  130 – 190 s). Held-out pairs >= 60 s: median 2.14 → 0.94°; cameras moved median 0.096, max 0.229 units; 26,497
+  points (484 dropped). Model `work_v9plg_sfm/gs_v9plg/splat.ply`. `eval_align.py` (60 frames common to R-096,
+  R-101, R-102; the export dropped 3 more held-out frames): R-096 23.58 / R-101 23.97 / **R-102 22.91**, SSIM 0.876,
+  pose correction median 2.98°. Per stretch (R-096 / R-101 / R-102): 0 – 10 s 28.25 / 28.39 / 28.17, 10 – 30 s
+  25.33 / 26.12 / 25.87, 30 – 60 s 21.38 / 20.00 / 23.13, 60 – 90 s 23.47 / 24.94 / 25.09, 90 – 120 s 30.36 /
+  30.30 / 27.91, **134 – 140 s 20.10 / 19.76 / 15.83** (corrections up to 12°, as R-097's 15.81), 160 – 170 s
+  24.82 / 24.60 / 23.20.
+  **Why 134 – 140 s breaks** (R-097 and R-102 alike): the camera model has two holes, 112.2 → 115.6 s (one step of
+  1.54 units) and **125.4 → 133.2 s (one step of 1.40 units)**. The keyframe selection picked 35 frames in the second
+  hole (`work_v9pfz/frames.json`); none is in the camera model: predicted blur 12 – 42 px (5 – 7 px after 133.7 s),
+  no ARCore pose (ARCore "lost" from 133.7 s). The second round moves 115 – 125 s by 0.19 – 0.28 units while 133 – 142 s
+  moves 0.03 – 0.06; the two sides are joined only by the loose step across the hole. The bathroom doorway (125 s) is
+  at the start of this hole: the bathroom interior is seen almost only in the unplaceable blurred frames.
+- **Verdict:** rejected as a model. The gated pairs help where the path is continuous (30 – 90 s +1.6 – 1.8 dB) and
+  break the stretch after the 125 – 133 s hole. Finding for the analyzer (PIPELINE_ANALYZER_PLAN): detect path holes
+  (unplaced keyframes, blur, no ARCore pose) and keep a loop correction from moving one side of a hole against the
+  other unless pairs tie both sides.

@@ -41,6 +41,7 @@ Measures the recording per time window (e.g. 5 s) and writes `analysis.json`:
 | SfM rotation vs gyro agreement | `rot_sfm.py` / `gyro_loop_bias.py` |
 | ARCore tracking state, sensor-path jumps | `poses.csv` |
 | blur | `select_sharp.py` sharpness, `blur_motion.json` |
+| holes in the camera path: keyframes not placed, one long step | camera model vs `frames.json` (R-102: scan_009 125.4 – 133.2 s, 35 keyframes, none placed, blur 12 – 42 px, no ARCore pose) |
 | scale consistency | `sfm_scale_check.py` |
 
 Each window gets a label: **textured / weak / featureless**. The analyzer must not add a heavy pass of its own: it
@@ -63,7 +64,7 @@ A step is kept only when a measured check improves; otherwise it is skipped and 
 |---|---|
 | loop closure (`loop_path.py`, `prior_ba.py --pair_priors`) | held-out loop pairs' angle improves (already built in) |
 | scale-drift correction (`scale_drift.py`) | room height along the walk more constant, Metric3D ratio spread not worse (R-094) |
-| extra loop pairs (`loop_match.py`) | new pairs agree with the current path within a gate (step 3, R-102) |
+| extra loop pairs (`loop_match.py`) | new pairs agree with the current path within a gate (R-102); a correction must not move one side of a path hole against the other unless pairs tie both sides (R-102 broke 134 – 140 s) |
 | pose refinement in training (`--pose_opt`) | held-out aligned PSNR (R-101) |
 | floater clean-up (`clean_splats.py`) | held-out aligned PSNR not worse (R-100: the camera-path rule failed this) |
 
