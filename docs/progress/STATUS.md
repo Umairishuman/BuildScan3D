@@ -731,6 +731,12 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       evidence) on R-096. See-through rule alone: aligned 23.54 vs 23.63 (clears mid-air splats above head height);
       the camera-path radius rule removes real wall (−0.23 dB). The bathroom doorway (125 s) is a smear even from its
       own training pose and is unchanged: the 100 – 150 s stretch fits worst (cameras), not floaters. Not adopted.
+    - [ ] Plan step 4, pose refinement in training on R-096 (R-101, running 2026-11-22), then step 3, second loop
+      round with a pair check against R-096's path (R-102) (Tayyab, D-082).
+    - [ ] Analyzer-driven pipeline (D-082, [PIPELINE_ANALYZER_PLAN.md](PIPELINE_ANALYZER_PLAN.md)), after steps 4 / 3:
+      analyzer `analysis.json` on the four test recordings; route decision and the sensor-path chain inside
+      `run_v8.py` with per-step checks; test bench vs the reference results; frame weighting by camera trust.
+      Processing time is a primary target: measure the sensor-path chain end to end (not measured yet).
     - [ ] Tayyab to decide: R-096's loop closure as part of the sensor-path recipe (OD-15); which scan_009 model the
       viewer shows (R-099 proposed); whether to retry the second loop round with a pair check (e.g. reject pairs whose
       direction disagrees with R-096's path by > 10° before solving).

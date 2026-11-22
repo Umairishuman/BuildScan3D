@@ -316,6 +316,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | Path | What |
 |---|---|
 | `progress/STATUS.md`, `DECISIONS.md`, `LOG.md`, `TRAINING.md` | The four live project records (CLAUDE.md §1) |
+| `progress/PIPELINE_ANALYZER_PLAN.md` | **current** · Plan (2026-11-22, D-082, not started): analyzer stage that labels a recording and picks the camera route, self-checking correction steps, four-recording test bench, processing-time rules |
 | `progress/FEATURELESS_TRACKING_PLAN.md` | **current** · Draft plan (2026-11-18) for placing cameras in featureless stretches: gyro rotation, lines / junctions, the room layout as a map, dense matchers; measurements, steps, options (OD-14) |
 | `progress/COMPLETION_PLAN.md` | **current** · Plan to finish by 2026-12-04: every open task by pipeline step, with done-when, dependencies, priority, week; snapshot of the shared doc (link inside) |
 | `progress/Problems_and_Solutions.md` | Technical evidence for every problem and fix (P&S §x) |

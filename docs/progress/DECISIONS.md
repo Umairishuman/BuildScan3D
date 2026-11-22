@@ -763,6 +763,24 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   the step's requirement). Answers the open VGGT question in plan §9.3 / STATUS.
 - **Status:** Active.
 
+## D-082 · 2026-11-22 · Plan an analyzer-driven pipeline; processing time a primary target; finish scan_009 steps 4 and 3 first
+
+- **Decision:** the featureless work moves towards one pipeline that decides its route by itself: an analyzer stage
+  labels the recording (textured / weak / featureless per time window) and picks the camera route; every corrective
+  step keeps itself only when a measured check improves; the rules are set on a four-recording test bench, not on
+  scan_009. Total processing time is a primary target alongside quality. Plan recorded in
+  [PIPELINE_ANALYZER_PLAN.md](PIPELINE_ANALYZER_PLAN.md), status planned. For now: plan step 4 (pose refinement in
+  training, R-101) then step 3 (second loop round with a pair check) on scan_009, as before.
+- **Why:** the scan_009 recipe is hand-tuned to one recording and runs from hand-written scripts outside `run_v8.py`;
+  it must work on textured and featureless recordings alike, and the processing time has to reach good numbers by
+  the end of the project.
+- **Evidence:** R-096 – R-100 (scan_009 chain and its checks); processing times in PIPELINE_ANALYZER_PLAN §4.
+- **Rejected alternatives:** continuing scan_009-only fixes without a pipeline plan; starting the analyzer before
+  steps 4 and 3 (Tayyab chose to finish them first).
+- **By:** Muhammad Tayyab ("record plan for an eventual pipeline/analyzer, also we need to consider total processing
+  time very much ... for now continue the step 4 and then 3 as we were", 2026-11-22).
+- **Status:** Active.
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |

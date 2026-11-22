@@ -949,3 +949,7 @@ Plan step 1 (Tayyab: "do step 1"), R-100: `clean_splats.py` extended for sensor-
 `--max_depth`). On R-096: see-through rule −0.09 dB, camera-path rule −0.23 dB; the bathroom doorway smear at 125 s is
 unchanged and shows even from its own training pose: the 100 – 150 s stretch fits worst, so the doorway is a camera
 problem there, not floaters. Not adopted. Next: Tayyab to choose (camera fixes for 100 – 150 s first).
+
+Tayyab: the featureless work is not a proper pipeline (hand-targeted to parts of one recording); asked for an analyzer
+that decides automatically for textured and featureless recordings, with total processing time a primary target.
+Recorded as D-082 and `docs/progress/PIPELINE_ANALYZER_PLAN.md` (planned). For now steps 4 then 3: R-101 started.
