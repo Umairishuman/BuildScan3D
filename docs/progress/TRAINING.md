@@ -147,6 +147,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-098 | 2026-11-22 | scan_009: 11.c second form, prior pixels contradicted by other views dropped (`prior_consistency.py`) on R-096's cameras (`v9pcs`) | 3070 | 24.0 min | loop-partner depth disagreement 12.4 → 9.1 %; aligned 23.61 vs R-096 23.63 (63 frames), SSIM 0.892 vs 0.888, flatness 8.54 vs 6.57 | Inconclusive, not adopted |
 | R-099 | 2026-11-22 | scan_009: R-096's recipe on all frames, for the viewer (`v9plf`, `scan-009-loops`) | 3070 | 27.9 min | no held-out score (all frames); off-path views as R-096 | Kept (viewer) |
 | R-100 | 2026-11-22 | scan_009: floater clean-up (`clean_splats.py --mono`) on R-096's model, no retraining | 3070 | 37 min (3 cleanings 20 s, evaluations 36 min) | aligned on 63 held-out frames: both rules 23.31, see-through rule only 23.54, camera-path rule only 23.40 (R-096 23.63); bathroom doorway (125 s) unchanged | Rejected as the doorway fix; see-through rule neutral, camera-path rule harmful |
+| R-101 | 2026-11-22 | scan_009: R-096 plus camera refinement in training (`--pose_opt`, `v9plo`) | 3070 | running | | |
 
 ## Runs
 
@@ -2828,3 +2829,20 @@ igs.txt`):
 - **Verdict:** rejected as the fix for the doorway: the doorway smear is not free-space floaters but the 100 – 150 s
   stretch fitting badly (cameras); the camera-path rule is harmful (−0.23 dB); the see-through rule alone is close to
   neutral (−0.09 dB) and only clears mid-air splats; not adopted. `clean_splats.py --mono` kept as a tool.
+
+### R-101 · 2026-11-22 · scan_009_057ed3beb4fc: R-096 plus camera refinement in training (`v9plo`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 61655ce
+- **Dataset:** `work_v9pfz` → `work_v9plo`; R-096's cameras `work_v9pfy_sfm/sparse_loop2_pba` → `work_v9plo_sfm/sparse/0`
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r101.sh` (log `r101.log`): `r096.sh` with tag `v9plo` plus `--pose_opt`
+  (nerfstudio SO3xR3 camera optimiser, as R-084); `eval_offpath.py`, `eval_align.py` (63 common held-out frames),
+  `offpath_views.py` with R-096
+- **Goal:** plan step 4 (Tayyab 2026-11-22: "continue the step 4 and then 3"). R-100 showed the bathroom doorway
+  (125 s) is a smear even from its own training pose and the 100 – 150 s stretch fits worst: per-frame camera error.
+  R-084 tried `--pose_opt` on R-080's cameras (no gain after alignment); R-096's cameras are closer, the case pose
+  refinement is made for. Processing time is recorded too (Tayyab: total processing time matters).
+- **Start → end:**
+- **Errors during the run:**
+- **Result:**
+- **Verdict:**
