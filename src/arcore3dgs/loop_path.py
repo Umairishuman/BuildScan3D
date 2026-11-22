@@ -14,6 +14,9 @@ agree worse with the path (p75 angle 11.4 -> 28.6 deg). Here the camera centres 
   - u_ab is in rot_sfm's world; one rotation to the model's world is fitted on the short pairs (|dt| < 5 s)
     (--model_frame: directions from loop_match.py, already in the model's world);
   - a tiny pull to the input positions fixes the gauge.
+Pair check (--gate deg, 2026-11-22, after R-097): pairs whose direction disagrees with the INPUT path by more than
+the gate are left out before solving. For a second round on an already loop-closed path (R-096): new pairs may only
+make small corrections; R-097 without the check broke the 134 - 137 s stretch with wrong pairs.
 Validation: a --hold fraction of the loop pairs is left out of a first solve, and their angle before / after is
 printed; the written model uses all pairs. Points are re-triangulated (scale_drift.write_model).
 
@@ -98,6 +101,8 @@ def main():
     ap.add_argument("--s0", type=float, default=0.01); ap.add_argument("--s1", type=float, default=0.05)
     ap.add_argument("--hold", type=float, default=0.2); ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--iters", type=int, default=12); ap.add_argument("--max_px", type=float, default=8.0)
+    ap.add_argument("--gate", type=float, default=0.0,
+                    help="deg; > 0: drop pairs whose angle on the input path exceeds this before solving")
     ap.add_argument("--model_frame", action="store_true",
                     help="the directions are already in the model's world (loop_match.py), no rotation is fitted")
     a = ap.parse_args()
@@ -125,6 +130,15 @@ def main():
     E_all = [(idx[x], idx[y], Q @ u, w) for (x, y, u, w), d_ in zip(raw, dt) if d_ >= a.min_dt]
     T_all = dt[dt >= a.min_dt]
     print(f"{len(E_all)} loop pairs with |dt| >= {a.min_dt} s", flush=True)
+    n_gated = 0
+    if a.gate > 0 and E_all:
+        ok = angles(C0, E_all) <= a.gate
+        bad_t = sorted(T[e[0]] for e, o in zip(E_all, ok) if not o) + sorted(T[e[1]] for e, o in zip(E_all, ok) if not o)
+        hist = np.histogram(bad_t, bins=np.arange(0, T.max() + 10, 10))[0]
+        n_gated = int((~ok).sum())
+        print(f"pair check: {n_gated} of {len(E_all)} pairs disagree with the input path by > {a.gate:g} deg, left out; "
+              f"their frames per 10 s: " + " ".join(f"{10 * k}s:{n}" for k, n in enumerate(hist) if n), flush=True)
+        E_all = [e for e, o in zip(E_all, ok) if o]; T_all = T_all[ok]
     steps = np.diff(C0, axis=0); sig = a.s0 + a.s1 * np.linalg.norm(steps, axis=1)
 
     rng = np.random.default_rng(a.seed); hold = rng.random(len(E_all)) < a.hold
@@ -156,7 +170,7 @@ def main():
               open(os.path.join(a.model_out, "loop_pairs.json"), "w"))
     print(f"{int(ok.sum())} of {len(E_all)} loop pairs agree with the solved path (< {3 * a.sigma_dir:g} deg): "
           f"loop_pairs.json", flush=True)
-    json.dump(dict(params=vars(a), residuals=res, moved_median=float(np.median(mv)), moved_max=float(mv.max()),
+    json.dump(dict(params=vars(a), gated=n_gated, residuals=res, moved_median=float(np.median(mv)), moved_max=float(mv.max()),
                    shift_per_10s=per10, points=len(out_pts), dropped=dropped),
               open(os.path.join(a.model_out, "loop_path.json"), "w"), indent=1)
 

@@ -148,6 +148,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-099 | 2026-11-22 | scan_009: R-096's recipe on all frames, for the viewer (`v9plf`, `scan-009-loops`) | 3070 | 27.9 min | no held-out score (all frames); off-path views as R-096 | Kept (viewer) |
 | R-100 | 2026-11-22 | scan_009: floater clean-up (`clean_splats.py --mono`) on R-096's model, no retraining | 3070 | 37 min (3 cleanings 20 s, evaluations 36 min) | aligned on 63 held-out frames: both rules 23.31, see-through rule only 23.54, camera-path rule only 23.40 (R-096 23.63); bathroom doorway (125 s) unchanged | Rejected as the doorway fix; see-through rule neutral, camera-path rule harmful |
 | R-101 | 2026-11-22 | scan_009: R-096 plus camera refinement in training (`--pose_opt`, `v9plo`) | 3070 | running | | |
+| R-102 | 2026-11-22 | scan_009: second loop round with a pair check (`loop_path.py --gate 10`), R-096's recipe (`v9plg`) | 3070 | planned (after R-101) | | |
 
 ## Runs
 
@@ -2842,6 +2843,24 @@ igs.txt`):
   (125 s) is a smear even from its own training pose and the 100 – 150 s stretch fits worst: per-frame camera error.
   R-084 tried `--pose_opt` on R-080's cameras (no gain after alignment); R-096's cameras are closer, the case pose
   refinement is made for. Processing time is recorded too (Tayyab: total processing time matters).
+- **Start → end:**
+- **Errors during the run:**
+- **Result:**
+- **Verdict:**
+
+### R-102 · 2026-11-22 · scan_009_057ed3beb4fc: second loop round with a pair check against R-096's path (`v9plg`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` (`loop_path.py --gate`, committed before the run)
+- **Dataset:** R-096's cameras `work_v9pfy_sfm/sparse_loop2_pba`; R-097's pair directions (old + new pairs, model
+  world) `work_v9pfy_sfm/loop_match2/pair_directions.json` (no new matching); `work_v9pfz` → `work_v9plg`
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r102.sh` (log `r102.log`): `loop_path.py … --model_frame --gate 10`
+  → `sparse_loop4`; `prior_ba.py … --pair_priors sparse_loop4/loop_pairs.json` (settings as R-096) →
+  `sparse_loop4_pba`; R-096's recipe with tag `v9plg` (no `--pose_opt`, so the change is the cameras only);
+  `eval_align.py`, `offpath_views.py` with R-096
+- **Goal:** plan step 3 (Tayyab, D-082). R-097 used the extra pairs without a check: four stretches better, 134 – 137 s
+  broken (20.10 → 15.81). Here pairs that disagree with R-096's path by > 10° are left out before solving (the check
+  is meant to be generic: PIPELINE_ANALYZER_PLAN §2.3).
 - **Start → end:**
 - **Errors during the run:**
 - **Result:**
