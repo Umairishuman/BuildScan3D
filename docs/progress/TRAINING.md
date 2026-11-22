@@ -147,7 +147,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-098 | 2026-11-22 | scan_009: 11.c second form, prior pixels contradicted by other views dropped (`prior_consistency.py`) on R-096's cameras (`v9pcs`) | 3070 | 24.0 min | loop-partner depth disagreement 12.4 → 9.1 %; aligned 23.61 vs R-096 23.63 (63 frames), SSIM 0.892 vs 0.888, flatness 8.54 vs 6.57 | Inconclusive, not adopted |
 | R-099 | 2026-11-22 | scan_009: R-096's recipe on all frames, for the viewer (`v9plf`, `scan-009-loops`) | 3070 | 27.9 min | no held-out score (all frames); off-path views as R-096 | Kept (viewer) |
 | R-100 | 2026-11-22 | scan_009: floater clean-up (`clean_splats.py --mono`) on R-096's model, no retraining | 3070 | 37 min (3 cleanings 20 s, evaluations 36 min) | aligned on 63 held-out frames: both rules 23.31, see-through rule only 23.54, camera-path rule only 23.40 (R-096 23.63); bathroom doorway (125 s) unchanged | Rejected as the doorway fix; see-through rule neutral, camera-path rule harmful |
-| R-101 | 2026-11-22 | scan_009: R-096 plus camera refinement in training (`--pose_opt`, `v9plo`) | 3070 | running | | |
+| R-101 | 2026-11-22 | scan_009: R-096 plus camera refinement in training (`--pose_opt`, `v9plo`) | 3070 | 30.4 min (train 24.3, R-096 22.5) | aligned 23.96 vs R-096 23.63 (63 frames), SSIM 0.896 vs 0.888; 35 frames > 0.5 dB better, 13 worse; doorway (125 s) unchanged | Kept (modest gain, +1.8 min training) |
 | R-102 | 2026-11-22 | scan_009: second loop round with a pair check (`loop_path.py --gate 10`), R-096's recipe (`v9plg`) | 3070 | planned (after R-101) | | |
 
 ## Runs
@@ -2843,10 +2843,21 @@ igs.txt`):
   (125 s) is a smear even from its own training pose and the 100 – 150 s stretch fits worst: per-frame camera error.
   R-084 tried `--pose_opt` on R-080's cameras (no gain after alignment); R-096's cameras are closer, the case pose
   refinement is made for. Processing time is recorded too (Tayyab: total processing time matters).
-- **Start → end:**
-- **Errors during the run:**
-- **Result:**
-- **Verdict:**
+- **Start → end:** 14:13 → 14:52 (copy / undistort / export 14:13 – 14:14; export 0.01, prior 3.61, init 1.72, train
+  24.26, ply 0.56 min, total 30.4; evaluations 8 min, views 4 s). R-096: train 22.46, total 28.3.
+- **Errors during the run:** none ("No module named 'triton'" is printed and caught, as in R-096).
+- **Result:** `work_v9plo_sfm/gs_v9plo/splat.ply`, 521,417 splats. `eval_offpath.py` (held-out frames on their
+  unrefined poses): PSNR 20.14 vs R-096 21.27, SSIM 0.853 vs 0.871, flatness 6.12 vs 6.57 cm, 0 blocked views (the raw
+  score drops because refinement moves the training cameras, as in R-084). `eval_align.py` on the 63 common held-out
+  frames: **aligned 23.96 vs 23.63, SSIM 0.8957 vs 0.8881**, pose correction median 1.25° / 0.089 units (R-096
+  1.57° / 0.166). Per frame: median +0.77 dB, 35 frames > 0.5 dB better, 13 worse. Per stretch (R-096 → R-101):
+  0 – 10 s 28.25 → 28.39, 10 – 30 s 25.33 → 26.12, 30 – 60 s 21.56 → 20.22, 60 – 90 s 23.47 → 24.94, 90 – 120 s
+  30.36 → 30.30, 134 – 140 s 20.10 → 19.76, 160 – 170 s 25.12 → 24.74. Off-path ring (`offpath_views_r101/`): the
+  same room-centre views. Bathroom doorway (`offpath_views_r101/door_125s.jpg`, rendered on the unrefined pose): still
+  a smear. Run-to-run spread for comparison (R-088): aligned ±0.1 overall, up to ±0.9 per stretch.
+- **Verdict:** kept: +0.33 dB aligned and better SSIM for +1.8 min of training; gains in 10 – 30 s and 60 – 90 s,
+  not in the doorway stretch (134 – 140 s −0.34, featureless 30 – 60 s −1.3 on 4 frames). Refined poses are not
+  exported (they stay in the checkpoint); the splats are in the world frame, so the viewer is unaffected.
 
 ### R-102 · 2026-11-22 · scan_009_057ed3beb4fc: second loop round with a pair check against R-096's path (`v9plg`)
 
