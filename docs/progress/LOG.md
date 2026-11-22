@@ -938,3 +938,7 @@ Tayyab: "what are the next steps, plan accordingly you have the entire night to 
 - Runs: R-096 – R-099. Decisions: none (OD-15 evidence added).
 - Next (Tayyab to choose): look at R-099 in the viewer; R-096's loop step into the sensor-path recipe (OD-15); retry
   the second loop round with a pair check; free disk (4.2 GB left after R-099).
+
+Tayyab, after viewing R-099 (`scan-009-loops`): "this model is miles better ... MUCH more like the real room". Issues
+he saw: off-angle views, splats detached from walls / doors, floating splats in the bathroom doorway blocking the view
+inside, missing floor splats in the middle of the room ("maybe because of the video"). Next plan proposed, his choice.

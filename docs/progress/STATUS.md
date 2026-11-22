@@ -723,6 +723,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       R-097 (second matching round, `loop_match.py`): 134 – 137 s broken by new pairs, rejected; needs a stricter
       pair check. R-098 (11.c second form, `prior_consistency.py`): equal (23.61), not adopted. R-099: R-096's recipe
       on all frames for the viewer.
+    - [x] Tayyab looked at R-099 (`scan-009-loops`) in the viewer (2026-11-22): "miles better ... MUCH more like the
+      real room". Still wrong: off-angle views, splats detached from walls / doors, floating splats in the bathroom
+      doorway blocking the view inside, missing floor splats in the middle of the room (maybe not filmed). Not
+      measured: these are his visual findings.
     - [ ] Tayyab to decide: R-096's loop closure as part of the sensor-path recipe (OD-15); which scan_009 model the
       viewer shows (R-099 proposed); whether to retry the second loop round with a pair check (e.g. reject pairs whose
       direction disagrees with R-096's path by > 10° before solving).
