@@ -944,3 +944,8 @@ he saw: off-angle views, splats detached from walls / doors, floating splats in 
 inside, missing floor splats in the middle of the room ("maybe because of the video"). Next plan proposed, his choice.
 Disk clean-up (Tayyab chose option 1): regenerable bulk of six rejected / inconclusive scan_009 runs and four rejected
 folders deleted, 3.8 -> 14 GB free; list in `dataset/scan_009_057ed3beb4fc/cleanup_2026-11-22.txt`, STATUS §7.
+
+Plan step 1 (Tayyab: "do step 1"), R-100: `clean_splats.py` extended for sensor-path models (`--mono`, `--exclude`,
+`--max_depth`). On R-096: see-through rule −0.09 dB, camera-path rule −0.23 dB; the bathroom doorway smear at 125 s is
+unchanged and shows even from its own training pose: the 100 – 150 s stretch fits worst, so the doorway is a camera
+problem there, not floaters. Not adopted. Next: Tayyab to choose (camera fixes for 100 – 150 s first).

@@ -727,6 +727,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       real room". Still wrong: off-angle views, splats detached from walls / doors, floating splats in the bathroom
       doorway blocking the view inside, missing floor splats in the middle of the room (maybe not filmed). Not
       measured: these are his visual findings.
+    - [x] Plan step 1, floaters (2026-11-22, R-100): `clean_splats.py --mono` (depth priors + BA points as free-space
+      evidence) on R-096. See-through rule alone: aligned 23.54 vs 23.63 (clears mid-air splats above head height);
+      the camera-path radius rule removes real wall (−0.23 dB). The bathroom doorway (125 s) is a smear even from its
+      own training pose and is unchanged: the 100 – 150 s stretch fits worst (cameras), not floaters. Not adopted.
     - [ ] Tayyab to decide: R-096's loop closure as part of the sensor-path recipe (OD-15); which scan_009 model the
       viewer shows (R-099 proposed); whether to retry the second loop round with a pair check (e.g. reject pairs whose
       direction disagrees with R-096's path by > 10° before solving).

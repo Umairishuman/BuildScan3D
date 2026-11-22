@@ -146,6 +146,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-097 | 2026-11-22 | scan_009: 11.d second round, loop pairs chosen with R-096's cameras and matched (`loop_match.py`, `v9plm`) | 3070 | 28.7 min (+3 min matching / solve) | aligned 22.93 vs R-096 23.63 (63 frames): four stretches better, 134 – 137 s broken (20.10 → 15.81) | Rejected (new pairs need a stricter check) |
 | R-098 | 2026-11-22 | scan_009: 11.c second form, prior pixels contradicted by other views dropped (`prior_consistency.py`) on R-096's cameras (`v9pcs`) | 3070 | 24.0 min | loop-partner depth disagreement 12.4 → 9.1 %; aligned 23.61 vs R-096 23.63 (63 frames), SSIM 0.892 vs 0.888, flatness 8.54 vs 6.57 | Inconclusive, not adopted |
 | R-099 | 2026-11-22 | scan_009: R-096's recipe on all frames, for the viewer (`v9plf`, `scan-009-loops`) | 3070 | 27.9 min | no held-out score (all frames); off-path views as R-096 | Kept (viewer) |
+| R-100 | 2026-11-22 | scan_009: floater clean-up (`clean_splats.py --mono`) on R-096's model, no retraining | 3070 | 37 min (3 cleanings 20 s, evaluations 36 min) | aligned on 63 held-out frames: both rules 23.31, see-through rule only 23.54, camera-path rule only 23.40 (R-096 23.63); bathroom doorway (125 s) unchanged | Rejected as the doorway fix; see-through rule neutral, camera-path rule harmful |
 
 ## Runs
 
@@ -2781,3 +2782,49 @@ igs.txt`):
   room-centre views as R-096. In the viewer as `scan-009-loops` (`prototype/web-ui/public/splats/scan009_v9plf.spz`,
   9.8 MB, local only). Free disk on C: after the run: 4.2 GB (`df`).
 - **Verdict:** kept as the scan_009 model to look at; not yet inspected by Tayyab.
+
+### R-100 · 2026-11-22 · scan_009_057ed3beb4fc: floaters removed from R-096's model with free-space evidence (no retraining)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 9f59d9e (`clean_splats.py` changes committed after the run)
+- **Dataset:** `work_v9plp_sfm` (R-096), its `splat.ply` (not changed; output `gs_v9plp/splat_clean_r100.ply`)
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r100.sh` (log `r100.log`): `clean_splats.py --mono 1 --mono_tol 0.2
+  --exclude offpath_test.txt --max_depth 20` (evidence: depth priors and BA points of every 2nd training frame,
+  the 69 held-out frames left out; a splat is dropped when >= 3 views see through it and none sees it as a surface,
+  or no view sees it, or it is < 0.2 units from the camera path); then `eval_align.py` (R-096 vs cleaned, the same
+  held-out frames) and `offpath_views.py`
+- **Goal:** plan step 1 after Tayyab's look at R-099 (2026-11-22): floating splats in the bathroom doorway block the
+  view inside. Remove splats in space the cameras looked through, without losing held-out quality.
+- **Start → end:** 13:16 → 13:54 (cleaning 10 s each; `eval_align.py` 17 min for two models; off-path views 5 s;
+  variants `r100b.sh` / `r100b.log` 13:34 → 13:54)
+- **Errors during the run:** none. Planned run changed before it started: `clean_splats.py` needed stereo depth
+  (`depth_mvs/`, `mvs_mask/`, `depth_scale`), which sensor-path models do not have; with no stereo views its "never
+  in view" test would have dropped every splat. Added `--mono`, `--exclude`, `--max_depth`, BA points projected with
+  the frame camera (stored uv belong to a 1080-px-high image, frames are 1048). A numpy RuntimeWarning (cast of
+  points behind the camera to int) is harmless: those points are masked by z > 0.1.
+- **Result:** evidence from 260 prior views and 409 BA views (69 held-out frames excluded). Both rules: 21,000 of
+  544,401 splats dropped (see-through 10,485, < 0.2 units from the camera path 9,948, never in view 566). Where
+  (`offpath_views_r100/dropped_plan.png`, scratch `plot_dropped.py`): the see-through splats sit in the middle of the
+  room at y 0.5 – 2.5 (cameras at y 0.15 median, floor near y −2, ceiling near y 2.8), i.e. in the air above head
+  height; 533 of ~12,900 floor splats in the room centre (y −2.5 – −1.5) were dropped too. Aligned PSNR, the same 63
+  held-out frames (`work_v9plp_sfm/eval_r096/aligned_r100.csv`, `aligned_r100b.csv`):
+
+  | Model | Aligned PSNR | SSIM | 0 – 5 s (3) | 20 – 25 s (14) | 134 – 138 s (15) | 160 – 166 s (7) |
+  |---|---|---|---|---|---|---|
+  | R-096 | 23.63 | 0.8881 | 28.25 | 25.76 | 20.10 | 25.12 |
+  | both rules | 23.31 | 0.8832 | 27.16 | 24.99 | 20.28 | 24.46 |
+  | see-through only (`_fl`) | 23.54 | 0.8859 | 28.25 | 25.76 | 20.08 | 24.51 |
+  | camera-path radius only (`_near`) | 23.40 | 0.8855 | 27.16 | 24.99 | 20.32 | 25.08 |
+
+  The camera-path rule removes real surface where the camera came close to a wall (0 – 5 s, 20 – 25 s). The
+  see-through rule costs 0.09 dB (3 frames > 0.5 dB worse, 160 – 166 s). Room-centre ring (`compare_ring.jpg`): the
+  flat near surface seen at yaw 135 – 225 from the room centre gets holes (white: nothing behind it), it is not
+  replaced by the far wall. **Bathroom doorway** (frame_03753, 125.1 s, a training frame; scratch `door_views.py`,
+  `offpath_views_r100/door_125s.jpg`): R-096 renders the open doorway as a smear even from the frame's own pose, and
+  from 0.7 units to the side; the cleaned model looks the same. Training-frame PSNR per 10 s (R-096, raw `images/`, no
+  exposure correction, so only the relative values mean anything): 100 – 150 s median 16.8 – 18.0, elsewhere mostly
+  19.3 – 24.5: the doorway stretch is the worst-fitting part of the walk, even on the frames trained on. Outputs:
+  `work_v9plp_sfm/gs_v9plp/splat_clean_r100{,_fl,_near}.ply` (+ `_dropped.npz`), `offpath_views_r100/`.
+- **Verdict:** rejected as the fix for the doorway: the doorway smear is not free-space floaters but the 100 – 150 s
+  stretch fitting badly (cameras); the camera-path rule is harmful (−0.23 dB); the see-through rule alone is close to
+  neutral (−0.09 dB) and only clears mid-air splats; not adopted. `clean_splats.py --mono` kept as a tool.

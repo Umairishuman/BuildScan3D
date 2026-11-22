@@ -163,7 +163,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `to_spz.mjs` | PLY → `.spz` with Spark's encoder (run from `prototype/web-ui`, Node) | **[v9]** |
 | `structure.py` | Older box-room structural layer (planes, walls, openings) | [exp] superseded by `layout.py` (its ceiling-height item marked obsolete 2026-11-19, #18) |
 | `planarize.py` | Post-hoc snapping of splats to planes | [exp] rejected (D-017) |
-| `clean_splats.py` | Floater pruning by measured free space | [exp] not default (D-040) |
+| `clean_splats.py` | Floater pruning by measured free space; `--mono` uses the depth priors for sensor-path models, `--exclude` leaves held-out frames out (R-100) | [exp] not default (D-040) |
 
 **Evaluation, diagnostics, viewing**
 
