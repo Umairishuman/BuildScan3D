@@ -1,0 +1,81 @@
+run	scan	tag	date	who	machine	state	folder	start	end	wall_min	model_min	after_min	select	sfm	export	prior	init	train	ply	layout	sem2d	sem3d	verify	sem3d2	mesh	meshlabels	web	plan	map_gp_s	map_ba_s	map_retri_s	map_total_s	source	note
+R-001	roomAttemptSadness		2026-10-06		RTX 3070 PC	done																												5–8 min train per version (index)
+R-002			2026-10-09		RTX 3070 PC	done																												time not recorded
+R-003			2026-10-09		RTX 3070 PC	done																												time not recorded
+R-004			2026-10-10		RTX 3070 PC	done																												time not recorded
+R-005	roomAttemptSadness	pocket8k	2026-10-10		RTX 3070 PC	done												12.7															TRAINING	
+R-006	ARKitScenes 47333462		2026-10-10	Zaid	Kaggle T4	done																												8.6 min + 1.3 min prep (index)
+R-007	newRoomAttemptSadness		2026-10-10		RTX 3070 PC	done																												~1 h 50 processing; 22 min (index)
+R-008	newRoomAttemptSadness		2026-10-11		RTX 3070 PC	done																												~2 h MVS; 17 / 28 min training (index)
+R-009	newRoomAttemptSadness		2026-10-11		RTX 3070 PC	done																												~75 min end to end (index, approximate)
+R-010			2026-10-11		RTX 3070 PC	done																												time not recorded
+R-011			2026-10-11		RTX 3070 PC	failed																												died ~step 12.5k; time not recorded
+R-012	newRoomAttemptSadness		2026-10-12		RTX 3070 PC	done																												~4 h end to end (PatchMatch 2 h 15) (index)
+R-013	newRoomAttemptSadness	v7	2026-10-21		RTX 3070 PC	done																												24 min 56 s (index)
+R-014	newRoomAttemptSadness		2026-10-24		RTX 3070 PC	done																												27.8–69.6 min train over seven variants (index)
+R-015			2026-10-24		RTX 3070 PC	done																												time not recorded
+R-016	newRoomAttemptSadness	v8e2e	2026-10-24		RTX 3070 PC	done					44																						TRAINING	
+R-017			2026-10-24		RTX 3070 PC	done																												Metric3D on 100 frames: 75 / 39 / 14 s (index)
+R-018	newRoomAttemptSadness		2026-10-26		RTX 3070 PC	done																												SfM variants 9.6 / 24.6 / 21.8 / 33.1 min (index)
+R-019	newRoomAttemptSadness		2026-10-26		RTX 3070 PC	done																												27.7–40.0 min train over four variants (index)
+R-020	newRoomAttemptSadness	v9e2e	2026-10-26		RTX 3070 PC	done					96.2		1.9	22.4		8.1	20.4	42.5	0.7														TRAINING	stage times quoted in R-065's goal
+R-021	newRoomAttemptSadness	v9pgsr	2026-10-27		RTX 3070 PC	done												46															TRAINING	
+R-022			2026-10-27		RTX 3070 PC	done																												time not recorded
+R-023	newRoomAttemptSadness		2026-10-27		RTX 3070 PC	done																												46 min (+ rerun after a power cut) (index)
+R-024	newRoomAttemptSadness		2026-10-27		RTX 3070 PC	done																												semantics v9: 7–8 min 2D, seconds 3D, 20 s mesh (index)
+R-025	newRoomAttemptSadness		2026-11-03		RTX 3070 PC	done															38												TRAINING	
+R-026			2026-11-03	Zaid	not recorded	done																												time not recorded
+R-027			2026-11-06	Umair (+ agent)	this PC (Ubuntu, RTX 4000 Ada)	done																												environment setup ~2.5 h (index), not a pipeline run
+R-028	scan_001_056fe94d3399	v9	2026-11-06	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	stopped	dataset/scan_001_056fe94d3399/work_v9_sfm/gs_v9						0.10	1.46	0.01	0.75	2.07												9.37	11.61	10.46	31.64	files	stopped after ~5 min (index)
+R-029	scan_001_056fe94d3399	umair	2026-11-06	Umair	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_001_056fe94d3399/work_umair_sfm/gs_umair	2026-11-06 18:01	2026-11-06 18:35	34.7	31.1	3.7	0.09	1.49	0.01	0.75	2.05	26.45	0.25	0.0	2.8	0.1	0.1	0.1	0.1	0.4	0.1		10.10	10.98	12.82	34.11	files	
+R-030	scan_002_646070948603	r1106	2026-11-06	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_002_646070948603/work_r1106_sfm/gs_r1106	2026-11-06 18:58	2026-11-06 19:48	50.2	41.7	8.5	0.20	4.93	0.01	1.92	6.57	27.76	0.29	0.1	7.7	0.1	0.1	0.1	0.1	0.2	0.1		49.57	69.51	76.50	197.59	files	
+R-031	scan_003_6de634cbb8b2	r1112	2026-11-12	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_003_6de634cbb8b2/work_r1112_sfm/gs_r1112	2026-11-12 15:04	2026-11-12 16:25	81.0	64.7	16.4	0.37	12.11	0.01	3.56	14.76	33.57	0.28	0.4	13.7	0.1	0.2	0.1	0.3	1.5	0.1		94.29	131.69	126.77	356.60	files	
+R-032	scans #2 / #3		2026-11-12	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done																												seconds per pass; exact time not recorded
+R-033	scans #2 / #3		2026-11-12	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done																												seconds per pass; exact time not recorded
+R-034	scans #2 / #3		2026-11-12	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done																												seconds per pass; exact time not recorded
+R-035	scan_003_6de634cbb8b2	r1112lev	2026-11-12	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_003_6de634cbb8b2/work_r1112lev_sfm/gs_r1112lev	2026-11-12 18:26	2026-11-12 18:44	18.0		18.1								1.2	13.7	0.1	0.2	0.1	0.3	2.4	0.1						files	model from R-034 (levelled)
+R-036	scan_002_646070948603	r1106lev	2026-11-12	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_002_646070948603/work_r1106lev_sfm/gs_r1106lev	2026-11-12 18:45	2026-11-12 18:53	8.5		8.5								0.1	7.8	0.1	0.1	0.1	0.1	0.1	0.1						files	
+R-037	newRoomAttemptSadness	r1112nr	2026-11-12	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1112nr	2026-11-12 18:56	2026-11-12 20:39	103.0	81.4	21.6	0.48	12.41	0.01	4.56	18.40	45.24	0.30	1.8	18.2	0.2	0.1	0.2	0.3	0.7	0.1		99.03	279.81	124.64	506.76	files	
+R-038	scan_008_7b486c855ed6	r1116	2026-11-16	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	failed	dataset/scan_008_7b486c855ed6/work_r1116_sfm/gs_r1116			49.7			0.71																				files+TRAINING	OOM in SfM; wall from TRAINING
+R-039	scan_008_7b486c855ed6	r1116w9	2026-11-16	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_008_7b486c855ed6/work_r1116w9_sfm/gs_r1116w9	2026-11-16 13:21	2026-11-16 16:08	166.7	145.4	21.2	0.71	63.60	0.01	4.94	17.39	57.91	0.87	2.7	16.6	0.2	0.1	0.2	0.3	1.0	0.1		1699.91	989.71	547.38	3259.19	files	
+R-040	scan_007_e6d4f090f88e	r1118	2026-11-18	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_007_e6d4f090f88e/work_r1118_sfm/gs_r1118	2026-11-18 10:19	2026-11-18 13:39	200.6	175.4	25.1	0.57	96.38	0.01	5.18	19.69	52.90	0.68	2.7	17.7	0.3	0.2	0.3	2.6	1.1	0.2		2162.92	1762.69	1141.23	5099.49	files	
+R-041	newRoomAttemptSadness	pgsrfast	2026-11-14	Tayyab (agent)	RTX 3070 PC	done												33.0															TRAINING	
+R-042	newRoomAttemptSadness	mcmc1m	2026-11-14	Tayyab (agent)	RTX 3070 PC	done												40.4															TRAINING	
+R-043	newRoomAttemptSadness	revop	2026-11-14	Tayyab (agent)	RTX 3070 PC	done												28.5															TRAINING	
+R-044	newRoomAttemptSadness	dg4	2026-11-14	Tayyab (agent)	RTX 3070 PC	done												30.8															TRAINING	
+R-045	scan_009_057ed3beb4fc	v9pgsr	2026-11-15	Tayyab (agent)	RTX 3070 PC	failed					32.4		1.51	1.18	0.01	0.95	0.39	27.87	0.5														TRAINING	model done; layout crashed at once
+R-046	scan_009_057ed3beb4fc	v9pf	2026-11-15	Tayyab (agent)	RTX 3070 PC	done									0.01	3.15	4.78	25.13	0.93														TRAINING	34.0 min from export (index)
+R-053	six rooms		2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done				8.8																							TRAINING	layout only, scratch output
+R-054	scan_003_6de634cbb8b2	r1119a	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_003_6de634cbb8b2/work_r1112lev_sfm/gs_r1119a	2026-11-19 09:01	2026-11-19 09:05	4.3		4.4								1.2		0.1	0.2	0.1		2.7	0.1						files	
+R-054	scan_007_e6d4f090f88e	r1119a	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_007_e6d4f090f88e/work_r1118_sfm/gs_r1119a	2026-11-19 08:57	2026-11-19 09:01	3.9		3.9								2.3		0.2	0.2	0.2		0.9	0.1						files	
+R-055	six rooms		2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done				16.9																							TRAINING	12 layout runs, scratch output
+R-056	newRoomAttemptSadness	r1119b	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1119b	2026-11-19 09:37	2026-11-19 09:40	3.0		3.1								1.8		0.2	0.2	0.2		0.6	0.1	0.0					files	
+R-056	scan_003_6de634cbb8b2	r1119b	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_003_6de634cbb8b2/work_r1112lev_sfm/gs_r1119b	2026-11-19 09:28	2026-11-19 09:33	4.2		4.3								1.2		0.1	0.3	0.1		2.5	0.1	0.0					files	
+R-056	scan_007_e6d4f090f88e	r1119b	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_007_e6d4f090f88e/work_r1118_sfm/gs_r1119b	2026-11-19 09:25	2026-11-19 09:28	3.8		3.8								2.2		0.2	0.2	0.2		0.9	0.1	0.0					files	
+R-056	scan_008_7b486c855ed6	r1119b	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_008_7b486c855ed6/work_r1116w9_sfm/gs_r1119b	2026-11-19 09:33	2026-11-19 09:37	4.6		4.7								2.9		0.2	0.2	0.2		1.0	0.2	0.0					files	
+R-057	newRoomAttemptSadness	r1119c	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/newRoomAttemptSadness/work_r1112nr_sfm/gs_r1119c	2026-11-19 15:22	2026-11-19 15:25	3.4		3.5								1.9		0.2	0.2	0.2		0.9	0.1	0.0					files	
+R-057	scan_003_6de634cbb8b2	r1119c	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_003_6de634cbb8b2/work_r1112lev_sfm/gs_r1119c	2026-11-19 15:12	2026-11-19 15:18	5.1		5.2								1.2		0.1	0.2	0.1		3.5	0.1	0.0					files	
+R-057	scan_007_e6d4f090f88e	r1119c	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_007_e6d4f090f88e/work_r1118_sfm/gs_r1119c	2026-11-19 15:09	2026-11-19 15:12	3.8		3.8								2.2		0.2	0.2	0.2		0.9	0.1	0.0					files	
+R-057	scan_008_7b486c855ed6	r1119c	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_008_7b486c855ed6/work_r1116w9_sfm/gs_r1119c	2026-11-19 15:18	2026-11-19 15:22	4.5		4.6								2.9		0.2	0.2	0.2		0.9	0.2	0.0					files	
+R-058	scan_006_1e457a214ce1	r1119	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	failed	dataset/scan_006_1e457a214ce1/work_r1119_sfm/gs_r1119			45.5			0.56																				files+TRAINING	OOM in global_mapper; wall from TRAINING
+R-059	scan_006_1e457a214ce1	r1119b6	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_006_1e457a214ce1/work_r1119b6_sfm/gs_r1119b6	2026-11-19 16:33	2026-11-19 19:37	183.8	162.5	21.5	0.53	86.07	0.01	5.23	19.41	50.53	0.73	1.4	17.6	0.2	0.2	0.2	0.3	1.5	0.1	0.0	2240.92	1528.52	733.86	4535.88	files	
+R-061	scan_003_6de634cbb8b2	r061c1	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_003_6de634cbb8b2/work_r061c1_sfm/gs_r061c1	2026-11-19 21:47	2026-11-19 22:56	69.5	50.8	18.8			0.01	3.55	14.53	32.39	0.29	1.2	13.7	0.1	0.2	0.1	0.3	3.1	0.1	0.0	93.25	119.62	142.08	358.90	files	CPU-1 (bs-colmap), map + downstream
+R-061	scan_003_6de634cbb8b2	r061c2	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_003_6de634cbb8b2/work_r061c2_sfm/gs_r061c2	2026-11-19 22:56	2026-11-20 00:06	69.5	50.6	19.0			0.01	3.53	14.54	32.28	0.28	1.2	13.7	0.1	0.2	0.1	0.3	3.3	0.1	0.0	95.76	105.67	139.40	344.61	files	CPU-2, map + downstream
+R-061	scan_003_6de634cbb8b2	r061c3	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_003_6de634cbb8b2/work_r061c3_sfm																						89.74	127.28	130.47	353.55	files	CPU-3, map only
+R-061	scan_003_6de634cbb8b2	r061g	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_003_6de634cbb8b2/work_r061g_sfm/gs_r061g	2026-11-20 00:06	2026-11-20 01:15	69.2	50.7	18.6			0.01	3.56	14.59	32.29	0.28	1.2	13.6	0.1	0.2	0.1	0.3	3.0	0.1	0.0	35.21	123.47	133.57	296.13	files	GPU (bs-colmap2 cuDSS), map + downstream
+R-061	scan_003_6de634cbb8b2	r061g2	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_003_6de634cbb8b2/work_r061g2_sfm																						35.60	96.80	115.09	253.16	files	GPU-2, map only
+R-061	scan_006_1e457a214ce1	r061c6b	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_006_1e457a214ce1/work_r061c6b_sfm																						2322.37	1010.90	905.91	4273.52	files	CPU repeat, map only
+R-061	scan_006_1e457a214ce1	r061g6	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_006_1e457a214ce1/work_r061g6_sfm																						358.11	1073.24	768.04	2231.93	files	GPU, map only
+R-062	newRoomAttemptSadness	fast_t1	2026-11-12	Tayyab (agent)	RTX 3070 PC	done												28.2															TRAINING	
+R-063	newRoomAttemptSadness	fast_t2_photo	2026-11-12	Tayyab (agent)	RTX 3070 PC	done											7.5	30.6															TRAINING	training slowed by R-064 on the CPU
+R-064	newRoomAttemptSadness		2026-11-12	Tayyab (agent)	RTX 3070 PC	done																												mapper 9.4 (skip_retriangulation) / 14.2 (ba1) / 14.3 min (default)
+R-065	newRoomAttemptSadness	v10fast	2026-11-12	Tayyab (agent)	RTX 3070 PC	done					61.6		1.77	17.58	0.01	6.8	8.08	26.66	0.66														TRAINING	
+R-066	scan_3028a4de8fa0	v10	2026-11-12	Tayyab (agent)	RTX 3070 PC	done					48.8		1.55	8.67	0.01	4.73	4.65	28.27	0.59														TRAINING	+ CPU wait 0.33 min
+R-067	scan_3028a4de8fa0	v10inc	2026-11-12	Tayyab (agent)	RTX 3070 PC	done								25.4																			TRAINING	map stage only (incremental mapper)
+R-068	scan_3028a4de8fa0	v10inc	2026-11-12	Tayyab (agent)	RTX 3070 PC	done					35.8				0.01	3.3	3.44	28.43	0.6														TRAINING	from export; map 25.4 min in R-067
+R-069	roomAttemptSadness2	v9pgsr8	2026-11-14	Tayyab (agent)	RTX 3070 PC	done					87.7	32.3	3.6	21.3		6.3	19.1	36.2	1.3	5.6	24.6	0.4	0.3	0.4	0.3	0.5	0.2						TRAINING	sem2d from the resumed run
+R-070	newRoomAttemptSadness	mcmc620	2026-11-14	Tayyab (agent)	RTX 3070 PC	done												35.0															TRAINING	
+R-071	scan_006_1e457a214ce1	r071g6	2026-11-23	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	running	dataset/scan_006_1e457a214ce1/work_r071g6_sfm/gs_r071g6						0.53	50.37	0.01	5.21	19.42												298.15	1231.62	832.13	2396.19	files	GPU COLMAP (bs-colmap2), R-059's recipe
+R-072	scan_003_6de634cbb8b2		2026-11-23	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	not run																												stopped before it ran (scan #3 not to be used, Umair)
+R-085	scan_006_1e457a214ce1	r1119b6	2026-11-23	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done				0.0																							TRAINING	fixture sheet, < 1 s, CPU
+R-086	four rooms		2026-11-23	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done				0.1																							TRAINING	wall roughness, 3.4 s, CPU

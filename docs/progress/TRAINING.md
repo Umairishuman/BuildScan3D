@@ -96,7 +96,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-056 | 2026-11-19 | Four rooms, layout → web → plan with the 2026-11-19 defaults, tag `r1119b` | this PC (Ubuntu, RTX 4000 Ada) | 15.6 min | #7 no roof + 2 openings; #3 no false openings; newRoom closed, 29.41 m²; #8 open, 2 doorways | Kept (for Umair's checks) |
 | R-057 | 2026-11-19 | Four rooms, layout → web → plan with the D-075 defaults, tag `r1119c` | this PC (Ubuntu, RTX 4000 Ada) | 16.7 min | #7 / #8 closed rectangles (17.99 / 26.44 m²); #3 tilt 0.29°; ceilings 4.3 → 0.04 cm; #8 lost a switch + socket | Kept (scan #8 corner = furniture, Umair) |
 | R-058 | 2026-11-19 | scan #6 `scan_006_1e457a214ce1` (259.8 s), full pipeline, R-023 recipe + D-075 (`r1119`) | this PC (Ubuntu, RTX 4000 Ada) | 45.5 min, did not finish | 1159 frames, 12.56 M observations; COLMAP `global_mapper` killed by OOM (26.4 GB) at 16:14:39 while the agent ran web work | Failed (OOM in SfM) |
-| R-059 | 2026-11-19 | scan #6 rerun after R-058, same recipe, PC kept quiet (`r1119b6`) | this PC (Ubuntu, RTX 4000 Ada) | 162.5 + 21.4 min | 1159/1159 frames; height 3.05 m, closed, 7 walls; 11 fixtures, 84 rejected | Kept (not checked by a person) |
+| R-059 | 2026-11-19 | scan #6 rerun after R-058, same recipe, PC kept quiet (`r1119b6`) | this PC (Ubuntu, RTX 4000 Ada) | 183.8 min (run_v8 162.5) | 1159/1159 frames; height 3.05 m, closed, 7 walls; 11 fixtures, 84 rejected | Kept (not checked by a person) |
 | R-085 | 2026-11-23 | scan #6 fixture check sheet from R-059 (`fixture_checklist.py --rejected`, no GPU) | this PC (Ubuntu, RTX 4000 Ada) | < 1 s | `scan_006…/checks_r085/fixture_check.md`: 11 fixtures + 84 rejected; switches 2 / 5 maybe one plate | Kept (for Umair, #21) |
 | R-086 | 2026-11-23 | Wall roughness in the mesh, where it sits (4.12, #18), four rooms, read-only, CPU | this PC (Ubuntu, RTX 4000 Ada) | 3.4 s | 16 of 20 walls ≤ 0.26 cm; rough: newRoom wall 3 (2.88, bowed), scan #8 wall 1 (1.55, offset stretches), scan #6 wall 5 (4.70, two surfaces) | Inconclusive (look in the viewer) |
 | R-062 | 2026-11-12 | Training speed-up: exact TV-loss / colour-affine fixes, blur colour grid once (`fast_t1`) | 3070 | 28.2 min train (was 42.5) | 25.14 / 0.8251, sharp 0.80, flat 0.81 | Kept (proposed) |
@@ -1124,7 +1124,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 - **Command(s):** `scripts/buildscan run 6 r1119b6 -- --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
 - **Goal:** first model of scan #6 (#19); SfM must pass in RAM like scan #7 (12.68 M observations, R-040). Then
   layout / fixtures / check sheet, publish within the 10 GB cap (D-077).
-- **Start → end:** 16:33:50 → 19:37:41 ("all done" in `gs_r1119b6/run_full.log`). Stage times (`timing.json`,
+- **Start → end:** 16:33:50 → 19:37:41 = **183.8 min** ("all done" in `gs_r1119b6/run_full.log`). Stage times (`timing.json`,
   `stages.tsv`): run_v8 162.5 min = select 0.53, SfM 86.07, export 0.01, prior 5.23, init 19.41, train 50.53, ply
   0.73; then layout 1.4, sem2d 17.6, sem3d 0.2, verify 0.2, sem3d2 0.2, mesh 0.3, meshlabels 1.5, web 0.1, plan 0.0 min.
   Inside SfM (`global_mapper.log`, as quoted in R-071): global positioning 2,240.92 s, iterative BA 1,528.52 s,
