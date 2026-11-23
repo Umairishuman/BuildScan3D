@@ -757,3 +757,19 @@ issues, use the existing datasets, try new techniques. Branch from `exp/fast-pip
 - Next: OD-12 layout re-run in a GPU gap between speed tests (Umair's go); scan #6 `r071g6` layout / fixtures after
   R-071; Umair: `CHECKS_FOR_UMAIR.md`; scan #5 (R-060) needs a GPU slot.
 
+## 2026-11-23 (run records) · Umair · `exp/colmap-cudss`, `feature/step4-triage`, `feature/run-times`
+- Done (agent for Umair): Umair found runs left "running" in TRAINING.md and asked (1) why R-072 names scan #3, (2) a rule
+  to always close runs, (3) run times in a structured place, applied to all earlier runs and checked. R-072: planned on
+  scan #3 copies (small map, R-061's CPU noise runs to compare with), stopped before running when Umair ruled scan #3
+  out; marked "not run". Closed: R-059 (183.8 min, 16:33:50 → 19:37:41), R-061 end time, R-064 result / verdict (from
+  R-065's text), "none so far" on finished R-039, R-041 – R-044, R-067, R-068, R-070. Rule in CLAUDE.md §6 (Umair) and the
+  agent's memory. New `docs/progress/runs.tsv` + `scripts/run_times.py` + `tests/test_run_times.py` (D-090) in the
+  worktree `../BuildScan3D-runtimes` (from `feature/step4-triage`).
+- Runs: none (records only; R-071 kept running in the main checkout, untouched).
+- Decisions: D-090 (Umair asked for it; format the agent's).
+- Problems: R-061's index time cell held a folder path; R-059's total was not quoted; no pytest in the envs (scratch
+  runner, 12 / 12). `check` on one branch alone fails for runs whose entries live on another branch (R-061, R-071,
+  R-072 on `exp/colmap-cudss`): use `--training git:<branch>` until the branches are merged.
+- Next: when R-071 ends: close it, `run_times.py update`, `check`. Merge order for Umair: `feature/run-times` contains
+  `feature/step4-triage`.
+

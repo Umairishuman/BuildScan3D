@@ -208,6 +208,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `view_splat.bat` | Starts `view.py` (http://localhost:7010) |
 | `start_server.bat` | Loads `.env`, starts the FastAPI server on port 8000, prints the IP for the phone |
 | `start_server.sh` | Linux twin of `start_server.bat`: loads `.env`, mode defaults to `dry_run`, runs uvicorn on port 8000 in the small `bs-server` micromamba env (not the pipeline envs), prints the phone URLs. Detached: `screen -dmS bs-server scripts/start_server.sh` |
+| `run_times.py` | **Run times table**: `update` fills `docs/progress/runs.tsv` from each run's `timing.json` / `stages.tsv` / `global_mapper.log`; `check` tests it against the files and TRAINING.md (open runs, totals that do not add up, runs without a row, run folders without a row); `show <text>` prints a comparison; standard library only (D-090) |
 | `publish_scan.py` | Puts a run's web bundle + plan.png on the online site: R2 bucket `scans/<owner>/<capture>_<tag>/` + that owner's `index.json`; `unpublish` archives in the bucket, `list`; Python + boto3 (Linux and Windows), keys from `.env`; `--target dir:` for tests (D-076). Linux: `scripts/buildscan publish / unpublish / published` |
 | `jobs.bat` / `jobs.py` | Job manager CLI (list, watch, logs, retry, reprocess, mode) |
 | `release.bat` | Bumps the app version and tags a release |
@@ -289,6 +290,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 |---|---|
 | `progress/STATUS.md`, `DECISIONS.md`, `LOG.md`, `TRAINING.md` | The four live project records (CLAUDE.md §1) |
 | `progress/COMPLETION_PLAN.md` | **current** · Plan to finish by 2026-12-04: every open task by pipeline step, with done-when, dependencies, priority, week; snapshot of the shared doc (link inside) |
+| `progress/runs.tsv` | **current** · One row per run and room with start / end, wall, model and after-model minutes, every stage's minutes and COLMAP map phase seconds; filled from the run's files by `scripts/run_times.py update`, older / other-PC runs by hand from TRAINING.md (`source` column); empty = not measured (D-090) |
 | `progress/CHECKS_FOR_UMAIR.md` | **current** · Step 4 checks only Umair can do, on one page (room names #23, fixture sheets #21, newRoom detections #22, tape #20, browser #24, scan #3 platform #17), with the pipeline values to compare; written 2026-11-23 |
 | `progress/Problems_and_Solutions.md` | Technical evidence for every problem and fix (P&S §x) |
 | `progress/Research_Notes_2026-10-24.md` | Literature behind v8/v9 |
@@ -322,6 +324,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `tests/conftest.py` | Shared fixtures (synthetic captures) |
 | `tests/test_common_*.py`, `test_imu.py`, `test_fallback.py`, `test_relocalize_and_sfm.py` | Pipeline maths: capture loading, poses, IMU, fallback, SfM helpers |
 | `tests/test_process_dataset.py` | First-prototype script |
+| `tests/test_run_times.py` | `scripts/run_times.py`: times from the files, map log only for its own tag, hand values kept, every check (D-090) |
 | `tests/test_server_api.py`, `test_server_pipeline.py`, `test_runpod_client.py`, `test_scan_numbers.py` | Upload server, local runner, RunPod client, scan numbers |
 | `tests/test_apk_checks.py` | APK / manifest checker and signing keys |
 | `tests/test_openings.py`, `tests/test_plan_export.py` | Wall-gap openings and the floor-plan export on synthetic rooms (#9, #12) |
