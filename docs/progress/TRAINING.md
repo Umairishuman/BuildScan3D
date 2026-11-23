@@ -732,7 +732,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 - **Memory** (agent's watcher, every 10 s; ``ps`` RSS of colmap and ``MemAvailable``): colmap 12.6 GB at 13:50:36, then
   19.8 GB at 13:50:46 and **23.3 GB at 13:50:56 with 2.1 GB available** (the watcher stopped there, so the true peak
   is not measured); swap in use 4.0 of 8.0 GB at 14:02. No OOM kill. At 14:02 colmap 10.4 GB in bundle adjustment.
-- **Errors during the run:** none so far (memory came within ~2 GB of running out at 13:50, see above).
+- **Errors during the run:** none (memory came within ~2 GB of running out at 13:50, see above).
 - **Stage times (min, `timing.json` / `stages.tsv`):** select 0.71, SfM 63.6, export 0.01, prior 4.94, init 17.39,
   train 57.91, ply 0.87 → run_v8 145.4; layout 2.7, sem2d 16.6, sem3d 0.2, verify 0.1, sem3d2 0.2, mesh 0.3,
   meshlabels 1.0, web 0.1. Whole run 13:21:30 → 16:08:11 = 166.7 min.
@@ -784,7 +784,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 - **Command(s):** `train_eval.sh pgsrfast --pgsr` (scratchpad helper = R-062's commands: `geo_splatfacto.py --data work_v9e2e_sfm/transforms_fmvs.json --iters 15000 --dash_res_steps 7500 --stop_split_at 7500 --no_eval --prior mono_prior/train_v9e2e.npz --planar_lambda 0.2 --blur_exposure 0.0222 --pgsr`, `ns-export`, `eval_offpath.py` vs `gs_v9e2e` on the 79 off-path frames)
 - **Goal:** The speed-ups (R-062) together with `--pgsr` (the best model's recipe, R-021 / R-023): same quality as R-021 v9pgsr (25.09 / 0.8254, 46 min training)?
 - **Start → end:** 04:03 → 04:37 (train 33.0 min)
-- **Errors during the run:** none so far
+- **Errors during the run:** none
 - **Result:** `work_v9e2e_sfm/gs_pgsrfast/` (623,022 Gaussians). Off-path, 79 frames: **PSNR(cf) 25.02 / SSIM 0.8232 /
   sharpness 0.87 / flatness 1.34 cm** in **33.0 min** of training, vs R-021 v9pgsr (old training code) 25.09 / 0.8254 /
   sharpness 0.88 in 46 min, and v9e2e 25.16 / 0.8247 / 0.80 / 0.77 cm. R-021's off-path flatness was never measured,
@@ -801,7 +801,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 - **Command(s):** `train_eval.sh mcmc1m --mcmc_cap 1000000` (scratchpad helper = R-062's commands: `geo_splatfacto.py --data work_v9e2e_sfm/transforms_fmvs.json --iters 15000 --dash_res_steps 7500 --stop_split_at 7500 --no_eval --prior mono_prior/train_v9e2e.npz --planar_lambda 0.2 --blur_exposure 0.0222 --mcmc_cap 1000000`, `ns-export`, `eval_offpath.py` vs `gs_v9e2e` on the 79 off-path frames)
 - **Goal:** Does a 1M-Gaussian MCMC model improve off-path quality, and at what time / size cost?
 - **Start → end:** 04:37 → 05:19 (train 40.4 min)
-- **Errors during the run:** none so far
+- **Errors during the run:** none
 - **Result:** `work_v9e2e_sfm/gs_mcmc1m/` (601,002 Gaussians exported). Off-path, 79 frames: **PSNR(cf) 24.74 / SSIM
   0.8200 / sharpness 0.69 / flatness 0.93 cm**, 40.4 min training (v9e2e 25.16 / 0.8247 / 0.80 / 0.77, 42.5 min).
 - **Verdict:** **rejected**: a larger budget helps MCMC a little over R-070 (+0.09 dB, sharpness 0.64 → 0.69) but it
@@ -816,7 +816,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
   "Revising Densification in Gaussian Splatting"; splatfacto turns it off)
 - **Goal:** cheaper floater / over-opacity fix than MCMC: does it beat R-062 (25.14 / 0.8251)?
 - **Start → end:** 05:24 → 05:53 (train 28.5 min)
-- **Errors during the run:** none so far
+- **Errors during the run:** none
 - **Result:** `work_v9e2e_sfm/gs_revop/` (561,425 Gaussians, −10% vs R-062's 621,430). Off-path, 79 frames: **PSNR(cf)
   25.02 / SSIM 0.8244 / sharpness 0.79 / flatness 0.73 cm**, 28.5 min, vs R-062 (same code without the option)
   25.14 / 0.8251 / 0.80 / 0.81 cm, 28.2 min.
@@ -832,7 +832,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 - **Goal:** do more Gaussians in detailed areas sharpen the off-path views (R-070 showed softness is the weak point),
   and at what size / time cost?
 - **Start → end:** 06:21 → 06:53 (train 30.8 min); then the R-021 / R-041 flatness eval (06:53)
-- **Errors during the run:** none so far
+- **Errors during the run:** none
 - **Result:** `work_v9e2e_sfm/gs_dg4/` (**868,556 Gaussians, +40%** vs R-062). Off-path, 79 frames: **PSNR(cf) 25.07 /
   SSIM 0.8243 / sharpness 0.85 / flatness 0.74 cm**, 30.8 min, vs R-062 25.14 / 0.8251 / 0.80 / 0.81 (28.2 min).
   Crops next to v9e2e: printer, floor and plant look the same; leaves perhaps slightly crisper.
@@ -1222,11 +1222,13 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Goal:** the mapper took 14.3 min in R-020 (global positioning 3.0, bundle adjustment 4.8, retriangulation +
   refinement 6.5; Ceres has no CUDA in this COLMAP build, so all on the CPU). Compare poses (Sim3-aligned camera
   centres in cm, rotations), points and lens parameters with R-020's `sparse/0`.
-- **Start → end:** first attempt 02:18 → stopped during `ba1`'s retriangulation (~02:45, see R-063 error 1); restarted 16:45 → (running)
+- **Start → end:** first attempt 02:18 → stopped during `ba1`'s retriangulation (~02:45, see R-063 error 1); restarted 16:45 → end not recorded (finished before 17:28, when R-065 started with its result)
 - **Errors during the run:**
   1. ~02:45 — stopped with exit code 4 together with R-063 (no COLMAP error in the log). Restarted at 16:45. (resolved: restarted)
-- **Result:** (pending)
-- **Verdict:** (pending)
+- **Result:** written up in R-065 ("R-064 result", closed 2026-11-23 from that text): two default mapper runs on the same
+  matches differ by median 0.48 cm (16 cameras > 10 cm); `skip_retriangulation` 9.4 vs 14.3 min, median 0.90 cm, within that
+  spread; `ba_num_iterations 1` 14.2 min, 51 cameras > 10 cm.
+- **Verdict:** `skip_retriangulation` kept for R-065, whose recipe was then rejected (the loss may come from it or from the mapper's run-to-run randomness, R-065); `ba_num_iterations 1` rejected.
 
 ### R-065 · 2026-11-12 · Fast pipeline end to end (`v10fast`): all kept speed-ups from the raw capture
 - **Who / machine:** Tayyab (agent) · RTX 3070 PC
@@ -1315,7 +1317,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Progress:** started 20:58. Mapping round 0 (12 min): incremental mapper split the frames into 7 components
   [565, 162, 33, 21, 19, 12, 3] of 842: it refuses to join the weakly linked part instead of shrinking it (as GLOMAP did).
   Bridge round 0: 277 frames outside the main component matched against 81 of it (22,437 pairs), mapping round 1 from 21:12.
-- **Errors during the run:** none so far (many Ceres `CHOLMOD warning: Matrix not positive definite` lines in
+- **Errors during the run:** none (many Ceres `CHOLMOD warning: Matrix not positive definite` lines in
   `mapper.log` during round 1: a failed LM step that Ceres retries, not a crash)
 - **Result:** round 1 components [581, 162, 33, 21, 20, 2] of 842: the bridge round joined only 16 more frames. The
   main component (`sparse/0`, 581 frames) has **no shrunken part**: SfM/Metric3D depth ratio per frame within 0.83–1.44×
@@ -1338,7 +1340,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   --init_args=--photometric --planar 0.2 --blur 0.030`
 - **Goal:** a model of the hall without R-066's shrunken "mini room" (front of the room expected thin or missing).
 - **Start → end:** 21:27 → 22:03 (undistort + SfM export ~3 min; run_v8 35.8 min: export 0.01, prior 3.30, init 3.44, CPU wait 0.00, train 28.43, ply 0.60)
-- **Errors during the run:** none so far
+- **Errors during the run:** none
 - **Result:** `dataset/scan_3028a4de8fa0/work_v10inc_sfm/gs_v10inc/splat.ply` (158 MB). SfM export: 572 frames (9 more
   dropped as pose jumps), 32,418 points, ARCore alignment 100 inliers, median 6.6 cm. Metric3D/SfM scale per frame: 5 of
   572 frames < 0.5× the median, 2 > 2× (R-066: 175 < 0.5×). Top-down splat density with camera path
@@ -1402,7 +1404,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Command(s):** `train_eval.sh mcmc620 --mcmc_cap 620000` (scratchpad helper = R-062's commands: `geo_splatfacto.py --data work_v9e2e_sfm/transforms_fmvs.json --iters 15000 --dash_res_steps 7500 --stop_split_at 7500 --no_eval --prior mono_prior/train_v9e2e.npz --planar_lambda 0.2 --blur_exposure 0.0222 --mcmc_cap 620000`, `ns-export`, `eval_offpath.py` vs `gs_v9e2e` on the 79 off-path frames)
 - **Goal:** gsplat `MCMCStrategy` (3DGS as MCMC, Kheradmand et al. 2024: relocation of dead Gaussians + position noise, opacity / scale regularisers 0.01) instead of splatfacto's split / clone / prune, capped at ~620k Gaussians (v9e2e has 619,056). New `--mcmc_cap` option in `geo_splatfacto.py`. Does it beat R-062 (25.14 / 0.8251) at the same size?
 - **Start → end:** 03:27 → 04:03 (train 35.0 min)
-- **Errors during the run:** none so far
+- **Errors during the run:** none
 - **Result:** `work_v9e2e_sfm/gs_mcmc620/` (eval sheets in `eval/`). MCMC grew from the 258k-point init by 5% per 100
   steps as expected (e.g. step 900: 15,352 relocated, 14,954 added, 314,042 total); the exported `splat.ply` has
   402,989 Gaussians (why fewer than the cap was not investigated). Off-path, 79 frames: **PSNR(cf) 24.65 / SSIM 0.8216 /
