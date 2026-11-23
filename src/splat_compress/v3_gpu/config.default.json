@@ -1,0 +1,35 @@
+{
+  "device": "auto",
+  "seed": 0,
+  "pipeline": ["prune", "sh_reduce"],
+  "prune": {
+    "min_opacity": 0.05,
+    "max_scale_mult": 0.0,
+    "importance_quantile": 0.0
+  },
+  "sh_reduce": {
+    "sh_degree": 1,
+    "drop_normals": true
+  },
+  "vq_sh": {
+    "codebook_size": 256,
+    "iters": 20,
+    "chunk": 262144
+  },
+  "write": {
+    "formats": ["ply"],
+    "name": "splat",
+    "spz": {"node": "node", "script": "src/arcore3dgs/to_spz.mjs", "cwd": "prototype/web-ui"},
+    "ksplat": {"node": "node", "converter": null, "level": 2, "alpha_threshold": 13,
+               "center": "0,0,0", "block_size": 5.0, "bucket_size": 256, "sh_degree": 1}
+  },
+  "evaluate": {
+    "enabled": false,
+    "frames_json": null,
+    "split": "every10",
+    "max_views": 20,
+    "scale": 2,
+    "near": 0.05,
+    "far": 50.0
+  }
+}
