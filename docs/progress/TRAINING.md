@@ -98,7 +98,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-058 | 2026-11-19 | scan #6 `scan_006_1e457a214ce1` (259.8 s), full pipeline, R-023 recipe + D-075 (`r1119`) | this PC (Ubuntu, RTX 4000 Ada) | 45.5 min, did not finish | 1159 frames, 12.56 M observations; COLMAP `global_mapper` killed by OOM (26.4 GB) at 16:14:39 while the agent ran web work | Failed (OOM in SfM) |
 | R-059 | 2026-11-19 | scan #6 rerun after R-058, same recipe, PC kept quiet (`r1119b6`) | this PC (Ubuntu, RTX 4000 Ada) | 162.5 + 21.4 min | 1159/1159 frames; height 3.05 m, closed, 7 walls; 11 fixtures, 84 rejected | Kept (not checked by a person) |
 | R-085 | 2026-11-23 | scan #6 fixture check sheet from R-059 (`fixture_checklist.py --rejected`, no GPU) | this PC (Ubuntu, RTX 4000 Ada) | < 1 s | `scan_006…/checks_r085/fixture_check.md`: 11 fixtures + 84 rejected; switches 2 / 5 maybe one plate | Kept (for Umair, #21) |
-| R-086 | 2026-11-23 | Wall roughness in the mesh, where it sits (4.12, #18), four rooms, read-only, CPU | this PC (Ubuntu, RTX 4000 Ada) | (running) | — | — |
+| R-086 | 2026-11-23 | Wall roughness in the mesh, where it sits (4.12, #18), four rooms, read-only, CPU | this PC (Ubuntu, RTX 4000 Ada) | 3.4 s | 16 of 20 walls ≤ 0.26 cm; rough: newRoom wall 3 (2.88, bowed), scan #8 wall 1 (1.55, offset stretches), scan #6 wall 5 (4.70, two surfaces) | Inconclusive (look in the viewer) |
 | R-062 | 2026-11-12 | Training speed-up: exact TV-loss / colour-affine fixes, blur colour grid once (`fast_t1`) | 3070 | 28.2 min train (was 42.5) | 25.14 / 0.8251, sharp 0.80, flat 0.81 | Kept (proposed) |
 | R-063 | 2026-11-12 | Photometric-only fast-MVS init (`fast_t2_photo`) | 3070 | init 7.5 min (was 20.1) | 25.16 / 0.8240, flat 0.78 | Kept (proposed) |
 | R-064 | 2026-11-12 | Global mapper settings (`ba1`, `noretri`, default rerun) | 3070 | mapper 9.4 – 14.5 min | default runs differ by ~16 cameras | Inputs to R-065 |
@@ -1445,5 +1445,25 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   of the large deviations (into the room = something in front of the wall; behind = a recess or noise behind it).
 - **Goal:** 4.12's open part: are rough walls rough everywhere (noise / real relief) or only in a band or stretch
   (furniture against the wall, a window, a board)? No ground truth needed; options for Umair afterwards.
-- **Start → end:** (running)
-- **Errors during the run:** none so far.
+- **Start → end:** 11:25:32 → 11:25:36 (3.4 s, peak RSS 0.79 GB); part 2 (`<scratchpad>/r086_hist.py`: signed
+  deviation histogram in 1 cm bins and median offset per third, for six walls) a few seconds after.
+- **Errors during the run:** none (exit 0).
+- **Result:** the measure agrees with the earlier ones (scan #8 wall 1 1.55 cm = R-057; newRoom wall 3 2.88 cm, #18:
+  2.86). 20 walls; median |deviation| ≤ 0.26 cm on 16 of them. The four rough ones:
+
+  | Wall | Length | Median cm | > 2 cm off | in front / behind | Where | Shape |
+  |---|---|---|---|---|---|---|
+  | newRoom wall 3 | 4.57 m | 2.88 | 64.8 % | 32.4 / 32.4 % | every height band (79.7 / 68.6 / 48.1 %), every third | broad spread ±5 cm, no peak; median offset per third −0.45 / +1.10 / +1.59 cm; plane 1.47° off vertical (other walls 0.1–0.4°) |
+  | scan #8 wall 1 | 6.03 m | 1.55 | 44.8 % | 24.2 / 20.6 % | every band, every third | several peaks (−3, 0, +4 cm); median offset per third −1.31 / **+2.45** / −0.27 cm: stretches at different depths |
+  | scan #6 wall 5 | 0.74 m | 4.70 | 73.9 % | 33.2 / 40.7 % | every band; first two thirds | flat ±8 cm spread with a gap at +1 cm: two surfaces, not one plane |
+  | newRoom wall 4 | 0.78 m | 1.23 | 24.8 % | 12.5 / 12.3 % | every band | (short jog, not histogrammed) |
+
+  Walls with a little roughness have it in one place and mostly in front of the wall (things against it): e.g. scan #6
+  wall 4 (2.32 m) 21 % in its first third, 19.9 % above 2 m, 7.6 of 8.6 % in front; newRoom wall 0 48.3 % below 1 m in
+  its last third, 17.3 of 21.2 % in front, while its histogram keeps a sharp peak (62.6 % within ±1 cm).
+- **Reading (not checked in the room):** the rough walls are not "noise on a flat wall" that a clean-up should flatten:
+  scan #8 wall 1 and scan #6 wall 5 are stretches at different depths joined into one layout wall (scan #8 wall 1 got
+  longer in R-057 when `--raised_max` dropped the corner furniture, 0.06 → 1.55 cm); newRoom wall 3 is bowed or
+  leaning (offset rising 2 cm along it, 1.47° off vertical) with broad scatter, which may be real (curtain, cupboard
+  fronts) or a poorly seen wall. Flattening these like `--clean_ceiling` would move real surfaces by several cm.
+- **Verdict:** inconclusive on cause (needs a look at the three walls in the viewer); options to Umair (4.12).
