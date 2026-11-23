@@ -10,7 +10,7 @@ Entries up to v0.3.6 were written on 2026-11-12 from the git history and docs/pr
 
 ## v0.3.9 · 2026-11-19
 
-No changes listed for this version.
+- Nothing you will notice: this release only renamed run numbers in a code comment (D-079).
 
 ## v0.3.8 · 2026-11-15
 
