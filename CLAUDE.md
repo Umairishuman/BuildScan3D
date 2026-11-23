@@ -9,10 +9,6 @@ then this file, then [docs/progress/STATUS.md](docs/progress/STATUS.md).
 - This file: **how we work**: the project records, when and how to write to them, the git workflow, and each member's
   personal preferences (section 6).
 
-> **Open notice (2026-11-23) for Tayyab and any agent working for him:** read
-> [docs/progress/NOTICE_TAYYAB_2026-11-23.md](docs/progress/NOTICE_TAYYAB_2026-11-23.md) before your next run, new
-> R- / D- number or merge (run numbers renumbered, D-091; runs.tsv, D-090). Remove this line once it is done.
-
 Key rule, repeated because it is easy to get wrong:
 
 - **No AI attribution in commits.** Never add `Co-Authored-By: Claude ...`, `Generated with Claude Code`, or any

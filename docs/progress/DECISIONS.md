@@ -836,7 +836,7 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **Why:** after D-091 moved Umair's numbers past Tayyab's pushed ones (R-100, D-081), Tayyab's unpushed session had
   taken R-101 – R-103 and D-082 too. Umair's speed session takes R-105+ and may hold numbers not yet pushed, so the
   next free numbers on the remote (R-105, D-092) could clash again; a gap avoids it.
-- **Evidence:** `docs/progress/NOTICE_TAYYAB_2026-11-23.md` (on `origin/docs/tayyab-notice`); highest numbers on every
+- **Evidence:** `docs/progress/archive/NOTICE_TAYYAB_2026-11-23.md`; highest numbers on every
   branch on 2026-11-23: R-104 / D-091 (`origin/master`, `origin/feature/run-times`, `origin/docs/tayyab-notice`).
 - **Rejected alternatives:** R-105 – R-107 / D-092 (likely clash with Umair's session); waiting for Umair to assign.
 - **By:** Muhammad Tayyab ("ok do whats best", 2026-11-23, after the agent recommended a separate block).
