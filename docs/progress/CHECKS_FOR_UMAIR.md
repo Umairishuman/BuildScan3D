@@ -1,7 +1,7 @@
 # Checks for Umair (Step 4)
 
 Everything in COMPLETION_PLAN Step 4 that only Umair can do, on one page, in the order that unblocks the most.
-Written 2026-11-23 by an agent for Umair (R-085); values come from each room's current run (named per room). Rooms in
+Written 2026-11-23 by an agent for Umair (R-103); values come from each room's current run (named per room). Rooms in
 the order Umair prefers: scans #6, #7, #8, newRoom, then scan #3 (poor recording, last). Scan #5 has no model yet.
 
 How to use it: fill in the blanks (here, or on paper and an agent copies them in). Write the **tape value first, then

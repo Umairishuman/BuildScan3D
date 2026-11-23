@@ -45,6 +45,12 @@ R-043	newRoomAttemptSadness	revop	2026-11-14	Tayyab (agent)	RTX 3070 PC	done				
 R-044	newRoomAttemptSadness	dg4	2026-11-14	Tayyab (agent)	RTX 3070 PC	done												30.8															TRAINING	
 R-045	scan_009_057ed3beb4fc	v9pgsr	2026-11-15	Tayyab (agent)	RTX 3070 PC	failed					32.4		1.51	1.18	0.01	0.95	0.39	27.87	0.5														TRAINING	model done; layout crashed at once
 R-046	scan_009_057ed3beb4fc	v9pf	2026-11-15	Tayyab (agent)	RTX 3070 PC	done									0.01	3.15	4.78	25.13	0.93														TRAINING	34.0 min from export (index)
+R-047	scan_009_057ed3beb4fc	v9pfg	2026-11-18	Tayyab	RTX 3070 PC	done																											TRAINING	32.2 min from export (train 25.3) (index, `docs/featureless-tracking-plan`)
+R-048	scan_009_057ed3beb4fc	v9pfm	2026-11-18	Tayyab	RTX 3070 PC	stopped																											TRAINING	73 min SfM (stopped before training) (index, `docs/featureless-tracking-plan`)
+R-049	scan_009_057ed3beb4fc	v9pfp	2026-11-18	Tayyab	RTX 3070 PC	done																											TRAINING	~1.5 min (index, `docs/featureless-tracking-plan`)
+R-050	scan_009_057ed3beb4fc		2026-11-18	Tayyab	RTX 3070 PC	done																											TRAINING	~55 min (index, `docs/featureless-tracking-plan`)
+R-051	scan_009_057ed3beb4fc	v9pfr	2026-11-18	Tayyab	RTX 3070 PC	done																											TRAINING	30.0 min from export (train 22.8) (index, `docs/featureless-tracking-plan`)
+R-052	scan_009_057ed3beb4fc	v9pfb	2026-11-19	Tayyab	RTX 3070 PC	done																											TRAINING	~78 min (two trainings) (index, `docs/featureless-tracking-plan`)
 R-053	six rooms		2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done				8.8																							TRAINING	layout only, scratch output
 R-054	scan_003_6de634cbb8b2	r1119a	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_003_6de634cbb8b2/work_r1112lev_sfm/gs_r1119a	2026-11-19 09:01	2026-11-19 09:05	4.3		4.4								1.2		0.1	0.2	0.1		2.7	0.1						files	
 R-054	scan_007_e6d4f090f88e	r1119a	2026-11-19	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done	dataset/scan_007_e6d4f090f88e/work_r1118_sfm/gs_r1119a	2026-11-19 08:57	2026-11-19 09:01	3.9		3.9								2.3		0.2	0.2	0.2		0.9	0.1						files	
@@ -75,7 +81,37 @@ R-067	scan_3028a4de8fa0	v10inc	2026-11-12	Tayyab (agent)	RTX 3070 PC	done							
 R-068	scan_3028a4de8fa0	v10inc	2026-11-12	Tayyab (agent)	RTX 3070 PC	done					35.8				0.01	3.3	3.44	28.43	0.6														TRAINING	from export; map 25.4 min in R-067
 R-069	roomAttemptSadness2	v9pgsr8	2026-11-14	Tayyab (agent)	RTX 3070 PC	done					87.7	32.3	3.6	21.3		6.3	19.1	36.2	1.3	5.6	24.6	0.4	0.3	0.4	0.3	0.5	0.2						TRAINING	sem2d from the resumed run
 R-070	newRoomAttemptSadness	mcmc620	2026-11-14	Tayyab (agent)	RTX 3070 PC	done												35.0															TRAINING	
-R-071	scan_006_1e457a214ce1	r071g6	2026-11-23	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	running	dataset/scan_006_1e457a214ce1/work_r071g6_sfm/gs_r071g6						0.53	50.37	0.01	5.21	19.42												298.15	1231.62	832.13	2396.19	files	GPU COLMAP (bs-colmap2), R-059's recipe
-R-072	scan_003_6de634cbb8b2		2026-11-23	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	not run																												stopped before it ran (scan #3 not to be used, Umair)
-R-085	scan_006_1e457a214ce1	r1119b6	2026-11-23	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done				0.0																							TRAINING	fixture sheet, < 1 s, CPU
-R-086	four rooms		2026-11-23	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done				0.1																							TRAINING	wall roughness, 3.4 s, CPU
+R-071	scan_009_057ed3beb4fc	v9pfl	2026-11-19	Tayyab	RTX 3070 PC	done				55.0																							TRAINING	55 min (index, `docs/featureless-tracking-plan`)
+R-072	newRoomAttemptSadness		2026-11-19	Tayyab	RTX 3070 PC	done				34.0																							TRAINING	34 min (index, `docs/featureless-tracking-plan`)
+R-073	newRoomAttemptSadness		2026-11-19	Tayyab	RTX 3070 PC	done				11.6																							TRAINING	11.6 min (index, `docs/featureless-tracking-plan`)
+R-074	newRoomAttemptSadness		2026-11-19	Tayyab	RTX 3070 PC	done				28.0																							TRAINING	28 min (index, `docs/featureless-tracking-plan`)
+R-075	newRoomAttemptSadness		2026-11-19	Tayyab	RTX 3070 PC	done				20.0																							TRAINING	20 min (index, `docs/featureless-tracking-plan`)
+R-076	scan_009_057ed3beb4fc		2026-11-20	Tayyab	RTX 3070 PC	done				10.0																							TRAINING	10 min (index, `docs/featureless-tracking-plan`)
+R-077	scan_009_057ed3beb4fc	v9pfv	2026-11-20	Tayyab	RTX 3070 PC	done				4.0																							TRAINING	4 min (index, `docs/featureless-tracking-plan`)
+R-078	newRoom + scan_009		2026-11-20	Tayyab	RTX 3070 PC	done				21.0																							TRAINING	21 min (index, `docs/featureless-tracking-plan`)
+R-079	scan_009_057ed3beb4fc	v9pfw	2026-11-20	Tayyab	RTX 3070 PC	done				11.0																							TRAINING	11 min (index, `docs/featureless-tracking-plan`)
+R-080	scan_009_057ed3beb4fc	v9pfy	2026-11-20	Tayyab	RTX 3070 PC	done				3.5																							TRAINING	3.5 min (index, `docs/featureless-tracking-plan`)
+R-081	scan_009_057ed3beb4fc	v9pfz	2026-11-20	Tayyab	RTX 3070 PC	done				28.8																							TRAINING	28.8 min (index, `docs/featureless-tracking-plan`)
+R-082	scan_009_057ed3beb4fc	v9pfh	2026-11-20	Tayyab	RTX 3070 PC	done				28.3																							TRAINING	28.3 min (index, `docs/featureless-tracking-plan`)
+R-083	scan_009_057ed3beb4fc	v9pfi	2026-11-20	Tayyab	RTX 3070 PC	done				34.4																							TRAINING	34.4 min (index, `docs/featureless-tracking-plan`)
+R-084	scan_009_057ed3beb4fc	v9pfj	2026-11-20	Tayyab	RTX 3070 PC	done				29.3																							TRAINING	29.3 min (index, `docs/featureless-tracking-plan`)
+R-085	scan_009_057ed3beb4fc	track_loop_r085	2026-11-20	Tayyab	RTX 3070 PC	stopped				18.2																							TRAINING	18.2 min (index, `docs/featureless-tracking-plan`)
+R-086	scan_009_057ed3beb4fc	v9pfk	2026-11-21	Tayyab	RTX 3070 PC	done				30.5																							TRAINING	30.5 min (index, `docs/featureless-tracking-plan`)
+R-087	scan_009_057ed3beb4fc	v9pfs	2026-11-21	Tayyab	RTX 3070 PC	done				29.7																							TRAINING	29.7 min (index, `docs/featureless-tracking-plan`)
+R-088	scan_009_057ed3beb4fc	v9pfn	2026-11-21	Tayyab	RTX 3070 PC	done				28.8																							TRAINING	28.8 min (index, `docs/featureless-tracking-plan`)
+R-089	scan_009_057ed3beb4fc	v9pfo	2026-11-21	Tayyab	RTX 3070 PC	done				29.4																							TRAINING	29.4 min (index, `docs/featureless-tracking-plan`)
+R-090	scan_009_057ed3beb4fc	v9pfq	2026-11-21	Tayyab	RTX 3070 PC	done				28.2																							TRAINING	28.2 min (index, `docs/featureless-tracking-plan`)
+R-091	scan_009_057ed3beb4fc	v9pfs2	2026-11-21	Tayyab	RTX 3070 PC	done																											TRAINING	~1 h 40 min of work (plus a pause) (index, `docs/featureless-tracking-plan`)
+R-092	scan_009_057ed3beb4fc	v9pfu	2026-11-21	Tayyab	RTX 3070 PC	done				29.9																							TRAINING	29.9 min (index, `docs/featureless-tracking-plan`)
+R-093	scan_009_057ed3beb4fc		2026-11-21	Tayyab	RTX 3070 PC	done																											TRAINING	22 – 43 s per chunk (index, `docs/featureless-tracking-plan`)
+R-094	scan_009_057ed3beb4fc	v9psc	2026-11-21	Tayyab	RTX 3070 PC	done				29.2																							TRAINING	29.2 min (index, `docs/featureless-tracking-plan`)
+R-095	scan_009_057ed3beb4fc	v9ppl	2026-11-21	Tayyab	RTX 3070 PC	done				24.8																							TRAINING	24.8 min (index, `docs/featureless-tracking-plan`)
+R-096	scan_009_057ed3beb4fc	v9plp	2026-11-22	Tayyab	RTX 3070 PC	done																											TRAINING	28.3 min (+7 min solve / BA) (index, `docs/featureless-tracking-plan`)
+R-097	scan_009_057ed3beb4fc	v9plm	2026-11-22	Tayyab	RTX 3070 PC	done																											TRAINING	28.7 min (+3 min matching / solve) (index, `docs/featureless-tracking-plan`)
+R-098	scan_009_057ed3beb4fc	v9pcs	2026-11-22	Tayyab	RTX 3070 PC	done				24.0																							TRAINING	24.0 min (index, `docs/featureless-tracking-plan`)
+R-099	scan_009_057ed3beb4fc	v9plf	2026-11-22	Tayyab	RTX 3070 PC	done				27.9																							TRAINING	27.9 min (index, `docs/featureless-tracking-plan`)
+R-100	scan_009_057ed3beb4fc		2026-11-22	Tayyab	RTX 3070 PC	done																											TRAINING	37 min (3 cleanings 20 s, evaluations 36 min) (index, `docs/featureless-tracking-plan`)
+R-101	scan_006_1e457a214ce1	r071g6	2026-11-23	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	running	dataset/scan_006_1e457a214ce1/work_r071g6_sfm/gs_r071g6						0.53	50.37	0.01	5.21	19.42												298.15	1231.62	832.13	2396.19	files	GPU COLMAP (bs-colmap2), R-059's recipe
+R-102	scan_003_6de634cbb8b2		2026-11-23	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	not run																												stopped before it ran (scan #3 not to be used, Umair)
+R-103	scan_006_1e457a214ce1	r1119b6	2026-11-23	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done				0.0																							TRAINING	fixture sheet, < 1 s, CPU
+R-104	four rooms		2026-11-23	Umair (agent)	this PC (Ubuntu, RTX 4000 Ada)	done				0.1																							TRAINING	wall roughness, 3.4 s, CPU

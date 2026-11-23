@@ -742,34 +742,41 @@ issues, use the existing datasets, try new techniques. Branch from `exp/fast-pip
 
 ## 2026-11-23 (Step 4) · Umair · `feature/step4-triage`
 - Done (agent for Umair, in the worktree `../BuildScan3D-step4`, from `origin/master` `8338680` because local `master`
-  lacks PR #39; the main checkout stays on `exp/colmap-cudss` for R-071; `dataset/`, `saved_models/`, `tools/`,
+  lacks PR #39; the main checkout stays on `exp/colmap-cudss` for R-101; `dataset/`, `saved_models/`, `tools/`,
   `semantic-env/` symlinked, hidden through `.git/info/exclude`): Step 4 triage table for Umair (done / blocked on Umair
   / agent-doable). R-059 (scan #6 `r1119b6`, finished 2026-11-19) written up in TRAINING from its files. Scan #6
-  fixture check sheet (R-085) into a new folder `dataset/scan_006_1e457a214ce1/checks_r085/` (R-059's folder not
+  fixture check sheet (R-103) into a new folder `dataset/scan_006_1e457a214ce1/checks_r085/` (R-059's folder not
   written). `docs/progress/CHECKS_FOR_UMAIR.md` (MAP): room names, fixture sheets, newRoom's three detections, tape list
   with the pipeline values, browser check, scan #3 platform. Scan #6 added to the #14 / #15 numbers (STATUS §7.5, plan
-  4.7 / 4.8). Wall roughness R-086 (read-only, CPU). STATUS recordings table: scan #5 not processed, scan #6 = R-059.
-- Runs: R-085 (sheet, < 1 s), R-086 (wall roughness, 3.4 s). Nothing on the GPU: R-071 used it the whole session.
+  4.7 / 4.8). Wall roughness R-104 (read-only, CPU). STATUS recordings table: scan #5 not processed, scan #6 = R-059.
+- Runs: R-103 (sheet, < 1 s), R-104 (wall roughness, 3.4 s). Nothing on the GPU: R-101 used it the whole session.
 - Decisions: none. Waiting for Umair: 4.12 options for the rough walls; OD-12 layout re-run (GPU: `layout.py` renders
   with gsplat on CUDA) on scans #6 / #7 / #8 / newRoom, scan #3 in or out.
 - Problems: `plan.png` labels walls by length, not number, so the check page names walls by length. `gh issue view`
   does not take `--comments` with `--json`.
 - Next: OD-12 layout re-run in a GPU gap between speed tests (Umair's go); scan #6 `r071g6` layout / fixtures after
-  R-071; Umair: `CHECKS_FOR_UMAIR.md`; scan #5 (R-060) needs a GPU slot.
+  R-101; Umair: `CHECKS_FOR_UMAIR.md`; scan #5 (R-060) needs a GPU slot.
 
 ## 2026-11-23 (run records) · Umair · `exp/colmap-cudss`, `feature/step4-triage`, `feature/run-times`
-- Done (agent for Umair): Umair found runs left "running" in TRAINING.md and asked (1) why R-072 names scan #3, (2) a rule
-  to always close runs, (3) run times in a structured place, applied to all earlier runs and checked. R-072: planned on
+- Done (agent for Umair): Umair found runs left "running" in TRAINING.md and asked (1) why R-102 names scan #3, (2) a rule
+  to always close runs, (3) run times in a structured place, applied to all earlier runs and checked. R-102: planned on
   scan #3 copies (small map, R-061's CPU noise runs to compare with), stopped before running when Umair ruled scan #3
   out; marked "not run". Closed: R-059 (183.8 min, 16:33:50 → 19:37:41), R-061 end time, R-064 result / verdict (from
   R-065's text), "none so far" on finished R-039, R-041 – R-044, R-067, R-068, R-070. Rule in CLAUDE.md §6 (Umair) and the
   agent's memory. New `docs/progress/runs.tsv` + `scripts/run_times.py` + `tests/test_run_times.py` (D-090) in the
   worktree `../BuildScan3D-runtimes` (from `feature/step4-triage`).
-- Runs: none (records only; R-071 kept running in the main checkout, untouched).
+- Runs: none (records only; R-101 kept running in the main checkout, untouched).
 - Decisions: D-090 (Umair asked for it; format the agent's).
 - Problems: R-061's index time cell held a folder path; R-059's total was not quoted; no pytest in the envs (scratch
-  runner, 12 / 12). `check` on one branch alone fails for runs whose entries live on another branch (R-061, R-071,
-  R-072 on `exp/colmap-cudss`): use `--training git:<branch>` until the branches are merged.
-- Next: when R-071 ends: close it, `run_times.py update`, `check`. Merge order for Umair: `feature/run-times` contains
+  runner, 12 / 12). `check` on one branch alone fails for runs whose entries live on another branch (R-061, R-101,
+  R-102 on `exp/colmap-cudss`): use `--training git:<branch>` until the branches are merged.
+- Next: when R-101 ends: close it, `run_times.py update`, `check`. Merge order for Umair: `feature/run-times` contains
   `feature/step4-triage`.
+- Later (Umair: merge, and check the branches for runs): every local and remote branch's TRAINING.md compared before
+  merging: Tayyab's pushed `docs/featureless-tracking-plan` already uses R-047 – R-052, R-071 – R-100, D-080 / D-081.
+  Umair chose "renumber ours" (**D-091**): R-071 → R-101, R-072 → R-102 (on `exp/colmap-cudss`, `43a3b4e`, speed session
+  told), R-085 / R-086 → R-103 / R-104 here, D-080 → D-082. His 36 runs added to `runs.tsv` from his index (116 rows);
+  `check` over `origin/master`, his branch, `exp/colmap-cudss` and this branch: 0 FAIL, 0 WARN. Still on old numbers:
+  `fix/run-full-exit-code` (branched from `exp/colmap-cudss` before the renumbering) and Tayyab's own branch (his
+  numbers stay); Tayyab to be told (D-091).
 

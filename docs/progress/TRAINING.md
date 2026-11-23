@@ -42,6 +42,12 @@ and file names on the 3070 PC (e.g. `gs_v10inc/topdown_vs_R-036.jpg`) still use 
 
 R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (Tayyab) did not collide and are unchanged.
 
+**Renumbered runs (2026-11-23, D-091).** Tayyab's branch `docs/featureless-tracking-plan` (pushed 2026-11-18 – 22) already
+used R-047 – R-052, R-071 – R-100 and D-080 / D-081. Umair chose to renumber ours: **R-071 → R-101** (scan #6 GPU COLMAP;
+tag `r071g6` and screen `run-r071g6` keep the old name), **R-072 → R-102**, the Step 4 session's **R-085 / R-086 → R-103 /
+R-104**, the pending GPU-COLMAP decision **D-080 → D-082**. A comment in `sfm_colmap.py` keeps "R-072" (not edited while
+R-101 runs). Next free: R-105, D-092.
+
 | Run | Date | Name | Machine | Time | Result | Verdict |
 |---|---|---|---|---|---|---|
 | R-001 | 2026-10-06 | roomAttemptSadness own trainer v1–v3 (7k steps) | 3070 | 5–8 min train | v3: colour-fit 21.37 dB, SSIM 0.769; floaters 10.7 → 7.4% | Superseded |
@@ -97,8 +103,8 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-057 | 2026-11-19 | Four rooms, layout → web → plan with the D-075 defaults, tag `r1119c` | this PC (Ubuntu, RTX 4000 Ada) | 16.7 min | #7 / #8 closed rectangles (17.99 / 26.44 m²); #3 tilt 0.29°; ceilings 4.3 → 0.04 cm; #8 lost a switch + socket | Kept (scan #8 corner = furniture, Umair) |
 | R-058 | 2026-11-19 | scan #6 `scan_006_1e457a214ce1` (259.8 s), full pipeline, R-023 recipe + D-075 (`r1119`) | this PC (Ubuntu, RTX 4000 Ada) | 45.5 min, did not finish | 1159 frames, 12.56 M observations; COLMAP `global_mapper` killed by OOM (26.4 GB) at 16:14:39 while the agent ran web work | Failed (OOM in SfM) |
 | R-059 | 2026-11-19 | scan #6 rerun after R-058, same recipe, PC kept quiet (`r1119b6`) | this PC (Ubuntu, RTX 4000 Ada) | 183.8 min (run_v8 162.5) | 1159/1159 frames; height 3.05 m, closed, 7 walls; 11 fixtures, 84 rejected | Kept (not checked by a person) |
-| R-085 | 2026-11-23 | scan #6 fixture check sheet from R-059 (`fixture_checklist.py --rejected`, no GPU) | this PC (Ubuntu, RTX 4000 Ada) | < 1 s | `scan_006…/checks_r085/fixture_check.md`: 11 fixtures + 84 rejected; switches 2 / 5 maybe one plate | Kept (for Umair, #21) |
-| R-086 | 2026-11-23 | Wall roughness in the mesh, where it sits (4.12, #18), four rooms, read-only, CPU | this PC (Ubuntu, RTX 4000 Ada) | 3.4 s | 16 of 20 walls ≤ 0.26 cm; rough: newRoom wall 3 (2.88, bowed), scan #8 wall 1 (1.55, offset stretches), scan #6 wall 5 (4.70, two surfaces) | Inconclusive (look in the viewer) |
+| R-103 | 2026-11-23 | scan #6 fixture check sheet from R-059 (`fixture_checklist.py --rejected`, no GPU) | this PC (Ubuntu, RTX 4000 Ada) | < 1 s | `scan_006…/checks_r085/fixture_check.md`: 11 fixtures + 84 rejected; switches 2 / 5 maybe one plate | Kept (for Umair, #21) |
+| R-104 | 2026-11-23 | Wall roughness in the mesh, where it sits (4.12, #18), four rooms, read-only, CPU | this PC (Ubuntu, RTX 4000 Ada) | 3.4 s | 16 of 20 walls ≤ 0.26 cm; rough: newRoom wall 3 (2.88, bowed), scan #8 wall 1 (1.55, offset stretches), scan #6 wall 5 (4.70, two surfaces) | Inconclusive (look in the viewer) |
 | R-062 | 2026-11-12 | Training speed-up: exact TV-loss / colour-affine fixes, blur colour grid once (`fast_t1`) | 3070 | 28.2 min train (was 42.5) | 25.14 / 0.8251, sharp 0.80, flat 0.81 | Kept (proposed) |
 | R-063 | 2026-11-12 | Photometric-only fast-MVS init (`fast_t2_photo`) | 3070 | init 7.5 min (was 20.1) | 25.16 / 0.8240, flat 0.78 | Kept (proposed) |
 | R-064 | 2026-11-12 | Global mapper settings (`ba1`, `noretri`, default rerun) | 3070 | mapper 9.4 – 14.5 min | default runs differ by ~16 cameras | Inputs to R-065 |
@@ -1127,11 +1133,11 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 - **Start → end:** 16:33:50 → 19:37:41 = **183.8 min** ("all done" in `gs_r1119b6/run_full.log`). Stage times (`timing.json`,
   `stages.tsv`): run_v8 162.5 min = select 0.53, SfM 86.07, export 0.01, prior 5.23, init 19.41, train 50.53, ply
   0.73; then layout 1.4, sem2d 17.6, sem3d 0.2, verify 0.2, sem3d2 0.2, mesh 0.3, meshlabels 1.5, web 0.1, plan 0.0 min.
-  Inside SfM (`global_mapper.log`, as quoted in R-071): global positioning 2,240.92 s, iterative BA 1,528.52 s,
+  Inside SfM (`global_mapper.log`, as quoted in R-101): global positioning 2,240.92 s, iterative BA 1,528.52 s,
   retriangulation + refinement 733.86 s, reconstruction 4,535.88 s.
 - **Errors during the run:** none (no traceback in `run_full.log`; only timm `FutureWarning`s). SfM passed in RAM with
   the PC kept quiet (R-058's failure did not repeat).
-- **Result** (written up 2026-11-23 from the run's files, R-085): `work_r1119b6_sfm/gs_r1119b6/` (`splat.ply`
+- **Result** (written up 2026-11-23 from the run's files, R-103): `work_r1119b6_sfm/gs_r1119b6/` (`splat.ply`
   506 MB); web bundle `prototype/web-ui/public/scans/scan_006_1e457a214ce1_r1119b6/`, published to R2 on 2026-11-19
   (LOG). SfM (`report.json`): 1,159 / 1,159 frames registered, 585,115 points, ARCore Sim3 174 inliers, median
   4.85 cm, gravity from ARCore (spread 0.70°; a full Sim3 on the same inliers would have tilted it 3.81°). Prior:
@@ -1143,7 +1149,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
   (door 1, window 1, light switch 5, power socket 1, ceiling light 1, ceiling fan 1, doorway 1), **84 rejected**
   (62 windows "in a wall, sill ≥ 0.5 m, ≥ 0.3 m wide", 11 sockets "small, on a wall", 4 fans, 3 tube lights, 2
   switches, 1 crop check, 1 ceiling light). Not measured: tape (room height, wall lengths), fixture correctness
-  (check sheet: R-085), render quality (no held-out split).
+  (check sheet: R-103), render quality (no held-out split).
 - **Verdict:** kept as the first model of scan #6 (#19); fixtures and dimensions not checked by a person yet.
 
 ### R-062 · 2026-11-12 · Training speed-up, phase 1: profiling + exact fixes + blur colour grid once (`fast_t1`)
@@ -1414,8 +1420,8 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   training; gsplat's default keeps it to 25k of 30k), interaction with the DashGaussian low-resolution phase and the
   depth / normal priors, the opacity regulariser pushing opacities down.
 
-### R-085 · 2026-11-23 · scan #6 fixture check sheet from R-059 (`r1119b6`), CPU only
-- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada), while R-071 (`run-r071g6`, speed session) runs
+### R-103 · 2026-11-23 · (numbered R-085 until 2026-11-23, D-091) scan #6 fixture check sheet from R-059 (`r1119b6`), CPU only
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada), while R-101 (`run-r071g6`, speed session) runs
   `patch_match_stereo` on the GPU; this run uses no GPU and a few MB of RAM (standard-library script).
 - **Branch / commit:** `feature/step4-triage` (worktree `../BuildScan3D-step4`, from `origin/master` `8338680`)
 - **Dataset:** R-059's `dataset/scan_006_1e457a214ce1/work_r1119b6_sfm/gs_r1119b6/semantic_v10/semantic.json` and
@@ -1435,8 +1441,8 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   detections.
 - **Verdict:** kept: the sheet is ready for Umair (#21).
 
-### R-086 · 2026-11-23 · Wall roughness in the mesh: how much and where (plan 4.12, #18), four rooms, CPU only
-- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada); R-071 runs `patch_match_stereo` on the GPU
+### R-104 · 2026-11-23 · (numbered R-086 until 2026-11-23, D-091) Wall roughness in the mesh: how much and where (plan 4.12, #18), four rooms, CPU only
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada); R-101 runs `patch_match_stereo` on the GPU
   meanwhile (no SfM running; ~23 GB RAM available). This run is CPU only (open3d + numpy, one mesh at a time, < 1 GB).
 - **Branch / commit:** `feature/step4-triage` (worktree `../BuildScan3D-step4`)
 - **Dataset:** `mesh/mesh_clean.ply` + `layout/layout.json` of scan #6 `gs_r1119b6` (R-059), scans #7 / #8 and
