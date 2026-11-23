@@ -289,6 +289,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 |---|---|
 | `progress/STATUS.md`, `DECISIONS.md`, `LOG.md`, `TRAINING.md` | The four live project records (CLAUDE.md §1) |
 | `progress/COMPLETION_PLAN.md` | **current** · Plan to finish by 2026-12-04: every open task by pipeline step, with done-when, dependencies, priority, week; snapshot of the shared doc (link inside) |
+| `progress/CHECKS_FOR_UMAIR.md` | **current** · Step 4 checks only Umair can do, on one page (room names #23, fixture sheets #21, newRoom detections #22, tape #20, browser #24, scan #3 platform #17), with the pipeline values to compare; written 2026-11-23 |
 | `progress/Problems_and_Solutions.md` | Technical evidence for every problem and fix (P&S §x) |
 | `progress/Research_Notes_2026-10-24.md` | Literature behind v8/v9 |
 | `progress/archive/` | Retired files (old TODO, Training_Analysis, early notes) |
