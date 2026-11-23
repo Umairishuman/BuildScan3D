@@ -238,7 +238,7 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [-0.15, -0.03, -0.11], target: [-0.22, -0.21, 0.87] },
   },
   {
-    // R-103 (2026-11-23): R-096's loop-closed cameras plus camera refinement during training (--pose_opt, R-101's
+    // R-122 (2026-11-23): R-096's loop-closed cameras plus camera refinement during training (--pose_opt, R-120's
     // recipe), trained on all 581 frames. File is local only (git-ignored).
     id: "scan-009-poseopt",
     name: "Scan 009 · loops closed + camera refinement",
@@ -255,7 +255,7 @@ export const MOCK_PROJECTS: Project[] = [
     accuracy: "Scale not measured",
     captureDevice: "realme RMX5111 (ARCore)",
     description:
-      "Same recording and cameras as 'loops closed', but each camera is also fine-tuned while the model trains. With 63 frames held out, the held-out frames match the photos a little better (+0.33 dB after pose alignment, R-101). This model uses every frame. The bathroom doorway stays smeared: the video passes it in a fast, blurred pan (125–133 s) that no method could place.",
+      "Same recording and cameras as 'loops closed', but each camera is also fine-tuned while the model trains. With 63 frames held out, the held-out frames match the photos a little better (+0.33 dB after pose alignment, R-120). This model uses every frame. The bathroom doorway stays smeared: the video passes it in a fast, blurred pan (125–133 s) that no method could place.",
     splatUrl: "/splats/scan009_v9plq.spz",
     splatStart: { position: [-0.47, 0.06, -0.41], target: [-0.51, -0.12, 0.57] },
   },

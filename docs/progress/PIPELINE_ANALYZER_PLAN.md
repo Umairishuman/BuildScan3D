@@ -1,7 +1,7 @@
 # Pipeline analyzer: one pipeline for textured and featureless recordings (plan)
 
-Status: **planned, not started** (Tayyab, 2026-11-22, D-082). The scan_009 camera fixes (steps 4 and 3 of the
-2026-11-22 plan, R-101 / R-102) go first; this plan is what they are folded into afterwards.
+Status: **planned, not started** (Tayyab, 2026-11-22, D-095). The scan_009 camera fixes (steps 4 and 3 of the
+2026-11-22 plan, R-120 / R-121) go first; this plan is what they are folded into afterwards.
 Related: [FEATURELESS_TRACKING_PLAN.md](FEATURELESS_TRACKING_PLAN.md) (§10 – §11, how the scan_009 recipe was found),
 OD-10 (fast recipe), OD-11 (SfM fallback), OD-15 (sensor-path recipe), [STATUS.md](STATUS.md) §7.
 
@@ -41,7 +41,7 @@ Measures the recording per time window (e.g. 5 s) and writes `analysis.json`:
 | SfM rotation vs gyro agreement | `rot_sfm.py` / `gyro_loop_bias.py` |
 | ARCore tracking state, sensor-path jumps | `poses.csv` |
 | blur | `select_sharp.py` sharpness, `blur_motion.json` |
-| holes in the camera path: keyframes not placed, one long step | camera model vs `frames.json` (R-102: scan_009 125.4 – 133.2 s, 35 keyframes, none placed, blur 12 – 42 px, no ARCore pose) |
+| holes in the camera path: keyframes not placed, one long step | camera model vs `frames.json` (R-121: scan_009 125.4 – 133.2 s, 35 keyframes, none placed, blur 12 – 42 px, no ARCore pose) |
 | scale consistency | `sfm_scale_check.py` |
 
 Each window gets a label: **textured / weak / featureless**. The analyzer must not add a heavy pass of its own: it
@@ -64,8 +64,8 @@ A step is kept only when a measured check improves; otherwise it is skipped and 
 |---|---|
 | loop closure (`loop_path.py`, `prior_ba.py --pair_priors`) | held-out loop pairs' angle improves (already built in) |
 | scale-drift correction (`scale_drift.py`) | room height along the walk more constant, Metric3D ratio spread not worse (R-094) |
-| extra loop pairs (`loop_match.py`) | new pairs agree with the current path within a gate (R-102); a correction must not move one side of a path hole against the other unless pairs tie both sides (R-102 broke 134 – 140 s) |
-| pose refinement in training (`--pose_opt`) | held-out aligned PSNR (R-101) |
+| extra loop pairs (`loop_match.py`) | new pairs agree with the current path within a gate (R-121); a correction must not move one side of a path hole against the other unless pairs tie both sides (R-121 broke 134 – 140 s) |
+| pose refinement in training (`--pose_opt`) | held-out aligned PSNR (R-120) |
 | floater clean-up (`clean_splats.py`) | held-out aligned PSNR not worse (R-100: the camera-path rule failed this) |
 
 ### 2.4 Frames weighted by camera trust
@@ -111,7 +111,7 @@ Rules for the pipeline:
 - Each new step states its time cost next to its quality gain in TRAINING.md; a step that costs much time for a
   gain inside the noise (~0.1 – 0.25 dB) is not adopted.
 
-## 5. Order of work (after R-101 / R-102)
+## 5. Order of work (after R-120 / R-121)
 
 1. Analyzer (`analysis.json`) on the four recordings, from outputs that already exist; check the labels against what
    we know of each recording.

@@ -763,14 +763,14 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   the step's requirement). Answers the open VGGT question in plan §9.3 / STATUS.
 - **Status:** Active.
 
-## D-082 · 2026-11-22 · Plan an analyzer-driven pipeline; processing time a primary target; finish scan_009 steps 4 and 3 first
+## D-095 · 2026-11-22 · (numbered D-082 until 2026-11-23, D-096) Plan an analyzer-driven pipeline; processing time a primary target; finish scan_009 steps 4 and 3 first
 
 - **Decision:** the featureless work moves towards one pipeline that decides its route by itself: an analyzer stage
   labels the recording (textured / weak / featureless per time window) and picks the camera route; every corrective
   step keeps itself only when a measured check improves; the rules are set on a four-recording test bench, not on
   scan_009. Total processing time is a primary target alongside quality. Plan recorded in
   [PIPELINE_ANALYZER_PLAN.md](PIPELINE_ANALYZER_PLAN.md), status planned. For now: plan step 4 (pose refinement in
-  training, R-101) then step 3 (second loop round with a pair check) on scan_009, as before.
+  training, R-120) then step 3 (second loop round with a pair check) on scan_009, as before.
 - **Why:** the scan_009 recipe is hand-tuned to one recording and runs from hand-written scripts outside `run_v8.py`;
   it must work on textured and featureless recordings alike, and the processing time has to reach good numbers by
   the end of the project.
@@ -779,6 +779,21 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   steps 4 and 3 (Tayyab chose to finish them first).
 - **By:** Muhammad Tayyab ("record plan for an eventual pipeline/analyzer, also we need to consider total processing
   time very much ... for now continue the step 4 and then 3 as we were", 2026-11-22).
+- **Status:** Active.
+
+## D-096 · 2026-11-23 · Tayyab's new run / decision numbers: R-120 – R-122 and D-095, a separate block from Umair's
+
+- **Decision:** Tayyab's three runs of 2026-11-22 / 23, first numbered R-101, R-102, R-103 on the unpushed branch,
+  become **R-120, R-121, R-122**; his decision D-082 (analyzer plan) becomes **D-095**; this decision is D-096. Umair's
+  side keeps R-101 – R-104 and D-082 (D-091) and takes R-105 and up next (his notice of 2026-11-23). Tayyab's next runs
+  continue at R-123, his next decisions at D-097, until the two sides agree on blocks; check every branch first (D-091).
+- **Why:** after D-091 moved Umair's numbers past Tayyab's pushed ones (R-100, D-081), Tayyab's unpushed session had
+  taken R-101 – R-103 and D-082 too. Umair's speed session takes R-105+ and may hold numbers not yet pushed, so the
+  next free numbers on the remote (R-105, D-092) could clash again; a gap avoids it.
+- **Evidence:** `docs/progress/NOTICE_TAYYAB_2026-11-23.md` (on `origin/docs/tayyab-notice`); highest numbers on every
+  branch on 2026-11-23: R-104 / D-091 (`origin/master`, `origin/feature/run-times`, `origin/docs/tayyab-notice`).
+- **Rejected alternatives:** R-105 – R-107 / D-092 (likely clash with Umair's session); waiting for Umair to assign.
+- **By:** Muhammad Tayyab ("ok do whats best", 2026-11-23, after the agent recommended a separate block).
 - **Status:** Active.
 
 ## Open decisions (need the team; agents must not decide these)

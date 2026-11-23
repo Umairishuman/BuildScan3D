@@ -147,9 +147,9 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-098 | 2026-11-22 | scan_009: 11.c second form, prior pixels contradicted by other views dropped (`prior_consistency.py`) on R-096's cameras (`v9pcs`) | 3070 | 24.0 min | loop-partner depth disagreement 12.4 → 9.1 %; aligned 23.61 vs R-096 23.63 (63 frames), SSIM 0.892 vs 0.888, flatness 8.54 vs 6.57 | Inconclusive, not adopted |
 | R-099 | 2026-11-22 | scan_009: R-096's recipe on all frames, for the viewer (`v9plf`, `scan-009-loops`) | 3070 | 27.9 min | no held-out score (all frames); off-path views as R-096 | Kept (viewer) |
 | R-100 | 2026-11-22 | scan_009: floater clean-up (`clean_splats.py --mono`) on R-096's model, no retraining | 3070 | 37 min (3 cleanings 20 s, evaluations 36 min) | aligned on 63 held-out frames: both rules 23.31, see-through rule only 23.54, camera-path rule only 23.40 (R-096 23.63); bathroom doorway (125 s) unchanged | Rejected as the doorway fix; see-through rule neutral, camera-path rule harmful |
-| R-101 | 2026-11-22 | scan_009: R-096 plus camera refinement in training (`--pose_opt`, `v9plo`) | 3070 | 30.4 min (train 24.3, R-096 22.5) | aligned 23.96 vs R-096 23.63 (63 frames), SSIM 0.896 vs 0.888; 35 frames > 0.5 dB better, 13 worse; doorway (125 s) unchanged | Kept (modest gain, +1.8 min training) |
-| R-102 | 2026-11-22 | scan_009: second loop round with a pair check (`loop_path.py --gate 10`), R-096's recipe (`v9plg`) | 3070 | 28.5 min + 1.5 min solve / BA | aligned 22.91 vs R-096 23.58 on 60 common frames; 30 – 90 s +1.6 – 1.8 dB, 134 – 140 s broken again (20.10 → 15.83); path hole 125.4 – 133.2 s found | Rejected (the hole, not the pairs, breaks 134 – 140 s) |
-| R-103 | 2026-11-23 | scan_009: R-101's recipe (R-096 cameras + `--pose_opt`) on all frames, for the viewer (`v9plq`) | 3070 | 32.8 min (train 25.95) | no held-out score (all frames); 521,715 splats | Kept (viewer `scan-009-poseopt`) |
+| R-120 | 2026-11-22 | scan_009: R-096 plus camera refinement in training (`--pose_opt`, `v9plo`) | 3070 | 30.4 min (train 24.3, R-096 22.5) | aligned 23.96 vs R-096 23.63 (63 frames), SSIM 0.896 vs 0.888; 35 frames > 0.5 dB better, 13 worse; doorway (125 s) unchanged | Kept (modest gain, +1.8 min training) |
+| R-121 | 2026-11-22 | scan_009: second loop round with a pair check (`loop_path.py --gate 10`), R-096's recipe (`v9plg`) | 3070 | 28.5 min + 1.5 min solve / BA | aligned 22.91 vs R-096 23.58 on 60 common frames; 30 – 90 s +1.6 – 1.8 dB, 134 – 140 s broken again (20.10 → 15.83); path hole 125.4 – 133.2 s found | Rejected (the hole, not the pairs, breaks 134 – 140 s) |
+| R-122 | 2026-11-23 | scan_009: R-120's recipe (R-096 cameras + `--pose_opt`) on all frames, for the viewer (`v9plq`) | 3070 | 32.8 min (train 25.95) | no held-out score (all frames); 521,715 splats | Kept (viewer `scan-009-poseopt`) |
 
 ## Runs
 
@@ -2832,7 +2832,7 @@ igs.txt`):
   stretch fitting badly (cameras); the camera-path rule is harmful (−0.23 dB); the see-through rule alone is close to
   neutral (−0.09 dB) and only clears mid-air splats; not adopted. `clean_splats.py --mono` kept as a tool.
 
-### R-101 · 2026-11-22 · scan_009_057ed3beb4fc: R-096 plus camera refinement in training (`v9plo`)
+### R-120 · 2026-11-22 · (numbered R-101 until 2026-11-23, D-096; script and log names keep `r101`) scan_009_057ed3beb4fc: R-096 plus camera refinement in training (`v9plo`)
 
 - **Who / machine:** Tayyab (agent) · RTX 3070 PC
 - **Branch / commit:** `docs/featureless-tracking-plan` @ 61655ce
@@ -2851,7 +2851,7 @@ igs.txt`):
   unrefined poses): PSNR 20.14 vs R-096 21.27, SSIM 0.853 vs 0.871, flatness 6.12 vs 6.57 cm, 0 blocked views (the raw
   score drops because refinement moves the training cameras, as in R-084). `eval_align.py` on the 63 common held-out
   frames: **aligned 23.96 vs 23.63, SSIM 0.8957 vs 0.8881**, pose correction median 1.25° / 0.089 units (R-096
-  1.57° / 0.166). Per frame: median +0.77 dB, 35 frames > 0.5 dB better, 13 worse. Per stretch (R-096 → R-101):
+  1.57° / 0.166). Per frame: median +0.77 dB, 35 frames > 0.5 dB better, 13 worse. Per stretch (R-096 → R-120):
   0 – 10 s 28.25 → 28.39, 10 – 30 s 25.33 → 26.12, 30 – 60 s 21.56 → 20.22, 60 – 90 s 23.47 → 24.94, 90 – 120 s
   30.36 → 30.30, 134 – 140 s 20.10 → 19.76, 160 – 170 s 25.12 → 24.74. Off-path ring (`offpath_views_r101/`): the
   same room-centre views. Bathroom doorway (`offpath_views_r101/door_125s.jpg`, rendered on the unrefined pose): still
@@ -2860,7 +2860,7 @@ igs.txt`):
   not in the doorway stretch (134 – 140 s −0.34, featureless 30 – 60 s −1.3 on 4 frames). Refined poses are not
   exported (they stay in the checkpoint); the splats are in the world frame, so the viewer is unaffected.
 
-### R-102 · 2026-11-22 · scan_009_057ed3beb4fc: second loop round with a pair check against R-096's path (`v9plg`)
+### R-121 · 2026-11-22 · (numbered R-102 until 2026-11-23, D-096; script and log names keep `r102`) scan_009_057ed3beb4fc: second loop round with a pair check against R-096's path (`v9plg`)
 
 - **Who / machine:** Tayyab (agent) · RTX 3070 PC
 - **Branch / commit:** `docs/featureless-tracking-plan` (`loop_path.py --gate`, committed before the run)
@@ -2870,7 +2870,7 @@ igs.txt`):
   → `sparse_loop4`; `prior_ba.py … --pair_priors sparse_loop4/loop_pairs.json` (settings as R-096) →
   `sparse_loop4_pba`; R-096's recipe with tag `v9plg` (no `--pose_opt`, so the change is the cameras only);
   `eval_align.py`, `offpath_views.py` with R-096
-- **Goal:** plan step 3 (Tayyab, D-082). R-097 used the extra pairs without a check: four stretches better, 134 – 137 s
+- **Goal:** plan step 3 (Tayyab, D-095). R-097 used the extra pairs without a check: four stretches better, 134 – 137 s
   broken (20.10 → 15.81). Here pairs that disagree with R-096's path by > 10° are left out before solving (the check
   is meant to be generic: PIPELINE_ANALYZER_PLAN §2.3).
 - **Start → end:** 14:52 → 15:32 (loop solve 9 s, prior BA 1.3 min, copy / export 14:54; export 0.01, prior 3.21,
@@ -2879,12 +2879,12 @@ igs.txt`):
 - **Result:** pair check: 322 of 3,161 pairs > 10° off R-096's path left out (their frames mostly at 0 – 30 s and
   130 – 190 s). Held-out pairs >= 60 s: median 2.14 → 0.94°; cameras moved median 0.096, max 0.229 units; 26,497
   points (484 dropped). Model `work_v9plg_sfm/gs_v9plg/splat.ply`. `eval_align.py` (60 frames common to R-096,
-  R-101, R-102; the export dropped 3 more held-out frames): R-096 23.58 / R-101 23.97 / **R-102 22.91**, SSIM 0.876,
-  pose correction median 2.98°. Per stretch (R-096 / R-101 / R-102): 0 – 10 s 28.25 / 28.39 / 28.17, 10 – 30 s
+  R-120, R-121; the export dropped 3 more held-out frames): R-096 23.58 / R-120 23.97 / **R-121 22.91**, SSIM 0.876,
+  pose correction median 2.98°. Per stretch (R-096 / R-120 / R-121): 0 – 10 s 28.25 / 28.39 / 28.17, 10 – 30 s
   25.33 / 26.12 / 25.87, 30 – 60 s 21.38 / 20.00 / 23.13, 60 – 90 s 23.47 / 24.94 / 25.09, 90 – 120 s 30.36 /
   30.30 / 27.91, **134 – 140 s 20.10 / 19.76 / 15.83** (corrections up to 12°, as R-097's 15.81), 160 – 170 s
   24.82 / 24.60 / 23.20.
-  **Why 134 – 140 s breaks** (R-097 and R-102 alike): the camera model has two holes, 112.2 → 115.6 s (one step of
+  **Why 134 – 140 s breaks** (R-097 and R-121 alike): the camera model has two holes, 112.2 → 115.6 s (one step of
   1.54 units) and **125.4 → 133.2 s (one step of 1.40 units)**. The keyframe selection picked 35 frames in the second
   hole (`work_v9pfz/frames.json`); none is in the camera model: predicted blur 12 – 42 px (5 – 7 px after 133.7 s),
   no ARCore pose (ARCore "lost" from 133.7 s). The second round moves 115 – 125 s by 0.19 – 0.28 units while 133 – 142 s
@@ -2895,7 +2895,7 @@ igs.txt`):
   (unplaced keyframes, blur, no ARCore pose) and keep a loop correction from moving one side of a hole against the
   other unless pairs tie both sides.
 
-### R-103 · 2026-11-23 · scan_009_057ed3beb4fc: R-101's recipe on all frames, for the viewer (`v9plq`)
+### R-122 · 2026-11-23 · (numbered R-103 until 2026-11-23, D-096; script and log names keep `r103`) scan_009_057ed3beb4fc: R-120's recipe on all frames, for the viewer (`v9plq`)
 
 - **Who / machine:** Tayyab (agent) · RTX 3070 PC
 - **Branch / commit:** `docs/featureless-tracking-plan` @ 0179ca3
@@ -2903,12 +2903,12 @@ igs.txt`):
 - **Command(s):** `dataset/scan_009_057ed3beb4fc/r103.sh` (log `r103.log`): as `r099.sh` with tag `v9plq` and
   `--pose_opt`, no `--split`; `offpath_views.py` with R-096
 - **Goal:** plan step 5 (Tayyab "you can resume", 2026-11-23, after the agent recommended it): the best recipe so far
-  (R-101, +0.33 dB aligned over R-096) on every frame, as the model for the viewer (replaces R-099 / `scan-009-loops`
+  (R-120, +0.33 dB aligned over R-096) on every frame, as the model for the viewer (replaces R-099 / `scan-009-loops`
   if Tayyab agrees). No held-out score possible.
 - **Start → end:** 19:01 → 19:35 (export 0.02, prior 4.05, init 1.78, init wait 0.33, train 25.95, ply 0.65 min, total
   32.8; views 4 s). Training 3.5 min longer than R-099 (22.16) on the same frames: `--pose_opt` cost.
-- **Errors during the run:** none. Free disk on C: fell from 13 GB (after R-102) to 4.2 GB at the end; this run's
+- **Errors during the run:** none. Free disk on C: fell from 13 GB (after R-121) to 4.2 GB at the end; this run's
   folders are ~1.4 GB, the rest was not written by these runs (not investigated; Tayyab's other work on the PC?).
 - **Result:** `work_v9plq_sfm/gs_v9plq/splat.ply`, 521,715 splats; off-path views `offpath_views_r103/`. In the
   viewer as `scan-009-poseopt` (`prototype/web-ui/public/splats/scan009_v9plq.spz`, 9.9 MB, local only).
-- **Verdict:** kept as the scan_009 model to look at (R-101's +0.33 dB recipe); not yet inspected by Tayyab.
+- **Verdict:** kept as the scan_009 model to look at (R-120's +0.33 dB recipe); not yet inspected by Tayyab.

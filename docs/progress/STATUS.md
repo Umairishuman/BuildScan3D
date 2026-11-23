@@ -731,18 +731,21 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       evidence) on R-096. See-through rule alone: aligned 23.54 vs 23.63 (clears mid-air splats above head height);
       the camera-path radius rule removes real wall (−0.23 dB). The bathroom doorway (125 s) is a smear even from its
       own training pose and is unchanged: the 100 – 150 s stretch fits worst (cameras), not floaters. Not adopted.
-    - [x] Plan step 4, pose refinement in training on R-096 (2026-11-22, R-101): aligned 23.96 vs 23.63, SSIM 0.896 vs
+    - [x] Plan step 4, pose refinement in training on R-096 (2026-11-22, R-120): aligned 23.96 vs 23.63, SSIM 0.896 vs
       0.888, +1.8 min training. Kept.
-    - [x] Plan step 3, second loop round with a pair check (`loop_path.py --gate 10`, 2026-11-22, R-102): 30 – 90 s
+    - [x] Plan step 3, second loop round with a pair check (`loop_path.py --gate 10`, 2026-11-22, R-121): 30 – 90 s
       +1.6 – 1.8 dB but 134 – 140 s broken again (15.83, as R-097). Cause: the camera model has a hole at 125.4 – 133.2 s
       (35 keyframes, none placed: blur 12 – 42 px, no ARCore pose); the bathroom doorway (125 s) is at its start.
       Rejected. The doorway is a limit of the video there (fast blurred pan), not of the method.
-    - [x] Plan step 5 (2026-11-23, R-103): R-101's recipe on all frames, 32.8 min, in the viewer as `scan-009-poseopt`.
-    - [ ] Tayyab to decide: whether to try a hole-aware second loop round, or move to the analyzer (D-082) now.
-    - [ ] Disk on the RTX 3070 PC: 4.2 GB free after R-103 (2026-11-23); 13 GB after R-102, the difference is not from
-      these runs (not investigated). Analyzer must detect path
+    - [x] Plan step 5 (2026-11-23, R-122): R-120's recipe on all frames, 32.8 min, in the viewer as `scan-009-poseopt`.
+    - [ ] Tayyab to decide: whether to try a hole-aware second loop round, or move to the analyzer (D-095) now.
+    - [x] Disk on the RTX 3070 PC (2026-11-23, Tayyab "do whats best"): 4.2 → 7.0 GB free. Deleted R-121's bulk
+      (`mono_prior/`, `images/`, `undist*/`), R-100's three cleaned copies (`splat_clean_r100*.ply`) and the input
+      copies of `work_v9pfz` for rejected / inconclusive runs (`work_v9plg`, `plm`, `pcs`, `ppl`, `pfk`, `pfs`, `pfo`);
+      list in `dataset/scan_009_057ed3beb4fc/cleanup_2026-11-22.txt`. Not touched: Windows Temp (3.4 GB), `outputs/`
+      (14 GB of old checkpoints, kept on purpose 2026-11-21). The 13 → 4.2 GB drop on 2026-11-23 was not investigated. Analyzer must detect path
       holes (unplaced keyframes, blur, no ARCore pose).
-    - [ ] Analyzer-driven pipeline (D-082, [PIPELINE_ANALYZER_PLAN.md](PIPELINE_ANALYZER_PLAN.md)), after steps 4 / 3:
+    - [ ] Analyzer-driven pipeline (D-095, [PIPELINE_ANALYZER_PLAN.md](PIPELINE_ANALYZER_PLAN.md)), after steps 4 / 3:
       analyzer `analysis.json` on the four test recordings; route decision and the sensor-path chain inside
       `run_v8.py` with per-step checks; test bench vs the reference results; frame weighting by camera trust.
       Processing time is a primary target: measure the sensor-path chain end to end (not measured yet).

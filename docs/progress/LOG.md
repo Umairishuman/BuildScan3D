@@ -952,15 +952,17 @@ problem there, not floaters. Not adopted. Next: Tayyab to choose (camera fixes f
 
 Tayyab: the featureless work is not a proper pipeline (hand-targeted to parts of one recording); asked for an analyzer
 that decides automatically for textured and featureless recordings, with total processing time a primary target.
-Recorded as D-082 and `docs/progress/PIPELINE_ANALYZER_PLAN.md` (planned). For now steps 4 then 3: R-101 started.
+Recorded as D-095 and `docs/progress/PIPELINE_ANALYZER_PLAN.md` (planned). For now steps 4 then 3: R-120 started.
 
-R-101 (step 4, `--pose_opt` on R-096): aligned 23.96 vs 23.63, kept (+1.8 min training). R-102 (step 3, `loop_path.py
+R-120 (step 4, `--pose_opt` on R-096): aligned 23.96 vs 23.63, kept (+1.8 min training). R-121 (step 3, `loop_path.py
 --gate 10`): 30 – 90 s +1.6 – 1.8 dB, 134 – 140 s broken again; cause found: a hole in the camera path at 125.4 – 133.2 s
 (35 blurred keyframes without ARCore pose, none placed), right where the bathroom doorway is seen. Rejected. Analyzer
 plan updated (detect path holes; hole-aware loop checks).
 
 ## 2026-11-23 · Tayyab (agent, `docs/featureless-tracking-plan`)
 
-- R-103: R-101's recipe (R-096 cameras + `--pose_opt`) on all frames, 32.8 min; in the viewer as `scan-009-poseopt`.
-- Disk: 4.2 GB free on C: after the run (13 GB after R-102); the drop is mostly not from these runs.
-- Next: Tayyab looks at `scan-009-poseopt`; then the analyzer (D-082) or a hole-aware loop round, his choice.
+- R-122: R-120's recipe (R-096 cameras + `--pose_opt`) on all frames, 32.8 min; in the viewer as `scan-009-poseopt`.
+- Disk: 4.2 GB free on C: after the run (13 GB after R-121); the drop is mostly not from these runs.
+- Next: Tayyab looks at `scan-009-poseopt`; then the analyzer (D-095) or a hole-aware loop round, his choice.
+- Umair's notice (2026-11-23, D-091) read: our unpushed R-101 – R-103 / D-082 clashed with his renumbered ones; ours
+  moved to R-120 – R-122 / D-095 (D-096, Tayyab "do whats best"). Disk: 4.2 → 7.0 GB free (rejected-run bulk).
