@@ -729,6 +729,52 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **By:** Umair (option chosen from the agent's three, renumber Tayyab's recommended) · **Source:** session 2026-11-19 ·
   **Status:** Active
 
+## D-090 · 2026-11-23 · Run times in one structured table, `docs/progress/runs.tsv`, filled from the run files
+- **Decision:** every run (R-NNN) has one row per room in `docs/progress/runs.tsv` (tracked): who, machine, state
+  (done / failed / stopped / not run / running), model folder, start / end, wall, model and after-model minutes, the
+  minutes of every stage (select … ply, layout … plan) and the COLMAP map phase seconds. `scripts/run_times.py update`
+  fills the time columns from the run's own `timing.json`, `stages.tsv` and `global_mapper.log`; runs without such
+  files (RTX 3070 PC, Kaggle, scratch output, R-001 – R-027) are written by hand from TRAINING.md (`source` =
+  TRAINING; ranges / approximations stay as text in `note`; empty = not measured). `run_times.py check` is the test:
+  runs in TRAINING.md without a row and the reverse, timing totals that do not add up, `stages.tsv` vs `timing.json`,
+  runs that are over but still open in TRAINING.md, rows marked running whose files say finished, run folders with
+  timing files but no row, measured totals that TRAINING.md does not quote. TRAINING.md stays the written record.
+- **Why:** Umair (2026-11-23): run times were not stored in one structured place (per-run files on this PC only, not
+  tied to run IDs; the TRAINING index time column is free text, e.g. R-061's held a folder path); R-059 had stayed
+  "running" for four days.
+- **Evidence:** first fill 2026-11-23: 80 rows for R-001 – R-086 (old numbers), then 116 with Tayyab's unmerged runs (D-091); every total measured from the files on this PC
+  matches the TRAINING.md index (R-029 – R-040, R-054 – R-059, R-061); fixed on the way: R-059 total 183.8 min not
+  quoted, R-061's index time cell; then `check` over `origin/master`, `origin/docs/featureless-tracking-plan`,
+  `exp/colmap-cudss` and this branch: 0 FAIL, 0 WARN.
+  `tests/test_run_times.py` 12 / 12 (scratch runner: no pytest in the project envs).
+- **Rejected:** `run_full.sh` appending to the tracked table itself (writes into whatever branch the main checkout is
+  on, mid-run, and does not know the run ID); a JSON / SQLite store (harder to diff and read on GitHub); copying
+  times by hand only (how R-059 was missed).
+- **Limits:** the run-folder files exist only on the machine that ran them (this PC: R-028 – R-101); 3070 PC runs are
+  as precise as their TRAINING entries; `stages.tsv` minutes are rounded to 0.1, start = first stage's end − its
+  minutes.
+- **By:** Umair ("fix all this the best way possible", 2026-11-23; format chosen by the agent) · **Source:** session
+  2026-11-23 · **Status:** Active
+
+## D-091 · 2026-11-23 · Run / decision IDs that clashed with Tayyab's pushed branch: ours move after his
+- **Decision:** Tayyab's branch `docs/featureless-tracking-plan` (pushed 2026-11-18 – 22, not on `master`) numbers his
+  scan_009 / newRoom runs R-047 – R-052 and R-071 – R-100 and his decisions D-080 / D-081. Ours with the same numbers
+  are renumbered: R-071 (scan #6 on the GPU COLMAP, tag `r071g6`) → **R-101**, R-072 (stopped scan #3 series) →
+  **R-102**, the Step 4 session's R-085 (scan #6 fixture sheet) / R-086 (wall roughness) → **R-103 / R-104**, the
+  pending GPU-COLMAP switch decision D-080 → **D-082**. The speed session's planned R-073 – R-084 are dropped; it takes
+  R-105 and up, decisions D-092 and up. Folder tags, screen names and `scripts/r072_series.sh`'s file name keep their
+  old names; a comment in `sfm_colmap.py` keeps "R-072" until R-101 has finished.
+- **Why:** his runs are pushed and more (36 runs, many references); ours are few and not on `master` yet. Found by
+  checking every branch's TRAINING.md before merging `feature/run-times` (D-090).
+- **Evidence:** `git show origin/docs/featureless-tracking-plan:docs/progress/TRAINING.md` (R-047 – R-052, R-071 –
+  R-100) and `DECISIONS.md` (D-080, D-081), 2026-11-23.
+- **Rejected:** Tayyab renumbers his (needs him, many references); merging first and fixing later (two meanings per ID
+  on `master`).
+- **Limits:** Tayyab has to be told; before taking a number, check every branch, local and remote
+  (`git branch -a`), not just `origin/master` (D-079's rule missed unmerged pushed branches).
+- **By:** Umair (option chosen from the agent's three, "renumber ours" recommended) · **Source:** session 2026-11-23 ·
+  **Status:** Active
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |

@@ -42,6 +42,12 @@ and file names on the 3070 PC (e.g. `gs_v10inc/topdown_vs_R-036.jpg`) still use 
 
 R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (Tayyab) did not collide and are unchanged.
 
+**Renumbered runs (2026-11-23, D-091).** Tayyab's branch `docs/featureless-tracking-plan` (pushed 2026-11-18 – 22) already
+used R-047 – R-052, R-071 – R-100 and D-080 / D-081. Umair chose to renumber ours: **R-071 → R-101** (scan #6 GPU COLMAP;
+tag `r071g6` and screen `run-r071g6` keep the old name), **R-072 → R-102**, the Step 4 session's **R-085 / R-086 → R-103 /
+R-104**, the pending GPU-COLMAP decision **D-080 → D-082**. A comment in `sfm_colmap.py` keeps "R-072" (not edited while
+R-101 runs). Next free: R-105, D-092.
+
 | Run | Date | Name | Machine | Time | Result | Verdict |
 |---|---|---|---|---|---|---|
 | R-001 | 2026-10-06 | roomAttemptSadness own trainer v1–v3 (7k steps) | 3070 | 5–8 min train | v3: colour-fit 21.37 dB, SSIM 0.769; floaters 10.7 → 7.4% | Superseded |
@@ -96,7 +102,9 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-056 | 2026-11-19 | Four rooms, layout → web → plan with the 2026-11-19 defaults, tag `r1119b` | this PC (Ubuntu, RTX 4000 Ada) | 15.6 min | #7 no roof + 2 openings; #3 no false openings; newRoom closed, 29.41 m²; #8 open, 2 doorways | Kept (for Umair's checks) |
 | R-057 | 2026-11-19 | Four rooms, layout → web → plan with the D-075 defaults, tag `r1119c` | this PC (Ubuntu, RTX 4000 Ada) | 16.7 min | #7 / #8 closed rectangles (17.99 / 26.44 m²); #3 tilt 0.29°; ceilings 4.3 → 0.04 cm; #8 lost a switch + socket | Kept (scan #8 corner = furniture, Umair) |
 | R-058 | 2026-11-19 | scan #6 `scan_006_1e457a214ce1` (259.8 s), full pipeline, R-023 recipe + D-075 (`r1119`) | this PC (Ubuntu, RTX 4000 Ada) | 45.5 min, did not finish | 1159 frames, 12.56 M observations; COLMAP `global_mapper` killed by OOM (26.4 GB) at 16:14:39 while the agent ran web work | Failed (OOM in SfM) |
-| R-059 | 2026-11-19 | scan #6 rerun after R-058, same recipe, PC kept quiet (`r1119b6`) | this PC (Ubuntu, RTX 4000 Ada) | running | — | running |
+| R-059 | 2026-11-19 | scan #6 rerun after R-058, same recipe, PC kept quiet (`r1119b6`) | this PC (Ubuntu, RTX 4000 Ada) | 183.8 min (run_v8 162.5) | 1159/1159 frames; height 3.05 m, closed, 7 walls; 11 fixtures, 84 rejected | Kept (not checked by a person) |
+| R-103 | 2026-11-23 | scan #6 fixture check sheet from R-059 (`fixture_checklist.py --rejected`, no GPU) | this PC (Ubuntu, RTX 4000 Ada) | < 1 s | `scan_006…/checks_r085/fixture_check.md`: 11 fixtures + 84 rejected; switches 2 / 5 maybe one plate | Kept (for Umair, #21) |
+| R-104 | 2026-11-23 | Wall roughness in the mesh, where it sits (4.12, #18), four rooms, read-only, CPU | this PC (Ubuntu, RTX 4000 Ada) | 3.4 s | 16 of 20 walls ≤ 0.26 cm; rough: newRoom wall 3 (2.88, bowed), scan #8 wall 1 (1.55, offset stretches), scan #6 wall 5 (4.70, two surfaces) | Inconclusive (look in the viewer) |
 | R-062 | 2026-11-12 | Training speed-up: exact TV-loss / colour-affine fixes, blur colour grid once (`fast_t1`) | 3070 | 28.2 min train (was 42.5) | 25.14 / 0.8251, sharp 0.80, flat 0.81 | Kept (proposed) |
 | R-063 | 2026-11-12 | Photometric-only fast-MVS init (`fast_t2_photo`) | 3070 | init 7.5 min (was 20.1) | 25.16 / 0.8240, flat 0.78 | Kept (proposed) |
 | R-064 | 2026-11-12 | Global mapper settings (`ba1`, `noretri`, default rerun) | 3070 | mapper 9.4 – 14.5 min | default runs differ by ~16 cameras | Inputs to R-065 |
@@ -730,7 +738,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 - **Memory** (agent's watcher, every 10 s; ``ps`` RSS of colmap and ``MemAvailable``): colmap 12.6 GB at 13:50:36, then
   19.8 GB at 13:50:46 and **23.3 GB at 13:50:56 with 2.1 GB available** (the watcher stopped there, so the true peak
   is not measured); swap in use 4.0 of 8.0 GB at 14:02. No OOM kill. At 14:02 colmap 10.4 GB in bundle adjustment.
-- **Errors during the run:** none so far (memory came within ~2 GB of running out at 13:50, see above).
+- **Errors during the run:** none (memory came within ~2 GB of running out at 13:50, see above).
 - **Stage times (min, `timing.json` / `stages.tsv`):** select 0.71, SfM 63.6, export 0.01, prior 4.94, init 17.39,
   train 57.91, ply 0.87 → run_v8 145.4; layout 2.7, sem2d 16.6, sem3d 0.2, verify 0.1, sem3d2 0.2, mesh 0.3,
   meshlabels 1.0, web 0.1. Whole run 13:21:30 → 16:08:11 = 166.7 min.
@@ -782,7 +790,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 - **Command(s):** `train_eval.sh pgsrfast --pgsr` (scratchpad helper = R-062's commands: `geo_splatfacto.py --data work_v9e2e_sfm/transforms_fmvs.json --iters 15000 --dash_res_steps 7500 --stop_split_at 7500 --no_eval --prior mono_prior/train_v9e2e.npz --planar_lambda 0.2 --blur_exposure 0.0222 --pgsr`, `ns-export`, `eval_offpath.py` vs `gs_v9e2e` on the 79 off-path frames)
 - **Goal:** The speed-ups (R-062) together with `--pgsr` (the best model's recipe, R-021 / R-023): same quality as R-021 v9pgsr (25.09 / 0.8254, 46 min training)?
 - **Start → end:** 04:03 → 04:37 (train 33.0 min)
-- **Errors during the run:** none so far
+- **Errors during the run:** none
 - **Result:** `work_v9e2e_sfm/gs_pgsrfast/` (623,022 Gaussians). Off-path, 79 frames: **PSNR(cf) 25.02 / SSIM 0.8232 /
   sharpness 0.87 / flatness 1.34 cm** in **33.0 min** of training, vs R-021 v9pgsr (old training code) 25.09 / 0.8254 /
   sharpness 0.88 in 46 min, and v9e2e 25.16 / 0.8247 / 0.80 / 0.77 cm. R-021's off-path flatness was never measured,
@@ -799,7 +807,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 - **Command(s):** `train_eval.sh mcmc1m --mcmc_cap 1000000` (scratchpad helper = R-062's commands: `geo_splatfacto.py --data work_v9e2e_sfm/transforms_fmvs.json --iters 15000 --dash_res_steps 7500 --stop_split_at 7500 --no_eval --prior mono_prior/train_v9e2e.npz --planar_lambda 0.2 --blur_exposure 0.0222 --mcmc_cap 1000000`, `ns-export`, `eval_offpath.py` vs `gs_v9e2e` on the 79 off-path frames)
 - **Goal:** Does a 1M-Gaussian MCMC model improve off-path quality, and at what time / size cost?
 - **Start → end:** 04:37 → 05:19 (train 40.4 min)
-- **Errors during the run:** none so far
+- **Errors during the run:** none
 - **Result:** `work_v9e2e_sfm/gs_mcmc1m/` (601,002 Gaussians exported). Off-path, 79 frames: **PSNR(cf) 24.74 / SSIM
   0.8200 / sharpness 0.69 / flatness 0.93 cm**, 40.4 min training (v9e2e 25.16 / 0.8247 / 0.80 / 0.77, 42.5 min).
 - **Verdict:** **rejected**: a larger budget helps MCMC a little over R-070 (+0.09 dB, sharpness 0.64 → 0.69) but it
@@ -814,7 +822,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
   "Revising Densification in Gaussian Splatting"; splatfacto turns it off)
 - **Goal:** cheaper floater / over-opacity fix than MCMC: does it beat R-062 (25.14 / 0.8251)?
 - **Start → end:** 05:24 → 05:53 (train 28.5 min)
-- **Errors during the run:** none so far
+- **Errors during the run:** none
 - **Result:** `work_v9e2e_sfm/gs_revop/` (561,425 Gaussians, −10% vs R-062's 621,430). Off-path, 79 frames: **PSNR(cf)
   25.02 / SSIM 0.8244 / sharpness 0.79 / flatness 0.73 cm**, 28.5 min, vs R-062 (same code without the option)
   25.14 / 0.8251 / 0.80 / 0.81 cm, 28.2 min.
@@ -830,7 +838,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 - **Goal:** do more Gaussians in detailed areas sharpen the off-path views (R-070 showed softness is the weak point),
   and at what size / time cost?
 - **Start → end:** 06:21 → 06:53 (train 30.8 min); then the R-021 / R-041 flatness eval (06:53)
-- **Errors during the run:** none so far
+- **Errors during the run:** none
 - **Result:** `work_v9e2e_sfm/gs_dg4/` (**868,556 Gaussians, +40%** vs R-062). Off-path, 79 frames: **PSNR(cf) 25.07 /
   SSIM 0.8243 / sharpness 0.85 / flatness 0.74 cm**, 30.8 min, vs R-062 25.14 / 0.8251 / 0.80 / 0.81 (28.2 min).
   Crops next to v9e2e: printer, floor and plant look the same; leaves perhaps slightly crisper.
@@ -1122,8 +1130,27 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 - **Command(s):** `scripts/buildscan run 6 r1119b6 -- --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
 - **Goal:** first model of scan #6 (#19); SfM must pass in RAM like scan #7 (12.68 M observations, R-040). Then
   layout / fixtures / check sheet, publish within the 10 GB cap (D-077).
-- **Start → end:** (running)
-- **Errors during the run:** none so far.
+- **Start → end:** 16:33:50 → 19:37:41 = **183.8 min** ("all done" in `gs_r1119b6/run_full.log`). Stage times (`timing.json`,
+  `stages.tsv`): run_v8 162.5 min = select 0.53, SfM 86.07, export 0.01, prior 5.23, init 19.41, train 50.53, ply
+  0.73; then layout 1.4, sem2d 17.6, sem3d 0.2, verify 0.2, sem3d2 0.2, mesh 0.3, meshlabels 1.5, web 0.1, plan 0.0 min.
+  Inside SfM (`global_mapper.log`, as quoted in R-101): global positioning 2,240.92 s, iterative BA 1,528.52 s,
+  retriangulation + refinement 733.86 s, reconstruction 4,535.88 s.
+- **Errors during the run:** none (no traceback in `run_full.log`; only timm `FutureWarning`s). SfM passed in RAM with
+  the PC kept quiet (R-058's failure did not repeat).
+- **Result** (written up 2026-11-23 from the run's files, R-103): `work_r1119b6_sfm/gs_r1119b6/` (`splat.ply`
+  506 MB); web bundle `prototype/web-ui/public/scans/scan_006_1e457a214ce1_r1119b6/`, published to R2 on 2026-11-19
+  (LOG). SfM (`report.json`): 1,159 / 1,159 frames registered, 585,115 points, ARCore Sim3 174 inliers, median
+  4.85 cm, gravity from ARCore (spread 0.70°; a full Sim3 on the same inliers would have tilted it 3.81°). Prior:
+  aligned Metric3D median error 1.6 % (raw 15.5 %). **Layout** (`layout/layout.json`): height **3.05 m** (strongest
+  horizontal plane above the cameras; wall tops 2.94 m above the floor), **room closed**, no warnings, 7 walls (5.26,
+  4.39, 4.01, 2.32, 1.71, 0.98, 0.74 m), 6 corners (89.6, 89.8, 90.0, 83.0, 87.0, 89.3°), one wall-gap doorway 0.90 m
+  on wall 2 (0.10–1.70 m, 5,011 Gaussians seen through). **Semantics v10** (`semantic_v10/semantic.json`): floor tilt
+  0.21°, ceiling tilt 0.24°, ceiling height 3.076 m (2.6 cm above the layout's), floor area 19.79 m², **11 fixtures**
+  (door 1, window 1, light switch 5, power socket 1, ceiling light 1, ceiling fan 1, doorway 1), **84 rejected**
+  (62 windows "in a wall, sill ≥ 0.5 m, ≥ 0.3 m wide", 11 sockets "small, on a wall", 4 fans, 3 tube lights, 2
+  switches, 1 crop check, 1 ceiling light). Not measured: tape (room height, wall lengths), fixture correctness
+  (check sheet: R-103), render quality (no held-out split).
+- **Verdict:** kept as the first model of scan #6 (#19); fixtures and dimensions not checked by a person yet.
 
 ### R-062 · 2026-11-12 · Training speed-up, phase 1: profiling + exact fixes + blur colour grid once (`fast_t1`)
 *Runs R-062 – R-068 were numbered R-029 – R-065 on the unmerged branch (the chat of 2026-11-12 uses those numbers);
@@ -1201,11 +1228,13 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Goal:** the mapper took 14.3 min in R-020 (global positioning 3.0, bundle adjustment 4.8, retriangulation +
   refinement 6.5; Ceres has no CUDA in this COLMAP build, so all on the CPU). Compare poses (Sim3-aligned camera
   centres in cm, rotations), points and lens parameters with R-020's `sparse/0`.
-- **Start → end:** first attempt 02:18 → stopped during `ba1`'s retriangulation (~02:45, see R-063 error 1); restarted 16:45 → (running)
+- **Start → end:** first attempt 02:18 → stopped during `ba1`'s retriangulation (~02:45, see R-063 error 1); restarted 16:45 → end not recorded (finished before 17:28, when R-065 started with its result)
 - **Errors during the run:**
   1. ~02:45 — stopped with exit code 4 together with R-063 (no COLMAP error in the log). Restarted at 16:45. (resolved: restarted)
-- **Result:** (pending)
-- **Verdict:** (pending)
+- **Result:** written up in R-065 ("R-064 result", closed 2026-11-23 from that text): two default mapper runs on the same
+  matches differ by median 0.48 cm (16 cameras > 10 cm); `skip_retriangulation` 9.4 vs 14.3 min, median 0.90 cm, within that
+  spread; `ba_num_iterations 1` 14.2 min, 51 cameras > 10 cm.
+- **Verdict:** `skip_retriangulation` kept for R-065, whose recipe was then rejected (the loss may come from it or from the mapper's run-to-run randomness, R-065); `ba_num_iterations 1` rejected.
 
 ### R-065 · 2026-11-12 · Fast pipeline end to end (`v10fast`): all kept speed-ups from the raw capture
 - **Who / machine:** Tayyab (agent) · RTX 3070 PC
@@ -1294,7 +1323,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Progress:** started 20:58. Mapping round 0 (12 min): incremental mapper split the frames into 7 components
   [565, 162, 33, 21, 19, 12, 3] of 842: it refuses to join the weakly linked part instead of shrinking it (as GLOMAP did).
   Bridge round 0: 277 frames outside the main component matched against 81 of it (22,437 pairs), mapping round 1 from 21:12.
-- **Errors during the run:** none so far (many Ceres `CHOLMOD warning: Matrix not positive definite` lines in
+- **Errors during the run:** none (many Ceres `CHOLMOD warning: Matrix not positive definite` lines in
   `mapper.log` during round 1: a failed LM step that Ceres retries, not a crash)
 - **Result:** round 1 components [581, 162, 33, 21, 20, 2] of 842: the bridge round joined only 16 more frames. The
   main component (`sparse/0`, 581 frames) has **no shrunken part**: SfM/Metric3D depth ratio per frame within 0.83–1.44×
@@ -1317,7 +1346,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   --init_args=--photometric --planar 0.2 --blur 0.030`
 - **Goal:** a model of the hall without R-066's shrunken "mini room" (front of the room expected thin or missing).
 - **Start → end:** 21:27 → 22:03 (undistort + SfM export ~3 min; run_v8 35.8 min: export 0.01, prior 3.30, init 3.44, CPU wait 0.00, train 28.43, ply 0.60)
-- **Errors during the run:** none so far
+- **Errors during the run:** none
 - **Result:** `dataset/scan_3028a4de8fa0/work_v10inc_sfm/gs_v10inc/splat.ply` (158 MB). SfM export: 572 frames (9 more
   dropped as pose jumps), 32,418 points, ARCore alignment 100 inliers, median 6.6 cm. Metric3D/SfM scale per frame: 5 of
   572 frames < 0.5× the median, 2 > 2× (R-066: 175 < 0.5×). Top-down splat density with camera path
@@ -1381,7 +1410,7 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
 - **Command(s):** `train_eval.sh mcmc620 --mcmc_cap 620000` (scratchpad helper = R-062's commands: `geo_splatfacto.py --data work_v9e2e_sfm/transforms_fmvs.json --iters 15000 --dash_res_steps 7500 --stop_split_at 7500 --no_eval --prior mono_prior/train_v9e2e.npz --planar_lambda 0.2 --blur_exposure 0.0222 --mcmc_cap 620000`, `ns-export`, `eval_offpath.py` vs `gs_v9e2e` on the 79 off-path frames)
 - **Goal:** gsplat `MCMCStrategy` (3DGS as MCMC, Kheradmand et al. 2024: relocation of dead Gaussians + position noise, opacity / scale regularisers 0.01) instead of splatfacto's split / clone / prune, capped at ~620k Gaussians (v9e2e has 619,056). New `--mcmc_cap` option in `geo_splatfacto.py`. Does it beat R-062 (25.14 / 0.8251) at the same size?
 - **Start → end:** 03:27 → 04:03 (train 35.0 min)
-- **Errors during the run:** none so far
+- **Errors during the run:** none
 - **Result:** `work_v9e2e_sfm/gs_mcmc620/` (eval sheets in `eval/`). MCMC grew from the 258k-point init by 5% per 100
   steps as expected (e.g. step 900: 15,352 relocated, 14,954 added, 314,042 total); the exported `splat.ply` has
   402,989 Gaussians (why fewer than the cap was not investigated). Off-path, 79 frames: **PSNR(cf) 24.65 / SSIM 0.8216 /
@@ -1391,3 +1420,58 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   training; gsplat's default keeps it to 25k of 30k), interaction with the DashGaussian low-resolution phase and the
   depth / normal priors, the opacity regulariser pushing opacities down.
 
+### R-103 · 2026-11-23 · (numbered R-085 until 2026-11-23, D-091) scan #6 fixture check sheet from R-059 (`r1119b6`), CPU only
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada), while R-101 (`run-r071g6`, speed session) runs
+  `patch_match_stereo` on the GPU; this run uses no GPU and a few MB of RAM (standard-library script).
+- **Branch / commit:** `feature/step4-triage` (worktree `../BuildScan3D-step4`, from `origin/master` `8338680`)
+- **Dataset:** R-059's `dataset/scan_006_1e457a214ce1/work_r1119b6_sfm/gs_r1119b6/semantic_v10/semantic.json` and
+  `layout/layout.json` (read only). The sheet goes to a new folder `dataset/scan_006_1e457a214ce1/checks_r085/`, so
+  R-059's run folder is not written.
+- **Command(s):** `python3 src/arcore3dgs/fixture_checklist.py --semantic <gs_r1119b6>/semantic_v10/semantic.json
+  --layout <gs_r1119b6>/layout/layout.json --out dataset/scan_006_1e457a214ce1/checks_r085/fixture_check.md
+  --title "scan #6 (R-059, r1119b6)" --rejected`
+- **Goal:** the scan #6 sheet for Umair (#21, plan 4.2), like the other rooms' sheets.
+- **Start → end:** 11:22:41 → 11:22:41 (< 1 s)
+- **Errors during the run:** none (exit 0).
+- **Result:** `dataset/scan_006_1e457a214ce1/checks_r085/fixture_check.md` (137 lines): 11 fixtures, empty "missed"
+  table, summary per class, and the 84 rejected candidates with their failed rule. Seen while reading it (not
+  checked against the room): `light_switch_2` and `light_switch_5` are both on wall 0 at 1.00 m along, 0.76 / 0.75 m
+  up (8 × 8 and 6 × 7 cm), so they may be one plate found twice; `power_socket_1` is at 1.88 m and `light_switch_4`
+  at 0.49 m, unusual heights; `doorway_1` (wall gap) has 0 frames because it comes from the layout, not from 2D
+  detections.
+- **Verdict:** kept: the sheet is ready for Umair (#21).
+
+### R-104 · 2026-11-23 · (numbered R-086 until 2026-11-23, D-091) Wall roughness in the mesh: how much and where (plan 4.12, #18), four rooms, CPU only
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada); R-101 runs `patch_match_stereo` on the GPU
+  meanwhile (no SfM running; ~23 GB RAM available). This run is CPU only (open3d + numpy, one mesh at a time, < 1 GB).
+- **Branch / commit:** `feature/step4-triage` (worktree `../BuildScan3D-step4`)
+- **Dataset:** `mesh/mesh_clean.ply` + `layout/layout.json` of scan #6 `gs_r1119b6` (R-059), scans #7 / #8 and
+  newRoom `gs_r1119c` (R-057). Read only; scan #3 left out (Umair: poor recording).
+- **Command(s):** `micromamba run -n bs-ns python <scratchpad>/r086_walls.py`: `mesh.py`'s `shell_flatness` (copied
+  unchanged: robust plane per wall, median |deviation|, % within 1 cm), plus, for each wall, the share of its vertices
+  > 2 cm off the plane per height band (0.15–1.0 m, 1.0–2.0 m, > 2.0 m) and per third along the wall, and the sign
+  of the large deviations (into the room = something in front of the wall; behind = a recess or noise behind it).
+- **Goal:** 4.12's open part: are rough walls rough everywhere (noise / real relief) or only in a band or stretch
+  (furniture against the wall, a window, a board)? No ground truth needed; options for Umair afterwards.
+- **Start → end:** 11:25:32 → 11:25:36 (3.4 s, peak RSS 0.79 GB); part 2 (`<scratchpad>/r086_hist.py`: signed
+  deviation histogram in 1 cm bins and median offset per third, for six walls) a few seconds after.
+- **Errors during the run:** none (exit 0).
+- **Result:** the measure agrees with the earlier ones (scan #8 wall 1 1.55 cm = R-057; newRoom wall 3 2.88 cm, #18:
+  2.86). 20 walls; median |deviation| ≤ 0.26 cm on 16 of them. The four rough ones:
+
+  | Wall | Length | Median cm | > 2 cm off | in front / behind | Where | Shape |
+  |---|---|---|---|---|---|---|
+  | newRoom wall 3 | 4.57 m | 2.88 | 64.8 % | 32.4 / 32.4 % | every height band (79.7 / 68.6 / 48.1 %), every third | broad spread ±5 cm, no peak; median offset per third −0.45 / +1.10 / +1.59 cm; plane 1.47° off vertical (other walls 0.1–0.4°) |
+  | scan #8 wall 1 | 6.03 m | 1.55 | 44.8 % | 24.2 / 20.6 % | every band, every third | several peaks (−3, 0, +4 cm); median offset per third −1.31 / **+2.45** / −0.27 cm: stretches at different depths |
+  | scan #6 wall 5 | 0.74 m | 4.70 | 73.9 % | 33.2 / 40.7 % | every band; first two thirds | flat ±8 cm spread with a gap at +1 cm: two surfaces, not one plane |
+  | newRoom wall 4 | 0.78 m | 1.23 | 24.8 % | 12.5 / 12.3 % | every band | (short jog, not histogrammed) |
+
+  Walls with a little roughness have it in one place and mostly in front of the wall (things against it): e.g. scan #6
+  wall 4 (2.32 m) 21 % in its first third, 19.9 % above 2 m, 7.6 of 8.6 % in front; newRoom wall 0 48.3 % below 1 m in
+  its last third, 17.3 of 21.2 % in front, while its histogram keeps a sharp peak (62.6 % within ±1 cm).
+- **Reading (not checked in the room):** the rough walls are not "noise on a flat wall" that a clean-up should flatten:
+  scan #8 wall 1 and scan #6 wall 5 are stretches at different depths joined into one layout wall (scan #8 wall 1 got
+  longer in R-057 when `--raised_max` dropped the corner furniture, 0.06 → 1.55 cm); newRoom wall 3 is bowed or
+  leaning (offset rising 2 cm along it, 1.47° off vertical) with broad scatter, which may be real (curtain, cupboard
+  fronts) or a poorly seen wall. Flattening these like `--clean_ceiling` would move real surfaces by several cm.
+- **Verdict:** inconclusive on cause (needs a look at the three walls in the viewer); options to Umair (4.12).
