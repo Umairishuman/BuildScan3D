@@ -290,6 +290,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 |---|---|
 | `progress/STATUS.md`, `DECISIONS.md`, `LOG.md`, `TRAINING.md` | The four live project records (CLAUDE.md §1) |
 | `progress/COMPLETION_PLAN.md` | **current** · Plan to finish by 2026-12-04: every open task by pipeline step, with done-when, dependencies, priority, week; snapshot of the shared doc (link inside) |
+| `progress/NOTICE_TAYYAB_2026-11-23.md` | **current (open notice)** · For Tayyab's agent: run / decision IDs renumbered (D-091), runs.tsv and closing runs (D-090), keep `master`'s closed entries when merging, known `test_changelog` failure; archive once done |
 | `progress/runs.tsv` | **current** · One row per run and room with start / end, wall, model and after-model minutes, every stage's minutes and COLMAP map phase seconds; filled from the run's files by `scripts/run_times.py update`, older / other-PC runs by hand from TRAINING.md (`source` column); empty = not measured (D-090) |
 | `progress/CHECKS_FOR_UMAIR.md` | **current** · Step 4 checks only Umair can do, on one page (room names #23, fixture sheets #21, newRoom detections #22, tape #20, browser #24, scan #3 platform #17), with the pipeline values to compare; written 2026-11-23 |
 | `progress/Problems_and_Solutions.md` | Technical evidence for every problem and fix (P&S §x) |

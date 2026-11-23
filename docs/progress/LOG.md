@@ -783,4 +783,7 @@ issues, use the existing datasets, try new techniques. Branch from `exp/fast-pip
   the same failure, hidden by the release commit's `[skip ci]`). A changelog line made CI green, but any `android/` change
   makes CD release a new app version; Umair: take it out (reverted), merge with that one known failure, fix it with the
   next real app change (STATUS §7.7).
+- Later: Umair asked to tell Tayyab's agent. It cannot be messaged from this PC, so a notice
+  `docs/progress/NOTICE_TAYYAB_2026-11-23.md` (D-091, D-090, merge advice, known CI failure), pointed to from the top of
+  CLAUDE.md, merged to `master`, plus a GitHub issue for Tayyab.
 
