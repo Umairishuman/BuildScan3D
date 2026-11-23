@@ -163,7 +163,7 @@ Umair's side continues at R-105.
 | R-120 | 2026-11-22 | scan_009: R-096 plus camera refinement in training (`--pose_opt`, `v9plo`) | 3070 | 30.4 min (train 24.3, R-096 22.5) | aligned 23.96 vs R-096 23.63 (63 frames), SSIM 0.896 vs 0.888; 35 frames > 0.5 dB better, 13 worse; doorway (125 s) unchanged | Kept (modest gain, +1.8 min training) |
 | R-121 | 2026-11-22 | scan_009: second loop round with a pair check (`loop_path.py --gate 10`), R-096's recipe (`v9plg`) | 3070 | 28.5 min + 1.5 min solve / BA | aligned 22.91 vs R-096 23.58 on 60 common frames; 30 – 90 s +1.6 – 1.8 dB, 134 – 140 s broken again (20.10 → 15.83); path hole 125.4 – 133.2 s found | Rejected (the hole, not the pairs, breaks 134 – 140 s) |
 | R-122 | 2026-11-23 | scan_009: R-120's recipe (R-096 cameras + `--pose_opt`) on all frames, for the viewer (`v9plq`) | 3070 | 32.8 min (train 25.95) | no held-out score (all frames); 521,715 splats | Kept (viewer `scan-009-poseopt`) |
-| R-123 | 2026-11-23 | scan_009: R-121's gated loop round with path holes held (`loop_path.py --hole_dt 2.5`), R-120's recipe (`v9plh`) | 3070 | running | | |
+| R-123 | 2026-11-23 | scan_009: R-121's gated loop round with path holes held (`loop_path.py --hole_dt 2.5`), R-120's recipe (`v9plh`) | 3070 | 35.1 min (train 28.66) + 2 min solve / BA | aligned 22.83 vs R-120 23.97 (60 frames); 134 – 140 s still broken (15.52); R-121's 30 – 90 s gains lost | Rejected (the holes are not why 134 – 140 s breaks) |
 | R-124 | 2026-11-23 | Analyzer, first part (`analyze_recording.py`) on the four test recordings (read-only, CPU) | 3070 | < 10 s per recording | newRoom / bedroom textured → normal SfM; lecture hall 68 % placed, 34 % holes → sensor path; scan_009 normal SfM 37 % placed → sensor path; labels match the known stretches | Kept (first thresholds by hand, not tuned) |
 
 ## Runs
@@ -3019,10 +3019,26 @@ igs.txt`):
 - **Goal:** Tayyab chose "1 then 2" (2026-11-23): keep R-121's gains where the path is continuous (30 – 90 s +1.6 –
   1.8 dB) without breaking 134 – 140 s at the 126 – 133 s hole. Compared with R-120 (aligned 23.96 / 23.97 on the
   60 common frames). Hole detection is the first piece of the analyzer (PIPELINE_ANALYZER_PLAN §2.1).
-- **Start → end:**
-- **Errors during the run:**
-- **Result:**
-- **Verdict:**
+- **Start → end:** 20:01 → 20:52 (loop solve 12 s, prior BA 1.8 min, copy / undistort / export 20:03 – 20:04; export
+  0.01, prior 3.66, init 2.09, train 28.66, ply 0.62 min, total 35.1; evaluation 13 min, views 4 s). Training 4.4 min
+  longer than R-120's (24.26) with the same recipe: not explained (the PC was also running R-124's analysis, CPU only).
+- **Errors during the run:** none.
+- **Result:** holes found on R-096's path (>= 2.5 s or >= 15 × median step): 12; 11 held (0 or 1 tying pairs),
+  95.7 – 100.5 s free (11 pairs). Pair check as R-121 (322 of 3,161 out). Held-out pairs >= 60 s: 2.14 → 0.97°
+  (R-121 0.94°); cameras moved median 0.084, max 0.207 units. Model `work_v9plh_sfm/gs_v9plh/splat.ply`.
+  `eval_align.py`, 60 frames common to R-096 / R-120 / R-121 / R-123: 23.58 / 23.97 / 22.91 / **22.83**; R-123 vs
+  R-120 per frame median −0.47 dB (11 better, 30 worse by > 0.5). Per stretch (R-096 / R-120 / R-121 / R-123):
+  0 – 10 s 28.25 / 28.39 / 28.17 / 29.14, 10 – 30 s 25.33 / 26.12 / 25.87 / 26.31, 30 – 60 s 21.38 / 20.00 / 23.13 /
+  20.09, 60 – 90 s 23.47 / 24.94 / 25.09 / 24.00, 90 – 120 s 30.36 / 30.30 / 27.91 / 28.59, **134 – 140 s 20.10 /
+  19.76 / 15.83 / 15.52**, 160 – 170 s 24.82 / 24.60 / 23.20 / 25.76.
+  Camera change vs R-096 (median per stretch): the loop solve moves cameras but does not rotate them (133 – 140 s:
+  0.025 units, 0°); the prior BA after it rotates 133 – 150 s by 0.76 – 0.81° (R-121's BA: 0.88 – 0.90°), the
+  other stretches by 0.11 – 0.60°.
+- **Verdict:** rejected. Holding the holes does not stop 134 – 140 s from breaking, so R-121's explanation (the 125 –
+  133 s hole lets one side shift) is wrong or incomplete; and the 30 – 90 s gains of R-121 came from moving across the
+  holes at 47 – 58 s and 68 – 72 s. What R-097 / R-121 / R-123 share and R-096 / R-120 do not: the second round's
+  pair directions (`loop_match2`) and their pair priors in the BA, which rotates 133 – 150 s by ~0.8°. Not yet tested
+  which of the two breaks 134 – 140 s. The `--hole_dt` option stays (off by default).
 
 ### R-124 · 2026-11-23 · Analyzer, first part: window labels and route on the four test recordings (read-only, CPU)
 
