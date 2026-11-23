@@ -164,6 +164,7 @@ Umair's side continues at R-105.
 | R-121 | 2026-11-22 | scan_009: second loop round with a pair check (`loop_path.py --gate 10`), R-096's recipe (`v9plg`) | 3070 | 28.5 min + 1.5 min solve / BA | aligned 22.91 vs R-096 23.58 on 60 common frames; 30 – 90 s +1.6 – 1.8 dB, 134 – 140 s broken again (20.10 → 15.83); path hole 125.4 – 133.2 s found | Rejected (the hole, not the pairs, breaks 134 – 140 s) |
 | R-122 | 2026-11-23 | scan_009: R-120's recipe (R-096 cameras + `--pose_opt`) on all frames, for the viewer (`v9plq`) | 3070 | 32.8 min (train 25.95) | no held-out score (all frames); 521,715 splats | Kept (viewer `scan-009-poseopt`) |
 | R-123 | 2026-11-23 | scan_009: R-121's gated loop round with path holes held (`loop_path.py --hole_dt 2.5`), R-120's recipe (`v9plh`) | 3070 | running | | |
+| R-124 | 2026-11-23 | Analyzer, first part (`analyze_recording.py`) on the four test recordings (read-only, CPU) | 3070 | < 10 s per recording | newRoom / bedroom textured → normal SfM; lecture hall 68 % placed, 34 % holes → sensor path; scan_009 normal SfM 37 % placed → sensor path; labels match the known stretches | Kept (first thresholds by hand, not tuned) |
 
 ## Runs
 
@@ -3022,3 +3023,39 @@ igs.txt`):
 - **Errors during the run:**
 - **Result:**
 - **Verdict:**
+
+### R-124 · 2026-11-23 · Analyzer, first part: window labels and route on the four test recordings (read-only, CPU)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC (CPU only, while R-123 trains)
+- **Branch / commit:** `exp/featureless-holes` (new `src/arcore3dgs/analyze_recording.py`, committed with the result)
+- **Dataset:** selections and camera models already on disk: newRoomAttemptSadness `work_v9e2e` / `work_v9e2e_sfm`
+  (R-020); roomAttemptSadness2 `work_v9pgsr8` / `_sfm` (R-069); scan_3028a4de8fa0 `work_v10` / `work_v10inc_sfm`
+  (R-068); scan_009 normal SfM `work_v9pgsr` / `_sfm` (R-045) and sensor path `work_v9pfz` / `work_v9plp_sfm` (R-096)
+- **Command(s):** `python src/arcore3dgs/analyze_recording.py --selection <work> --model <sfm> --out
+  <sfm>/analysis.json` per recording (defaults: 5 s windows, hole >= 2.5 s or >= 15 × median step, first thresholds
+  set by hand)
+- **Goal:** plan step 2 (Tayyab "do 1 then 2", 2026-11-23): do the labels and the suggested route match what we know
+  of each recording (newRoom / bedroom textured, normal SfM fine; lecture hall: 581 / 842 placed by the incremental
+  mapper; scan_009: normal SfM fails, featureless 45 – 60 s, hole 125 – 133 s)?
+- **Start → end:** 2026-11-23 evening, < 10 s per recording (CPU, while R-123 trained).
+- **Errors during the run:** first pass showed "ARCore tracked 0 %" everywhere: the script read `arcore_pose`, which
+  select_sharp.py only sets to "lost" / "unsettled" for frames WITHOUT a pose. Fixed (tracked = `c2w_arcore` present);
+  rerun.
+- **Result:** `analysis.json` in each model folder. Letters per 5 s window (T textured, w weak, f featureless,
+  _ hole):
+
+  | Recording (model) | Placed | Obs / camera | ARCore | Holes >= 2.5 s | Windows | Route |
+  |---|---|---|---|---|---|---|
+  | newRoom (`v9e2e`) | 1165 / 1166 | 715 | 100 % | 0 | 44 T, 4 w | normal SfM |
+  | bedroom roomAttemptSadness2 (`v9pgsr8`) | 1000 / 1042 | 906 | 100 % | 2 (9 s, 3 %) | 55 T, 1 f, 3 _ | normal SfM |
+  | lecture hall scan_3028 (`v10inc`) | 572 / 842 | 335 | 100 % | 2 (60 s, 34 %) | 15 T, 9 w, 11 _ | sensor path |
+  | scan_009 normal SfM (`v9pgsr`) | 87 / 238 | 56 | 100 % | 2 (144 s, 89 %) | 3 w, 1 f, 12 _ | sensor path |
+  | scan_009 sensor path R-096 (`v9plp`) | 581 / 894 | 105 | 26 % | 8 (38 s, 20 %) | 10 T, 11 w, 7 f, 10 _ | sensor path |
+
+  scan_009 (R-096) per window: `wTTTwTTTw_f_wf_Tfff_f__ww__TTfwww__Tww`: featureless / holes at 45 – 60 s, 65 – 110 s
+  (mixed), 125 – 133 s (blur 17 – 22 px) and 165 – 175 s, matching R-091 / R-093 (45 – 60 s) and R-121 (125 – 133 s).
+  The lecture hall's route matches R-066 – R-068 (GLOMAP collapsed, the incremental mapper left the right-side walk
+  out). The bedroom's two short holes at ~235 s and ~270 s were not known before (not checked).
+- **Verdict:** kept as the analyzer's first part: the labels and routes agree with what each recording is known to be.
+  Thresholds are hand-set first guesses (obs 30 / 100, blur 15 px, placed 95 %, holes 5 %), not tuned; four
+  recordings only. Next: use the labels in the pipeline (route choice, hole-aware loop step R-123, frame weights).
