@@ -3,6 +3,7 @@ offpath_test.txt in R-014 / R-020. The stretches are spread evenly over the midd
 end (often the camera still settling) are not used. Deterministic: same frames.json -> same list.
 
   python src/arcore3dgs/make_split.py --work <work_sfm> --out <dataset>/offpath_test.txt [--n 6] [--seconds 3]
+      [--add <still_frames split>]
 
 Then: run_v8.py ... --split <dataset>/offpath_test.txt, and score with eval_offpath.py.
 """
@@ -13,6 +14,7 @@ ap.add_argument("--work", required=True, help="work_<tag>_sfm folder with frames
 ap.add_argument("--out", required=True)
 ap.add_argument("--n", type=int, default=6, help="number of held-out stretches")
 ap.add_argument("--seconds", type=float, default=3.0, help="length of each stretch")
+ap.add_argument("--add", default=None, help="file with more held-out names (e.g. still_frames.py --split_out)")
 args = ap.parse_args()
 
 frames = json.load(open(os.path.join(args.work, "frames.json")))["frames"]
@@ -23,6 +25,11 @@ held = []
 for k in range(args.n):
     c = lo + (k + 0.5) / args.n * span
     held += [f["name"] for f in frames if abs(f["pts"] - c) <= args.seconds / 2]
+if args.add:
+    known = {f["name"] for f in frames}
+    extra = [n for n in open(args.add).read().split() if n in known]
+    print(f"{len(extra)} more from {args.add}")
+    held += extra
 held = sorted(set(held))
 open(args.out, "w").write("\n".join(held) + "\n")
 print(f"{len(held)} of {len(frames)} frames held out ({100 * len(held) / len(frames):.1f}%), "

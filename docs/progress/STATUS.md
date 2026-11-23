@@ -1,6 +1,7 @@
 # BuildScan3D: Project Status
 
-Last updated: 2026-11-23 by Umair (agent, `feature/run-times`: runs.tsv + `scripts/run_times.py`, D-090; `feature/step4-triage`: R-059 written up, scan #6 fixture sheet R-103, wall roughness R-104, `CHECKS_FOR_UMAIR.md` with every Step 4 check only Umair can do; R-061 / R-101 speed work on `exp/colmap-cudss`). Before that: 2026-11-19 by Umair (merged with `master`: Tayyab's records to 2026-11-15, his runs renumbered R-062 – R-070, D-079; R-058 scan #6 OOM in SfM, R-059 rerun running; issues #31 – #38 for the next steps; feature/vercel-deploy pushed; R-057: D-075 defaults on four rooms; R-058 scan #6 running; D-076 online site on Vercel + R2, issues #26 – #30, code on `feature/vercel-deploy`; earlier D-075: Step 4 options on in run_full.sh, older web bundles moved to prototype/web-ui/scans_archive/; before that Step 4 issues #8 – #25, runs R-053 – R-056)
+Last updated: 2026-11-23 (merge of `master`) and 2026-11-22 by Tayyab (agent, night on `docs/featureless-tracking-plan`): §11.d loop closure (R-096, +0.96 dB, first clear gain), R-097 (rejected), R-098 (inconclusive), R-099 (all frames, viewer), `loop_path.py`, `loop_match.py`, `prior_consistency.py`, `offpath_views.py`, `prior_ba.py --pair_priors`. Before that: 2026-11-20 by Tayyab (agent, on `docs/featureless-tracking-plan`): R-082 (§10.a held-out baseline, 20.80 dB), R-083 (§10.f gyro blur, inconclusive), R-084 (§10.d pose refinement, rejected), `eval_align.py`, R-085 (§10.c track loop, rejected); 2026-11-21: disk cleanup, R-086 – R-088 (10.e part 1, 10.b-1, noise repeat), `--path_prune` with R-089 / R-090, R-091 (10.b-2, rejected), R-092 (`--fill_scale`), §11 plan, D-081 + R-093 (VGGT test), R-094 (scale drift), R-095 (plane priors, rejected); before that, code for featureless §10.a – 10.f (rolling shutter, track loop, still frames, pose refinement, gyro blur; not trained); earlier the same day: video point tracks and adaptive priors, runs R-073 – R-081, `scan-009-tracks` in the viewer, featureless plan §10. Before that: 2026-11-19 by Tayyab (agent, on `docs/featureless-tracking-plan`): `master` merged in, clashing IDs renumbered (R-071, R-072, D-080, OD-14, OD-15), featureless plan §9. Night before: scan_009 runs R-052, R-071, R-072, `prior_ba.py`, `gyro_loop_bias.py`, loop-closed `scan-009-loop` in the viewer. Before that: 2026-11-18 by Tayyab (agent, night on `docs/featureless-tracking-plan`): scan_009 runs R-048 – R-051, IMU scale / gyro tools, `scan-009-gyro` in the viewer. Earlier: featureless tracking plan, D-080 (option 1 then continue), `gyro_check.py` / `--gyro_thr`, `gap_test.py`, R-047, app low-texture prompts. Before that: 2026-11-15 by Tayyab (agent, on `exp/overnight-2026-11-14`): scan_009 runs R-045 / R-046, `--pose_free` keyframes, layout no-floor fix, app feature-point map + coverage dots per frame + depth/pose pairing, 7 real models in the web viewer. Before that: 2026-11-14 by Tayyab (agent, overnight session on `exp/overnight-2026-11-14`): roomAttemptSadness2 v9 run (R-069), newRoom technique tests (R-070 – R-043), layout ceiling fix, server v9 option, tape script, capture checks in the app and on the PC, coverage 45%. Before that: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-062 – R-068 (renumbered from R-029 – R-065 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066). Merged with `master` the same day; before that: 2026-11-19 by Umair (merged with `master`: Tayyab's records to 2026-11-15, his runs renumbered R-062 – R-070, D-079; R-058 scan #6 OOM in SfM, R-059 rerun running; issues #31 – #38 for the next steps; feature/vercel-deploy pushed; R-057: D-075 defaults on four rooms; R-058 scan #6 running; D-076 online site on Vercel + R2, issues #26 – #30, code on `feature/vercel-deploy`; earlier D-075: Step 4 options on in run_full.sh, older web bundles moved to prototype/web-ui/scans_archive/; before that Step 4 issues #8 – #25, runs R-053 – R-056)
+Before that on `master`: 2026-11-23 by Umair (agent, `feature/run-times`: runs.tsv + `scripts/run_times.py`, D-090; `feature/step4-triage`: R-059 written up, scan #6 fixture sheet R-103, wall roughness R-104, `CHECKS_FOR_UMAIR.md` with every Step 4 check only Umair can do; R-061 / R-101 speed work on `exp/colmap-cudss`). Before that: 2026-11-19 by Umair (merged with `master`: Tayyab's records to 2026-11-15, his runs renumbered R-062 – R-070, D-079; R-058 scan #6 OOM in SfM, R-059 rerun running; issues #31 – #38 for the next steps; feature/vercel-deploy pushed; R-057: D-075 defaults on four rooms; R-058 scan #6 running; D-076 online site on Vercel + R2, issues #26 – #30, code on `feature/vercel-deploy`; earlier D-075: Step 4 options on in run_full.sh, older web bundles moved to prototype/web-ui/scans_archive/; before that Step 4 issues #8 – #25, runs R-053 – R-056)
 Before that on `master`: 2026-11-15 by Tayyab (agent, on `exp/overnight-2026-11-14`): scan_009 runs R-045 / R-046, `--pose_free` keyframes, layout no-floor fix, app feature-point map + coverage dots per frame + depth/pose pairing, 7 real models in the web viewer. Before that: 2026-11-14 by Tayyab (agent, overnight session on `exp/overnight-2026-11-14`): roomAttemptSadness2 v9 run (R-069), newRoom technique tests (R-070 – R-043), layout ceiling fix, server v9 option, tape script, capture checks in the app and on the PC, coverage 45%. Before that: 2026-11-13 by Tayyab (agent): merged `origin/master` into `exp/fast-pipeline`; speed-up runs R-062 – R-068 (renumbered from R-029 – R-065 at the merge), mini-room diagnosis, OD-10, OD-11, new 7.2 items. Before that: 2026-11-12 by Umair (recordings table in §2 "Which recording is which"; NFR1 re-measured on scan #3, NFR2 timing in the app, 1.7 closed D-067, update prompts + changelog D-068, readable `buildscan watch`, quality banner only at the top; earlier the same day: D-062 – D-066).
 
 
@@ -632,6 +633,154 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       turning (168/592 keyframes had no stereo neighbours); closer passes (≤ 3 m) in large rooms; all lights on. *(from TODO)*
 
 ### 7.9 IMU fallback (novelty)
+
+- [ ] **[new 2026-11-18] Featureless tracking plan** ([FEATURELESS_TRACKING_PLAN.md](FEATURELESS_TRACKING_PLAN.md), draft):
+      gyro rotation check and gap filling in `sfm_colmap.py`, lines / junctions and the `layout.py` room as a map for
+      frames without corners, dense matchers / VGGT as quick tests, app guidance. Measured: scan_009's ARCore-lost
+      frames have SIFT median 39 (bedroom 526) but as many long lines (6 vs 7) (`texture_probe.py`). **OD-14 open**
+      (recommended: steps 0, 1, 6 first). Would answer OD-6.
+  - **2026-11-18: option 1 chosen, then continue (D-080).** Built: `gyro_check.py` + `sfm_colmap.py --gyro_thr`
+    (newRoom: 0.15° median, 3 of 1,166 frames flagged; scan_009: 330 of 761), `gap_test.py` (gyro rotation through
+    cut gaps: 0.30° median at 15 s), app prompts. R-047 (scan_009 with the check): inconclusive, path jumps 51 → 21,
+    remaining errors are position / scale. Next: step 4 (position from lines + layout) or the incremental mapper
+    on scan_009 (OD-11); the app prompts are not tested on a phone. Progress table: plan §8.
+  - **Night 2026-11-18 (scan_009, R-048 – R-051):** incremental mapper (R-048, rejected: locally wrong);
+    diagnosis (R-050): SfM positions locally wrong in both mappers, not from wrong matches or timing; ARCore barely
+    tracked (gyro correlation 0.34); the IMU is clean. New: `imu_scale.py` (accelerometer scale, VINS-style: newRoom
+    −2.8%, bedroom +2.5%, hall −18.7% vs ARCore), `known_rot_pnp.py` + `--place_unplaced` (R-049, inconclusive),
+    `gyro_pairs.py`, gyro bias estimate, `rot_sfm.py` (gyro rotation + accelerometer positions, R-051: rejected,
+    blurrier, scale 2–3× off). **Best scan_009 model: R-047**, now in the viewer as `scan-009-gyro`. Open for Tayyab:
+    allow VGGT (learned poses; code + weights in `C:\Users\tyb\.cache\buildscan`, running it needs his OK) or
+    re-record the room (slower, more light, floor in view). Scale of scan_009 remains unknown.
+  - **Night 2026-11-19 (scan_009, R-052, R-071, R-072):** `prior_ba.py` (BA of a sensor-based path with gyro /
+    accelerometer relative priors; a free BA undid the gyro: 106 of 706 frames > 2°) → R-052 (698 frames, +0.5 dB vs
+    R-051, ≈ R-047, loop not closed). Loop check: pairs > 120 s apart disagreed with the gyro by a consistent 14° yaw
+    (gyro bias error). `gyro_loop_bias.py` (bias from all image pairs' 5-point rotations: 14.6 → 3.5°) +
+    `rot_sfm.py --bg_json --max_dt 300` + `prior_ba.py` → **R-071: 680 frames, loop closed (3,625 of 5,603 end points
+    shared with the start), first scan_009 model whose scale check says "ok"**; training-view PSNR ≈ R-047; in the viewer
+    as `scan-009-loop`. Scale still unknown (estimates 0.37 – 0.64 m per unit: ~2× too large; not applied); layout not
+    a clean rectangle. R-072 validation on newRoom: the recipe cuts the position error of the sensor path from 72 to
+    31 cm median (normal SfM is far better where it works). Open: VGGT (needs Tayyab's OK), re-recording, a scale
+    source, lines / layout for the IMU-only stretches (45 – 60 s, 90 – 105 s have ~0 matched points), cleanup of the
+    scan_009 experiment folders (disk 9 GB free; ask).
+  - **2026-11-19 (day): `master` merged into this branch; next steps planned** in
+    [FEATURELESS_TRACKING_PLAN.md §9](FEATURELESS_TRACKING_PLAN.md):
+    - [ ] 9.a E1 table: cut-gap ATE and frames placed for normal SfM, gyro check and the sensor-path recipe, on 3 rooms
+          plus scan_009. Target 11-22. Needs an E1 owner.
+    - [ ] 9.b scan_009 scale: `layout.py` height on R-071, a tape visit, `tape_check.py`.
+    - [ ] 9.c sharp re-recording of scan_009's room.
+    - [ ] 9.d pipeline fallback option, only if OD-15 = a.
+    - [ ] 9.e lines / layout for the IMU-only stretches, shared with COMPLETION_PLAN 4.11. W3, only if G2 is met.
+    - [ ] 9.f VGGT, if Tayyab approves.
+    - [ ] 9.g ship the corner prompt in the next app release.
+    - [ ] 9.h report section.
+    - [ ] `sfm_colmap.py` after the merge (D-071 levelling + `--sim3 none`): re-run one export to check (only
+          `py_compile` so far).
+    - [ ] `tests/test_changelog.py` fails on `master` too: v0.3.9 was released with an empty "Unreleased", so its entry
+          is "No changes listed". CI will be red on the next push. Fix: release notes for v0.3.9 (Umair's release).
+  - **2026-11-20: video point tracks (R-073 – R-081); best scan_009 model so far (R-081, `scan-009-tracks` in the
+    viewer, "much better than the old one" per Tayyab).** `video_tracks.py`, adaptive priors in `prior_ba.py`
+    (newRoom 31.1 → 16.2 cm median, p90 68.4 → 29.6), track directions in `rot_sfm.py`; 90 – 105 s fixed, 45 – 60 s
+    still without texture. Ranked next steps in [FEATURELESS_TRACKING_PLAN.md §10](FEATURELESS_TRACKING_PLAN.md):
+    - [x] 10.a held-out baseline (2026-11-20, R-082): 69 of 622 frames held out (`s10_test.txt`: 6 stretches of 3 s +
+      8 still frames); held-out PSNR 20.80, SSIM 0.874, flatness 8.18 cm (R-081, which saw those frames: 23.98 / 0.909 /
+      5.98). The planned every-8th split was replaced by stretches + still frames (§10.5). Orbit sheet: `eval_offpath.py`
+      room-centre views (`eval_r082/centre.jpg`) instead of a separate orbit.
+    - [ ] 10.b rolling-shutter rectification from the gyro (shear median 8 px, p90 17 px), full re-run.
+    - [x] 10.c iterate tracks ↔ path (2026-11-20, R-085): 647 → 676 → 656 cameras, support thinner, 45 – 60 s
+      unchanged; oscillates, rejected; R-080's model stays best.
+    - [x] 10.d `--pose_opt` on scan_009 (2026-11-20, R-084): held-out 20.20 vs 20.80; with test-pose alignment
+      (`eval_align.py`) 22.39 vs R-082 22.64: no gain, rejected for now. Alignment shows held-out SfM poses ~2° off.
+    - [x] Free disk on the 3070 PC (2026-11-21, Tayyab chose): all 19 `mono_prior/` folders under `dataset/` (17.9 GB;
+      rebuilt by `run_v8.py`'s prior stage in ~3.5 min), the R-083 / R-084 work folders (evaluations kept in
+      `scan_009_057ed3beb4fc/s10_eval/`), and the checkpoints + TensorBoard logs of the three `outputs/` runs that
+      have an exported `export/splat.ply` (room2 baseline, roomAttemptSadness run1, roomAttemptSadness_fast run2).
+      Freed 22.8 GB, 23.9 GB free. Kept: the 17 other `outputs/` checkpoints (no exported copy; ~8 GB of TensorBoard
+      logs there too), older experiment folders.
+    - [ ] `run_v8.py`: option to keep the checkpoint / write the refined poses when `--pose_opt` is on (R-084 lost them).
+    - [ ] 10.e geometry for off-path views. First part done 2026-11-21 (R-086: planar 0.5, depth / normal 0.1):
+      flatness 4.98 vs 8.18 cm, aligned PSNR 21.85 vs 22.65, a flat sheet blocks the 134 s view; inconclusive.
+      Near-camera pruning coded and tested 2026-11-21 (`--path_prune 0.1`, R-089 / R-090: no cost, blocked views
+      7 → 0) and the flatness guard (`eval_offpath.py` blocked views). Still to code: layout planes.
+    - [ ] 10.b rolling shutter: 10.b-1 done 2026-11-21 (R-087, rectified keyframes on R-080's cameras): aligned 22.22
+      vs 22.65, 51 – 53 s +1.6 dB, flatness 4.18 cm, blocked views at 134 / 186 s; inconclusive, most promising.
+      R-089 (rectified + pruning): 51 – 53 s +2.6 dB, overall −0.4. 10.b-2 (R-091, SfM on rectified keyframes):
+      rejected, 45 – 60 s still 0 – 1 obs per camera, fewer cameras than R-080; not trained.
+    - [x] Run-to-run spread (2026-11-21, R-088, R-082 repeated): ~0.1 – 0.25 dB overall, ≤ 0.9 dB per stretch, 1.5 cm
+      flatness.
+    - [x] 10.f per-frame motion blur from the gyro (2026-11-20, R-083): held-out PSNR 20.86 vs 20.80, sharpness 0.43 vs
+      0.28, flatness 9.85 vs 8.18 cm, +6 min training. Inconclusive; keep `--blur_gyro` or not: Tayyab.
+    - [x] Depth priors for frames without SfM support (2026-11-21, R-092, `mono_prior.py --fill_scale`): 77 frames
+      had no depth / normal prior at all; filled with a time-interpolated scale (5.3 % leave-one-out error).
+      Flatness 9.92 → 6.77 cm, aligned PSNR −0.26 dB; kept for Tayyab's inspection.
+    - [ ] §11 plan (2026-11-21, FEATURELESS_TRACKING_PLAN §11): one consistent room geometry first. 11.a VGGT test on
+      45 – 60 s (needs Tayyab's OK to run the downloaded code), 11.b room planes, 11.c depth guidance rendered from one
+      geometry, 11.d cameras placed against the planes, 11.e off-path judging (orbit renders, depth agreement, final
+      models on all frames). Tayyab: R-092 looks almost worse than R-081 in the viewer.
+      11.a done 2026-11-21 (R-093, D-081): VGGT cannot place the blank-wall frames (rotation 3.5 – 10° off per step
+      on the blank wall, 0.6 – 0.9° on texture); its depth is ~3× more consistent across frames than the Metric3D
+      priors (5.3 % vs 15.1 %). Next 11.b.
+      11.b (2026-11-21): the sensor camera path's scale drifts ~2× along the walk (room height 8.3 → 4.6 units);
+      `scale_drift.py` corrects it with the room height; R-094 trained on the corrected path, paused before its
+      evaluation; evaluated later: aligned 22.59 = R-090 (22.63). 11.c (R-095, `plane_prior.py`): depth disagreement
+      6.8 → 3.6 % but aligned 21.53 (−1.06 dB): rejected, the plane set still holds parallel copies of walls
+      (horizontal drift). Next: 11.d (walls seen at different times made to coincide), then 11.c again.
+      **11.d done 2026-11-22 (R-096): first clear gain.** R-094's model had almost no point tracks between distant
+      times, so its BA never saw the loops; 852 verified pairs >= 60 s apart existed in rot_sfm's cache.
+      `loop_path.py` re-solves the camera centres with them (held-out pairs >= 60 s: 7.0 → 2.5°), `prior_ba.py
+      --pair_priors` keeps them in the BA. Aligned **22.67 → 23.63 dB** on the same 63 held-out frames, no stretch
+      worse; off-path room-centre views coherent in 6 of 8 directions (`offpath_views.py`, 11.e). Walls still thick.
+      R-097 (second matching round, `loop_match.py`): 134 – 137 s broken by new pairs, rejected; needs a stricter
+      pair check. R-098 (11.c second form, `prior_consistency.py`): equal (23.61), not adopted. R-099: R-096's recipe
+      on all frames for the viewer.
+    - [x] Tayyab looked at R-099 (`scan-009-loops`) in the viewer (2026-11-22): "miles better ... MUCH more like the
+      real room". Still wrong: off-angle views, splats detached from walls / doors, floating splats in the bathroom
+      doorway blocking the view inside, missing floor splats in the middle of the room (maybe not filmed). Not
+      measured: these are his visual findings.
+    - [x] Plan step 1, floaters (2026-11-22, R-100): `clean_splats.py --mono` (depth priors + BA points as free-space
+      evidence) on R-096. See-through rule alone: aligned 23.54 vs 23.63 (clears mid-air splats above head height);
+      the camera-path radius rule removes real wall (−0.23 dB). The bathroom doorway (125 s) is a smear even from its
+      own training pose and is unchanged: the 100 – 150 s stretch fits worst (cameras), not floaters. Not adopted.
+    - [x] Plan step 4, pose refinement in training on R-096 (2026-11-22, R-120): aligned 23.96 vs 23.63, SSIM 0.896 vs
+      0.888, +1.8 min training. Kept.
+    - [x] Plan step 3, second loop round with a pair check (`loop_path.py --gate 10`, 2026-11-22, R-121): 30 – 90 s
+      +1.6 – 1.8 dB but 134 – 140 s broken again (15.83, as R-097). Cause: the camera model has a hole at 125.4 – 133.2 s
+      (35 keyframes, none placed: blur 12 – 42 px, no ARCore pose); the bathroom doorway (125 s) is at its start.
+      Rejected. The doorway is a limit of the video there (fast blurred pan), not of the method.
+    - [x] Plan step 5 (2026-11-23, R-122): R-120's recipe on all frames, 32.8 min, in the viewer as `scan-009-poseopt`.
+    - [ ] Tayyab to decide: whether to try a hole-aware second loop round, or move to the analyzer (D-095) now.
+    - [x] Disk on the RTX 3070 PC (2026-11-23, Tayyab "do whats best"): 4.2 → 7.0 GB free. Deleted R-121's bulk
+      (`mono_prior/`, `images/`, `undist*/`), R-100's three cleaned copies (`splat_clean_r100*.ply`) and the input
+      copies of `work_v9pfz` for rejected / inconclusive runs (`work_v9plg`, `plm`, `pcs`, `ppl`, `pfk`, `pfs`, `pfo`);
+      list in `dataset/scan_009_057ed3beb4fc/cleanup_2026-11-22.txt`. Not touched: Windows Temp (3.4 GB), `outputs/`
+      (14 GB of old checkpoints, kept on purpose 2026-11-21). The 13 → 4.2 GB drop on 2026-11-23 was not investigated. Analyzer must detect path
+      holes (unplaced keyframes, blur, no ARCore pose).
+    - [ ] Analyzer-driven pipeline (D-095, [PIPELINE_ANALYZER_PLAN.md](PIPELINE_ANALYZER_PLAN.md)), after steps 4 / 3:
+      analyzer `analysis.json` on the four test recordings; route decision and the sensor-path chain inside
+      `run_v8.py` with per-step checks; test bench vs the reference results; frame weighting by camera trust.
+      Processing time is a primary target: measure the sensor-path chain end to end (not measured yet).
+    - [ ] Tayyab to decide: R-096's loop closure as part of the sensor-path recipe (OD-15); which scan_009 model the
+      viewer shows (R-099 proposed); whether to retry the second loop round with a pair check (e.g. reject pairs whose
+      direction disagrees with R-096's path by > 10° before solving).
+    - [x] Free disk on the 3070 PC (2026-11-22, Tayyab chose option 1): 3.8 → 14 GB free (`df`). Deleted the
+      regenerable bulk (`mono_prior/`, `images/`, `undist/`, `undist_fast/`) of six rejected / inconclusive scan_009
+      runs (R-086 `v9pfk`, R-087 `v9pfs`, R-089 `v9pfo`, R-095 `v9ppl`, R-097 `v9plm`, R-098 `v9pcs`; their
+      `splat.ply`, `sparse/`, eval folders and logs kept) and four rejected folders not used by later runs
+      (`track_loop_r085`, `work_v9pfs2_sfm`, `work_v9pfv_sfm`, `work_v9pfw_sfm`). Exact list with sizes:
+      `dataset/scan_009_057ed3beb4fc/cleanup_2026-11-22.txt`. Not touched: the other room datasets
+      (newRoomAttemptSadness 36 GB, roomAttemptSadness2 17 GB, roomAttemptSadness 6.8 GB: could move to an external
+      drive) and ~14 older scan_009 folders (~8 GB, verdicts not checked). The project uses ~110 GB of the 931 GB C:.
+    - [ ] 10.g planes for 45 – 60 s (a re-recording is not possible: the site is far away, Tayyab 2026-11-21).
+      Next candidates: layout planes from the tracked walls, and placing the featureless frames by matching their
+      depth maps to those planes; or leaving the untrackable frames out of training (Tayyab's idea).
+    - [x] Commit `video_tracks.py`, the `rot_sfm.py` / `prior_ba.py` options and the R-081 viewer entry, MAP.md entry
+          (2026-11-20, `5b26db3`, `d8678ae`, `666c74a`).
+    - [ ] Move `stretch_stats.py` / `track_dir_check.py` / `render_compare.py` from the agent's scratch folder into
+          `src/arcore3dgs/` with 9.a's tools.
+    - **Code for 10.a – 10.f written 2026-11-20, nothing trained** (§10.5 has the run order): `rs_rectify.py`,
+      `track_loop.py`, `still_frames.py`, `--pose_opt`, `--blur_gyro`, `--train_args`. Not coded: floater pruning and
+      layout-plane constraints (10.e). Found: scan_009's blur model had no motion for 398 of 622 frames (ARCore lost).
+      Tayyab 2026-11-20: this week is not the evaluation week; §10 goes first.
 
 - [ ] Tune BA pass 2 so it keeps PnP accuracy (8.2 px → 15.1 px after BA): weaker within-segment ARCore priors after a gap. *(from TODO 2026-10-10)*
 - [ ] Use bridged fallback frames in training with per-frame pose refinement (only re-aligned segments are used now). *(from TODO)*

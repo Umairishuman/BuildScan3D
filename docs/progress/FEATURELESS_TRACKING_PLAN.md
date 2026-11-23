@@ -1,0 +1,581 @@
+# Featureless tracking: plan
+
+2026-11-18 · drafted for Muhammad Tayyab (Workflow B), to be reviewed by the team · status: **option 1 chosen, then
+continue (D-080, Tayyab, 2026-11-18)**; progress in §8
+
+**The problem.** On plain walls, ceilings and poorly lit rooms, the cameras cannot be placed, so most of the recording is
+lost. The worst case so far is `scan_009_057ed3beb4fc`:
+
+- ARCore lost tracking for 63.7% of the walk;
+- the default recipe trained on 87 frames (R-045);
+- the pose-free + ALIKED run reached 535 frames, but with misplaced cameras and no reliable scale (R-046).
+
+**The question** (Tayyab, 2026-11-18): can the pipeline track a featureless room another way?
+
+- **Lines and junctions:** wall/wall, wall/floor, wall/ceiling edges and the corners where three surfaces meet.
+- **Faint contrast:** whatever subtle shading the image still has.
+- **Phone sensors:** to aid the above.
+
+**Short answer:** yes, and the data supports it. The cheapest wins come from the gyroscope (rotation) and from using
+straight lines and the room's layout once part of it is mapped. Full line/plane/IMU SLAM is the end state, but too big
+for 2026-12-04.
+
+---
+
+## 1. What we measured (2026-11-18)
+
+### 1.1 Texture in the keyframes
+
+Tool: [`src/arcore3dgs/texture_probe.py`](../../src/arcore3dgs/texture_probe.py), half resolution (960 × 540). The
+columns are:
+
+- **SIFT keypoints:** what COLMAP's default features see.
+- **Long lines:** LSD segments longer than 15% of the image size, i.e. room junctions, door and window frames.
+- **Faint-gradient pixels:** Sobel magnitude 8–40, the signal a photometric (direct) method uses.
+
+| Keyframes | n | SIFT keypoints, median (10th pct.) | Long lines, median | Faint-gradient pixels |
+|---|---|---|---|---|
+| newRoomAttemptSadness (`work_v9e2e`, every 6th) | 195 | 797 (285) | 5 | 30.5% |
+| roomAttemptSadness2 (`work_v9pgsr8`, every 6th) | 174 | 526 (118) | 7 | 24.6% |
+| lecture hall `scan_3028a4de8fa0` (`work_v10`, every 6th) | 141 | 445 (170) | 12 | 29.5% |
+| scan_009, ARCore tracking | 230 | 66 (16) | 7 | 14.3% |
+| scan_009, ARCore **lost** | 571 | **39 (2)** | **6** | 11.7% |
+| scan_009, not in the R-046 model | 359 | 17 (0) | 5 | 10.2% |
+
+**What it shows:**
+
+- **Corners are scarce.** Frames where ARCore lost tracking have about 13× fewer SIFT corners than the bedroom
+  (39 vs 526). The frames SfM could not place have almost none (median 17, 10th percentile 0).
+- **Straight lines survive.** The same frames still have as many long lines as the well-tracked rooms (median 6 vs
+  5–12). This is the signal Tayyab's junction idea would use, and it is present.
+- **Faint contrast is reduced but not gone.** 10–14% of pixels against 25–30% in the good rooms.
+- **Even the tracked part of scan_009 is poor** (SIFT median 66). This is the whole room and the way it was filmed,
+  not a few bad seconds.
+- **Confound: motion blur.** scan_009's median predicted blur was 21.7 px (`check_capture.py`), 10.5 px after
+  pose-free selection. Blur removes corners and faint gradients too, so part of the "featureless" signal here is blur,
+  not the walls. A sharp recording of the same room is needed to separate the two (§4, step 0).
+
+### 1.2 Phone sensors (from earlier work, P&S §4.10)
+
+The ARCore MP4 already stores the gyroscope and accelerometer at 201 Hz on the same clock as the frames (`imu.py`;
+scan_009 has 37,844 gyro samples). On gaps cut out of tracked data, IMU bridging (`fallback.py`) gave:
+
+| Gap length | Rotation error | Position error, median (max) | Plain interpolation, position median |
+|---|---|---|---|
+| 2 s | 0.16° | 0.6 cm (2.8 cm) | 5.0 cm |
+| 5 s | 0.34° | 1.5 cm (3.4 cm) | 20.6 cm |
+| 9 s | 0.38° | 3.8 cm (8.5 cm) | 30.6 cm |
+
+The error is low only because both ends of each gap were anchored by tracked frames. Without the end anchor,
+position drifts quickly: 33 cm median over 9 s.
+
+**Conclusion:**
+
+- **Rotation is essentially solved by the gyroscope**, for gaps of many seconds, with or without texture.
+- **Position (translation) is the hard part.** The accelerometer drifts, so position needs a visual or geometric
+  signal: lines, planes, faint contrast or depth.
+
+### 1.3 What we do and do not control
+
+- **Live tracking in the app is ARCore.** It is closed; we cannot add line features to it. In the app we can only
+  guide the user, record more, and detect bad stretches.
+- **Offline pose recovery is ours** (`select_sharp.py` → `sfm_colmap.py` → priors → training). Every approach below
+  runs on the PC after upload, using the video, the 201 Hz IMU, ARCore depth and the ARCore poses where they exist.
+
+---
+
+## 2. Ideas, mapped to known methods
+
+| Idea | What it gives | Known methods | Fit for us |
+|---|---|---|---|
+| **A. Gyro for rotation** | Rotation of every frame, including lost ones; an independent check of SfM | IMU pre-integration (Forster et al. 2017); known-rotation 2-point relative pose (Kneip et al. 2011) | **High.** Already calibrated in `fallback.py`. With rotation known, two matched points fix the direction of motion between two frames (five without it), so sparse matches on plain walls become usable |
+| **B. Lines and junctions** (Tayyab's idea) | Rotation from vanishing directions (with gravity: a Manhattan frame); position from triangulated lines and corners | LSD / DeepLSD (2023) detection; GlueStick (ICCV 2023) point + line matching; LIMAP (CVPR 2023) line mapping and line bundle adjustment on a COLMAP model; PL-SLAM, PL-VINS; ManhattanSLAM | **High.** Long lines survive in lost frames (§1.1). A single line does not pin position along its own direction, but corners (wall/wall/ceiling) do, and a few lines in different directions do |
+| **C. Room layout as the map** | Place a featureless frame by aligning its image lines to the projected wall / floor / ceiling edges of the layout | Model-based tracking; the layout comes from our own `layout.py` | **High, and a novelty.** `layout.py` already finds walls, floor, ceiling and corners in 3D. Once part of the room is placed, the rest can be placed against that layout, with the gyro giving rotation |
+| **D. Faint contrast (direct)** | Motion from all image gradients, not only corners | DSO (Engel et al. 2017), DM-VIO (2022, with IMU); dense learned matchers RoMa (CVPR 2024), MASt3R (2024); DROID-SLAM (2021) | **Medium.** Lost frames have half the usable gradient (§1.1). Dense matchers are easy to try as COLMAP matches. Full direct odometry is a big build |
+| **E. Learned whole-sequence pose** | Poses for a whole chunk in one network pass, robust to low texture | VGGT (CVPR 2025), MASt3R-SfM (2024) | **Medium.** Quick to try on scan_009 chunks; GPU memory on the 8 GB RTX 3070 limits chunk size (the RTX 4000 Ada has more); check the licences (research / non-commercial) |
+| **F. Planes from depth** | Position from aligning walls seen in depth (point-to-plane ICP), no texture needed | Planar SLAM; we already have ARCore raw depth (5 Hz) and Metric3D | **Medium.** ARCore depth is sparse (160 × 90, ~25% valid on this phone), and on scan_009 only 17 maps were usable. Metric3D's scale is off by 7–48% (R-046), so only its *shape* (plane normals) is safe |
+| **G. Full fusion** | One optimisation over IMU + points + lines + planes | Factor graphs (GTSAM), VINS-style back ends | **Low before 2026-12-04.** The right end state; weeks of work |
+| **H. Capture guidance** | Fewer featureless stretches in the first place | — | **High, cheap.** The app already warns "Low texture – keep some detail in view" (`QualityMonitor`); scan_009's walk faced the upper walls and ceiling, with the floor barely in view |
+
+Ideas A–C use what we already have (gyro, lines, our own layout), so they are the core of the plan. D–E are quick
+experiments with existing code. F–G come later.
+
+---
+
+## 3. The proposed approach
+
+**Step 1: anchor.** Run SfM as today (pose-free keyframes, ALIKED or SIFT) and take the frames it places with
+confidence.
+
+**Step 2: check with the gyro.** For every pair of consecutive placed frames, compare SfM's relative rotation with the
+gyro's. A mismatch of more than a few degrees means a misplaced camera. This replaces the current filter, which only
+catches jumps over 30 cm. Whether it catches R-046's bad placements is not measured yet (step 1 checks it).
+
+**Step 3: fill the gaps.** For each unplaced frame:
+
+1. Rotation from the gyro, chained from the nearest placed frame.
+2. Gravity from the accelerometer.
+3. Vanishing directions of its long lines, to correct slow gyro drift.
+
+**Step 4: position from structure.** With rotation fixed, solve only position (3 unknowns per frame) from:
+
+- **Lines:** match its long lines to lines already triangulated (LIMAP) or to the layout's edges (`layout.py`: walls,
+  floor, ceiling, corners).
+- **Points:** any point matches, using the 2-point known-rotation solver.
+- **Motion bounds:** the IMU-bridged position from `fallback.py` as a prior (accurate to a few cm when both ends of the
+  gap are anchored).
+
+**Step 5: refine and train.**
+
+1. Joint bundle adjustment of all frames with point, line and rotation-prior terms.
+2. Frames that stay inconsistent are flagged and kept out of training, as `relocalize_pnp.py` does today.
+3. Train as usual. Scale still comes from ARCore where it tracked; where it never did, see §5.
+
+This uses Tayyab's junction idea where it is strongest (rotation from lines and gravity; position from corners and from
+lines in several directions), and the gyro where vision is weakest.
+
+---
+
+## 4. Steps, effort and how each is checked
+
+Each step is a run in TRAINING.md with a before/after number. Effort is a rough estimate, not measured.
+
+| # | Step | Effort | Checked by | Needs |
+|---|---|---|---|---|
+| 0 | **Test set and baseline.** Fix the captures (scan_009; newRoom and the bedroom with gaps cut out of tracked stretches, where the true poses are known), the metrics (frames placed; rotation / position error against the uncut solution; held-out PSNR) and the current numbers. Ideally also a **new sharp recording of scan_009's room**, to separate blur from missing texture (§1.1) | 1 day | numbers in TRAINING | — |
+| 1 | **Gyro rotation check in `sfm_colmap.py`**: flag and drop frames whose SfM rotation disagrees with the gyro (reuse the IMU-to-camera calibration in `fallback.py`) | 1 day | R-046 again: misplaced cameras removed, top-down path continuous; no good frames lost on newRoom | 0 |
+| 2 | **Quick experiments: dense matchers and VGGT/MASt3R** on scan_009 (RoMa matches into COLMAP for pairs with few ALIKED matches; VGGT on chunks) | 1–2 days | frames placed and rotation agreement with the gyro, against R-046 | 0, 1 |
+| 3 | **Gyro + gravity rotation for unplaced frames**, plus a vanishing-point correction from long lines | 1–2 days | cut-gap captures: rotation error against the uncut solution | 1 |
+| 4 | **Position from lines and the layout**: LIMAP line triangulation on the anchored model; match lines of unplaced frames to it and to the `layout.py` edges; solve position with rotation fixed | 3–4 days | cut-gap captures: position error (target: better than IMU-only bridging, §1.2); scan_009: frames placed | 3 |
+| 5 | **Joint refinement** with line and rotation-prior terms (LIMAP's line BA, or our `ba.py`), inconsistent frames flagged | 2 days | held-out PSNR on scan_009 and on newRoom (must not get worse) | 4 |
+| 6 | **App guidance for featureless stretches**: when texture is low, say "keep a corner or edge in view" (wall / floor / ceiling junctions are what step 4 uses); log the count of long lines per frame in `quality.csv` | 1 day, parallel | device test; fewer lost seconds on a new recording | — |
+| 7 | **Later (not before 2026-12-04):** planes from depth (F), a full fusion back end (G), direct odometry (D) | weeks | — | 5 |
+
+**Total for steps 0–6:** about 10–13 working days if all go well. That does not fit next to the Must items of
+[COMPLETION_PLAN.md](COMPLETION_PLAN.md) (week 2, gate G2 on 2026-11-26, is the evaluation week). So the realistic
+choice is between the options in §6.
+
+---
+
+## 5. Scale where ARCore never tracked
+
+Scale stays an open problem, and this plan does not fully solve it:
+
+- Metric3D is off by 7–48% against ARCore on the rooms where both are known (R-046).
+- ARCore depth was sparse and inconsistent on scan_009. The pairing bug fixed in app v0.3.8 may be part of why; the
+  next recording's `depth/timestamps.csv` will show.
+
+Options, in order of cost:
+
+1. Any stretch where ARCore tracks gives scale for the whole connected model (today's Sim3); capture guidance (step 6)
+   makes such stretches likely.
+2. Accelerometer double integration over short, well-excited motions (scale observability as in visual-inertial
+   odometry); needs testing on cut-gap data.
+3. A known length: the room height from `layout.py` against a typical 2.6–3.0 m, or one tape measurement entered by the
+   user. Approximate, but honest if labelled.
+
+---
+
+## 6. Options for the team
+
+**Option 1 (recommended): steps 0, 1, 6 now, then 2–3 if week 2 allows.**
+
+- Costs about 3 days, and fixes R-046's misplaced cameras.
+- Gives the app guidance.
+- Leaves a measured baseline and a clear write-up of the line/layout method (steps 4–5) as future work and novelty in
+  the final report.
+- Fits COMPLETION_PLAN week 1–2 without moving a Must.
+
+**Option 2: the full steps 0–5 before 2026-12-04.**
+
+- The strongest novelty: featureless frames placed with lines, layout and gyro.
+- About 2 weeks of Tayyab's time, overlapping the evaluation week.
+- Risks Musts (E1–E9, the report).
+
+**Option 3: capture only (step 6 and re-recording rooms carefully).**
+
+- Cheapest.
+- Does not address the question, and scan_009-type rooms stay unsolved.
+
+**Related open decisions:**
+
+- **D-022 (ALIKED rejected on 2026-10-26).** R-046 gave new evidence on another capture; step 2 tests it properly.
+- **OD-6 (IMU fallback in the v9 pipeline).** This plan is the answer to OD-6: the gyro enters `sfm_colmap.py`
+  (steps 1 and 3).
+
+**Decision: OD-14, Tayyab with the team.** Record the choice in DECISIONS.md, with the name under "By".
+
+---
+
+## 7. References
+
+- Kneip, Chli, Siegwart, "Robust real-time visual odometry with a single camera and an IMU", BMVC 2011: known-rotation
+  relative pose with 2 points.
+- Forster et al., "On-manifold preintegration for real-time visual-inertial odometry", IEEE T-RO 2017.
+- Pumarola et al., "PL-SLAM: real-time monocular visual SLAM with points and lines", ICRA 2017; Fu et al., "PL-VINS",
+  2020.
+- Liu et al., "3D line mapping revisited" (LIMAP), CVPR 2023; Pautrat et al., "GlueStick", ICCV 2023; Pautrat et al.,
+  "DeepLSD", CVPR 2023.
+- Yunus et al., "ManhattanSLAM", ICRA 2021.
+- Engel et al., "Direct sparse odometry", IEEE TPAMI 2017; von Stumberg & Cremers, "DM-VIO", RA-L 2022.
+- Teed & Deng, "DROID-SLAM", NeurIPS 2021; Edstedt et al., "RoMa", CVPR 2024; Leroy et al., "MASt3R", ECCV 2024;
+  Duisterhof et al., "MASt3R-SfM", 2024; Wang et al., "VGGT", CVPR 2025.
+- Our own: P&S §4.10 (IMU fallback), §4.11 (why COLMAP places the cameras), TRAINING R-045 / R-046.
+
+---
+
+## 8. Progress
+
+| Step | State (2026-11-18) | Evidence |
+|---|---|---|
+| 0 · test set | Cut-gap test on newRoom built (`gap_test.py`): windows of keyframes removed every 20 s and predicted from the frames outside. Sharp re-recording of scan_009's room: not done | below |
+| 1 · gyro rotation check | Built: `gyro_check.py`, `sfm_colmap.py --gyro_thr` (default 0 = off). IMU→camera rotation and time offset estimated from the SfM model, no ARCore tracking needed | newRoom: pair error median 0.15°, frame score p99 1.03°, 3 of 1,166 frames over 2°. scan_009: 330 of 761 over 2°, of them 185 of the 226 the 30 cm jump filter dropped and 144 it kept; after both filters 370 frames, steps > 5× median speed 21 (R-046: 51). R-047 (trained): +1.0 dB on common training views (not held out), sharper in some views, worse in one; long path jumps and a shrunken block remain: the rest are **position / scale** errors, which need step 4 or the incremental mapper (OD-11). Inconclusive, `--gyro_thr` off by default |
+| 3 · gyro rotation for unplaced frames | Rotation part built (`gyro_check.fill_rotations`); position (step 4) not started | cut gaps on newRoom, rotation error median / p90 / max: 2 s 0.15 / 0.48 / 1.15°; 9 s 0.28 / 0.91 / 1.76°; 15 s 0.30 / 0.83 / 2.10°; 30 s 0.47 / 0.91 / 5.83° (one end only, 15 s: 0.59 / 1.19 / 1.89°). Calibration estimated on the same model (a per-phone constant), one capture only |
+| 6 · app prompt | Compiled locally (JDK 21: Android Studio's JBR is now Java 25, which this Gradle cannot run). Messages changed: "Low texture - keep a room corner or edge in view", "Tracking lost (plain surface) - aim at a corner or edge". Long-line count in `quality.csv`: not done | not tested on a phone |
+| 5 · refinement | `prior_ba.py`: BA with gyro / accelerometer priors (R-052, R-071, R-072) | §8.2 |
+| 2, 4 | Not started (VGGT blocked, needs Tayyab's OK) | — |
+
+### 8.1 Night of 2026-11-18 (Tayyab: "work throughout the night, I need scan_009 to be working properly soon")
+
+- **Step 4, points part:** `known_rot_pnp.py`. With the gyro rotation fixed, two matched 3D points place a camera
+  (linear in the centre). Cut gaps on newRoom, error in cm (ok = < 10 cm):
+
+  | Gap | Matches per frame | Gyro rotation + points | PnP RANSAC (no gyro) |
+  |---|---|---|---|
+  | 2 s | 3 | median 0.8, ok 95% | impossible (needs 4) |
+  | 2 s | 5 | 0.8, ok 96% | 1.2, ok 91% |
+  | 9 s | 5 | 1.8, ok 88% | 2.7, ok 76%, p90 396 cm |
+  | 9 s | all | 1.2, ok 90% | 0.6, ok 91% |
+
+  In `sfm_colmap.py --place_unplaced N` (with `--gyro_thr`). On scan_009's GLOMAP model (R-049): 157 of 442 unplaced
+  frames placed, 90 survive the jump filter, but the path has more jumps (40 vs 21): the map points are partly wrong.
+- **Scale from the accelerometer** (`imu_scale.py`, §5 option 2). First version (second derivative of a spline through
+  the SfM positions) was too noisy: forward and inverse fits bracket the truth but disagree by up to 5× (bedroom 0.215
+  vs 1.07). Second version, pre-integrated accelerometer over keyframe triplets 1 s apart (VINS-style linear
+  initialisation, velocity eliminated), against the ARCore Sim3 scale:
+
+  | Capture | IMU scale (1 s) | ARCore Sim3 | Difference | Fitted \|g\| |
+  |---|---|---|---|---|
+  | newRoom (v9e2e) | 0.649 | 0.668 (inliers: most) | −2.8% | 9.85 |
+  | roomAttemptSadness2 (v9pgsr8) | 0.227 | 0.222 (777 / 1,014) | +2.5% | 9.86 |
+  | lecture hall (v10inc) | 0.749 | 0.922 (100 / 581, weak) | −18.7% | 9.98 |
+  | scan_009 GLOMAP (R-046) | ~0 | 0.48 – 0.85 (26 – 29 inliers) | — | 6 – 7.8 |
+
+  Not tuned per room (same settings everywhere). The hall disagreement is unexplained: either ARCore (weak fit) or the
+  IMU is off there; no tape measurement of the hall.
+- **Finding: scan_009's GLOMAP model is locally wrong.** Fitting scale per 15 s window: newRoom gives 0.48 – 0.93
+  (mostly 0.6 – 0.7); scan_009 gives −4.5 to +24 with most windows lacking continuous frames. Filtering cameras cannot
+  fix that model; a locally correct base model is needed (incremental mapper, R-048), whose pieces can then get scale
+  and gravity from the IMU and be joined with the gyro.
+- **Why SfM fails on scan_009 (R-050):** not wrong matches between look-alike places (the gyro rejects only 0.6% of
+  verified pairs; 0.2% on newRoom) and not the timestamps (sync PASS). ARCore itself barely tracked (its rotation vs
+  the gyro: correlation 0.34, bedroom 0.99), so it is no reference. The IMU data is clean. Images (21.7 px median blur,
+  plain and repeated surfaces) give roughly right rotations but locally wrong positions in both COLMAP mappers.
+- **Known-rotation SfM with the accelerometer** (`rot_sfm.py`, R-051): rotations from the gyro (bias removed:
+  0.055°/s newRoom, 0.134°/s scan_009; without it the gravity leak broke everything), pair directions with the rotation
+  fixed, positions + velocities + gravity (per 15 s) + accelerometer bias in one sparse linear system. Lessons: the
+  homogeneous direction form `(C_a − C_b) × u = 0` collapses the path (steps 0.02× true); fixed-length direction
+  equations do not. On newRoom: Sim3 scale 0.936, median 1-s step 0.98× true but noisy (spread 7×) and 63 – 71 cm
+  median position error: far below normal SfM where normal SfM works. On scan_009: all 894 keyframes connected, the
+  images triangulate 23,508 points at 1.76 px with these poses fixed (GLOMAP model: 9,349), but the metric scale looks
+  2 – 3× too large (Metric3D ratio 3.0, cameras spread 7.5 × 7 m).
+- **VGGT (step 2):** code and weights fetched outside the repo (`C:\Users\tyb\.cache\buildscan`); running them was
+  blocked by the session's permission check (third-party code downloaded from the internet). Needs Tayyab's OK.
+
+### 8.2 Night of 2026-11-19 (Tayyab: "work on featureless overnight")
+
+- **Refining the sensor path with the images** (`prior_ba.py`, R-052): a free COLMAP BA of R-051's model pulled the
+  rotations off the gyro again (106 of 706 frames > 2°). With the gyro / accelerometer solution as soft relative
+  priors: reprojection 1.77 → 1.22 px, rotations stay within 0.1° of the gyro. Trained: +0.5 dB vs R-051, about equal
+  to R-047 on training views, with 698 instead of 370 frames.
+- **Loop closure** (R-071): each verified image pair's own rotation (5-point) against the gyro chain showed that pairs
+  > 2 min apart disagree by a consistent 14° yaw: the gyro bias from `gyro_check` (fitted against the wrong SfM model)
+  was off by ~0.08°/s. `gyro_loop_bias.py` fits the bias from all pairs (> 120 s pairs: 14.6 → 3.5°, the noise floor
+  of these images is ~3°); `rot_sfm.py --bg_json --max_dt 300` then uses far-apart pairs too, and `prior_ba.py`
+  refines. Result: the start and end of the walk share 3,625 of 5,603 points (R-052: 115), the scale check says "ok"
+  for the first time on scan_009, training-view PSNR ≈ R-047. Two stretches (45 – 60 s, 90 – 105 s) have almost no
+  matched points and rest on the IMU alone: this is where step 4 (lines, layout) would help.
+- **Validation on newRoom** (R-072): position error of the sensor path against normal SfM, median (p90): 72 (166) cm →
+  31 (68) cm with the full recipe; scale 0.89. Still far worse than normal SfM: the recipe is a fallback for captures
+  where SfM fails, not a replacement.
+- **Scale of scan_009:** accelerometer 0.37 – 0.48, Metric3D ~0.44 – 0.53, room height (if 2.6 – 3.0 m) 0.56 – 0.64 m
+  per model unit: about 2× too large, but no source is reliable enough to apply.
+
+---
+
+## 9. Plan from 2026-11-20 (after merging `master`, 2026-11-19)
+
+Written for Tayyab after `master` (Umair's Step 4 work, the online site, app v0.3.9) was merged into this branch.
+**A proposal, not a decision:** the rows marked "decision" are Tayyab's or the team's.
+
+### 9.1 What changed on `master` that matters here
+
+- **Correction 2026-11-20 (Tayyab): this week is not the evaluation week.** The line below was read from
+  COMPLETION_PLAN.md and is kept as written. Week 2 (2026-11-20 → 11-26) is the evaluation week; gate G2 on 11-26 wants every evaluation number measured
+  ([COMPLETION_PLAN.md](COMPLETION_PLAN.md)). **E1** ("COLMAP with vs without ARCore priors on low-texture captures:
+  ATE, track completion", Must, no owner yet) is the evaluation this work answers. So the featureless work should go
+  into E1 first and into new methods second.
+- **Step 4 layout** (`layout.py` with D-075 defaults, openings, `--square`, `plan_export.py`): it was never run on a
+  sensor-path model. It may give scan_009 a cleaner outline and a room height, which is scale option 3 in §5.
+  COMPLETION_PLAN **4.11** ("edge-based corners, gravity-aware lines, wall–floor boundary", Could, W3) needs the same
+  line detector as step 4 here. Build it once, with Umair.
+- **Gravity (D-071):** `sfm_colmap.py` export now levels the world with ARCore gravity. `--sim3 none` (sensor-path
+  models, already +Y up) skips both the Sim3 and the levelling. That is correct for `rot_sfm.py --imu 1` output; it is
+  checked only by `py_compile`, not by a run after the merge.
+- **Online site (D-076, D-077):** the deployed site shows only scans published to R2 (cap 10 GB). `scan-009-gyro` /
+  `scan-009-loop` exist only in `mockData.ts` on this PC. Showing scan_009 online needs a web bundle (`export_web.py`)
+  and `publish_scan.py`, and a clear "scale not reliable" label. Part of OD-15.
+- **Run IDs (D-079):** check `origin/master`'s TRAINING.md before every run. The next free numbers after this merge
+  are **R-073** and **D-081** (R-060 / R-061 and D-078 are Umair's).
+
+### 9.2 Steps, in order
+
+| # | Step | Effort | Done when | Needs | When |
+|---|---|---|---|---|---|
+| 9.a | **E1 table.** Cut-gap captures (newRoom, bedroom, roomAttemptSadness2: windows of 2 / 9 / 15 / 30 s removed) placed by (1) normal SfM, (2) SfM + gyro check / placement, (3) the sensor-path recipe (R-071). Report ATE (median / p90) and frames placed. Add scan_009's frames placed (R-046 370 → R-071 680) and loop error. Move `eval_rot.py` and `render_compare.py` from the agent's scratch folder into `src/arcore3dgs/` as eval tools | 1.5 days | table in TRAINING + report draft | E1 owner (decision) | 11-20 → 11-22 |
+| 9.b | **Scale for scan_009.** (1) Run `layout.py` (D-075 defaults) on R-071 and record the room height. (2) Ask who recorded scan_009 and tape the room: one length and the height. (3) Apply the scale, check it against the accelerometer / Metric3D estimates (§8.2), and run `tape_check.py` (E2) | 0.5 day + a tape visit | scale applied with its error stated, or "not measured" | access to the room | 11-21 → 11-23 |
+| 9.c | **Sharp re-recording of scan_009's room** with the capture protocol (COMPLETION_PLAN 1.4). This separates blur (21.7 px median) from missing texture. Process with the normal pipeline first, then with 9.d if SfM fails | 1 h recording + 1 run | logged run; frames placed and scale check vs R-071 | the app with the corner prompt (9.g) helps but is not required | 11-21 → 11-24 |
+| 9.d | **Pipeline option (if OD-15 = a).** `run_full.sh` / `run_v8.py` option that runs `gyro_loop_bias.py` → `rot_sfm.py --bg_json --max_dt 300` → `prior_ba.py` → export `--sim3 none`, **only** when `sfm_scale_check.py` fails, with "scale unknown" in the web bundle. Tested on scan_009 (must reproduce R-071) and newRoom (must not trigger) | 1 day | two logged runs; default off until tested | OD-15 (decision) | 11-23 → 11-25 |
+| 9.e | **Step 4, lines and layout, for the IMU-only stretches** (45 – 60 s, 90 – 105 s of scan_009): wall–floor / wall–wall junction lines (LSD, gravity-aware) matched to the R-071 layout, position solved with the gyro rotation fixed (like `known_rot_pnp.py`). Shared with COMPLETION_PLAN 4.11 | 3 – 4 days | cut-gap position error better than R-072's 31 cm median; scan_009 stretches with points | 9.a, 9.b; agree the split with Umair | W3 (11-27 →), only if G2 is met |
+| 9.f | **VGGT (step 2)** on the two IMU-only stretches, as a quick comparison | 0.5 day | frames placed, gyro agreement | **Tayyab's OK to run downloaded code** (decision) | any time once approved |
+| 9.g | **App:** the corner / edge prompt is under "Unreleased" in `android/CHANGELOG.md` (not in v0.3.9). It ships with the next release once this branch is merged. Add the long-line count to `quality.csv` | 0.5 day + device test | prompt seen on a phone | merge to `master` | with the merge |
+| 9.h | **Report section** for the final report: method (gyro check, loop bias, prior BA), E1 numbers, scan_009 before / after renders, limits (scale, IMU-only stretches) | 1 day | section drafted | 9.a, 9.b | W3 |
+
+**Not planned before 2026-12-04:** step 5's line BA, step 7 (planes from depth, full fusion back end, direct odometry).
+
+### 9.3 Decisions needed (none taken here)
+
+- **OD-15** (Tayyab): sensor-path recipe as an opt-in pipeline fallback, and which scan_009 model to show. Now also:
+  whether to publish scan_009 to the online site before its scale is known.
+- **E1 owner** (team): proposed Tayyab, since 9.a reuses this branch's tools.
+- **VGGT** (Tayyab): run the downloaded code, or drop step 2.
+- **Merge this branch to `master`** (Tayyab, through a PR with CI green). It carries the app prompt, the tools and the
+  records Umair's side does not have yet. One test fails on `master` and here alike (`test_changelog`, v0.3.9 released
+  with an empty "Unreleased"), so CI may be red for a reason that is not this branch's.
+- **Disk on the 3070 PC** (Tayyab): ~9 GB free; scan_009's `work_v9pfb*` / `work_v9pfl*` hold ~4 GB. Keep R-071's
+  folders, and ask before removing the rest.
+
+## 10. Video tracks and the road to a usable scan_009 (2026-11-20)
+
+Written for Tayyab after R-073 – R-081. **A proposal, not a decision.** §9's steps still stand; this section ranks
+what should improve the scan_009 model the most from here.
+
+### 10.1 What R-073 – R-081 showed
+
+- **Video point tracks** (`video_tracks.py`): corners tracked through every 30 fps frame (KLT, forward-backward check),
+  checked against the gyro rotation (2-point RANSAC on the travel direction). A probe at 45 – 60 s: about 260 points
+  survive one keyframe gap (0.2 s), median over 9 starts.
+- **newRoom (truth known):** the R-071 recipe's position priors were too tight (31.1 cm median → 14.8 cm with them
+  nearly off, R-075). **Adaptive priors** (`prior_ba.py --adapt_n 150`, R-078): tight where a keyframe pair has few
+  3D observations, loose where it has many: 16.2 cm median, **p90 29.6 cm** (R-071 recipe 68.4).
+- **scan_009:** the tracks agree with the image-supported path to 2.4 – 2.9°, and disagree by 47° / 73° in the two
+  low-texture stretches: the sensor path there was wrong, not the tracks (R-078 side check). Weighting the tracks ×30
+  in `rot_sfm.py` (R-079) and re-triangulating them (R-080): 3D observations per camera median 54 → 120, cameras
+  with < 10: 202 → 110, 90 – 105 s fixed (3 → 23), reprojection 1.27 → 1.13 px. **45 – 60 s is not fixed:** the video
+  has too little texture there for tracks to last to the next keyframe.
+- **R-081** (trained on R-080): training-view PSNR median 19.52 → 19.59, better on 61 % of frames; Tayyab, looking at
+  it in the web viewer (2026-11-20): "much better than the old one … from the proper camera angles from where the
+  pictures were taken the room is finally looking like the real thing".
+
+### 10.2 What is still wrong
+
+1. **Views away from the recorded path** look worse than views from it (what Tayyab's remark implies; not measured):
+   the likely cause is that the splats fit each photo but the geometry between photos is not tight (floaters, wall
+   "fog"; not checked). This is what decides whether the room
+   reads as a room in the viewer.
+2. **We measure only training views.** A gain off the path cannot be seen in the current numbers.
+3. **Rolling shutter** is not modelled anywhere: shear median 8 px, p90 17 px per keyframe (`camera.csv`, 19.5 ms
+   readout), against a reprojection error of 1.13 px. It is the largest known per-pixel error left.
+4. **Motion blur** median 10.5 px (predicted from the gyro); the training's blur model (`--blur 0.0222`) is a global
+   exposure, not the measured per-frame motion.
+5. **45 – 60 s** rests on the sensors (no texture); **scale** is ~2× too large (§9.b).
+
+### 10.3 Steps, ranked by expected gain per day
+
+| # | Step | Why it should help | Effort | Done when |
+|---|---|---|---|---|
+| 10.a | **Measure novel views.** Hold out every 8th keyframe (`run_v8.py --split`), retrain R-081 as the baseline; plus a fixed set of off-path virtual cameras (orbit around the room centre, 1 m above the floor) rendered the same way for every model, as a sheet | Without it no later step can be judged; Tayyab's observation (10.2.1) becomes a number | 0.5 day + 1 training (30 min) | held-out PSNR / SSIM for R-081 in TRAINING, orbit sheet |
+| 10.b | **Rolling-shutter rectification from the gyro.** Each image row has its own time; the gyro gives the rotation per row. Warp every keyframe to one instant (per-row rotation homography `K R_row K⁻¹`) before SfM, tracks and training, so all stages see consistent images | Removes an 8 – 17 px shear that differs between views and blurs the 3D fit; rotation-only is enough at 17°/s and room distances | 1 day + full re-run (tracks → rot_sfm → BA → train ≈ 45 min) | held-out PSNR up and orbit sheet sharper than 10.a's baseline; reprojection below 1.13 px |
+| 10.c | **Iterate tracks ↔ path.** Re-extract tracks on R-080's path (better rotations and positions), feed back into `rot_sfm.py`, re-triangulate; repeat until the kept cameras stop rising (647 now, 698 in R-071) | Each round so far gave more points (R-076 6,398 → R-080 7,263) and fixed 90 – 105 s; the 51 cameras lost in R-079 are likely recoverable | 0.5 day, ~15 min per round + 1 training | more cameras kept; held-out PSNR not worse |
+| 10.d | **Pose refinement during training** (`train.py --pose_opt`, off by default because on newRoom the BA poses were already better, 73 mm drift). scan_009's poses are worse, so the photometric loss may correct them, especially in 45 – 60 s | Cheap to try; directly targets the remaining pose error | 1 training run | held-out PSNR (with test-pose alignment) and orbit sheet vs 10.a |
+| 10.e | **Geometry for off-path views:** stronger planar prior (`--planar` 0.2 → 0.5 / 1.0), Metric3D depth and normal supervision weight, and floater pruning; then wall planes from `layout.py` as a constraint | Targets 10.2.1 directly: flat walls and no fog between the photos | 1 – 1.5 days, 3 – 4 trainings | orbit sheet cleaner, wall flatness (`eval_offpath.py`-style) better, held-out PSNR not worse |
+| 10.f | **Per-frame motion blur from the gyro** in the blur model (the measured blur path per keyframe instead of one global exposure) | Sharper texture; matters more after 10.b | 1 day | held-out PSNR / sharpness up |
+| 10.g | **45 – 60 s with planes** (= §9.e, lines and planes with the gyro rotation fixed) or a **re-recording** (§9.c) | The only ways to fix a stretch without texture | 3 – 4 days, or 1 h recording | that stretch has points; or a new capture replaces it |
+
+**Recommended order:** 10.a → 10.b → 10.c → 10.d → 10.e, one variable per training run, each against 10.a's
+baseline. 10.b and 10.e are where a "breakthrough" in how the room looks is most likely; 10.c and 10.d are cheap
+and safe. 10.f and 10.g come after, or 10.g as the re-recording if the room is reachable.
+
+**Cost against the schedule:** 10.a – 10.d are about 3 working days. Tayyab (2026-11-20): this week is not the
+evaluation week, so §10 goes first; 10.a's held-out numbers can still go into the report.
+
+**Still frames (Tayyab, 2026-11-20):** during the scan_009 recording he held the camera still at several points along
+the room, so there are sharp frames there. They show up in the gyro as stretches of near-zero rotation and help
+three steps: 10.b (no rolling-shutter shear when still), 10.f (no blur), and 10.e (sharp reference views for the
+geometry). `select_sharp.py` already prefers low-motion frames; `still_frames.py` (10.f) lists the still stretches
+so they can be weighted up in training.
+
+### 10.4 Decisions needed (none taken here)
+
+- ~~Order and time~~: answered 2026-11-20 by Tayyab: §10 first (not the evaluation week); code 10.a – 10.f, no
+  training until he says so.
+- **Re-recording scan_009's room** (Tayyab / whoever has access): the cheapest fix for 45 – 60 s and for blur.
+- Still open from §9.3: OD-15, the E1 owner, VGGT, the merge to `master`, disk.
+
+### 10.5 Code for 10.a – 10.f (2026-11-20, written, no training run yet)
+
+Tayyab asked to code the steps but not start training. What exists now, and what was checked without training:
+
+| Step | Code | Checked so far |
+|---|---|---|
+| 10.a | `still_frames.py` (still stretches from the gyro, held-out list); `make_split.py --add` (off-path stretches + still frames in one list); `eval_offpath.py` (held-out PSNR / SSIM, wall flatness, room-centre views) already existed | scan_009 still stretches: 4 at < 4°/s for ≥ 0.5 s (2.2 s), **9 at < 6°/s for ≥ 0.4 s (6.7 s, the default)**, 15 at < 8°/s; rotation speed median 16.8°/s |
+| 10.b | `rs_rectify.py` (per-row gyro rotation, iterated remap, lens distortion kept; `--probe_only` picks the readout direction from the video); `video_tracks.py --rs 1` (moves the raw-video track points into the rectified images); unit test `tests/test_rs_rectify.py` | Probe on the 24 fastest-rotating keyframes (median 53°/s): photometric error without gyro warp 7.04, gyro warp without rectification 4.52, **columns +1: 4.09** (rows +1 4.17, rows −1 4.18, columns −1 4.32), so readout along the image columns; a 10 % margin, tentative. Shift on fast frames 7 – 8 px median, up to 24 px. Image map vs point correction round trip 0.06 px |
+| 10.c | `track_loop.py` (rounds of tracks → `rot_sfm.py` → adaptive BA → tracks → adaptive BA until the kept cameras stop rising) | compiles; not run |
+| 10.d | `geo_splatfacto.py --pose_opt` (nerfstudio SO3xR3; the correction is applied once per training view, also in the blur sub-renders and the PGSR geometry pass); `run_v8.py --pose_opt` | compiles; not trained. The refined poses are not written out; held-out frames are scored with their unrefined poses |
+| 10.e | `run_v8.py --train_args` passes `--depth_lambda`, `--normal_lambda` etc. to the trainer; `--planar` already existed | Floater pruning and layout-plane constraints **not coded** |
+| 10.f | `blur_motion.py --source gyro --gyro_calib --per_frame_exposure`; `run_v8.py --blur_gyro <bias json>` | **Found: on scan_009 the blur model had no motion for most frames** (ARCore lost: 398 of 622 frames none, 224 from ARCore; R-071 / R-081 trained like that). With the gyro: all 622 frames, blur median 8.7 px, p90 17.6 px. ARCore and gyro disagree on the 224 shared frames (direction 14° median, p90 90°), so `--blur_gyro` uses the gyro for every frame |
+
+Tests: 288 passed, 1 failed (`test_changelog`, the known v0.3.9 failure on `master`).
+
+**Run order when Tayyab says go** (S = `dataset/scan_009_057ed3beb4fc`; one change per training, ~30 min each; run IDs
+from `origin/master`'s TRAINING.md first):
+
+1. **10.a baseline:** `still_frames.py $S $S/work_v9pfz_sfm $S/work_v9pfz_sfm --bg_json $S/gyro_loop_bias.json
+   --split_out $S/still_test.txt`; `make_split.py --work $S/work_v9pfz_sfm --out $S/s10_test.txt --add
+   $S/still_test.txt`; copy `work_v9pfz` / `work_v9pfz_sfm/sparse/0` to a new tag (e.g. `v9pfh`); `sfm_colmap.py
+   --stage undistort / export --sim3 none`; `run_v8.py --tag v9pfh --from_stage export --pose_free --init fmvs
+   --planar 0.2 --blur 0.0222 --pgsr --split $S/s10_test.txt`; `eval_offpath.py --work $S/work_v9pfh_sfm --models
+   base=…`. Every later model uses the same `s10_test.txt`.
+2. **10.f** (cheapest, now known to be broken on this scan): as 1 plus `--blur_gyro $S/gyro_loop_bias.json`.
+3. **10.b-1** (rectified images, R-080's poses): `rs_rectify.py $S $S/work_v9pfz $S/work_v9pfz_sfm <new keyframe
+   dir> --bg_json $S/gyro_loop_bias.json`, then as 1 on that tag. **10.b-2** (full): ALIKED features and matching on
+   the rectified keyframes (`sfm_colmap.py --stage extract / match --feature aliked`), `gyro_loop_bias.py`,
+   `rot_sfm.py`, `track_loop.py --rs 1`, then train.
+4. **10.c:** `track_loop.py $S $S/work_v9pfl $S/work_v9pfm_sfm $S/work_v9pfy_sfm/sparse_vt_pba_adapt <out>
+   --pair_cache $S/work_v9pfl_sfm/pair_directions_dt300_par1_bg.json --bg_json $S/gyro_loop_bias.json --colmap …`
+   (CPU / GPU BA only, ~10 min per round), then train its last model.
+5. **10.d:** best of the above plus `--pose_opt`.
+6. **10.e:** best of the above with `--planar 0.5` / `1.0`, `--train_args "--depth_lambda 0.1 --normal_lambda 0.1"`.
+
+**10.a done (R-082, 2026-11-20):** 69 of 622 frames held out (`s10_test.txt`: 6 stretches of 3 s plus 8 still
+frames). Held-out PSNR **20.80**, SSIM **0.874**, flatness **8.18 cm**; R-081 on the same frames, which it trained on,
+scores 23.98 / 0.909 / 5.98 cm, so an unseen view loses about 3.2 dB. Every later step is compared with R-082. Next:
+10.f (`--blur_gyro`).
+
+**10.f run (R-083, 2026-11-20):** gyro motion for all 622 frames. Held-out PSNR 20.86 (R-082 20.80), SSIM 0.871
+(0.874), sharpness 0.43 (0.28), flatness 9.85 cm (8.18), training 28.0 min (21.9). Sharper, not more accurate; the
+entrance and far-door failures are unchanged. Inconclusive; keeping it for 10.b onwards is open (Tayyab).
+
+**Per-frame check and 10.d (R-084, 2026-11-20):** per held-out stretch, the gap between R-082 and R-081 (which saw
+the frames) is ~0 on the still frames, 2.8 dB at 22 – 25 s, 4.5 dB at 51 – 53 s (no image support), 5.9 dB at 78 – 81 s
+(good support) and 3.2 dB at 134 – 137 s, which is poor even when seen (18.9). `--pose_opt` (R-084): 20.20 held out;
+since held-out poses are not refined, new `eval_align.py` aligns each held-out pose to the frozen model first: R-082
+22.64, R-083 22.51, R-084 22.39, so no model is better. The alignment itself is the finding: held-out SfM poses are
+~2° off on textured stretches (+1.8 dB when corrected), so the pose fix has to come from SfM (10.c, 10.b); at
+78 – 81 s the pose is nearly right and the gap stays 4 dB (geometry / coverage, 10.e). Next: 10.c (no training, no
+disk needed until its model is trained); training needs disk space first (2.7 GB free).
+
+**10.c (R-085, 2026-11-20):** two rounds from R-080's model: 647 → 676 → 656 cameras, 3D obs median 120 → 91 → 109,
+45 – 60 s median 1 → 3 → 1. The loop oscillates (weakly supported cameras come and go) and never beats R-080;
+rejected, not trained. Where §10 stands: 10.a measured; 10.f, 10.d, 10.c gave no held-out gain. What is left: 10.e
+(geometry / floaters, for the 78 – 81 s coverage gap and blank-wall floaters), 10.b (rolling shutter, a full SfM
+re-run) and 10.g (a re-recording of 45 – 60 s, which no tool has fixed). Training needs disk first.
+
+**2026-11-21: 10.e first part, 10.b-1 and the noise check (R-086 – R-088).** All on R-082's split, scored with
+`eval_offpath.py` and `eval_align.py`:
+
+| Run | Change | Aligned PSNR | Flatness cm | Notes |
+|---|---|---|---|---|
+| R-082 | baseline | 22.65 | 8.18 | |
+| R-088 | none (repeat) | 22.55 | 6.65 | noise: ~0.1 – 0.25 dB overall, ≤ 0.9 dB per stretch, 1.5 cm flatness |
+| R-083 | gyro blur | 22.51 | 9.85 | within noise |
+| R-084 | pose refinement | 22.39 | 7.40 | within / near noise |
+| R-086 | planar 0.5, depth / normal 0.1 | 21.85 | 4.98 | flat sheet blocks the 134 s view |
+| R-087 | rolling-shutter rectified keyframes | 22.22 | 4.18 | 51 – 53 s +1.6 dB; sheet at 134 s, blank 186 s |
+
+No step so far gives a clear held-out gain. The rectified keyframes (10.b-1) are the most promising: the only
+stretch-level gain above the noise, in the stretch with no image support, and flatter walls; their losses come from
+views blocked by a sheet of Gaussians close to the camera, which a floater / near-camera pruning step (10.e, not yet
+coded) would target. The flatness metric counts such a sheet as flat, so it needs a guard (e.g. ignore frames whose
+render is one surface close to the camera) before flatness can be compared.
+
+**Blocked views and path pruning (R-089, R-090, 2026-11-21).** The "flat sheets" were Gaussians right in front of
+the lens (rendered depth 0.01 – 0.04 units): 7 of 69 held-out views in R-082, 16 in R-087. New
+`geo_splatfacto.py --path_prune 0.1` removes Gaussians reaching within ~5 cm of the camera path every 500 steps
+(the phone was carried there, so it is free space); `eval_offpath.py` now reports blocked views and leaves them out
+of flatness. Results (aligned PSNR; blocked views of 69):
+
+| Run | Images | Pruning | Aligned PSNR | 51 – 53 s | Blocked |
+|---|---|---|---|---|---|
+| R-082 / R-088 | raw | no | 22.64 / 22.54 | 21.59 / 21.46 | 7 / 5 |
+| R-090 | raw | yes | 22.52 | 22.72 | 0 |
+| R-087 | rectified | no | 22.18 | 23.23 | 16 |
+| R-089 | rectified | yes | 22.21 | **24.18** | 1 |
+
+Pruning is free (within the run-to-run spread, no blocked views): keep it on. Rectification consistently helps the
+stretch with no image support (+1.6 / +2.6 dB) and costs ~0.4 dB overall; 10.b-2 (R-091) re-solves the cameras on
+the rectified images to see whether the overall loss is the old cameras not matching the new images.
+
+**10.b-2 (R-091, 2026-11-21) and where §10 ends.** The full camera solve on rectified keyframes matches as well as on
+the raw ones (695 cameras, 23,494 points) but does not add tracking in 45 – 60 s (median 0 – 1 3D observations per
+camera, 30 – 45 cameras there vs R-080's 41); rejected, not trained. Summary of §10 on scan_009: measured
+(held-out split, test-pose alignment, run-to-run spread, blocked-view guard); kept: path pruning (no cost, no blocked
+views); rectification helps how 51 – 53 s renders (+1.6 / +2.6 dB) but costs ~0.4 dB overall; no software step
+tried here gives the 45 – 60 s cameras image support. What remains: a re-recording of that part of the room
+(10.g) or layout-plane constraints for it (not coded).
+
+## 11. Plan after §10: one consistent geometry first (2026-11-21)
+
+**Why.** Tayyab (2026-11-21), after looking at R-081 and R-092 in the viewer: the room is coherent only from the
+recorded angles, the depth looks wrong off-path, and R-092 looks almost worse than R-081. A re-recording is not
+possible (far-away site). Reading of the evidence (not proven):
+1. The depth guidance contradicts itself: every frame's Metric3D depth is scaled on its own (5.9 % median alignment
+   error, 16.9 % p90 for filled frames), so overlapping frames disagree about where a wall is; 3DGS then satisfies
+   each view separately (correct from the recorded angles, wrong between them). R-092 added 77 more such frames.
+2. The cameras are off: held-out SfM poses ~2° (R-084 alignment) on textured stretches; 45 – 60 s rests on the
+   sensors (0 – 1 SfM observations per camera, R-091).
+3. R-092 trained on 553 frames (69 held out) against R-081's 622, so the viewer comparison was not like for like.
+§10 patched the training; §11 builds one room geometry that all views agree on, then fixes the cameras against it.
+
+| Step | What | Expected gain | Cost | Needs |
+|---|---|---|---|---|
+| 11.a | **VGGT feasibility test** on one chunk (~40 keyframes) across 45 – 60 s: do its poses agree with the gyro (rotation) and its depth maps with each other? | Decides whether a learned multi-view model can place the blank-wall frames at all | 1 – 2 h | **Tayyab's OK to run the downloaded code** (`C:/Users/tyb/.cache/buildscan/vggt`, research licence) |
+| 11.b | **Room planes**: fit walls / floor / ceiling from the well-tracked frames (SfM points + plane_seg regions + Metric3D normals), robust plane fit, Manhattan check | Fixed surfaces for the blank walls | 0.5 day | separate code, or Umair's `layout.py` read-only (his module) |
+| 11.c | **Consistent depth guidance**: render depth / normals for every training view from one fused geometry (planes for wall / floor / ceiling pixels; fused Metric3D or VGGT depth elsewhere) and train on that instead of per-frame Metric3D | Views stop disagreeing about depth: the core fix for the off-path look | 0.5 day + 1 training | 11.b (11.a optional) |
+| 11.d | **Cameras against the geometry**: place the 45 – 60 s / 60 – 90 s frames by aligning their depth (and VGGT pose, if 11.a works) to the planes; then a joint refinement of all poses with the plane constraints | Fixes the stretch no image-matching step could | 1 day + 1 training | 11.b |
+| 11.e | **Judge off-path**: final models on all 622 frames (no hold-out) for the viewer; a fixed set of off-path cameras (orbit + room centre) rendered for every model; a depth-agreement score (rendered depth vs the room planes) next to held-out PSNR | Measures what Tayyab sees instead of only near-path PSNR | 0.5 day | — |
+
+Order recommended: 11.a and 11.b first (both small, 11.a tells whether 11.d can use VGGT), then 11.c (largest
+expected gain for the depth problem), then 11.d, judged with 11.e. About 3 working days. `--path_prune` stays on;
+`--fill_scale` stays off until 11.c replaces it.
+
+**11.a done (R-093, 2026-11-21, D-081): VGGT cannot place the blank-wall frames.** On dense video frames (every
+0.25 s) its step rotations follow the gyro to 0.6 – 0.9° on texture (44 – 48 s) but are 3.5 – 10° off (max 92°) on
+the blank wall (48 – 60 s), with its confidence at the floor. Useful by-product: its depth maps agree across frames
+to 2.5 – 5.3 %, against 15.1 % for the per-frame Metric3D priors with R-080's poses, which supports the diagnosis
+above. Consequence: 11.d uses the room planes only; 11.c takes VGGT depth where its confidence is high and the
+planes elsewhere. Next: 11.b.
+
+**11.b / 11.c (R-094, R-095, 2026-11-21).** Fitting the room planes showed the real fault: **the sensor camera path's
+scale drifts ~2× along the walk** (room height 8.3 → 4.6 model units; camera-to-floor 4.85 → 2.3), so each part of the
+room is built at its own size. `scale_drift.py` corrects it with the room height (room height now 5.0 – 6.0 units
+over 20 – 160 s; Metric3D-ratio spread 3.81 → 2.29); R-094 trained on it scores like R-090 overall (aligned 22.59 vs
+22.63), better late in the walk, worse in 22 – 25 s / 51 – 53 s. The walls are still split into parallel copies
+(horizontal drift, which the room height cannot see). 11.c (`plane_prior.py`, R-095) halves the depth disagreement
+between frames (6.8 → 3.6 %) but ties the frames to that fragmented plane set and loses 1 dB (aligned 21.53):
+rejected. **Order changes: 11.d first** (make the walls seen at different times coincide: horizontal drift), then
+11.c again on a one-room plane set.
+
+
+**11.d (R-096, night of 2026-11-22): the loops, not the planes, fixed the horizontal drift.** The wall planes were
+too noisy to measure it (normals of one frame scatter 6.6°). The image evidence was there all along: rot_sfm's
+cache holds 852 verified pairs >= 60 s apart, but R-094's model has almost no point tracks between distant times,
+so its bundle adjustment never saw them, and the room-height correction had bent the path against them (p75 angle
+11.4 → 28.6°). `loop_path.py` solves the camera centres again with those pair directions + the path's own steps
+(validated on 20 % held-out pairs: >= 60 s median 7.0 → 2.5°), and `prior_ba.py --pair_priors` keeps them in the
+bundle adjustment (without it the BA undid most of the closure). Trained with R-094's recipe: **aligned 22.67 →
+23.63 dB on the same 63 held-out frames, no stretch worse**; off-path views from the room centre coherent in 6 of 8
+directions; the far wall seen at 0 – 25 s now matches its later views. Walls still thick (several offsets within
+~1.5 units). Second round (R-097): pairs chosen with the corrected cameras and matched on purpose (`loop_match.py`,
++1,031 directions). Then 11.c in a safer form (`prior_consistency.py`, R-098): keep each frame's depth but drop
+the pixels other views contradict (loop partners disagree 12.4 % median vs 3.5 % for time neighbours).

@@ -8,6 +8,8 @@ Entries up to v0.3.6 were written on 2026-11-12 from the git history and docs/pr
 
 ## Unreleased
 
+- On plain walls the quality banner asks you to keep a room corner or edge in view (where walls, floor and ceiling meet): that is what processing can still track there.
+
 ## v0.3.9 · 2026-11-19
 
 No changes listed for this version.

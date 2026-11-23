@@ -740,6 +740,225 @@ issues, use the existing datasets, try new techniques. Branch from `exp/fast-pip
   0.28 GB of the 9.5 GB cap, D-077); `feature/step4-layout` up to `e74ee55` merged into `feature/vercel-deploy`
   (leaves out `e724252`, the cuDSS to-do), PR to `master`. The cuDSS work (D-078, R-061) stays on `exp/colmap-cudss`.
 
+## 2026-11-18 · Tayyab (agent) · `docs/featureless-tracking-plan`
+- Did: drafted [FEATURELESS_TRACKING_PLAN.md](FEATURELESS_TRACKING_PLAN.md) at Tayyab's request (track featureless rooms
+  with wall junction lines, faint contrast and phone sensors). New tool `src/arcore3dgs/texture_probe.py`; measured
+  newRoom, the bedroom, the lecture hall and scan_009 (table in the plan §1.1): lost frames have few corners but keep
+  their long lines. Plan steps 0–7 with effort, checks and three options.
+- Runs: none (texture_probe is a read-only measurement, no TRAINING entry). Decisions: none; OD-14 added (open).
+- Problems: scan_009's blur (21.7 px median) confounds "featureless"; a sharp re-recording of that room is needed.
+- Next: Tayyab and the team decide OD-14; then step 0 (test set) and step 1 (gyro rotation check).
+- Later the same session (00:00–01:15): Tayyab chose option 1, then continue (D-080, OD-14 closed). Built
+  `gyro_check.py` (IMU→camera rotation estimated from the SfM model; per-frame rotation disagreement with the gyro),
+  `sfm_colmap.py --gyro_thr` (default off), `gap_test.py` (cut-gap rotation test), `gyro_check.fill_rotations`; app
+  prompts "keep a room corner or edge in view" (compiled with JDK 21, not on a phone). Run R-047 (scan_009 with the
+  gyro check): inconclusive; two run errors logged (wrong resume stage; a copied directory link). Next: step 4 or
+  the incremental mapper on scan_009; MAP entries added for the new tools.
+
+## 2026-11-18 (night, 01:13 – 05:00) · Tayyab (agent) · `docs/featureless-tracking-plan`
+Asked by Tayyab: "work throughout the night, I need scan_009 to be working properly soon".
+- Did: R-048 incremental mapper (rejected); R-049 placing unplaced frames with gyro rotation + known-rotation fit
+  (`known_rot_pnp.py`, `sfm_colmap.py --place_unplaced`; inconclusive); `imu_scale.py` (accelerometer scale, validated
+  on three rooms); R-050 diagnosis (SfM locally wrong; not wrong matches (`gyro_pairs.py`), not timing; ARCore poor;
+  IMU clean); gyro bias estimate (`gyro_check.py`); `rot_sfm.py` (gyro rotation + accelerometer positions) validated on
+  newRoom, R-051 on scan_009 (rejected); `sfm_colmap.py --sim3 none`; R-047 added to the viewer (`scan-009-gyro`).
+  VGGT code + weights fetched outside the repo (`C:\Users\tyb\.cache\buildscan`); running them was blocked by the
+  permission check; `vggt_poses.py` written but never run.
+- Runs: R-048, R-049, R-050, R-051. Decisions: none.
+- Problems: scan_009 is not "working properly": the best model is still R-047 (rough, scale unknown). Disk 19 GB free;
+  the experiment folders under scan_009 (`work_v9pf{g,m,p,t,x,r}*`, whole capture folder 11 GB) were not deleted.
+- Next: Tayyab decides on VGGT (or re-recording); a scale source for scan_009; clean up the experiment folders (ask).
+
+## 2026-11-19 (night, 01:31 – 04:30) · Tayyab (agent) · `docs/featureless-tracking-plan`
+Asked by Tayyab: "work on featureless overnight".
+- Did: `prior_ba.py` (BA with sensor priors) → R-052 on scan_009; loop check showed a 14° gyro heading drift between
+  the start and end of the walk; `gyro_loop_bias.py` (gyro bias from far-apart image pairs) and `rot_sfm.py
+  --bg_json` → R-071 (loop closed, scale check ok, PSNR ≈ R-047, 680 frames); R-072 validation on newRoom (position
+  error of the sensor path 72 → 31 cm median); `layout.py` / IMU / Metric3D scale estimates for R-071 (~2× too large,
+  not applied); `scan-009-loop` in the web viewer (tsc ok, eslint 1 known warning, not opened in a browser). Records:
+  TRAINING R-052, R-071, R-072, FEATURELESS_TRACKING_PLAN §8.2, STATUS, MAP, web-ui STATUS. Nothing committed (not asked
+  this session).
+- Runs: R-052, R-071, R-072. Decisions: none.
+- Problems: R-051's TRAINING entry says `--init mono` but its log shows `fast_mvs` (noted in R-052). Disk 9 GB free
+  (new folders `work_v9pfb*`, `work_v9pfl*` ~4 GB; nothing deleted).
+- Next: Tayyab looks at `scan-009-loop` vs `scan-009-gyro` in the viewer and decides which to keep; whether the
+  R-071 recipe becomes a pipeline option for captures where SfM fails (open decision); a scale source; VGGT or
+  re-recording; folder cleanup (ask).
+
+## 2026-11-19 (day) · Tayyab (agent) · `docs/featureless-tracking-plan`
+Asked by Tayyab: "commit these stuff, also pull the latest stuff ... also plan future progress on featureless tracking".
+- Did: committed the night's work in three commits (`c1b2b8f` tools, `5ef259c` viewer entry, `113e7a5` records).
+  Fetched `origin/master` (Umair's Step 4, online site D-076 / D-077, v0.3.9, renumbering D-079): Umair's R-053 /
+  R-054, D-069 and OD-12 / OD-13 clashed with this branch's, so this branch's were renumbered by D-079's rule before
+  the merge (`8f45391`): R-053 → R-071, R-054 → R-072, D-069 → D-080, OD-12 → OD-14, OD-13 → OD-15 (table at the
+  top of TRAINING.md). Lines this branch added after PR #7 that still used Tayyab's old R-032 – R-040 were changed to
+  R-062 – R-070. Merge `fa356e7`: records keep both sides, runs in number order; `sfm_colmap.py` keeps D-071 levelling,
+  then `--sim3 none`; the app's corner / edge prompt stays under "Unreleased" (not in v0.3.9). Local `master`
+  fast-forwarded to `8338680`. Plan for the next steps: [FEATURELESS_TRACKING_PLAN.md §9](FEATURELESS_TRACKING_PLAN.md)
+  (E1 table first, then scale, re-recording, the pipeline option if OD-15 = a, lines / layout in W3).
+- Checks after the merge: `npx tsc --noEmit` ok, eslint 0 errors (1 known warning), `py_compile` ok, pytest 280 passed,
+  1 failed (`test_changelog`: v0.3.9's entry is "No changes listed"; fails on `master` alike).
+- Runs: none. Decisions: none (the renumbering applies D-079).
+- Problems: the commit messages `c1b2b8f` / `113e7a5` and the dataset scripts `r053.sh` / `r054.sh` keep the old
+  numbers. Nothing pushed.
+- Next: Tayyab decides OD-15, the E1 owner, VGGT, and the PR of this branch to `master`; Umair should hear about the
+  renumbering and the changelog test; then plan §9.a (E1 table).
+
+## 2026-11-20 · Tayyab (agent) · `docs/featureless-tracking-plan`
+Asked by Tayyab: "start featureless tracking we need to somehow get the scan_009 working", later "keep refining it and
+reach a break through point … plan ahead what will give us best gains".
+- Did: new `src/arcore3dgs/video_tracks.py` (KLT tracks through every video frame, checked against the gyro rotation,
+  triangulated into a model; `--pairs_out` for keyframe-pair directions); `rot_sfm.py --extra_pairs / --extra_w /
+  --extra_min_inliers`; `prior_ba.py --adapt_n / --loose_t0 / --loose_t1` (adaptive position priors). newRoom: tracks
+  alone do not help (R-073); the position priors were the limit (R-074, R-075); adaptive priors keep the gain (R-078:
+  16.2 cm median, p90 29.6 vs 31.1 / 68.4). scan_009: tracks on the old path do not triangulate (R-076); as directions
+  at normal weight they are outvoted (R-077); a check showed the tracks are right and the path in the low-texture
+  stretches is wrong; ×30 weight (R-079) and re-triangulation (R-080) fix 90 – 105 s, not 45 – 60 s. R-081 trained on
+  R-080: slightly better than R-071 on training views (better on 61 % of frames); in the web viewer as
+  `scan-009-tracks`, which Tayyab looked at and found "much better than the old one". Plan for the next steps:
+  [FEATURELESS_TRACKING_PLAN.md §10](FEATURELESS_TRACKING_PLAN.md) (novel-view measurement, rolling-shutter
+  rectification, iterate tracks ↔ path, pose refinement in training, geometry priors). Records: TRAINING R-073 –
+  R-081, web-ui STATUS. Dev server started on 127.0.0.1:3000 and closed again at Tayyab's request.
+- Runs: R-073 – R-081. Decisions: none.
+- Problems: COLMAP GUI first launch from the background shell closed without a window (relaunched with
+  `Start-Process`); `work_v9pfx_sfm` already existed (R-079 used `v9pfy` instead); `render_compare.py` needs
+  `nerfstudio-env`'s Python (plyfile). Nothing committed or pushed (not asked this session).
+- Later the same day (Tayyab: "this week is NOT eval week … commit the current progress and merge accordingly … code the
+  stuff for these steps but dont start training yet"; he also held the camera still at points during the recording):
+  committed the R-073 – R-081 work (`5b26db3`, `d8678ae`, `666c74a`); `origin/master` had nothing new to merge.
+  Coded §10.a – 10.f ([FEATURELESS_TRACKING_PLAN.md §10.5](FEATURELESS_TRACKING_PLAN.md)): `rs_rectify.py` (probe:
+  readout along image columns, photometric error 4.52 → 4.09), `video_tracks.py --rs`, `track_loop.py`,
+  `still_frames.py` (9 still stretches, 6.7 s), `make_split.py --add`, `geo_splatfacto.py` / `run_v8.py --pose_opt`,
+  `run_v8.py --train_args / --blur_gyro`, `blur_motion.py --source gyro`. Found: the blur model had no motion for 398
+  of 622 scan_009 frames (ARCore lost), so R-071 / R-081 trained almost without it. Tests 288 passed, 1 failed (known
+  `test_changelog`). Probe frames cached in `work_v9pfz_rs/probe_frames.npz` (dataset, gitignored).
+- Runs: none (only CPU checks of the new tools, no pipeline outputs). Decisions: none; Tayyab's answers (not the
+  evaluation week, §10 first) recorded in §10.3 / §10.4.
+- Next: when Tayyab says go, the run order in §10.5: 10.a baseline, 10.f, 10.b, 10.c, 10.d, 10.e.
+- Evening (Tayyab: "ok start 10a"): R-082, the §10.a baseline. `still_frames.py` → `still_test.txt` (8 still frames;
+  7 of the 9 still stretches are in the first 17.6 s), `make_split.py --add` → `s10_test.txt` (69 of 622 frames held
+  out). R-081's recipe on a copy (`v9pfh`): held-out PSNR 20.80, SSIM 0.874, flatness 8.18 cm; R-081 on the same
+  (seen) frames 23.98 / 0.909 / 5.98. Problem: `cp -r` turned the `undist_fast/images` junction into a real folder,
+  so `fast_mvs.py` failed at init; removed the copied folder, resumed from init (TRAINING R-082).
+- Runs: R-082. Decisions: none.
+- Then (Tayyab: "ok start the next part"): committed R-082's records (`d013674`); R-083, 10.f gyro motion blur
+  (`v9pfi`): all 622 frames get gyro motion; held-out PSNR 20.86 vs 20.80, SSIM 0.871 vs 0.874, sharpness 0.43 vs
+  0.28, flatness 9.85 vs 8.18 cm, training +6 min. Inconclusive (TRAINING R-083).
+- Runs: R-083. Decisions: none (keeping `--blur_gyro` is open for Tayyab).
+- Then (Tayyab: "what are the next best steps", then "ok start work"): per-frame check of R-082 / R-083 (scratchpad
+  `perframe.py`): pose-like gaps at 22 – 25 s and 51 – 53 s, a coverage gap at 78 – 81 s, 134 – 137 s poor even when
+  trained on. R-084, 10.d `--pose_opt` without gyro blur: held-out 20.20 vs 20.80. New `src/arcore3dgs/eval_align.py`
+  (test-pose alignment): aligned R-082 22.64, R-083 22.51, R-084 22.39, so no gain; held-out SfM poses ~2° off.
+  Disk down to 2.7 GB (each run ~2.3 GB); nothing deleted.
+- R-085, 10.c track loop from R-080's model: 647 → 676 → 656 cameras, support thinner, 45 – 60 s unchanged;
+  oscillates, rejected, not trained.
+- Runs: R-084, R-085. Decisions: none.
+- Next (Tayyab to choose): free disk; then 10.e (geometry / floaters), 10.b (rolling shutter) or a re-recording of
+  45 – 60 s (10.g).
+
+## 2026-11-21 · Tayyab (agent)
+
+Asked by Tayyab: "why is FYP taking up 125 gb", then "ok do those 3".
+- Did: measured disk use (FYP ~125 GB: `dataset/` 97 GB, `outputs/` 17 GB; `mono_prior/` 18.8 GB and keyframe copies
+  17.8 GB across the work folders). Deleted, after checking for junctions and that only pipeline stages read
+  `mono_prior/`: all 19 `mono_prior/` folders, R-083 / R-084 work folders (evaluations moved to
+  `scan_009_057ed3beb4fc/s10_eval/`), checkpoints + TensorBoard logs of the three `outputs/` runs with an exported
+  `splat.ply`. Freed 22.8 GB, 23.9 GB free (STATUS §7).
+- Runs: none. Decisions: none (what to delete was Tayyab's choice).
+- Then (Tayyab: "ok continue where we left on the past run due to running out of space"): R-086 (10.e: planar 0.5,
+  depth / normal 0.1): flatter walls (4.98 cm), aligned PSNR 21.85 vs 22.65, a sheet blocks the 134 s view.
+  R-087 (10.b-1: `rs_rectify.py`, columns +1, shift median 4.6 px, max 21.5 px; trained on R-080's cameras):
+  aligned 22.22, 51 – 53 s +1.6 dB, flatness 4.18 cm, blocked views at 134 / 186 s. R-088 (R-082 repeated):
+  noise ~0.1 – 0.25 dB overall, up to 0.9 dB per stretch, 1.5 cm flatness. Found: the flatness metric scores a
+  view-filling sheet as flat.
+- Then (Tayyab: "continue", later "keep working on it complete all the work"): the blocked views are Gaussians
+  0.01 – 0.04 units in front of the lens. New `src/arcore3dgs/prune_near_path.py` and `geo_splatfacto.py
+  --path_prune` (every 500 steps), `eval_offpath.py` blocked-view count. R-089 (rectified + pruning): 1 blocked
+  view, 51 – 53 s +2.6 dB, aligned 22.21. R-090 (pruning only): 0 blocked, aligned 22.52 (= baseline): pruning is
+  free. R-091 (10.b-2: features, rot_sfm, adaptive BA, one track round on the rectified keyframes) started.
+- Runs: R-086 – R-091. Decisions: none.
+- Later the same day: moved `stretch_stats.py`, `track_dir_check.py`, `render_compare.py` and `perframe.py` (as
+  `eval_perframe.py`) from the scratchpad into `src/arcore3dgs/`. R-091 (10.b-2): the bridge-pair import first
+  failed (cuBLAS DLL missing when COLMAP was called without `sfm_colmap.py`'s PATH), fixed in `r091b.sh`; paused and
+  resumed at Tayyab's request; result: no gain in 45 – 60 s (0 – 1 obs per camera), rejected, not trained.
+- Runs: R-089 – R-091. Decisions: none.
+- Next (Tayyab to choose): re-record 45 – 60 s of scan_009, or code layout-plane constraints (10.e / 10.g); whether
+  to make `--path_prune 0.1` the default in `run_v8.py` (a recipe choice, his).
+- Evening: viewer started on 127.0.0.1:4173 (port 3000 is in a Windows-reserved range now). Tayyab inspected R-081:
+  coherent only from the recorded angles, wrong depth off-path; no re-recording possible (far-away site). Found 77
+  training frames with no depth / normal prior (< 5 SfM points), mostly in the featureless stretches. New
+  `mono_prior.py --fill_scale` + `run_v8.py --prior_args`; R-092: flatness 9.92 → 6.77 cm, aligned PSNR −0.26 dB,
+  cleaner room-centre views. Problem: `--prior_args "--fill_scale"` is parsed as an option (use
+  `--prior_args=--fill_scale`).
+- Runs: R-092. Decisions: none (re-recording ruled out by Tayyab: noted in STATUS §7).
+- Later: `scan-009-depthfill` (R-092) added to the viewer (`598ec14`); Tayyab: "it looks almost worse than the prev
+  attempt", asked to stop the server (stopped) and plan a significant quality uplift that fixes the depth. Plan
+  written as FEATURELESS_TRACKING_PLAN §11 (one consistent room geometry first: VGGT test, room planes, depth guidance
+  rendered from one geometry, cameras placed against the planes, off-path judging).
+- Then (Tayyab: "ok start 11.a"): D-081 (run the downloaded VGGT). New `src/arcore3dgs/vggt_chunk.py`. R-093: first
+  try spilled out of the 8 GB GPU (fp32 weights), fixed with bf16 weights; VGGT follows the camera on texture
+  (0.6 – 0.9° vs the gyro) but not on the blank wall (3.5 – 10°, max 92°), so it cannot place those frames; its depth
+  agrees across frames ~3× better than the per-frame Metric3D priors (5.3 % vs 15.1 %).
+- Runs: R-093. Decisions: D-081.
+- Next: 11.b (room planes), then 11.c (consistent depth guidance: VGGT depth on texture, planes elsewhere).
+- Then (Tayyab: "ok do that, and also complete 11.c afterwards"): 11.b. New `room_planes.py`: on R-080's model it
+  found 60 planes (5 "floors" at different heights): **the camera path's scale drifts ~2× along the walk** (camera to
+  floor 4.85 → 2.3 units, room height 8.3 → 4.6 units, Metric3D ratio 2.7 – 5.3 → 1.4 – 2.7). New `scale_drift.py`
+  rescales the path with the room height (s(t) 1.66 → 0.66), re-triangulates; Metric3D-ratio spread 3.81 → 2.29;
+  prior BA 1.10 px. R-094 trained on it (R-090's recipe); paused by Tayyab before the evaluation. `plane_prior.py`
+  (11.c) written, not run.
+- Resumed (Tayyab: "ok claude you can resume"): R-094 evaluated (aligned 22.59 = R-090); its planes are more
+  consistent vertically but walls still come in parallel copies. Eval tools now skip held-out frames the export
+  dropped. R-095 (11.c, `plane_prior.py`): depth disagreement 6.8 → 3.6 % but −1 dB aligned: rejected.
+- Runs: R-094, R-095. Decisions: none.
+- Next (Tayyab to choose): 11.d (fix the horizontal drift by making walls seen at different times coincide), then
+  11.c again; or stop §11 here.
+
+## 2026-11-22 · Tayyab (agent, night on `docs/featureless-tracking-plan`)
+
+Tayyab: "what are the next steps, plan accordingly you have the entire night to train and run it".
+
+- 11.d, first by the wall planes: per-frame wall offsets showed the parallel copies, but plane normals of a single
+  frame scatter 6.6°, too noisy to solve for drift. Found instead: R-094's camera model has almost no point tracks
+  between distant times (1,327 of 29,207 points span >= 60 s, nearly all start ↔ end), while rot_sfm's pair cache
+  holds 852 verified pairs >= 60 s apart; R-094's path agrees with them worse than R-080's (p75 28.6° vs 11.4°).
+- New `loop_path.py` (camera centres re-solved with the path's steps + pair directions, validated on held-out pairs:
+  >= 60 s median 7.0 → 2.5°). The prior BA undid most of it; new `prior_ba.py --pair_priors` keeps the loop pairs.
+  `scale_drift.py` re-triangulation moved into `read_model` / `write_model` (output checked byte-identical).
+  **R-096: aligned 22.67 → 23.63 dB on the same 63 held-out frames, every stretch equal or better**; new
+  `offpath_views.py` (11.e): room-centre views coherent in 6 of 8 directions (R-094 / R-090 mostly blank walls), top
+  view without wall slabs across the walked area. Residual room-height drift small (s(t) 0.85 – 1.18), not corrected.
+- New `loop_match.py` (pairs chosen with the corrected cameras, ALIKED + LightGlue on a copy of the database):
+  +1,031 directions. R-097: four stretches better, 134 – 137 s broken (20.10 → 15.81): rejected.
+- New `prior_consistency.py` (11.c, second form: drop prior pixels other views contradict; loop partners disagreed
+  12.4 % vs 3.5 % for time neighbours). R-098: aligned 23.61 = R-096: inconclusive, not adopted.
+- R-099: R-096's recipe on all frames (no held-out) for the viewer.
+- Problems: `loop_match.py` crash on images without keypoints, `loop_path.py --model_frame` crash without short pairs
+  (both fixed, TRAINING R-097); gsplat `backgrounds` shape assertion in `offpath_views.py` (composited white by hand).
+- Runs: R-096 – R-099. Decisions: none (OD-15 evidence added).
+- Next (Tayyab to choose): look at R-099 in the viewer; R-096's loop step into the sensor-path recipe (OD-15); retry
+  the second loop round with a pair check; free disk (4.2 GB left after R-099).
+
+Tayyab, after viewing R-099 (`scan-009-loops`): "this model is miles better ... MUCH more like the real room". Issues
+he saw: off-angle views, splats detached from walls / doors, floating splats in the bathroom doorway blocking the view
+inside, missing floor splats in the middle of the room ("maybe because of the video"). Next plan proposed, his choice.
+Disk clean-up (Tayyab chose option 1): regenerable bulk of six rejected / inconclusive scan_009 runs and four rejected
+folders deleted, 3.8 -> 14 GB free; list in `dataset/scan_009_057ed3beb4fc/cleanup_2026-11-22.txt`, STATUS §7.
+
+Plan step 1 (Tayyab: "do step 1"), R-100: `clean_splats.py` extended for sensor-path models (`--mono`, `--exclude`,
+`--max_depth`). On R-096: see-through rule −0.09 dB, camera-path rule −0.23 dB; the bathroom doorway smear at 125 s is
+unchanged and shows even from its own training pose: the 100 – 150 s stretch fits worst, so the doorway is a camera
+problem there, not floaters. Not adopted. Next: Tayyab to choose (camera fixes for 100 – 150 s first).
+
+Tayyab: the featureless work is not a proper pipeline (hand-targeted to parts of one recording); asked for an analyzer
+that decides automatically for textured and featureless recordings, with total processing time a primary target.
+Recorded as D-095 and `docs/progress/PIPELINE_ANALYZER_PLAN.md` (planned). For now steps 4 then 3: R-120 started.
+
+R-120 (step 4, `--pose_opt` on R-096): aligned 23.96 vs 23.63, kept (+1.8 min training). R-121 (step 3, `loop_path.py
+--gate 10`): 30 – 90 s +1.6 – 1.8 dB, 134 – 140 s broken again; cause found: a hole in the camera path at 125.4 – 133.2 s
+(35 blurred keyframes without ARCore pose, none placed), right where the bathroom doorway is seen. Rejected. Analyzer
+plan updated (detect path holes; hole-aware loop checks).
+
 ## 2026-11-23 (Step 4) · Umair · `feature/step4-triage`
 - Done (agent for Umair, in the worktree `../BuildScan3D-step4`, from `origin/master` `8338680` because local `master`
   lacks PR #39; the main checkout stays on `exp/colmap-cudss` for R-101; `dataset/`, `saved_models/`, `tools/`,
@@ -783,4 +1002,20 @@ issues, use the existing datasets, try new techniques. Branch from `exp/fast-pip
   the same failure, hidden by the release commit's `[skip ci]`). A changelog line made CI green, but any `android/` change
   makes CD release a new app version; Umair: take it out (reverted), merge with that one known failure, fix it with the
   next real app change (STATUS §7.7).
+- Later: Umair asked to tell Tayyab's agent. It cannot be messaged from this PC, so a notice
+  `docs/progress/NOTICE_TAYYAB_2026-11-23.md` (D-091, D-090, merge advice, known CI failure), pointed to from the top of
+  CLAUDE.md, merged to `master`, plus a GitHub issue for Tayyab.
 
+## 2026-11-23 · Tayyab (agent, `docs/featureless-tracking-plan`)
+
+- R-122: R-120's recipe (R-096 cameras + `--pose_opt`) on all frames, 32.8 min; in the viewer as `scan-009-poseopt`.
+- Disk: 4.2 GB free on C: after the run (13 GB after R-121); the drop is mostly not from these runs.
+- Next: Tayyab looks at `scan-009-poseopt`; then the analyzer (D-095) or a hole-aware loop round, his choice.
+- Umair's notice (2026-11-23, D-091) read: our unpushed R-101 – R-103 / D-082 clashed with his renumbered ones; ours
+  moved to R-120 – R-122 / D-095 (D-096, Tayyab "do whats best"). Disk: 4.2 → 7.0 GB free (rejected-run bulk).
+- Merge of `origin/master` and `origin/docs/tayyab-notice` into `docs/featureless-tracking-plan` (2026-11-23): conflicts
+  only in DECISIONS / LOG / STATUS / TRAINING; master's closed entries kept (R-059's start / errors lines on this branch
+  were a stray copy of R-082's, which R-082 still has). Umair's notice acted on and archived: R-120 – R-122 rows in
+  runs.tsv, 22 of Tayyab's rows given their model folder (exact times from `timing.json`); `run_times.py check`: 3 FAIL,
+  all Umair's unpushed `exp/colmap-cudss` runs (R-061, R-101, R-102), the same on `master` alone. On Windows the script
+  needs `PYTHONIOENCODING=utf-8` (it crashes printing "→" to a cp1252 console). Not touched: `android/CHANGELOG.md`.

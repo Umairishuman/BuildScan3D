@@ -73,6 +73,8 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | D-058 | 2026-11-06 | App package name `com.buildscan3d.app` instead of Google's sample name | Active |
 | D-059 | 2026-11-06 | Release APKs signed with a private key kept in GitHub Secrets | Active |
 | D-060 | 2026-11-06 | App fixes ship by PR → merge → CD release | Active |
+| D-080 | 2026-11-18 | Featureless tracking: option 1 first (test set, gyro rotation check, app prompt), then continue with plan steps 2–5 if time allows (OD-14 closed) | Active |
+| D-081 | 2026-11-21 | Run the downloaded VGGT code and weights for FEATURELESS_TRACKING_PLAN §11.a (research licence, outside the repo) | Active |
 
 ---
 
@@ -729,6 +731,38 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **By:** Umair (option chosen from the agent's three, renumber Tayyab's recommended) · **Source:** session 2026-11-19 ·
   **Status:** Active
 
+## D-080 · 2026-11-18 · Featureless tracking: option 1 first, then continue
+
+- **Decision:** build FEATURELESS_TRACKING_PLAN.md option 1 first: step 0 (test set), step 1 (gyro rotation check in
+  `sfm_colmap.py`), step 6 (app prompt "keep a room corner or edge in view"), each measured. Then continue with steps 2–5
+  (dense matchers / VGGT, gyro rotation for unplaced frames, lines + layout placement, joint refinement) as far as time
+  allows next to the COMPLETION_PLAN Musts.
+- **Why:** steps 0, 1 and 6 are cheap (~3 days) and fix R-046's misplaced cameras; the line / layout method is the
+  stronger novelty but ~2 weeks, overlapping the evaluation week.
+- **Evidence:** `texture_probe.py` (plan §1.1): scan_009's ARCore-lost frames have SIFT median 39 (bedroom 526) and
+  long lines 6 (good rooms 5–12); gyro rotation error 0.38° over a 9 s gap (P&S §4.10).
+- **Rejected alternatives:** option 2 (the full method now: risks the Musts), option 3 (capture guidance only: leaves
+  scan_009-type rooms unsolved).
+- **By:** Muhammad Tayyab (answer to the agent's question, 2026-11-18). Closes OD-14; touches D-022 (ALIKED, re-tested
+  in step 2) and OD-6 (the gyro enters `sfm_colmap.py`).
+- **Status:** Active.
+
+## D-081 · 2026-11-21 · Run VGGT for the featureless test (§11.a)
+
+- **Decision:** run Meta's VGGT (`facebookresearch/vggt` at commit `a288dd0`, weights `model.pt` 4.7 GB) from
+  `C:/Users/tyb/.cache/buildscan/` (outside the repo, not committed) for FEATURELESS_TRACKING_PLAN §11.a: a
+  feasibility test on one scan_009 chunk across the textureless 45 – 60 s stretch. Weights loaded with
+  `torch.load(weights_only=True)`.
+- **Why:** no matching-based step in §10 gave the 45 – 60 s cameras image support (R-085, R-091); a learned
+  multi-view model may place them and give depth that agrees across views; re-recording is not possible.
+- **Evidence:** FEATURELESS_TRACKING_PLAN §10 / §11; TRAINING R-091, R-092.
+- **Rejected alternatives:** skipping VGGT (11.d with the room planes only).
+- **Licence:** VGGT License v1 (research materials, Meta): fine for this research use; any use in a shipped product
+  needs a licence check first (open, not decided here).
+- **By:** Muhammad Tayyab ("ok start 11.a", 2026-11-21, after the agent named the OK to run the downloaded code as
+  the step's requirement). Answers the open VGGT question in plan §9.3 / STATUS.
+- **Status:** Active.
+
 ## D-090 · 2026-11-23 · Run times in one structured table, `docs/progress/runs.tsv`, filled from the run files
 - **Decision:** every run (R-NNN) has one row per room in `docs/progress/runs.tsv` (tracked): who, machine, state
   (done / failed / stopped / not run / running), model folder, start / end, wall, model and after-model minutes, the
@@ -775,6 +809,39 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **By:** Umair (option chosen from the agent's three, "renumber ours" recommended) · **Source:** session 2026-11-23 ·
   **Status:** Active
 
+## D-095 · 2026-11-22 · (numbered D-082 until 2026-11-23, D-096) Plan an analyzer-driven pipeline; processing time a primary target; finish scan_009 steps 4 and 3 first
+
+- **Decision:** the featureless work moves towards one pipeline that decides its route by itself: an analyzer stage
+  labels the recording (textured / weak / featureless per time window) and picks the camera route; every corrective
+  step keeps itself only when a measured check improves; the rules are set on a four-recording test bench, not on
+  scan_009. Total processing time is a primary target alongside quality. Plan recorded in
+  [PIPELINE_ANALYZER_PLAN.md](PIPELINE_ANALYZER_PLAN.md), status planned. For now: plan step 4 (pose refinement in
+  training, R-120) then step 3 (second loop round with a pair check) on scan_009, as before.
+- **Why:** the scan_009 recipe is hand-tuned to one recording and runs from hand-written scripts outside `run_v8.py`;
+  it must work on textured and featureless recordings alike, and the processing time has to reach good numbers by
+  the end of the project.
+- **Evidence:** R-096 – R-100 (scan_009 chain and its checks); processing times in PIPELINE_ANALYZER_PLAN §4.
+- **Rejected alternatives:** continuing scan_009-only fixes without a pipeline plan; starting the analyzer before
+  steps 4 and 3 (Tayyab chose to finish them first).
+- **By:** Muhammad Tayyab ("record plan for an eventual pipeline/analyzer, also we need to consider total processing
+  time very much ... for now continue the step 4 and then 3 as we were", 2026-11-22).
+- **Status:** Active.
+
+## D-096 · 2026-11-23 · Tayyab's new run / decision numbers: R-120 – R-122 and D-095, a separate block from Umair's
+
+- **Decision:** Tayyab's three runs of 2026-11-22 / 23, first numbered R-101, R-102, R-103 on the unpushed branch,
+  become **R-120, R-121, R-122**; his decision D-082 (analyzer plan) becomes **D-095**; this decision is D-096. Umair's
+  side keeps R-101 – R-104 and D-082 (D-091) and takes R-105 and up next (his notice of 2026-11-23). Tayyab's next runs
+  continue at R-123, his next decisions at D-097, until the two sides agree on blocks; check every branch first (D-091).
+- **Why:** after D-091 moved Umair's numbers past Tayyab's pushed ones (R-100, D-081), Tayyab's unpushed session had
+  taken R-101 – R-103 and D-082 too. Umair's speed session takes R-105+ and may hold numbers not yet pushed, so the
+  next free numbers on the remote (R-105, D-092) could clash again; a gap avoids it.
+- **Evidence:** `docs/progress/archive/NOTICE_TAYYAB_2026-11-23.md`; highest numbers on every
+  branch on 2026-11-23: R-104 / D-091 (`origin/master`, `origin/feature/run-times`, `origin/docs/tayyab-notice`).
+- **Rejected alternatives:** R-105 – R-107 / D-092 (likely clash with Umair's session); waiting for Umair to assign.
+- **By:** Muhammad Tayyab ("ok do whats best", 2026-11-23, after the agent recommended a separate block).
+- **Status:** Active.
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |
@@ -792,3 +859,5 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | OD-11 | SfM on hard captures: keep GLOMAP (`global_mapper`, ~9 min) and add a scale check that falls back to the incremental `mapper` (25 min on 842 frames, R-067) when part of the model is shrunken; or switch to the incremental mapper always; or keep GLOMAP and only warn? | GLOMAP shrank ~175 frames of the lecture hall into a "mini room" (TRAINING R-066, R-067); incremental mapper gave a correct but partial model (R-068); on newRoom GLOMAP is fine (scale check: 0 shrunken frames). Recommended: check + fallback. Tayyab to decide |
 | ~~OD-12~~ | ~~How to merge `origin/master` (Tayyab's PR #7) with Umair's Step 4 branches: run IDs R-032 … R-040 given to different runs on both sides~~ | IDs settled by **D-079** (2026-11-19, Umair: Tayyab's nine renumbered R-062 – R-070; D-069 did not clash after all: master has no D-069). Still open: `layout.py` now runs Tayyab's ceiling candidates (`d052301`, `--above_frac`) first and the D-072 wall-top rule after them; re-run the four R-057 rooms to check the heights (not done, GPU busy with R-061) |
 | ~~OD-13~~ | ~~Step 4 defaults from 2026-11-19 (issues #8 – #18)~~ | Settled by D-075 (2026-11-19, Umair: all options on) |
+| ~~OD-14~~ | Closed 2026-11-18 by D-080 (Tayyab): option 1, then continue | — |
+| OD-15 | scan_009 / captures where SfM fails: (a) add the sensor-path recipe (`gyro_loop_bias.py` → `rot_sfm.py --bg_json --max_dt 300` → `prior_ba.py`) as a pipeline option used when the SfM scale check fails; (b) keep it as a manual experiment; (c) drop it and re-record such rooms. Also: which scan_009 model to show (`scan-009-gyro` R-047 or `scan-009-loop` R-071)? | R-071: loop closed, 680 frames, scale check ok, training-view PSNR ≈ R-047 (370 frames), scale ~2× off; R-072: position error 72 → 31 cm median on newRoom, still far worse than normal SfM. Recommended: (a) as an opt-in fallback, with the scale shown as unknown; show R-071. 2026-11-22 (R-096): with the loops closed (`loop_path.py` + `prior_ba.py --pair_priors`) the recipe gains +0.96 dB aligned on scan_009's held-out frames; if (a), the loop step belongs in it. Show R-099 (R-096's recipe on all frames). Tayyab to decide |

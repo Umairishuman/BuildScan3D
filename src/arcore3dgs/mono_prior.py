@@ -27,6 +27,8 @@ ap.add_argument("--model", choices=["large", "small"], default="large")
 ap.add_argument("--fp16", action="store_true", help="autocast the network to half precision")
 ap.add_argument("--out", default="mono_prior", help="output folder inside --work")
 ap.add_argument("--limit", type=int, default=0, help="only the first N frames (benchmarking)")
+ap.add_argument("--fill_scale", action="store_true",
+                help="frames with < 5 SfM points get a scale interpolated in time instead of no prior (FEATURELESS §10)")
 args = ap.parse_args()
 meta = json.load(open(os.path.join(args.work, "frames.json"))); fr = meta["frames"]
 W, H, d = meta["W"], meta["H"], args.down
@@ -101,6 +103,7 @@ def post(i, f, m):
     np.savez_compressed(os.path.join(out_dir, f["name"] + ".npz"), depth=D.astype(np.float16),
                         normal=np.clip(n * 127, -127, 127).astype(np.int8), valid=valid)
     stats[f["name"]] = dict(scale=float(a), shift=float(b), n_sfm=int(len(z)), inliers=n_in,
+                            ratio=float(np.median(z / zm)) if len(z) else None,
                             median_rel_err=float(np.median(rel)), raw_median_rel_err=float(np.median(np.abs(zm - z) / z)) if len(z) else None)
     if i % 100 == 0:
         print(f"{i}/{len(fr)}  aligned median err {100 * np.median(rel):.1f}% (raw Metric3D "
@@ -121,6 +124,32 @@ with ThreadPoolExecutor(1) as reader, ThreadPoolExecutor(3) as writer:
         jobs.append(writer.submit(post, i, f, metric_depth(img)))
     for j in jobs:
         j.result()                                                      # re-raise any worker error
+if args.fill_scale and not args.limit:
+    # Frames with < 5 SfM points (no image support: textureless walls, FEATURELESS_TRACKING_PLAN §10) would get no
+    # depth / normal prior at all, so 3DGS is free to put their surfaces at any depth that fits the training view.
+    # Metric3D's scale error drifts slowly along the walk, so such a frame gets a scale interpolated in time (log)
+    # from the robust ratio median(z_sfm / z_mono) of well-fitted frames (>= 20 inliers, residual < 15 %), shift 0.
+    # The leave-one-out error of that interpolation on the well-fitted frames is printed as the expected error.
+    t = {f["name"]: f["pts"] for f in fr}
+    good = sorted((t[n], np.log(s["ratio"]), n) for n, s in stats.items()
+                  if s["inliers"] >= 20 and s["median_rel_err"] < 0.15 and s["ratio"])
+    gt = np.array([g[0] for g in good]); gl = np.array([g[1] for g in good])
+    loo = [abs(np.exp(np.interp(gt[k], np.delete(gt, k), np.delete(gl, k)) - gl[k]) - 1) for k in range(1, len(gt) - 1)]
+    filled = 0
+    for f in fr:
+        s = stats[f["name"]]
+        if s["n_sfm"] >= 5 or len(gt) < 2:
+            continue
+        a_f = float(np.exp(np.interp(t[f["name"]], gt, gl)))
+        p = os.path.join(out_dir, f["name"] + ".npz")
+        z_ = np.load(p); D = z_["depth"].astype(np.float32) * a_f       # saved with a = 1, b = 0 (raw Metric3D)
+        n = normals_from_depth(cv2.medianBlur(D, 5))
+        np.savez_compressed(p, depth=D.astype(np.float16), normal=np.clip(n * 127, -127, 127).astype(np.int8),
+                            valid=(D > 0.15) & (D < 15))
+        s["scale_filled"] = a_f; filled += 1                            # "scale" stays the fitted value (sfm_scale_check)
+    print(f"fill_scale: {filled} frames without SfM support got a time-interpolated scale from {len(gt)} well-fitted "
+          f"frames; leave-one-out scale error on those: median {100 * np.median(loo):.1f} %, p90 "
+          f"{100 * np.percentile(loo, 90):.1f} %", flush=True)
 json.dump(stats, open(os.path.join(out_dir, "stats.json"), "w"), indent=1)
 e = np.array([s["median_rel_err"] for s in stats.values()]); r = np.array([s["raw_median_rel_err"] for s in stats.values() if s["raw_median_rel_err"] is not None])
 print(f"done: {len(stats)} frames in {time.time() - t0:.0f} s, aligned median error {100 * np.median(e):.1f}% (raw Metric3D {100 * np.median(r):.1f}%)")

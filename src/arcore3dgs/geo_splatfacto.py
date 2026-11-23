@@ -101,6 +101,12 @@ class GeoSplatfactoModelConfig(SplatfactoModelConfig):
     mcmc_cap: int = 0                # > 0: gsplat MCMCStrategy (3DGS as MCMC, Kheradmand et al. 2024) with this many Gaussians max
     mcmc_reg: float = 0.01           # its opacity and scale regularisers (paper default)
     revised_opacity: bool = False    # gsplat DefaultStrategy: opacity correction on clone / split (Bulo et al. 2024)
+    # FEATURELESS_TRACKING_PLAN 10.e: Gaussians reaching into the camera path (where the phone was carried, so free
+    # space) are removed every path_prune_every steps; R-087 had views blocked by Gaussians 1 - 4 cm from the lens
+    path_prune_points: str = ""      # .npy of path points (prune_near_path.path_points); "" = off
+    path_prune_radius: float = 0.1
+    path_prune_sigmas: float = 2.0
+    path_prune_every: int = 500
 
 
 class GeoSplatfactoModel(SplatfactoModel):
@@ -109,6 +115,15 @@ class GeoSplatfactoModel(SplatfactoModel):
     def populate_modules(self):
         super().populate_modules()
         self._geo_idx = None
+        # Pose refinement (--pose_opt, FEATURELESS_TRACKING_PLAN 10.d): the blur sub-renders and the PGSR geometry pass
+        # build their own cameras, so the correction is applied once in get_outputs and splatfacto's own call is
+        # turned into a no-op while that camera is in use (otherwise it would be skipped or applied twice).
+        self._camopt_apply = self.camera_optimizer.apply_to_camera
+        self._camopt_done = False
+
+        def _apply(camera, _orig=self._camopt_apply):
+            return camera.camera_to_worlds if self._camopt_done else _orig(camera)
+        self.camera_optimizer.apply_to_camera = _apply
         self.has_prior = bool(self.config.prior_file) and os.path.exists(self.config.prior_file)
         if self.has_prior:
             z = np.load(self.config.prior_file)
@@ -119,6 +134,10 @@ class GeoSplatfactoModel(SplatfactoModel):
             self.prior_planes = torch.from_numpy(z["planes"]) if "planes" in z.files else None   # [N, h, w] uint8
             self.blur_motion = torch.from_numpy(z["motion"]).float() if "motion" in z.files else None  # [N, 6]
         self._blur_n = 1
+        self._path_pts = None
+        if self.config.path_prune_points and os.path.exists(self.config.path_prune_points):
+            self._path_pts = torch.from_numpy(np.load(self.config.path_prune_points)).float()
+            self._path_pruned = 0
         if self.config.revised_opacity and self.config.mcmc_cap <= 0:
             self.strategy.revised_opacity = True
         if self.config.mcmc_cap > 0:
@@ -150,9 +169,20 @@ class GeoSplatfactoModel(SplatfactoModel):
         return super()._get_downscale_factor()
 
     def get_outputs(self, camera):
-        out = self._get_outputs(camera)
-        if self.training and self.config.pgsr and self.has_prior and self.step >= self.config.pgsr_start:
-            out["geo"] = self._render_geometry(camera)
+        if (self.training and self.config.camera_optimizer.mode != "off" and camera.metadata is not None
+                and "cam_idx" in camera.metadata):
+            from nerfstudio.cameras.cameras import Cameras
+            c2w = self._camopt_apply(camera)                           # corrected pose, differentiable
+            camera = Cameras(camera_to_worlds=c2w, fx=camera.fx, fy=camera.fy, cx=camera.cx, cy=camera.cy,
+                             width=camera.width, height=camera.height, camera_type=camera.camera_type,
+                             metadata=camera.metadata)
+            self._camopt_done = True
+        try:
+            out = self._get_outputs(camera)
+            if self.training and self.config.pgsr and self.has_prior and self.step >= self.config.pgsr_start:
+                out["geo"] = self._render_geometry(camera)
+        finally:
+            self._camopt_done = False
         return out
 
     @staticmethod
@@ -204,7 +234,8 @@ class GeoSplatfactoModel(SplatfactoModel):
                 c2w = camera.camera_to_worlds[0]                     # its info drives densification
                 # The bilateral grid models the camera's colour processing, which acts on the light integrated
                 # over the exposure: apply it once to the averaged render, not to every sub-render (a sub-render
-                # camera without cam_idx skips it; the camera optimizer is off). Saves ~2/3 of its cost.
+                # camera without cam_idx skips it; with --pose_opt the pose is already corrected in get_outputs).
+                # Saves ~2/3 of its cost.
                 meta = camera.metadata
                 if not cfg.blur_grid_per_sub and self.config.use_bilateral_grid:
                     meta = {k: v for k, v in camera.metadata.items() if k != "cam_idx"}
@@ -250,6 +281,21 @@ class GeoSplatfactoModel(SplatfactoModel):
             if getattr(m2d, "absgrad", None) is not None:
                 m2d.absgrad.mul_(self._blur_n)
         super().step_post_backward(step)
+        if self._path_pts is not None and self.step > 0 and self.step % self.config.path_prune_every == 0:
+            self._prune_near_path()
+
+    @torch.no_grad()
+    def _prune_near_path(self):
+        from gsplat.strategy.ops import remove
+        P = self._path_pts.to(self.means.device)
+        d = torch.cat([torch.cdist(m, P).min(1).values for m in self.means.split(200000)])
+        reach = d - self.config.path_prune_sigmas * torch.exp(self.scales).max(1).values
+        mask = reach < self.config.path_prune_radius
+        n = int(mask.sum())
+        if n:
+            remove(params=self.gauss_params, optimizers=self.optimizers, state=self.strategy_state, mask=mask)
+            self._path_pruned += n
+            print(f"path prune at step {self.step}: removed {n} of {len(mask)} (total {self._path_pruned})", flush=True)
 
     def _points(self, D):
         fx, fy, cx, cy = self.prior_K
@@ -400,6 +446,13 @@ if __name__ == "__main__":
     ap.add_argument("--revised_opacity", action="store_true", help="opacity correction when Gaussians are cloned / split")
     ap.add_argument("--save_every", type=int, default=2500, help="checkpoint interval (only the latest is kept)")
     ap.add_argument("--resume", action="store_true", help="continue from this run name's latest checkpoint (power cut)")
+    ap.add_argument("--pose_opt", action="store_true",
+                    help="refine the training camera poses (SO3xR3); for sensor-path models (FEATURELESS 10.d)")
+    ap.add_argument("--path_prune", type=float, default=0.0,
+                    help="> 0: remove Gaussians reaching within this distance (model units) of the camera path, "
+                         "every --path_prune_every steps (FEATURELESS 10.e); path from frames.json next to --data")
+    ap.add_argument("--path_prune_sigmas", type=float, default=2.0)
+    ap.add_argument("--path_prune_every", type=int, default=500)
     args = ap.parse_args()
     from nerfstudio.configs.method_configs import method_configs
     from nerfstudio.data.dataparsers.nerfstudio_dataparser import NerfstudioDataParserConfig
@@ -434,6 +487,19 @@ if __name__ == "__main__":
               densify_grad_thresh=args.densify_grad, num_downscales=args.num_downscales,
               resolution_schedule=args.resolution_schedule, stop_split_at=args.stop_split_at,
               output_depth_during_training=not args.no_prior)
+    if args.pose_opt:
+        from nerfstudio.cameras.camera_optimizers import CameraOptimizerConfig
+        kw["camera_optimizer"] = CameraOptimizerConfig(mode="SO3xR3")
+    if args.path_prune > 0:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import json as _json
+        from prune_near_path import path_points
+        wk = os.path.dirname(os.path.abspath(args.data))
+        pp = path_points(_json.load(open(os.path.join(wk, "frames.json")))["frames"], 0.02, 0.5)
+        np.save(os.path.join(wk, "path_points.npy"), pp.astype(np.float32))
+        kw.update(path_prune_points=os.path.join(wk, "path_points.npy"), path_prune_radius=args.path_prune,
+                  path_prune_sigmas=args.path_prune_sigmas, path_prune_every=args.path_prune_every)
+        print(f"path prune: {len(pp)} path points, radius {args.path_prune:g}, every {args.path_prune_every} steps")
     # import this file under its module name so the saved config references geo_splatfacto.* (not __main__),
     # which ns-export can re-import with PYTHONPATH=src/arcore3dgs
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

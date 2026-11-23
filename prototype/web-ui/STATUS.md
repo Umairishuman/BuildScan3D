@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-11-19 (published scans from the R2 bucket listed for the Vercel site, D-076; earlier: wall-gap openings and no-roof / open-outline flags shown; earlier the same day: every scan bundle listed in the Projects tab); merged with `master`: 2026-11-15 (real models in the project list: bedroom, lecture hall, scan 009 + its pose-free model, newRoom v9e2e / v6 / v3; local-only files)
+Last updated: 2026-11-23 (`scan-009-poseopt`: R-122, loop-closed cameras refined during training, all frames, added to the project list); before that 2026-11-22 (`scan-009-loops`: R-099, scan_009 with the camera-path loops closed, trained on all frames, added to the project list); before that 2026-11-21 (`scan-009-depthfill`: R-092, scan_009 with filled depth priors and path pruning, added to the project list); before that 2026-11-20 (`scan-009-tracks`: R-081, scan_009 with the track-corrected camera path, added to the project list); before that 2026-11-19 (`scan-009-loop`: R-071, the loop-closed scan_009 model, added to the project list) Merged with `master` the same day; before that: 2026-11-19 (published scans from the R2 bucket listed for the Vercel site, D-076; earlier: wall-gap openings and no-roof / open-outline flags shown; earlier the same day: every scan bundle listed in the Projects tab); merged with `master`: 2026-11-15 (real models in the project list: bedroom, lecture hall, scan 009 + its pose-free model, newRoom v9e2e / v6 / v3; local-only files)
 
 ---
 
@@ -219,6 +219,57 @@ real path.** Currently only `/dashboard` has a href.
 - **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` → 0 errors, 1 known warning
   (ExportModal.tsx:29); `npx next build` compiled + prerendered all routes (run through `micromamba run -n bs-ns`,
   where Node lives on the Ubuntu PC). **Not checked in a browser**, and no size checked against tape yet.
+
+### Pose-refined scan_009 model in the project list ✅ (2026-11-23, session for Tayyab)
+- **Modified** `src/lib/mockData.ts`: `scan-009-poseopt` (`/splats/scan009_v9plq.spz`, R-122: R-096's cameras +
+  `--pose_opt`, all 581 frames, 521,715 splats, 9.9 MB, status draft, start pose frame_00001 as `scan-009-loops`).
+  File local only (git-ignored), converted with `src/arcore3dgs/to_spz.mjs` (2.2 s).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src` → 0 errors, 1 known warning (ExportModal.tsx:29).
+  `next build` not re-run; dev server on 127.0.0.1:4173 for Tayyab.
+
+### Loop-closed (11.d) scan_009 model in the project list ✅ (2026-11-22, night session for Tayyab)
+- **Modified** `src/lib/mockData.ts`: `scan-009-loops` (`/splats/scan009_v9plf.spz`, R-099: R-096's cameras, i.e. the
+  camera path re-solved with image pairs that see the same place at different times (`loop_path.py` +
+  `prior_ba.py --pair_priors`), R-096's recipe, all 581 exported keyframes, 513,603 splats, 9.8 MB, status draft,
+  start pose frame_00001 [-0.47, 0.06, -0.41] → [-0.51, -0.12, 0.57] from `frames.json` (same rule as the earlier
+  scan_009 entries: position, position − camera z); thumbnail reused from `scan009_v9pgsr.jpg`). File local only
+  (git-ignored), converted with `src/arcore3dgs/to_spz.mjs` (1.9 s).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src` → 0 errors, 1 known warning (ExportModal.tsx:29).
+  `next build` not re-run; dev server not started; not looked at in a browser (start pose not checked).
+
+### Depth-filled scan_009 model in the project list ✅ (2026-11-21, Tayyab's ask)
+- **Modified** `src/lib/mockData.ts`: `scan-009-depthfill` (`/splats/scan009_v9pfu.spz`, R-092: R-081's cameras,
+  `mono_prior.py --fill_scale` depth priors for the 77 frames without SfM points, `--path_prune 0.1`; 553 training
+  keyframes (69 held out), 591,387 splats, 11.1 MB, status draft, start pose frame_00001 [-0.15, -0.03, -0.11] →
+  [-0.22, -0.21, 0.87] from `transforms_fmvs.json` (same as `scan-009-tracks`); thumbnail reused from
+  `scan009_v9pgsr.jpg`). File local only (git-ignored), converted with `src/arcore3dgs/to_spz.mjs` (2.3 s).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src` → 0 errors, 1 known warning (ExportModal.tsx:29);
+  dev server on 127.0.0.1:4173 (port 3000 is inside a Windows-reserved port range on this PC now):
+  `/viewer/scan-009-depthfill` 200, the `.spz` 200 (11,102,068 bytes). `next build` not re-run; not looked at in a
+  browser by me (Tayyab inspects it).
+
+### Track-corrected scan_009 model in the project list ✅ (2026-11-20, Tayyab's ask)
+- **Modified** `src/lib/mockData.ts`: `scan-009-tracks` (`/splats/scan009_v9pfz.spz`, R-081: R-080's camera path,
+  622 keyframes, 542,469 splats, 10.3 MB, status draft, start pose frame_00001 [-0.15, -0.03, -0.11] → [-0.22, -0.21,
+  0.87], computed from `transforms_fmvs.json` the same way that reproduces `scan-009-loop`'s pose; thumbnail reused
+  from `scan009_v9pgsr.jpg`). File local only (git-ignored), converted with `src/arcore3dgs/to_spz.mjs` (2.0 s).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src` → 0 errors, 1 known warning (ExportModal.tsx:29).
+  `next build` not re-run; dev server started for Tayyab to look at it (start pose not checked by me).
+
+### Loop-closed scan_009 model in the project list ✅ (2026-11-19, night session for Tayyab)
+- **Modified** `src/lib/mockData.ts`: `scan-009-loop` (`/splats/scan009_v9pfl.spz`, R-071: gyro + accelerometer camera
+  path with the loop closed, 680 keyframes, 454,442 splats, 8.6 MB, status draft, start pose frame_00001
+  [0.09, -0.02, -0.11] → [0.0, -0.19, 0.87], thumbnail reused from `scan009_v9pgsr.jpg`). File local only (git-ignored
+  like the other `.spz`), converted with `src/arcore3dgs/to_spz.mjs` (1.7 s).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src` → 0 errors, 1 known warning (ExportModal.tsx:29).
+  `next build` not re-run; not looked at in a browser (start pose not checked).
+
+### Best scan_009 model in the project list ✅ (2026-11-18, night session for Tayyab)
+- **Modified** `src/lib/mockData.ts`: `scan-009-gyro` (`/splats/scan009_v9pfg.spz`, R-047: R-046's model with the gyro
+  rotation check, 562,769 splats, 10.5 MB, status draft, start pose frame_05437 [0.22, -0.04, 1.82] → [-0.33, -0.07,
+  0.99], thumbnail reused from `scan009_v9pgsr.jpg`). File local only (git-ignored like the other `.spz`).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src` → 0 errors, 1 known warning (ExportModal.tsx:29).
+  `next build` not re-run; not looked at in a browser.
 
 ### More real models in the project list ✅ (partly, 2026-11-15, user ask: "add other splats as an option to be viewed too which exist")
 - **Modified** `src/lib/mockData.ts`: `bedroom-scan` (labelled bundle `/scans/roomAttemptSadness2_v9pgsr8/`, R-069,
@@ -850,9 +901,15 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-11-23** — `scan-009-poseopt` (R-122, loop-closed cameras refined during training, all frames) added to the project list.
+- **2026-11-22** — `scan-009-loops` (R-099, camera-path loops closed, all frames) added to the project list.
+- **2026-11-21** — `scan-009-depthfill` (R-092, filled depth priors + path pruning) added to the project list.
+- **2026-11-20** — `scan-009-tracks` (R-081, camera path corrected with video point tracks) added to the project list.
 - **2026-11-19** — Wall-gap openings (`doorway`, `window opening`) and no-roof / open-outline flags shown in cards and Scan Layers.
 - **2026-11-19** — Projects tab lists every processed scan bundle in `public/scans/` (`/api/scans`, `/viewer/run-<folder>`).
 - **2026-11-18** — Scan #8 (R-039) added as its own project `scan-008`; the plan image is its thumbnail.
+- **2026-11-19** — `scan-009-loop` (R-071, loop-closed sensor camera path) added to the project list.
+- **2026-11-18** — `scan-009-gyro` (R-047, gyro-checked cameras) added to the project list.
 - **2026-11-15** — Real models added to the project list: `bedroom-scan` (labelled), `lecture-hall-scan`, `scan-009` (partial), `scan-009-posefree` (R-046), `newroom-v9e2e`, `newroom-v6`, `newroom-v3`; local model files git-ignored.
 - **2026-11-12** — Fixture size card in Scan Layers (width, height, area, heights above floor, wall) and clickable fixture markers (FR10).
 - **2026-11-06** — `newroom-scan` no longer points at the unused `/splats/newroom_v6.spz`; the file is out of git (CI 10 MB limit).

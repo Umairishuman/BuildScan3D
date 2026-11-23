@@ -124,9 +124,9 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does | Status |
 |---|---|---|
-| `mono_prior.py` | Metric3D depth + normals per frame, aligned to SfM points (fp16 default) | **[v9]** |
+| `mono_prior.py` | Metric3D depth + normals per frame, aligned to SfM points (fp16 default); `--fill_scale`: frames with < 5 SfM points get a time-interpolated scale instead of no prior (R-092) | **[v9]** |
 | `plane_seg.py` | Per-frame planar regions for the planar prior | **[v9]** |
-| `blur_motion.py` | Per-frame camera motion during exposure for the blur model | **[v9]** |
+| `blur_motion.py` | Per-frame camera motion during exposure for the blur model; `--source gyro --gyro_calib --per_frame_exposure` for captures without ARCore (`run_v8.py --blur_gyro`, FEATURELESS 10.f) | **[v9]** |
 | `fast_mvs.py` | Fast dense init: PatchMatch on every 7th frame at 640 px | **[v9]** |
 | `mono_init.py` | Dense init from aligned mono depth (12 s, loses few-view detail) | [exp] option `--init mono` |
 | `mvs_init.py` | Dense init from a full COLMAP PatchMatch (v6, 2 h 15 min) | [exp] v6 recipe |
@@ -140,8 +140,8 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does | Status |
 |---|---|---|
-| `run_v8.py` | One-command driver for the v9 pipeline, times every stage. Finds the nerfstudio env through `toolpaths.py` | **[v9]** |
-| `geo_splatfacto.py` | Splatfacto subclass: DashGaussian, depth / normal / planar priors, blur model, PGSR-lite, checkpoints + `--resume` | **[v9]** |
+| `run_v8.py` | One-command driver for the v9 pipeline, times every stage. Finds the nerfstudio env through `toolpaths.py`; `--pose_opt`, `--train_args`, `--blur_gyro`, `--prior_args` (FEATURELESS 10.d – 10.f) | **[v9]** |
+| `geo_splatfacto.py` | Splatfacto subclass: DashGaussian, depth / normal / planar priors, blur model, PGSR-lite, checkpoints + `--resume`; `--pose_opt` (SO3xR3, applied once per view incl. blur / PGSR passes); `--path_prune <r>` (removes Gaussians reaching into the camera path every 500 steps) | **[v9]** |
 | `export_nerfstudio.py` | Writes `transforms.json` for nerfstudio | **[v9]** [v3] |
 | `train.py` | Own gsplat trainer (experiments only, D-010) | [exp] |
 | `train_fixed2_backup.py`, `train_v3_backup.py` | Old copies of `train.py` | [dead] |
@@ -163,16 +163,44 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `to_spz.mjs` | PLY → `.spz` with Spark's encoder (run from `prototype/web-ui`, Node) | **[v9]** |
 | `structure.py` | Older box-room structural layer (planes, walls, openings) | [exp] superseded by `layout.py` (its ceiling-height item marked obsolete 2026-11-19, #18) |
 | `planarize.py` | Post-hoc snapping of splats to planes | [exp] rejected (D-017) |
-| `clean_splats.py` | Floater pruning by measured free space | [exp] not default (D-040) |
+| `clean_splats.py` | Floater pruning by measured free space; `--mono` uses the depth priors for sensor-path models, `--exclude` leaves held-out frames out (R-100) | [exp] not default (D-040) |
 
 **Evaluation, diagnostics, viewing**
 
 | File | Does | Status |
 |---|---|---|
-| `eval_offpath.py` | Off-path split metrics (PSNR, SSIM, sharpness, flatness) + sheets | [eval] current |
+| `eval_offpath.py` | Off-path split metrics (PSNR, SSIM, sharpness, flatness, blocked views) + sheets | [eval] current |
+| `eval_align.py` | Held-out PSNR / SSIM after test-pose alignment (model frozen, 6-DoF + colour per frame), for models trained with `--pose_opt` (R-084) | [eval] current |
+| `prune_near_path.py` | Removes Gaussians reaching within a radius of the camera path from a trained `splat.ply` (blocked views, R-087 / R-089); `path_points()` is also used by `geo_splatfacto.py --path_prune` | [eval] current |
+| `room_planes.py` | Room planes (walls / floor / ceiling) from plane_seg regions lifted with the depth priors + SfM points, before training; top-view `room_plan.png` (FEATURELESS §11.b, R-094) | [v9] experiment |
+| `plane_prior.py` | Rewrites the depth / normal priors from the room planes: per-frame scale tied to the planes, plane depth + normal on agreeing planar pixels; before / after cross-frame consistency (FEATURELESS §11.c) | [v9] experiment |
+| `prior_consistency.py` | Switches off depth-prior pixels that other views contradict (free space in front of them in time neighbours / loop partners); each frame keeps its own depth (FEATURELESS §11.c second form, R-098) | [v9] experiment |
+| `scale_drift.py` | Corrects the scale drift of a sensor camera path with the room height (floor / ceiling distances per frame), re-triangulates the points (R-094); its `read_model` / `write_model` are used by loop_path.py | [v9] experiment |
+| `loop_path.py` | Closes the loops of a camera path: camera centres solved again from the path's steps + the direction of verified image pairs >= 5 s apart (validation on held-out pairs), points re-triangulated, `loop_pairs.json` for `prior_ba.py --pair_priors` (FEATURELESS §11.d, R-096) | [v9] experiment |
+| `loop_match.py` | Second loop round: picks pairs that see the same surfaces at different times with the corrected cameras + depth priors, matches them (ALIKED + LightGlue, copy of the database), pair directions in the model's world (R-097) | [v9] experiment |
+| `offpath_views.py` | Fixed off-path views of trained splats: 8 views from the room centre (colour + depth) and a top view of a horizontal slice (walls as lines vs ghost copies) (FEATURELESS §11.e) | [eval] |
+| `vggt_chunk.py` | VGGT (downloaded, outside the repo, D-081) on a chunk of keyframes or dense video frames: rotation vs the gyro / an SfM model, positions vs the model, depth consistency vs the Metric3D priors (R-093) | [experiment] |
+| `eval_perframe.py` | Per held-out frame: PSNR of a held-out model vs a model that saw the frame, 3D support, time (R-084's per-stretch table) | [eval] current |
+| `stretch_stats.py` | Per SfM model: 3D observations per camera, path smoothness, overall and in time stretches; movement vs a reference model | [eval] current |
+| `track_dir_check.py` | Agreement of video-track pair directions with a model's path, by support and time stretch (R-077 – R-079) | [eval] current |
+| `render_compare.py` | Two models on their common training views: PSNR per model and a photo / A / B sheet (R-081) | [eval] current |
 | `fixture_checklist.py` | Fixture check sheet for one room from `semantic.json` (+ layout): every accepted fixture with height, size, wall, a real / wrong class / false column, a missed table and per-class summary; `--rejected` also lists the rule-rejected candidates (plan 4.2, E3) | [eval] current |
-| `make_split.py` | Writes the held-out list for `run_v8.py --split` / `eval_offpath.py`: 6 × 3 s stretches of the walk (D-070) | [eval] current |
+| `make_split.py` | Writes the held-out list for `run_v8.py --split` / `eval_offpath.py`: 6 × 3 s stretches of the walk (D-070); `--add` merges another held-out list (still frames) | [eval] current |
 | `sfm_scale_check.py` | Finds parts of an SfM model rebuilt at the wrong scale ("mini room"): per-frame SfM depth / Metric3D depth from `mono_prior` (TRAINING R-066, R-067) | [eval] diagnostic |
+| `texture_probe.py` | Per keyframe: SIFT keypoints, LSD long lines, faint / strong gradient share; grouped by ARCore pose state and by whether a model kept the frame (FEATURELESS_TRACKING_PLAN §1.1) | [eval] diagnostic |
+| `gyro_check.py` | Gyro rotation check of an SfM model: IMU→camera rotation + time offset from the model, per-frame rotation disagreement with the gyroscope; `fill_rotations` gives rotations for frames SfM could not place. Used by `sfm_colmap.py --gyro_thr` (FEATURELESS_TRACKING_PLAN step 1, R-047) | **[v9]** option, default off |
+| `known_rot_pnp.py` | Places a camera from >= 2 matched 3D points with its rotation fixed (gyro); cut-gap test vs PnP. Used by `sfm_colmap.py --place_unplaced` (R-049) | [experiment] option, default off |
+| `imu_scale.py` | Metric scale of an SfM model from the accelerometer (pre-integrated over keyframe triplets, VINS-style), gravity and bias; `--gyro_orient` | [eval] diagnostic |
+| `gyro_pairs.py` | Rejects image pairs whose matches contradict the gyro rotation; `Orientation` (gyro integrated once over a capture, bias removable) | [experiment] |
+| `rot_sfm.py` | SfM with gyro rotations + positions from pair directions and the accelerometer (one linear system), then COLMAP triangulation / BA (R-051: rejected on scan_009); `--bg_json` (bias from `gyro_loop_bias.py`), `--max_dt 300` for loop pairs (R-071); `--extra_pairs` / `--extra_w` / `--extra_min_inliers`: pair directions from `video_tracks.py` (R-077, R-079) | [experiment] |
+| `prior_ba.py` | Bundle adjustment of a COLMAP text model with soft gyro / accelerometer priors on consecutive keyframes (rotation 0.1° + 0.1°/s, position 0.02 + 30% of the step); same LM / Schur solver as `ba.py` (R-052, R-071, R-072); `--adapt_n`: position prior tight where a pair has few 3D observations, loose where it has many (R-078); `--pair_priors`: keeps the relative position of loop pairs from loop_path.py (R-096) | [experiment] |
+| `video_tracks.py` | KLT point tracks through every video frame, checked against the gyro rotation (2-point RANSAC), triangulated into a COLMAP text model; `--pairs_out` writes keyframe-pair correspondences for `rot_sfm.py` (R-073 – R-080) | [experiment] |
+| `rs_rectify.py` | Rolling-shutter rectification of keyframes with the gyro (per-row rotation, lens distortion kept); `--probe_only` finds the readout direction from the video; `rectify_points` used by `video_tracks.py --rs 1` (FEATURELESS 10.b, not trained yet) | [experiment] |
+| `track_loop.py` | Rounds of video tracks → `rot_sfm.py` → adaptive `prior_ba.py` until the kept cameras stop rising (FEATURELESS 10.c, not run yet) | [experiment] |
+| `still_frames.py` | Still stretches of a capture from the gyro; held-out list of sharp frames for `make_split.py --add` (FEATURELESS 10.a) | [experiment] |
+| `gyro_loop_bias.py` | Gyro bias from the 5-point rotations of all verified image pairs (far-apart pairs see the drift); writes the bias for `rot_sfm.py --bg_json` (R-071, R-072) | [experiment] |
+| `vggt_poses.py` | VGGT (learned poses) on chunks of keyframes, chained, checked against gyro / accelerometer / ARCore, written in the export layout. Needs VGGT outside the repo; **never run** (needs Tayyab's OK) | [experiment] not run |
+| `gap_test.py` | Cut-gap test: removes windows of keyframes from a trusted model and predicts their rotation from the gyro (plan step 0 / 3) | [eval] |
 | `tape_check.py` | Model vs tape table for a room (`<dataset>/tape.csv`: layout room length / width / height or values measured in the viewer), mean / max error, NFR6 (≤ 5%) check (COMPLETION_PLAN E2) | [eval] current |
 | `fair_compare.py` | Compares models from different SfM runs (trimmed Sim3 + test-pose refinement) | [eval] current |
 | `compare_models.py` | Photometric + geometric metrics and sheets on held-out frames | [eval] |
@@ -289,7 +317,10 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | Path | What |
 |---|---|
 | `progress/STATUS.md`, `DECISIONS.md`, `LOG.md`, `TRAINING.md` | The four live project records (CLAUDE.md §1) |
+| `progress/PIPELINE_ANALYZER_PLAN.md` | **current** · Plan (2026-11-22, D-095, not started): analyzer stage that labels a recording and picks the camera route, self-checking correction steps, four-recording test bench, processing-time rules |
+| `progress/FEATURELESS_TRACKING_PLAN.md` | **current** · Draft plan (2026-11-18) for placing cameras in featureless stretches: gyro rotation, lines / junctions, the room layout as a map, dense matchers; measurements, steps, options (OD-14) |
 | `progress/COMPLETION_PLAN.md` | **current** · Plan to finish by 2026-12-04: every open task by pipeline step, with done-when, dependencies, priority, week; snapshot of the shared doc (link inside) |
+| `progress/archive/NOTICE_TAYYAB_2026-11-23.md` | **archived** 2026-11-23 · Umair's notice for Tayyab's agent (D-091 renumbering, D-090 runs.tsv, merge advice); acted on in the merge of 2026-11-23 (D-096) |
 | `progress/runs.tsv` | **current** · One row per run and room with start / end, wall, model and after-model minutes, every stage's minutes and COLMAP map phase seconds; filled from the run's files by `scripts/run_times.py update`, older / other-PC runs by hand from TRAINING.md (`source` column); empty = not measured (D-090) |
 | `progress/CHECKS_FOR_UMAIR.md` | **current** · Step 4 checks only Umair can do, on one page (room names #23, fixture sheets #21, newRoom detections #22, tape #20, browser #24, scan #3 platform #17), with the pipeline values to compare; written 2026-11-23 |
 | `progress/Problems_and_Solutions.md` | Technical evidence for every problem and fix (P&S §x) |
@@ -360,7 +391,7 @@ tell what is current. **Nothing is ever deleted: retired files are archived** (`
      train/      run_v8.py geo_splatfacto.py export_nerfstudio.py
      scene/      layout.py semantic2d.py semantic3d.py verify_fixtures.py mesh.py mesh_labels.py
      export/     export_web.py to_spz.mjs
-     eval/       eval_offpath.py make_split.py sfm_scale_check.py tape_check.py fair_compare.py compare_models.py fit_diag.py diagnose.py view.py ...
+     eval/       eval_offpath.py eval_align.py prune_near_path.py make_split.py sfm_scale_check.py tape_check.py fair_compare.py compare_models.py fit_diag.py diagnose.py view.py ...
      legacy/     ba.py mvs.py align_fuse.py pocket_prior.py make_init.py colmap_mvs.py train.py prepare.py ...
    ```
 

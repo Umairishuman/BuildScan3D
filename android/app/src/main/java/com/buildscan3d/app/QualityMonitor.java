@@ -154,7 +154,7 @@ public class QualityMonitor {
       r.message = String.format(Locale.US, "Slight motion blur (~%.0f px) - slow down a little", r.blurPx);
     } else if (lastSharp >= 0 && lastSharp < TEX_WARN && lastBright > DARK_BAD) {
       r.level = Level.WARN;
-      r.message = "Low texture - keep some detail in view";
+      r.message = "Low texture - keep a room corner or edge in view";
     } else if (lastSharpRel >= 0 && lastSharpRel < SHARP_WARN) {
       r.level = Level.WARN;
       r.message = "Slightly blurry";
@@ -286,7 +286,7 @@ public class QualityMonitor {
     switch (reason) {
       case INSUFFICIENT_LIGHT: return "Tracking lost (too dark)" + back;
       case EXCESSIVE_MOTION: return "Tracking lost (moving too fast)" + back;
-      case INSUFFICIENT_FEATURES: return "Tracking lost (plain surface)" + back;
+      case INSUFFICIENT_FEATURES: return "Tracking lost (plain surface) - aim at a corner or edge" + back;
       case CAMERA_UNAVAILABLE: return "Camera unavailable";
       case BAD_STATE: return "Tracking error - restart recording";
       case NONE: return "Starting tracking - move the phone slowly";
