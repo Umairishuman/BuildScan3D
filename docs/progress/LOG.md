@@ -1019,3 +1019,6 @@ plan updated (detect path holes; hole-aware loop checks).
   runs.tsv, 22 of Tayyab's rows given their model folder (exact times from `timing.json`); `run_times.py check`: 3 FAIL,
   all Umair's unpushed `exp/colmap-cudss` runs (R-061, R-101, R-102), the same on `master` alone. On Windows the script
   needs `PYTHONIOENCODING=utf-8` (it crashes printing "→" to a cp1252 console). Not touched: `android/CHANGELOG.md`.
+- PR #43 (`docs/featureless-tracking-plan` → `master`) merged by Tayyab on 2026-11-23 (`3165033`). CI red only on the
+  known `test_changelog` failure that `master` already had (v0.3.9 has no line in `android/CHANGELOG.md`, Umair's notice
+  §3); ruff and every other test passed locally, coverage 39.9 %. Umair to be told.
