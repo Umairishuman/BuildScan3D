@@ -97,7 +97,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-057 | 2026-11-19 | Four rooms, layout → web → plan with the D-075 defaults, tag `r1119c` | this PC (Ubuntu, RTX 4000 Ada) | 16.7 min | #7 / #8 closed rectangles (17.99 / 26.44 m²); #3 tilt 0.29°; ceilings 4.3 → 0.04 cm; #8 lost a switch + socket | Kept (scan #8 corner = furniture, Umair) |
 | R-058 | 2026-11-19 | scan #6 `scan_006_1e457a214ce1` (259.8 s), full pipeline, R-023 recipe + D-075 (`r1119`) | this PC (Ubuntu, RTX 4000 Ada) | 45.5 min, did not finish | 1159 frames, 12.56 M observations; COLMAP `global_mapper` killed by OOM (26.4 GB) at 16:14:39 while the agent ran web work | Failed (OOM in SfM) |
 | R-059 | 2026-11-19 | scan #6 rerun after R-058, same recipe, PC kept quiet (`r1119b6`) | this PC (Ubuntu, RTX 4000 Ada) | 162.5 + 21.4 min | 1159/1159 frames; height 3.05 m, closed, 7 walls; 11 fixtures, 84 rejected | Kept (not checked by a person) |
-| R-085 | 2026-11-23 | scan #6 fixture check sheet from R-059 (`fixture_checklist.py --rejected`, no GPU) | this PC (Ubuntu, RTX 4000 Ada) | (running) | — | — |
+| R-085 | 2026-11-23 | scan #6 fixture check sheet from R-059 (`fixture_checklist.py --rejected`, no GPU) | this PC (Ubuntu, RTX 4000 Ada) | < 1 s | `scan_006…/checks_r085/fixture_check.md`: 11 fixtures + 84 rejected; switches 2 / 5 maybe one plate | Kept (for Umair, #21) |
 | R-062 | 2026-11-12 | Training speed-up: exact TV-loss / colour-affine fixes, blur colour grid once (`fast_t1`) | 3070 | 28.2 min train (was 42.5) | 25.14 / 0.8251, sharp 0.80, flat 0.81 | Kept (proposed) |
 | R-063 | 2026-11-12 | Photometric-only fast-MVS init (`fast_t2_photo`) | 3070 | init 7.5 min (was 20.1) | 25.16 / 0.8240, flat 0.78 | Kept (proposed) |
 | R-064 | 2026-11-12 | Global mapper settings (`ba1`, `noretri`, default rerun) | 3070 | mapper 9.4 – 14.5 min | default runs differ by ~16 cameras | Inputs to R-065 |
@@ -1422,5 +1422,12 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   --layout <gs_r1119b6>/layout/layout.json --out dataset/scan_006_1e457a214ce1/checks_r085/fixture_check.md
   --title "scan #6 (R-059, r1119b6)" --rejected`
 - **Goal:** the scan #6 sheet for Umair (#21, plan 4.2), like the other rooms' sheets.
-- **Start → end:** (running)
-- **Errors during the run:** none so far.
+- **Start → end:** 11:22:41 → 11:22:41 (< 1 s)
+- **Errors during the run:** none (exit 0).
+- **Result:** `dataset/scan_006_1e457a214ce1/checks_r085/fixture_check.md` (137 lines): 11 fixtures, empty "missed"
+  table, summary per class, and the 84 rejected candidates with their failed rule. Seen while reading it (not
+  checked against the room): `light_switch_2` and `light_switch_5` are both on wall 0 at 1.00 m along, 0.76 / 0.75 m
+  up (8 × 8 and 6 × 7 cm), so they may be one plate found twice; `power_socket_1` is at 1.88 m and `light_switch_4`
+  at 0.49 m, unusual heights; `doorway_1` (wall gap) has 0 frames because it comes from the layout, not from 2D
+  detections.
+- **Verdict:** kept: the sheet is ready for Umair (#21).
