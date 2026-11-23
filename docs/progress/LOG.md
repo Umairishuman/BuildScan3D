@@ -784,3 +784,18 @@ issues, use the existing datasets, try new techniques. Branch from `exp/fast-pip
   makes CD release a new app version; Umair: take it out (reverted), merge with that one known failure, fix it with the
   next real app change (STATUS §7.7).
 
+
+## 2026-11-23 (compression) · Zaid · `feat/splat-compress`
+- Did (agent for Zaid): found the compression work (`feat/splat-compress`, v1 / v2 notes) and the remaining tasks in
+  COMPLETION_PLAN Step 5 (5.1, 5.2, 5.4, E5, E6). Merged `origin/master` into `feat/splat-compress` (no conflicts). Wrote
+  the v3 GPU compression plan and first code in `src/splat_compress/v3_gpu/` (config-driven prune / SH reduce / VQ
+  stages, writers for PLY, `.spz`, `.ksplat`, `report.json`, `evaluate.py`) and `tests/test_splat_compress_v3.py`
+  (15 pass on CPU torch 2.15 in a scratch venv; with defaults v3 equals the v1 script's output). MAP.md and STATUS §7.10
+  updated.
+- Runs: none (no GPU run yet; nothing to put in TRAINING.md).
+- Decisions: none made. Open: which branch carries the work (agent recommended `feat/splat-compress`, Zaid has not
+  answered); OD-1 `.spz` vs `.ksplat` and OD-4 stay open.
+- Problems: lab GPU (`gpu-lab-precision-3680`) reachable over Tailscale (ping via relay, port 22 open) but SSH not set
+  up: Linux username unknown and the new public key is not installed there. The teammate's concern about the existing
+  compression code is not known yet.
+- Next: SSH to the lab GPU, then STATUS §7.10 "Compression v3" items (a) to (g).

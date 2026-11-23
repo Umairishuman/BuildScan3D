@@ -40,6 +40,7 @@ diagnostics · [v3] = the older SfM pipeline the server still runs · [legacy] =
 | `README.md` | Overview and setup (its folder tree is out of date, STATUS §7.1) |
 | `src/arcore3dgs/` | **The reconstruction pipeline** (all Python stages, section 3) |
 | `src/Metric3D_v2/`, `src/process_dataset.py`, `src/visualize_trajectory.py` | First prototype (Sept 2026): Metric3D depth + ARCore poses → dense cloud. Superseded; `process_dataset.py` still has a test |
+| `src/splat_compress/` | **Compression** (Zaid, branch `feat/splat-compress`): `v1_ply_prune_sh_ksplat/` (numpy prune + SH reduce, notes), `v2_ksplat_high_fidelity/` (notes only), **`v3_gpu/`** (2026-11-23: config-driven torch engine: `PLAN.md`, `config.default.json`, `compress_gpu.py` CLI, `stages.py`, `writers.py`, `evaluate.py` PSNR / SSIM render check). v3 is **new, run on CPU only, never on a GPU**; `evaluate.py` never run |
 | `server/` | Phone-upload processing server (FastAPI) + RunPod / remote-GPU runners (section 4) |
 | `scripts/` | Windows `.bat` launchers + the job-manager CLI (section 5) |
 | `android/` | **The capture app** (Android, our code; moved here from `googleARCore/samples/hello_ar_java/` on 2026-11-12, D-063), section 6 |
@@ -329,6 +330,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `tests/test_apk_checks.py` | APK / manifest checker and signing keys |
 | `tests/test_openings.py`, `tests/test_plan_export.py` | Wall-gap openings and the floor-plan export on synthetic rooms (#9, #12) |
 | `tests/test_publish_scan.py` | `publish_scan.py` against a folder bucket: index, owners, republish, unpublish to archive, refusals (D-076) |
+| `tests/test_splat_compress_v3.py` | `src/splat_compress/v3_gpu` on CPU torch with synthetic splats (skipped where torch / plyfile are missing, so CI without torch skips it) |
 | `tests/test_changelog.py` | App changelog tool (`.github/android/changelog.py`) and that `android/CHANGELOG.md` has the current version |
 | `tests/test_sources_compile.py` | Every Python file compiles |
 | `tests/requirements.txt` | Light test dependencies (no GPU) |
