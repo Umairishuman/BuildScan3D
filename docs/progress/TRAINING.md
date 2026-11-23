@@ -98,6 +98,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-058 | 2026-11-19 | scan #6 `scan_006_1e457a214ce1` (259.8 s), full pipeline, R-023 recipe + D-075 (`r1119`) | this PC (Ubuntu, RTX 4000 Ada) | 45.5 min, did not finish | 1159 frames, 12.56 M observations; COLMAP `global_mapper` killed by OOM (26.4 GB) at 16:14:39 while the agent ran web work | Failed (OOM in SfM) |
 | R-059 | 2026-11-19 | scan #6 rerun after R-058, same recipe, PC kept quiet (`r1119b6`) | this PC (Ubuntu, RTX 4000 Ada) | 162.5 + 21.4 min | 1159/1159 frames; height 3.05 m, closed, 7 walls; 11 fixtures, 84 rejected | Kept (not checked by a person) |
 | R-085 | 2026-11-23 | scan #6 fixture check sheet from R-059 (`fixture_checklist.py --rejected`, no GPU) | this PC (Ubuntu, RTX 4000 Ada) | < 1 s | `scan_006…/checks_r085/fixture_check.md`: 11 fixtures + 84 rejected; switches 2 / 5 maybe one plate | Kept (for Umair, #21) |
+| R-086 | 2026-11-23 | Wall roughness in the mesh, where it sits (4.12, #18), four rooms, read-only, CPU | this PC (Ubuntu, RTX 4000 Ada) | (running) | — | — |
 | R-062 | 2026-11-12 | Training speed-up: exact TV-loss / colour-affine fixes, blur colour grid once (`fast_t1`) | 3070 | 28.2 min train (was 42.5) | 25.14 / 0.8251, sharp 0.80, flat 0.81 | Kept (proposed) |
 | R-063 | 2026-11-12 | Photometric-only fast-MVS init (`fast_t2_photo`) | 3070 | init 7.5 min (was 20.1) | 25.16 / 0.8240, flat 0.78 | Kept (proposed) |
 | R-064 | 2026-11-12 | Global mapper settings (`ba1`, `noretri`, default rerun) | 3070 | mapper 9.4 – 14.5 min | default runs differ by ~16 cameras | Inputs to R-065 |
@@ -1431,3 +1432,18 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   at 0.49 m, unusual heights; `doorway_1` (wall gap) has 0 frames because it comes from the layout, not from 2D
   detections.
 - **Verdict:** kept: the sheet is ready for Umair (#21).
+
+### R-086 · 2026-11-23 · Wall roughness in the mesh: how much and where (plan 4.12, #18), four rooms, CPU only
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada); R-071 runs `patch_match_stereo` on the GPU
+  meanwhile (no SfM running; ~23 GB RAM available). This run is CPU only (open3d + numpy, one mesh at a time, < 1 GB).
+- **Branch / commit:** `feature/step4-triage` (worktree `../BuildScan3D-step4`)
+- **Dataset:** `mesh/mesh_clean.ply` + `layout/layout.json` of scan #6 `gs_r1119b6` (R-059), scans #7 / #8 and
+  newRoom `gs_r1119c` (R-057). Read only; scan #3 left out (Umair: poor recording).
+- **Command(s):** `micromamba run -n bs-ns python <scratchpad>/r086_walls.py`: `mesh.py`'s `shell_flatness` (copied
+  unchanged: robust plane per wall, median |deviation|, % within 1 cm), plus, for each wall, the share of its vertices
+  > 2 cm off the plane per height band (0.15–1.0 m, 1.0–2.0 m, > 2.0 m) and per third along the wall, and the sign
+  of the large deviations (into the room = something in front of the wall; behind = a recess or noise behind it).
+- **Goal:** 4.12's open part: are rough walls rough everywhere (noise / real relief) or only in a band or stretch
+  (furniture against the wall, a window, a board)? No ground truth needed; options for Umair afterwards.
+- **Start → end:** (running)
+- **Errors during the run:** none so far.
