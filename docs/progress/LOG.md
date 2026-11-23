@@ -739,3 +739,21 @@ issues, use the existing datasets, try new techniques. Branch from `exp/fast-pip
   except the cuDSS / COLMAP work into `master` so the deployed site shows it: scan #6 published (8 bundles, bucket
   0.28 GB of the 9.5 GB cap, D-077); `feature/step4-layout` up to `e74ee55` merged into `feature/vercel-deploy`
   (leaves out `e724252`, the cuDSS to-do), PR to `master`. The cuDSS work (D-078, R-061) stays on `exp/colmap-cudss`.
+
+## 2026-11-23 (Step 4) · Umair · `feature/step4-triage`
+- Done (agent for Umair, in the worktree `../BuildScan3D-step4`, from `origin/master` `8338680` because local `master`
+  lacks PR #39; the main checkout stays on `exp/colmap-cudss` for R-071; `dataset/`, `saved_models/`, `tools/`,
+  `semantic-env/` symlinked, hidden through `.git/info/exclude`): Step 4 triage table for Umair (done / blocked on Umair
+  / agent-doable). R-059 (scan #6 `r1119b6`, finished 2026-11-19) written up in TRAINING from its files. Scan #6
+  fixture check sheet (R-085) into a new folder `dataset/scan_006_1e457a214ce1/checks_r085/` (R-059's folder not
+  written). `docs/progress/CHECKS_FOR_UMAIR.md` (MAP): room names, fixture sheets, newRoom's three detections, tape list
+  with the pipeline values, browser check, scan #3 platform. Scan #6 added to the #14 / #15 numbers (STATUS §7.5, plan
+  4.7 / 4.8). Wall roughness R-086 (read-only, CPU). STATUS recordings table: scan #5 not processed, scan #6 = R-059.
+- Runs: R-085 (sheet, < 1 s), R-086 (wall roughness, 3.4 s). Nothing on the GPU: R-071 used it the whole session.
+- Decisions: none. Waiting for Umair: 4.12 options for the rough walls; OD-12 layout re-run (GPU: `layout.py` renders
+  with gsplat on CUDA) on scans #6 / #7 / #8 / newRoom, scan #3 in or out.
+- Problems: `plan.png` labels walls by length, not number, so the check page names walls by length. `gh issue view`
+  does not take `--comments` with `--json`.
+- Next: OD-12 layout re-run in a GPU gap between speed tests (Umair's go); scan #6 `r071g6` layout / fixtures after
+  R-071; Umair: `CHECKS_FOR_UMAIR.md`; scan #5 (R-060) needs a GPU slot.
+
