@@ -163,6 +163,7 @@ Umair's side continues at R-105.
 | R-120 | 2026-11-22 | scan_009: R-096 plus camera refinement in training (`--pose_opt`, `v9plo`) | 3070 | 30.4 min (train 24.3, R-096 22.5) | aligned 23.96 vs R-096 23.63 (63 frames), SSIM 0.896 vs 0.888; 35 frames > 0.5 dB better, 13 worse; doorway (125 s) unchanged | Kept (modest gain, +1.8 min training) |
 | R-121 | 2026-11-22 | scan_009: second loop round with a pair check (`loop_path.py --gate 10`), R-096's recipe (`v9plg`) | 3070 | 28.5 min + 1.5 min solve / BA | aligned 22.91 vs R-096 23.58 on 60 common frames; 30 – 90 s +1.6 – 1.8 dB, 134 – 140 s broken again (20.10 → 15.83); path hole 125.4 – 133.2 s found | Rejected (the hole, not the pairs, breaks 134 – 140 s) |
 | R-122 | 2026-11-23 | scan_009: R-120's recipe (R-096 cameras + `--pose_opt`) on all frames, for the viewer (`v9plq`) | 3070 | 32.8 min (train 25.95) | no held-out score (all frames); 521,715 splats | Kept (viewer `scan-009-poseopt`) |
+| R-123 | 2026-11-23 | scan_009: R-121's gated loop round with path holes held (`loop_path.py --hole_dt 2.5`), R-120's recipe (`v9plh`) | 3070 | running | | |
 
 ## Runs
 
@@ -3001,3 +3002,23 @@ igs.txt`):
 - **Result:** `work_v9plq_sfm/gs_v9plq/splat.ply`, 521,715 splats; off-path views `offpath_views_r103/`. In the
   viewer as `scan-009-poseopt` (`prototype/web-ui/public/splats/scan009_v9plq.spz`, 9.9 MB, local only).
 - **Verdict:** kept as the scan_009 model to look at (R-120's +0.33 dB recipe); not yet inspected by Tayyab.
+
+### R-123 · 2026-11-23 · scan_009_057ed3beb4fc: gated second loop round with path holes held, R-120's recipe (`v9plh`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/featureless-holes` (from `docs/featureless-tracking-plan` @ cf8fdaa; `loop_path.py` hole
+  options committed before the run)
+- **Dataset:** R-096's cameras `work_v9pfy_sfm/sparse_loop2_pba`, R-097's pair directions
+  `work_v9pfy_sfm/loop_match2/pair_directions.json`; `work_v9pfz` → `work_v9plh`
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r123.sh` (log `r123.log`): `loop_path.py … --model_frame --gate 10
+  --hole_dt 2.5` → `sparse_loop5` (a gap >= 2.5 s or a step >= 15 × the median is a hole; held at R-096's offset,
+  sigma 0.01 units, unless >= 5 pairs tie the 10 s on each side; cross-hole pairs added to `loop_pairs.json`);
+  `prior_ba.py … --pair_priors` (as R-121) → `sparse_loop5_pba`; R-120's recipe (`--pose_opt`) with `--split`;
+  `eval_align.py`; `offpath_views.py` with R-120
+- **Goal:** Tayyab chose "1 then 2" (2026-11-23): keep R-121's gains where the path is continuous (30 – 90 s +1.6 –
+  1.8 dB) without breaking 134 – 140 s at the 126 – 133 s hole. Compared with R-120 (aligned 23.96 / 23.97 on the
+  60 common frames). Hole detection is the first piece of the analyzer (PIPELINE_ANALYZER_PLAN §2.1).
+- **Start → end:**
+- **Errors during the run:**
+- **Result:**
+- **Verdict:**

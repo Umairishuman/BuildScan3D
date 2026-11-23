@@ -17,6 +17,12 @@ agree worse with the path (p75 angle 11.4 -> 28.6 deg). Here the camera centres 
 Pair check (--gate deg, 2026-11-22, after R-097): pairs whose direction disagrees with the INPUT path by more than
 the gate are left out before solving. For a second round on an already loop-closed path (R-096): new pairs may only
 make small corrections; R-097 without the check broke the 134 - 137 s stretch with wrong pairs.
+Holes (--hole_dt s / --hole_step x median step, 2026-11-23, after R-121): a gap in the path (no placed keyframes for
+>= --hole_dt s, or one step >= --hole_step times the median) only joins its two sides by one loose path step, so loop
+pairs elsewhere can shift one side against the other (R-121 moved 115 - 125 s by 0.2 - 0.28 units against 133 s+ and
+broke 134 - 140 s). A hole stays free only when >= --hole_min_tie pairs tie the --hole_win seconds on each side
+directly; otherwise its step keeps the input path's offset (sigma --hole_sigma units), and loop_pairs.json gets
+cross-hole pairs (5 x 5 frames) so prior_ba.py --pair_priors keeps it too.
 Validation: a --hold fraction of the loop pairs is left out of a first solve, and their angle before / after is
 printed; the written model uses all pairs. Points are re-triangulated (scale_drift.write_model).
 
@@ -103,6 +109,11 @@ def main():
     ap.add_argument("--iters", type=int, default=12); ap.add_argument("--max_px", type=float, default=8.0)
     ap.add_argument("--gate", type=float, default=0.0,
                     help="deg; > 0: drop pairs whose angle on the input path exceeds this before solving")
+    ap.add_argument("--hole_dt", type=float, default=0.0, help="s; > 0: gaps this long are holes (0 = off)")
+    ap.add_argument("--hole_step", type=float, default=15.0, help="x median step: a step this long is a hole too")
+    ap.add_argument("--hole_win", type=float, default=10.0, help="s on each side of a hole for the tie count")
+    ap.add_argument("--hole_min_tie", type=int, default=5, help="pairs across a hole that leave it free")
+    ap.add_argument("--hole_sigma", type=float, default=0.01, help="model units: step sigma of a held hole")
     ap.add_argument("--model_frame", action="store_true",
                     help="the directions are already in the model's world (loop_match.py), no rotation is fitted")
     a = ap.parse_args()
@@ -141,6 +152,18 @@ def main():
         E_all = [e for e, o in zip(E_all, ok) if o]; T_all = T_all[ok]
     steps = np.diff(C0, axis=0); sig = a.s0 + a.s1 * np.linalg.norm(steps, axis=1)
 
+    held = []
+    if a.hole_dt > 0:
+        dts = np.diff(T); st = np.linalg.norm(steps, axis=1)
+        for k in np.flatnonzero((dts >= a.hole_dt) | (st >= a.hole_step * np.median(st))):
+            t0_, t1_ = T[k], T[k + 1]
+            tie = sum(1 for ia, ib, _, _ in E_all if (t0_ - a.hole_win <= min(T[ia], T[ib]) <= t0_) and (t1_ <= max(T[ia], T[ib]) <= t1_ + a.hole_win))
+            free = tie >= a.hole_min_tie
+            if not free:
+                sig[k] = a.hole_sigma; held.append(k)
+            print(f"hole {t0_:.1f} -> {t1_:.1f} s ({t1_ - t0_:.1f} s, step {st[k]:.2f}): {tie} pairs tie its sides -> "
+                  f"{'free' if free else 'held'}", flush=True)
+        print(f"{len(held)} holes held at the input path's offset (sigma {a.hole_sigma:g})", flush=True)
     rng = np.random.default_rng(a.seed); hold = rng.random(len(E_all)) < a.hold
     E_fit = [e for e, h in zip(E_all, hold) if not h]; E_hold = [e for e, h in zip(E_all, hold) if h]
     print(f"validation: {len(E_fit)} pairs fitted, {len(E_hold)} held out", flush=True)
@@ -166,11 +189,13 @@ def main():
     print(f"re-triangulated {len(out_pts)} points, dropped {dropped}", flush=True)
     # the pairs the solved path agrees with (< 3 sigma): prior_ba.py --pair_priors keeps their relative positions
     ang = angles(C1, E_all); ok = ang < 3 * a.sigma_dir
-    json.dump([[imgs[ia]["key"], imgs[ib]["key"]] for (ia, ib, _, _), o in zip(E_all, ok) if o],
-              open(os.path.join(a.model_out, "loop_pairs.json"), "w"))
+    lp = [[imgs[ia]["key"], imgs[ib]["key"]] for (ia, ib, _, _), o in zip(E_all, ok) if o]
+    for k in held:                                              # cross-hole pairs keep the held offset in prior_ba
+        lp += [[imgs[i]["key"], imgs[j]["key"]] for i in range(max(0, k - 4), k + 1) for j in range(k + 1, min(len(imgs), k + 6))]
+    json.dump(lp, open(os.path.join(a.model_out, "loop_pairs.json"), "w"))
     print(f"{int(ok.sum())} of {len(E_all)} loop pairs agree with the solved path (< {3 * a.sigma_dir:g} deg): "
           f"loop_pairs.json", flush=True)
-    json.dump(dict(params=vars(a), gated=n_gated, residuals=res, moved_median=float(np.median(mv)), moved_max=float(mv.max()),
+    json.dump(dict(params=vars(a), gated=n_gated, held_holes=[[float(T[k]), float(T[k + 1])] for k in held], residuals=res, moved_median=float(np.median(mv)), moved_max=float(mv.max()),
                    shift_per_10s=per10, points=len(out_pts), dropped=dropped),
               open(os.path.join(a.model_out, "loop_path.json"), "w"), indent=1)
 
