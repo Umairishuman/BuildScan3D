@@ -96,7 +96,8 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-056 | 2026-11-19 | Four rooms, layout → web → plan with the 2026-11-19 defaults, tag `r1119b` | this PC (Ubuntu, RTX 4000 Ada) | 15.6 min | #7 no roof + 2 openings; #3 no false openings; newRoom closed, 29.41 m²; #8 open, 2 doorways | Kept (for Umair's checks) |
 | R-057 | 2026-11-19 | Four rooms, layout → web → plan with the D-075 defaults, tag `r1119c` | this PC (Ubuntu, RTX 4000 Ada) | 16.7 min | #7 / #8 closed rectangles (17.99 / 26.44 m²); #3 tilt 0.29°; ceilings 4.3 → 0.04 cm; #8 lost a switch + socket | Kept (scan #8 corner = furniture, Umair) |
 | R-058 | 2026-11-19 | scan #6 `scan_006_1e457a214ce1` (259.8 s), full pipeline, R-023 recipe + D-075 (`r1119`) | this PC (Ubuntu, RTX 4000 Ada) | 45.5 min, did not finish | 1159 frames, 12.56 M observations; COLMAP `global_mapper` killed by OOM (26.4 GB) at 16:14:39 while the agent ran web work | Failed (OOM in SfM) |
-| R-059 | 2026-11-19 | scan #6 rerun after R-058, same recipe, PC kept quiet (`r1119b6`) | this PC (Ubuntu, RTX 4000 Ada) | running | — | running |
+| R-059 | 2026-11-19 | scan #6 rerun after R-058, same recipe, PC kept quiet (`r1119b6`) | this PC (Ubuntu, RTX 4000 Ada) | 162.5 + 21.4 min | 1159/1159 frames; height 3.05 m, closed, 7 walls; 11 fixtures, 84 rejected | Kept (not checked by a person) |
+| R-085 | 2026-11-23 | scan #6 fixture check sheet from R-059 (`fixture_checklist.py --rejected`, no GPU) | this PC (Ubuntu, RTX 4000 Ada) | (running) | — | — |
 | R-062 | 2026-11-12 | Training speed-up: exact TV-loss / colour-affine fixes, blur colour grid once (`fast_t1`) | 3070 | 28.2 min train (was 42.5) | 25.14 / 0.8251, sharp 0.80, flat 0.81 | Kept (proposed) |
 | R-063 | 2026-11-12 | Photometric-only fast-MVS init (`fast_t2_photo`) | 3070 | init 7.5 min (was 20.1) | 25.16 / 0.8240, flat 0.78 | Kept (proposed) |
 | R-064 | 2026-11-12 | Global mapper settings (`ba1`, `noretri`, default rerun) | 3070 | mapper 9.4 – 14.5 min | default runs differ by ~16 cameras | Inputs to R-065 |
@@ -1122,8 +1123,27 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 - **Command(s):** `scripts/buildscan run 6 r1119b6 -- --sfm_args "--retrieval 20" --init fmvs --planar 0.2 --blur 0.0222 --pgsr`
 - **Goal:** first model of scan #6 (#19); SfM must pass in RAM like scan #7 (12.68 M observations, R-040). Then
   layout / fixtures / check sheet, publish within the 10 GB cap (D-077).
-- **Start → end:** (running)
-- **Errors during the run:** none so far.
+- **Start → end:** 16:33:50 → 19:37:41 ("all done" in `gs_r1119b6/run_full.log`). Stage times (`timing.json`,
+  `stages.tsv`): run_v8 162.5 min = select 0.53, SfM 86.07, export 0.01, prior 5.23, init 19.41, train 50.53, ply
+  0.73; then layout 1.4, sem2d 17.6, sem3d 0.2, verify 0.2, sem3d2 0.2, mesh 0.3, meshlabels 1.5, web 0.1, plan 0.0 min.
+  Inside SfM (`global_mapper.log`, as quoted in R-071): global positioning 2,240.92 s, iterative BA 1,528.52 s,
+  retriangulation + refinement 733.86 s, reconstruction 4,535.88 s.
+- **Errors during the run:** none (no traceback in `run_full.log`; only timm `FutureWarning`s). SfM passed in RAM with
+  the PC kept quiet (R-058's failure did not repeat).
+- **Result** (written up 2026-11-23 from the run's files, R-085): `work_r1119b6_sfm/gs_r1119b6/` (`splat.ply`
+  506 MB); web bundle `prototype/web-ui/public/scans/scan_006_1e457a214ce1_r1119b6/`, published to R2 on 2026-11-19
+  (LOG). SfM (`report.json`): 1,159 / 1,159 frames registered, 585,115 points, ARCore Sim3 174 inliers, median
+  4.85 cm, gravity from ARCore (spread 0.70°; a full Sim3 on the same inliers would have tilted it 3.81°). Prior:
+  aligned Metric3D median error 1.6 % (raw 15.5 %). **Layout** (`layout/layout.json`): height **3.05 m** (strongest
+  horizontal plane above the cameras; wall tops 2.94 m above the floor), **room closed**, no warnings, 7 walls (5.26,
+  4.39, 4.01, 2.32, 1.71, 0.98, 0.74 m), 6 corners (89.6, 89.8, 90.0, 83.0, 87.0, 89.3°), one wall-gap doorway 0.90 m
+  on wall 2 (0.10–1.70 m, 5,011 Gaussians seen through). **Semantics v10** (`semantic_v10/semantic.json`): floor tilt
+  0.21°, ceiling tilt 0.24°, ceiling height 3.076 m (2.6 cm above the layout's), floor area 19.79 m², **11 fixtures**
+  (door 1, window 1, light switch 5, power socket 1, ceiling light 1, ceiling fan 1, doorway 1), **84 rejected**
+  (62 windows "in a wall, sill ≥ 0.5 m, ≥ 0.3 m wide", 11 sockets "small, on a wall", 4 fans, 3 tube lights, 2
+  switches, 1 crop check, 1 ceiling light). Not measured: tape (room height, wall lengths), fixture correctness
+  (check sheet: R-085), render quality (no held-out split).
+- **Verdict:** kept as the first model of scan #6 (#19); fixtures and dimensions not checked by a person yet.
 
 ### R-062 · 2026-11-12 · Training speed-up, phase 1: profiling + exact fixes + blur colour grid once (`fast_t1`)
 *Runs R-062 – R-068 were numbered R-029 – R-065 on the unmerged branch (the chat of 2026-11-12 uses those numbers);
@@ -1391,3 +1411,16 @@ renumbered on 2026-11-13 when `origin/master` (which already had R-029 – R-031
   training; gsplat's default keeps it to 25k of 30k), interaction with the DashGaussian low-resolution phase and the
   depth / normal priors, the opacity regulariser pushing opacities down.
 
+### R-085 · 2026-11-23 · scan #6 fixture check sheet from R-059 (`r1119b6`), CPU only
+- **Who / machine:** agent for Umair · this PC (Ubuntu, RTX 4000 Ada), while R-071 (`run-r071g6`, speed session) runs
+  `patch_match_stereo` on the GPU; this run uses no GPU and a few MB of RAM (standard-library script).
+- **Branch / commit:** `feature/step4-triage` (worktree `../BuildScan3D-step4`, from `origin/master` `8338680`)
+- **Dataset:** R-059's `dataset/scan_006_1e457a214ce1/work_r1119b6_sfm/gs_r1119b6/semantic_v10/semantic.json` and
+  `layout/layout.json` (read only). The sheet goes to a new folder `dataset/scan_006_1e457a214ce1/checks_r085/`, so
+  R-059's run folder is not written.
+- **Command(s):** `python3 src/arcore3dgs/fixture_checklist.py --semantic <gs_r1119b6>/semantic_v10/semantic.json
+  --layout <gs_r1119b6>/layout/layout.json --out dataset/scan_006_1e457a214ce1/checks_r085/fixture_check.md
+  --title "scan #6 (R-059, r1119b6)" --rejected`
+- **Goal:** the scan #6 sheet for Umair (#21, plan 4.2), like the other rooms' sheets.
+- **Start → end:** (running)
+- **Errors during the run:** none so far.
