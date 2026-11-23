@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-11-22 (`scan-009-loops`: R-099, scan_009 with the camera-path loops closed, trained on all frames, added to the project list); before that 2026-11-21 (`scan-009-depthfill`: R-092, scan_009 with filled depth priors and path pruning, added to the project list); before that 2026-11-20 (`scan-009-tracks`: R-081, scan_009 with the track-corrected camera path, added to the project list); before that 2026-11-19 (`scan-009-loop`: R-071, the loop-closed scan_009 model, added to the project list) Merged with `master` the same day; before that: 2026-11-19 (published scans from the R2 bucket listed for the Vercel site, D-076; earlier: wall-gap openings and no-roof / open-outline flags shown; earlier the same day: every scan bundle listed in the Projects tab); merged with `master`: 2026-11-15 (real models in the project list: bedroom, lecture hall, scan 009 + its pose-free model, newRoom v9e2e / v6 / v3; local-only files)
+Last updated: 2026-11-23 (`scan-009-poseopt`: R-103, loop-closed cameras refined during training, all frames, added to the project list); before that 2026-11-22 (`scan-009-loops`: R-099, scan_009 with the camera-path loops closed, trained on all frames, added to the project list); before that 2026-11-21 (`scan-009-depthfill`: R-092, scan_009 with filled depth priors and path pruning, added to the project list); before that 2026-11-20 (`scan-009-tracks`: R-081, scan_009 with the track-corrected camera path, added to the project list); before that 2026-11-19 (`scan-009-loop`: R-071, the loop-closed scan_009 model, added to the project list) Merged with `master` the same day; before that: 2026-11-19 (published scans from the R2 bucket listed for the Vercel site, D-076; earlier: wall-gap openings and no-roof / open-outline flags shown; earlier the same day: every scan bundle listed in the Projects tab); merged with `master`: 2026-11-15 (real models in the project list: bedroom, lecture hall, scan 009 + its pose-free model, newRoom v9e2e / v6 / v3; local-only files)
 
 ---
 
@@ -219,6 +219,13 @@ real path.** Currently only `/dashboard` has a href.
 - **Verification:** `npx tsc --noEmit` silent; `npx eslint src --max-warnings=0` → 0 errors, 1 known warning
   (ExportModal.tsx:29); `npx next build` compiled + prerendered all routes (run through `micromamba run -n bs-ns`,
   where Node lives on the Ubuntu PC). **Not checked in a browser**, and no size checked against tape yet.
+
+### Pose-refined scan_009 model in the project list ✅ (2026-11-23, session for Tayyab)
+- **Modified** `src/lib/mockData.ts`: `scan-009-poseopt` (`/splats/scan009_v9plq.spz`, R-103: R-096's cameras +
+  `--pose_opt`, all 581 frames, 521,715 splats, 9.9 MB, status draft, start pose frame_00001 as `scan-009-loops`).
+  File local only (git-ignored), converted with `src/arcore3dgs/to_spz.mjs` (2.2 s).
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src` → 0 errors, 1 known warning (ExportModal.tsx:29).
+  `next build` not re-run; dev server on 127.0.0.1:4173 for Tayyab.
 
 ### Loop-closed (11.d) scan_009 model in the project list ✅ (2026-11-22, night session for Tayyab)
 - **Modified** `src/lib/mockData.ts`: `scan-009-loops` (`/splats/scan009_v9plf.spz`, R-099: R-096's cameras, i.e. the
@@ -894,6 +901,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-11-23** — `scan-009-poseopt` (R-103, loop-closed cameras refined during training, all frames) added to the project list.
 - **2026-11-22** — `scan-009-loops` (R-099, camera-path loops closed, all frames) added to the project list.
 - **2026-11-21** — `scan-009-depthfill` (R-092, filled depth priors + path pruning) added to the project list.
 - **2026-11-20** — `scan-009-tracks` (R-081, camera path corrected with video point tracks) added to the project list.

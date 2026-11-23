@@ -238,6 +238,28 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [-0.15, -0.03, -0.11], target: [-0.22, -0.21, 0.87] },
   },
   {
+    // R-103 (2026-11-23): R-096's loop-closed cameras plus camera refinement during training (--pose_opt, R-101's
+    // recipe), trained on all 581 frames. File is local only (git-ignored).
+    id: "scan-009-poseopt",
+    name: "Scan 009 · loops closed + camera refinement",
+    floor: "—",
+    block: "Residence",
+    area: "Not measured",
+    location: "scan_009_057ed3beb4fc • loop-closed cameras, refined in training",
+    dateCaptured: "Nov 15, 2026",
+    status: "draft",
+    statusLabel: "Experimental · 581 of 894 keyframes · scale not measured",
+    thumbnail: "/thumbnails/scan009_v9pgsr.jpg",
+    scansCount: 1,
+    gaussianCount: "521,715",
+    accuracy: "Scale not measured",
+    captureDevice: "realme RMX5111 (ARCore)",
+    description:
+      "Same recording and cameras as 'loops closed', but each camera is also fine-tuned while the model trains. With 63 frames held out, the held-out frames match the photos a little better (+0.33 dB after pose alignment, R-101). This model uses every frame. The bathroom doorway stays smeared: the video passes it in a fast, blurred pan (125–133 s) that no method could place.",
+    splatUrl: "/splats/scan009_v9plq.spz",
+    splatStart: { position: [-0.47, 0.06, -0.41], target: [-0.51, -0.12, 0.57] },
+  },
+  {
     // R-099 (2026-11-22): R-096's recipe (camera-path loops closed with image pairs that see the same place at
     // different times, loop_path.py + prior_ba.py --pair_priors) trained on all 581 frames. File is local only
     // (git-ignored).

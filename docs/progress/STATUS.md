@@ -737,8 +737,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       +1.6 – 1.8 dB but 134 – 140 s broken again (15.83, as R-097). Cause: the camera model has a hole at 125.4 – 133.2 s
       (35 keyframes, none placed: blur 12 – 42 px, no ARCore pose); the bathroom doorway (125 s) is at its start.
       Rejected. The doorway is a limit of the video there (fast blurred pan), not of the method.
-    - [ ] Tayyab to decide: viewer model with R-101's recipe (R-096 cameras + `--pose_opt`) on all frames (~30 min);
-      whether to try a hole-aware second loop round; or move to the analyzer (D-082) now. Analyzer must detect path
+    - [x] Plan step 5 (2026-11-23, R-103): R-101's recipe on all frames, 32.8 min, in the viewer as `scan-009-poseopt`.
+    - [ ] Tayyab to decide: whether to try a hole-aware second loop round, or move to the analyzer (D-082) now.
+    - [ ] Disk on the RTX 3070 PC: 4.2 GB free after R-103 (2026-11-23); 13 GB after R-102, the difference is not from
+      these runs (not investigated). Analyzer must detect path
       holes (unplaced keyframes, blur, no ARCore pose).
     - [ ] Analyzer-driven pipeline (D-082, [PIPELINE_ANALYZER_PLAN.md](PIPELINE_ANALYZER_PLAN.md)), after steps 4 / 3:
       analyzer `analysis.json` on the four test recordings; route decision and the sensor-path chain inside
