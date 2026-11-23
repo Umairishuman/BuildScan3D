@@ -779,4 +779,8 @@ issues, use the existing datasets, try new techniques. Branch from `exp/fast-pip
   `check` over `origin/master`, his branch, `exp/colmap-cudss` and this branch: 0 FAIL, 0 WARN. Still on old numbers:
   `fix/run-full-exit-code` (branched from `exp/colmap-cudss` before the renumbering) and Tayyab's own branch (his
   numbers stay); Tayyab to be told (D-091).
+- PR #40 (`feature/run-times` → `master`): CI failed only in `test_changelog` (v0.3.9 has no changelog line; `master` has
+  the same failure, hidden by the release commit's `[skip ci]`). A changelog line made CI green, but any `android/` change
+  makes CD release a new app version; Umair: take it out (reverted), merge with that one known failure, fix it with the
+  next real app change (STATUS §7.7).
 

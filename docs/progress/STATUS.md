@@ -559,6 +559,11 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 
 ### 7.7 Android app
 
+- [ ] **[new 2026-11-23] `tests/test_changelog.py` fails on `master`:** the v0.3.9 release (`8338680`, `[skip ci]`) wrote "No
+      changes listed" (only a code comment changed, D-079), and the test wants every current version to have a line.
+      Not fixed in PR #40 because any `android/` change makes CD publish a new app release (Umair 2026-11-23: fix it with the
+      next real app change). Fix: a v0.3.9 line ("Nothing you will notice: …") in `android/CHANGELOG.md` with that change.
+
 - [ ] **[new 2026-11-15] Capture-screen dots fixed, test on the phone** (`exp/overnight-2026-11-14`; Tayyab reported lag,
       flicker, no dots and floating). Measured on the recordings: the app drew at 29.9 fps (scan_009, `tracking.csv`),
       IQA median 0.2 ms; ARCore's point cloud updates every 100 ms with 7 – 76 points (median per recording) and the same
