@@ -10,24 +10,39 @@ structure.py assumes a box room (the outermost wall on each side of two Manhatta
      each cluster is refit (robust PCA line on all its points) with its extent along the line and its height.
      A cluster is a WALL if it is tall (>= half the room height) and nothing parallel lies behind it
      (furniture fronts, doors in their frames and pictures sit in front of a wall).
+     The ceiling may not lie below the top of the walls (D-072): lower candidates are ignored. A sky-coloured
+     "ceiling" over a small part of the room means no roof (open_top; height = top of the walls).
   4. corners = intersections of non-parallel walls whose segments end near each other.
+Needs a levelled model (+Y = gravity): sfm_colmap.py does it since D-071; older models: level_model.py.
 Works for any number of walls and non-Manhattan angles.
 
   nerfstudio-env\\Scripts\\python.exe src/arcore3dgs/layout.py --ply <splat.ply> --work <work_sfm> --out <dir>
 Outputs: layout.json (floor/ceiling heights, walls with lengths, corners), plan.png (top view), corners.jpg
 (corner edges projected into frames).
 """
-import os, json, argparse
+import os, sys, json, argparse
 import numpy as np, cv2, torch, torch.nn.functional as F
 from plyfile import PlyData
 from gsplat import rasterization
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from openings import find_openings                            # noqa: E402  (#9: doorways / window openings)
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--ply", required=True); ap.add_argument("--work", required=True); ap.add_argument("--out", required=True)
 ap.add_argument("--every", type=int, default=6); ap.add_argument("--down", type=int, default=4)
 ap.add_argument("--ang", type=float, default=6.0); ap.add_argument("--off", type=float, default=0.08)
 ap.add_argument("--min_len", type=float, default=0.5)
+ap.add_argument("--above_frac", type=float, default=0.03,
+                help="a ceiling candidate is rejected if more than this fraction of the opaque splats lies > 15 cm above it")
 ap.add_argument("--max_rms", type=float, default=0.05, help="m: a region is used if the rendered surface fits a plane this well")
+ap.add_argument("--infer_gap", type=float, default=0.0, help="m, > 0: a missing corner between neighbouring walls is "
+                "inferred (marked) when both walls stop at most this far short of it and it lies over the floor (#10); 0 = off")
+ap.add_argument("--raised_max", type=float, default=0.0, help="m, > 0: a wall shorter than this whose visible bottom is "
+                "more than 0.5 m above the floor is dropped (boards / material leaning on a wall, #11); 0 = off")
+ap.add_argument("--debug", action="store_true", help="print every wall candidate and the step that dropped it")
+ap.add_argument("--openings", type=int, default=1, help="1: find doorways / window openings from wall gaps (#9); 0: off")
+ap.add_argument("--open_cover", type=float, default=0.35, help="open to the sky if the ceiling plane covers less of the floor than this ...")
+ap.add_argument("--open_blue", type=float, default=0.15, help="... and its colour is this much bluer than red (sky); see 3c")
 args = ap.parse_args()
 os.makedirs(args.out, exist_ok=True)
 dev = "cuda"; G = np.diag([1, -1, -1, 1.0]); UP = np.array([0.0, 1.0, 0.0])
@@ -90,7 +105,41 @@ def mode_y(sel):
     h_, e_ = np.histogram(ys[sel], bins=np.arange(ys[sel].min() - 0.03, ys[sel].max() + 0.05, 0.02), weights=wts[sel])
     y0 = e_[h_.argmax()] + 0.01
     return float(np.median(ys[sel & (np.abs(ys - y0) < 0.03)]))
-floor_y = mode_y(ys < cy_.min() - 0.5); ceil_y = mode_y(ys > cy_.max() + 0.1)
+floor_y = mode_y(ys < cy_.min() - 0.5)
+
+
+def ceiling_y():
+    """The ceiling is the horizontal surface above the cameras with (almost) nothing of the model above it.
+    The strongest horizontal cluster above the cameras is not always the ceiling: the undersides of AC units, wall
+    cabinets, shelves or a partition top are seen more often (the ceiling only at grazing angles). R-030 (lab room)
+    took such a surface 1.50 m above the floor in a ~3.1 m tall model. Candidates are the histogram peaks above the
+    cameras, strongest first; the first one with < --above_frac of the opaque splats above it wins; if none, the
+    highest candidate."""
+    sel = ys > cy_.max() + 0.1
+    if sel.sum() < 50:
+        return float("nan")
+    h_, e_ = np.histogram(ys[sel], bins=np.arange(ys[sel].min() - 0.03, ys[sel].max() + 0.05, 0.02), weights=wts[sel])
+    h_ = np.convolve(h_, [0.25, 0.5, 0.25], mode="same")
+    pk = [i for i in range(len(h_)) if h_[i] > 0.05 * h_.max() and h_[i] >= h_[max(i - 1, 0)] and h_[i] >= h_[min(i + 1, len(h_) - 1)]]
+    Py = means[:, 1][opac > 0.5].cpu().numpy()
+    cands = []
+    for i in sorted(pk, key=lambda i: -h_[i]):
+        y0 = e_[i] + 0.01; near = sel & (np.abs(ys - y0) < 0.03)
+        if near.sum() < 20:
+            continue
+        y = float(np.median(ys[near]))
+        if any(abs(y - c[0]) < 0.06 for c in cands):
+            continue
+        cands.append((y, float(h_[i] / h_.max()), float((Py > y + 0.15).mean())))
+    for y, w, a in cands:
+        print(f"  ceiling candidate y {y:.3f} (height {y - floor_y:.2f} m): weight {w:.2f}, splats above {100 * a:.1f}%")
+    if not cands:
+        return float("nan")
+    ok = [c for c in cands if c[2] < args.above_frac]
+    return (ok[0] if ok else max(cands))[0]
+
+
+ceil_y = ceiling_y()
 if not np.isfinite(ceil_y):
     print("no ceiling found above the cameras")
 height = ceil_y - floor_y
@@ -200,8 +249,71 @@ for w in inner:
             outside = True; break
     if not outside:
         final.append(w)
+# #11 (optional): short surfaces that do not come down to the floor are boards or stacked material in front of a
+# wall (scan #7: plank faces 1.06 / 0.57 m long starting 1.21 / 0.60 m up; real walls start at 0.07-0.30 m)
+raised = [w for w in final if args.raised_max > 0 and w["t1"] - w["t0"] < args.raised_max and w["y0"] - floor_y > 0.5]
+if raised:
+    final = [w for w in final if not any(w is x for x in raised)]
+    print(f"{len(raised)} short raised surface(s) dropped (not down to the floor): "
+          + ", ".join(f"{w['t1'] - w['t0']:.2f} m from {w['y0'] - floor_y:.2f} m up" for w in raised))
+if args.debug:
+    _mid = lambda w: w["cen"] + w["dir"] * (w["t0"] + w["t1"]) / 2
+    for w in sorted(walls, key=lambda w: -(w["t1"] - w["t0"])):
+        st_ = ("WALL" if any(w is x for x in final) else "raised" if any(w is x for x in raised) else
+               "outside" if any(w is x for x in inner) else
+               "front" if any(w is x for x in cand) else "short, low or merged")
+        print(f"  cand mid=({_mid(w)[0]:.2f},{_mid(w)[1]:.2f}) len {w['t1'] - w['t0']:.2f} h {w['y0'] - floor_y:.2f}-{w['y1'] - floor_y:.2f} "
+              f"nrm ({w['nrm'][0]:.2f},{w['nrm'][1]:.2f}) area {w['area']} -> {st_}")
 print(f"{len(clusters)} vertical plane clusters -> {len(walls) and len(cand)} tall + long after merging -> "
       f"{len(inner)} without furniture fronts -> {len(final)} walls")
+
+# ---------------- 3b. the ceiling may not lie below the top of the walls (D-072) ----------------
+# A white, textureless ceiling can be reconstructed too close to the cameras and glass reflects it (scan #2, R-032:
+# the strongest plane above the cameras was 1.50 m above the floor, its walls reach 2.3-2.7 m). Walls run up to the
+# ceiling, so candidates below the highest wall top (98th percentile of its points) are ignored.
+ceil_first, ceil_source, warnings = ceil_y, "horizontal plane above the cameras with almost nothing above it", []
+wall_top = max((w["y1"] for w in final), default=float("nan"))
+if np.isfinite(wall_top) and not (np.isfinite(ceil_y) and ceil_y >= wall_top):
+    c_ = mode_y(ys > wall_top)
+    if np.isfinite(c_):
+        ceil_y, ceil_source = c_, "strongest horizontal plane above the wall tops"
+    else:
+        ceil_y, ceil_source = wall_top, "top of the highest wall (no horizontal plane above it)"
+    print(f"ceiling {ceil_first - floor_y:.3f} m was below the wall top ({wall_top - floor_y:.3f} m) -> {ceil_y - floor_y:.3f} m ({ceil_source})")
+height = ceil_y - floor_y
+
+# ---------------- 3c. open to the sky: no roof (#8, scan #7 R-040: a building under construction) ----------------
+# With no roof, the "ceiling" plane is a few sky-coloured splats over a small part of the room. A real ceiling covers
+# most of the floor outline (scans #2 / #3 / #8 / newRoom: 47-96 %) in a grey / white / wall colour (blue - red
+# <= 0); scan #7's covered 20 % and was sky blue (blue - red 0.25). Both must hold, so a dim or patchy ceiling alone
+# never counts as open. Then there is no ceiling and the room height is the top of the walls.
+open_top, sky = False, {}
+if np.isfinite(ceil_y):
+    P_ = means.cpu().numpy(); o_ = opac.cpu().numpy()
+    rgb_ = np.stack([np.asarray(v[f"f_dc_{i}"]) for i in range(3)], 1) * 0.28209479177387814 + 0.5
+    cell_ = lambda Q: set(map(tuple, np.floor(Q / 0.25).astype(int)))
+    on_floor = cell_(P_[(np.abs(P_[:, 1] - floor_y) < 0.06) & (o_ > 0.5)][:, [0, 2]])
+    at_ceil = (np.abs(P_[:, 1] - ceil_y) < 0.10) & (o_ > 0.5)
+    cover = len(on_floor & cell_(P_[at_ceil][:, [0, 2]])) / max(len(on_floor), 1)
+    c_rgb = np.clip(rgb_[at_ceil], 0, 1).mean(0) if at_ceil.any() else np.full(3, np.nan)
+    sky = dict(floor_cover=round(float(cover), 3), blue_minus_red=round(float(c_rgb[2] - c_rgb[0]), 3),
+               gaussians=int(at_ceil.sum()))
+    print(f"ceiling evidence: covers {cover:.0%} of the floor outline, colour blue - red {c_rgb[2] - c_rgb[0]:+.3f}, "
+          f"{int(at_ceil.sum())} opaque Gaussians")
+    if cover < args.open_cover and c_rgb[2] - c_rgb[0] > args.open_blue and np.isfinite(wall_top):
+        open_top = True
+        warnings.append(f"open to the sky: the plane at {ceil_y - floor_y:.2f} m is sky-coloured and covers only "
+                        f"{cover:.0%} of the floor; no ceiling, height = top of the walls")
+        ceil_first_open = ceil_y
+        ceil_y, ceil_source = float("nan"), "none: open to the sky (no roof)"
+        height = wall_top - floor_y
+        print(f"no roof: plane at {ceil_first_open - floor_y:.3f} m is sky -> no ceiling, walls reach {height:.3f} m")
+if np.isfinite(height) and height < 2.2:
+    warnings.append(f"room height {height:.2f} m is below 2.2 m: check the ceiling")
+if np.isfinite(ceil_y) and ceil_y - cy_.max() < 0.3:
+    warnings.append(f"ceiling only {ceil_y - cy_.max():.2f} m above the highest camera")
+for w_ in warnings:
+    print("WARNING:", w_)
 
 # ---------------- 4. corners: walls in angular order around the room centre ----------------
 ctr = C[:, [0, 2]].mean(0)
@@ -210,6 +322,8 @@ def ang_of(w):
     return np.arctan2(m_[1], m_[0])
 order = sorted(final, key=ang_of)
 corners = []
+_P = means.cpu().numpy(); _fl = _P[(np.abs(_P[:, 1] - floor_y) < 0.06) & (opac.cpu().numpy() > 0.5)][:, [0, 2]]
+floor_box = (np.percentile(_fl, 1, 0), np.percentile(_fl, 99, 0)) if len(_fl) > 100 else None
 for k in range(len(order)):
     a, b = order[k], order[(k + 1) % len(order)]
     if abs(a["dir"] @ b["dir"]) > np.cos(np.radians(30)):   # parallel neighbours (a step in the wall): no corner
@@ -217,10 +331,15 @@ for k in range(len(order)):
     Am = np.stack([a["dir"], -b["dir"]], 1); s_ = np.linalg.solve(Am, b["cen"] - a["cen"])
     X = a["cen"] + s_[0] * a["dir"]
     ga = max(a["t0"] - s_[0], s_[0] - a["t1"], 0); gb = max(b["t0"] - s_[1], s_[1] - b["t1"], 0)
-    if ga > 2.5 or gb > 2.5:                                 # the walls do not meet near here (furniture hides corners)
-        continue
     ia, ib = next(i for i, w in enumerate(final) if w is a), next(i for i, w in enumerate(final) if w is b)
-    corners.append(dict(xz=X.tolist(), walls=[ia, ib], angle=float(np.degrees(np.arccos(abs(a["dir"] @ b["dir"]))))))
+    ang_ = float(np.degrees(np.arccos(abs(a["dir"] @ b["dir"]))))
+    if ga > 2.5 or gb > 2.5:                                 # the walls do not meet near here (furniture hides corners)
+        # #10: optionally infer it (the outline then closes) if it lies over the floor; the walls keep their extent
+        if args.infer_gap > 0 and max(ga, gb) <= args.infer_gap and floor_box is not None and \
+                np.all(X >= floor_box[0] - 0.3) and np.all(X <= floor_box[1] + 0.3):
+            corners.append(dict(xz=X.tolist(), walls=[ia, ib], angle=ang_, inferred=True, gap=round(float(max(ga, gb)), 2)))
+        continue
+    corners.append(dict(xz=X.tolist(), walls=[ia, ib], angle=ang_))
     for w, s in ((a, s_[0]), (b, s_[1])):                    # extend / trim the wall to the corner
         w.setdefault("ends", []).append(s)
 for w in final:
@@ -232,6 +351,38 @@ for w in final:
             w["t0"] = e[0]
         else:
             w["t1"] = e[0]
+# #9: doorways and window openings without a leaf: gaps in each wall's surface with the model seen through them
+_o = opac.cpu().numpy(); _top = ceil_y if np.isfinite(ceil_y) else wall_top
+for w in final:
+    w["openings"] = find_openings(_P, _o, w["cen"], w["dir"], w["nrm"], w["t0"], w["t1"], floor_y, _top) \
+        if args.openings else []
+    for op in w["openings"]:
+        print(f"  {op['kind']} on a wall: {op['width']:.2f} m wide, {op['bottom']:.2f}-{op['top']:.2f} m above the floor")
+# #10: is this a closed room? Each wall meets its neighbour in a corner (measured or inferred), >= 3 walls.
+n_inf = sum(1 for cn in corners if cn.get("inferred"))
+# Neighbours in angular order are joined by a corner, or, when nearly parallel (a step: no corner by design, see
+# above), by ends within 0.5 m (R-055: newRoom's 0.78 m jog, 16 deg off, ends 0.42 m apart; scan #8's open side,
+# 21 deg, 2.31 m apart).
+_pairs = {tuple(sorted(cn["walls"])) for cn in corners}
+_idx = lambda w: next(i for i, x in enumerate(final) if x is w)
+_ends = lambda w: [w["cen"] + w["dir"] * w["t0"], w["cen"] + w["dir"] * w["t1"]]
+def _joined(a, b):
+    if tuple(sorted((_idx(a), _idx(b)))) in _pairs:
+        return True
+    return abs(a["dir"] @ b["dir"]) > np.cos(np.radians(30)) and \
+        min(np.linalg.norm(p - q) for p in _ends(a) for q in _ends(b)) < 0.5
+room_closed = len(final) >= 3 and all(_joined(order[k], order[(k + 1) % len(order)]) for k in range(len(order)))
+n_warn = len(warnings)
+if len(final) < 3:
+    warnings.append(f"only {len(final)} wall(s) found: not a closed room (corridor end, open space or a partial "
+                    f"recording); floor area and room size are not known")
+elif not room_closed:
+    warnings.append(f"outline not closed: {len(corners)} corners for {len(final)} walls and a gap between neighbouring "
+                    f"walls; floor area is not computed")
+if n_inf:
+    warnings.append(f"{n_inf} corner(s) inferred where the walls stop short (not seen)")
+for w_ in warnings[n_warn:]:
+    print("WARNING:", w_)
 # room dimensions wall-to-wall: opposite (anti-parallel) walls, mean separation over their common extent
 dims = []
 for i in range(len(final)):
@@ -242,9 +393,13 @@ for i in range(len(final)):
         Qb = b["Q"][:, [0, 2]]; sep = float(np.median((Qb - a["cen"]) @ a["nrm"]))
         dims.append(dict(walls=[i, j], distance=abs(sep)))
         print(f"walls {i} <-> {j}: {abs(sep):.3f} m apart")
-res = dict(floor_y=floor_y, ceiling_y=ceil_y, height=height, dimensions=dims,
+res = dict(floor_y=floor_y, ceiling_y=ceil_y, height=height, ceiling_source=ceil_source, open_top=open_top,
+           room_closed=room_closed,
+           ceiling_evidence=sky,
+           ceiling_first_y=ceil_first, wall_top_y=wall_top, warnings=warnings, dimensions=dims,
            walls=[dict(id=k, p0=(w["cen"] + w["dir"] * w["t0"]).tolist(), p1=(w["cen"] + w["dir"] * w["t1"]).tolist(),
-                       length=float(w["t1"] - w["t0"]), normal=w["nrm"].tolist(), corners=len(w.get("ends", [])))
+                       length=float(w["t1"] - w["t0"]), normal=w["nrm"].tolist(), corners=len(w.get("ends", [])),
+                       openings=w.get("openings", []))
                   for k, w in enumerate(final)],
            corners=corners)
 json.dump(res, open(os.path.join(args.out, "layout.json"), "w"), indent=1)
@@ -255,7 +410,13 @@ for cn in corners:
 
 # ---------------- plan.png ----------------
 P = means.cpu().numpy(); o = opac.cpu().numpy()
-m = (o > 0.5) & (P[:, 1] > floor_y + 0.1) & (P[:, 1] < (ceil_y if np.isfinite(ceil_y) else floor_y + 2.4) - 0.1)
+top_ = ceil_y if np.isfinite(ceil_y) else (wall_top if np.isfinite(wall_top) else floor_y + 2.4)
+# no floor / ceiling found (partial scans, e.g. TRAINING R-045 / R-046): plan from all opaque splats instead of crashing
+y_lo = floor_y + 0.1 if np.isfinite(floor_y) else -np.inf
+y_hi = top_ - 0.1 if np.isfinite(top_) else np.inf
+m = (o > 0.5) & (P[:, 1] > y_lo) & (P[:, 1] < y_hi)
+if not m.any():
+    m = o > 0.5
 xz = P[m][:, [0, 2]]; lo = np.percentile(xz, 0.5, 0) - 0.5; hi = np.percentile(xz, 99.5, 0) + 0.5
 sc = 150; Wp, Hp = ((hi - lo) * sc).astype(int)
 img = np.full((Hp, Wp, 3), 255, np.uint8)
@@ -270,9 +431,17 @@ for w in res["walls"]:
     cv2.line(img, pt_(w["p0"]), pt_(w["p1"]), (40, 160, 40), 3)
     mid = (np.array(w["p0"]) + np.array(w["p1"])) / 2
     cv2.putText(img, f"{w['length']:.2f} m", pt_(mid), 0, 0.6, (0, 90, 0), 2)
+for w in res["walls"]:                                       # openings: blue (doorway) / cyan (window) over the wall
+    p0_, p1_ = np.array(w["p0"]), np.array(w["p1"]); dd_ = (p1_ - p0_) / max(np.linalg.norm(p1_ - p0_), 1e-9)
+    for op in w["openings"]:
+        a_, b_ = p0_ + dd_ * (op["along"] - op["width"] / 2), p0_ + dd_ * (op["along"] + op["width"] / 2)
+        cv2.line(img, pt_(a_), pt_(b_), (220, 90, 40) if op["kind"] == "doorway" else (230, 200, 0), 6)
 for cn in corners:
-    cv2.circle(img, pt_(cn["xz"]), 7, (0, 0, 220), -1)
-cv2.putText(img, f"height {height:.2f} m, {len(final)} walls, {len(corners)} corners", (10, 25), 0, 0.7, (0, 0, 0), 2)
+    cv2.circle(img, pt_(cn["xz"]), 7, (0, 0, 220), 2 if cn.get("inferred") else -1)   # hollow = inferred
+for k_, w_ in enumerate(warnings[:3]):
+    cv2.putText(img, "! " + w_[:110], (10, 55 + 25 * k_), 0, 0.55, (0, 0, 200), 2)
+cv2.putText(img, f"{'walls ' if open_top else ''}height {height:.2f} m{' (no roof)' if open_top else ''}, {len(final)} walls, "
+            f"{len(corners)} corners", (10, 25), 0, 0.7, (0, 0, 0), 2)
 cv2.imwrite(os.path.join(args.out, "plan.png"), img)
 
 # ---------------- corners.jpg: vertical corner edges in a few frames ----------------
@@ -282,7 +451,7 @@ for f in meta["frames"][:: max(1, len(meta["frames"]) // 60)]:
     vis = []
     for cn in corners:
         seg = []
-        for y in np.linspace(floor_y, ceil_y if np.isfinite(ceil_y) else floor_y + 2.4, 20):
+        for y in np.linspace(floor_y, top_, 20):
             X = w2c @ np.array([cn["xz"][0], y, cn["xz"][1], 1.0])
             if X[2] > 0.2:
                 u_, v_ = K[0, 0] * d * X[0] / X[2] + K[0, 2] * d, K[1, 1] * d * X[1] / X[2] + K[1, 2] * d

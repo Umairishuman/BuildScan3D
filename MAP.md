@@ -2,7 +2,7 @@
 
 **What is where, and what each file does.** Read this first in a new session (human or agent), then
 [CLAUDE.md](CLAUDE.md) (how we work) and [docs/progress/STATUS.md](docs/progress/STATUS.md) (where the project stands).
-Last checked against the code: 2026-11-12 (branch `feature/iqa-timing`: app changelog `android/CHANGELOG.md`, update checks on start and return, `iqa_ms`; earlier: app moved to `android/` §6, USB upload, light UI).
+Last checked against the code: 2026-11-19 (online site: `publish_scan.py`, `remoteBundles.ts`, D-076, branch `feature/vercel-deploy`; web UI: `/api/scans` lists every scan bundle, D-074; earlier 2026-11-12: branch `feature/iqa-timing`: app changelog `android/CHANGELOG.md`, update checks on start and return, `iqa_ms`; earlier: app moved to `android/` §6, USB upload, light UI).
 When you add, move, retire or repurpose a file, update this map in the same commit.
 
 Markers: **[v9]** = part of the current best pipeline (v9 processing + v10 semantics) · [eval] = evaluation /
@@ -113,7 +113,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does | Status |
 |---|---|---|
-| `sfm_colmap.py` | COLMAP 4.2: features, ARCore-guided / retrieval pairs, global mapper, lens self-calibration, undistortion, Sim3 to ARCore, mis-registration filter. COLMAP path from `toolpaths.py`; `tools/cudnn9` only for the rejected ALIKED path | **[v9]** [v3] |
+| `sfm_colmap.py` | COLMAP 4.2: features, ARCore-guided / retrieval pairs, global mapper, lens self-calibration, undistortion, Sim3 to ARCore (levelled with ARCore gravity since D-071), mis-registration filter. COLMAP path from `toolpaths.py`; `tools/cudnn9` only for the rejected ALIKED path | **[v9]** [v3] |
 | `fallback.py` | IMU featureless-tracking fallback: bridge tracking gaps, detect heading jumps | [v3] [legacy]; not in `run_v8.py` (OD-6) |
 | `relocalize_pnp.py` | Re-aligns post-gap segments to the map with PnP | [legacy] |
 | `relocalize.py` | Earlier image-content relocalisation of post-gap segments | [legacy] |
@@ -150,15 +150,18 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does | Status |
 |---|---|---|
-| `layout.py` | Room layout: any number of walls, floor, ceiling, corners, dimensions, `plan.png` | **[v9]** |
+| `layout.py` | Room layout: any number of walls, floor, ceiling, corners, dimensions, `plan.png`; since 2026-11-19 also no-roof detection (`open_top`, #8), wall-gap openings (`openings.py`, #9), `room_closed` + warnings (#10); options `--debug`, `--raised_max`, `--infer_gap` (off) | **[v9]** |
+| `openings.py` | Doorways and window openings without a leaf / frame from gaps in each wall's surface with the model seen through them; used by `layout.py` (#9) | **[v9]** shared |
+| `plan_export.py` | As-built floor plan from `layout.json` (+ `semantic.json`): `plan.json`, `plan.svg`, `plan.dxf` (R12, layers WALLS / OPENINGS / FIXTURES / TEXT); `--square` turns near-right-angle walls and writes `plan_square.json|svg|dxf` instead (on in `run_full.sh` since D-075) (#12, plan 4.9) | **[v9]** stage `plan` of `run_full.sh` |
+| `level_model.py` | Levels an already trained model with ARCore gravity (rotates splats incl. colour coefficients and poses) into a new tag, for models exported before D-071 (2026-11-12) | **[v9]** one-off tool |
 | `semantic2d.py` | Grounding DINO + SAM fixture masks on upright frames, decoy classes, tile pass | **[v9]** semantic-env |
 | `semantic3d.py` | Votes 2D labels onto Gaussians, structure from layout, fixture instances + geometry rules | **[v9]** |
 | `verify_fixtures.py` | CLIP crop check of switch / socket candidates | **[v9]** semantic-env |
 | `mesh.py` | TSDF mesh from rendered depth (Open3D 0.19), PGSR unbiased depth, shell flatness | **[v9]** |
-| `mesh_labels.py` | Labels onto the mesh, shell denoising, areas, `.glb` | **[v9]** |
+| `mesh_labels.py` | Labels onto the mesh, shell denoising, areas, `.glb`; `--clean_ceiling` own radius for the ceiling (off, #18) | **[v9]** |
 | `export_web.py` | Splits the model into label groups (`.spz`), `scan.json`, mesh for the viewer | **[v9]** |
 | `to_spz.mjs` | PLY → `.spz` with Spark's encoder (run from `prototype/web-ui`, Node) | **[v9]** |
-| `structure.py` | Older box-room structural layer (planes, walls, openings) | [exp] superseded by `layout.py` |
+| `structure.py` | Older box-room structural layer (planes, walls, openings) | [exp] superseded by `layout.py` (its ceiling-height item marked obsolete 2026-11-19, #18) |
 | `planarize.py` | Post-hoc snapping of splats to planes | [exp] rejected (D-017) |
 | `clean_splats.py` | Floater pruning by measured free space | [exp] not default (D-040) |
 
@@ -167,6 +170,10 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | File | Does | Status |
 |---|---|---|
 | `eval_offpath.py` | Off-path split metrics (PSNR, SSIM, sharpness, flatness) + sheets | [eval] current |
+| `fixture_checklist.py` | Fixture check sheet for one room from `semantic.json` (+ layout): every accepted fixture with height, size, wall, a real / wrong class / false column, a missed table and per-class summary; `--rejected` also lists the rule-rejected candidates (plan 4.2, E3) | [eval] current |
+| `make_split.py` | Writes the held-out list for `run_v8.py --split` / `eval_offpath.py`: 6 × 3 s stretches of the walk (D-070) | [eval] current |
+| `sfm_scale_check.py` | Finds parts of an SfM model rebuilt at the wrong scale ("mini room"): per-frame SfM depth / Metric3D depth from `mono_prior` (TRAINING R-066, R-067) | [eval] diagnostic |
+| `tape_check.py` | Model vs tape table for a room (`<dataset>/tape.csv`: layout room length / width / height or values measured in the viewer), mean / max error, NFR6 (≤ 5%) check (COMPLETION_PLAN E2) | [eval] current |
 | `fair_compare.py` | Compares models from different SfM runs (trimmed Sim3 + test-pose refinement) | [eval] current |
 | `compare_models.py` | Photometric + geometric metrics and sheets on held-out frames | [eval] |
 | `compare.py` | Older held-out comparison | [eval] [legacy] |
@@ -192,7 +199,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does |
 |---|---|
-| `buildscan` | **Linux: one command for everything**: `status`, `server start/stop/log`, `datasets`, `check`, `run` (calls `run_full.sh` in screen `run-<tag>`), `watch`, `results`, `view` (port 7010), `web` (port 3000), `attach`, `stop`, `ip`, `gpu`. `latest` = newest recording |
+| `buildscan` | **Linux: one command for everything**: `status`, `server start/stop/log`, `datasets`, `check`, `run` (calls `run_full.sh` in screen `run-<tag>`), `watch`, `results`, `view` (port 7010), `web` (port 3000), `publish` / `unpublish` / `published` (online site, D-076), `attach`, `stop`, `ip`, `gpu`. `latest` = newest recording |
 | `watch_run.py` | Live view behind `buildscan watch`: stage n of 15 and what it does, time vs R-030, training step, GPU, last message without paths (reads `run_full.log` / `train.log`; standard library only) |
 | `run_full.sh` | **Linux: the whole pipeline in one command**, recording → 3DGS → layout → semantics → mesh → web bundle, each stage in its env; `--from <stage>` restarts; prints GPU use / temperature / training progress every 30 s (`gpu.csv`). Guide: [docs/RUN_PIPELINE.md](docs/RUN_PIPELINE.md) |
 | `setup_linux.sh` | **Linux setup** (no sudo): micromamba, envs `bs-colmap` / `bs-ns` / `bs-system`, `semantic-env`, vocabulary tree, web-ui packages, then checks (GPU, COLMAP, gsplat, Open3D). `--check` = checks only. Same script for the Docker image (D-048) |
@@ -201,6 +208,8 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `view_splat.bat` | Starts `view.py` (http://localhost:7010) |
 | `start_server.bat` | Loads `.env`, starts the FastAPI server on port 8000, prints the IP for the phone |
 | `start_server.sh` | Linux twin of `start_server.bat`: loads `.env`, mode defaults to `dry_run`, runs uvicorn on port 8000 in the small `bs-server` micromamba env (not the pipeline envs), prints the phone URLs. Detached: `screen -dmS bs-server scripts/start_server.sh` |
+| `run_times.py` | **Run times table**: `update` fills `docs/progress/runs.tsv` from each run's `timing.json` / `stages.tsv` / `global_mapper.log`; `check` tests it against the files and TRAINING.md (open runs, totals that do not add up, runs without a row, run folders without a row); `show <text>` prints a comparison; standard library only (D-090) |
+| `publish_scan.py` | Puts a run's web bundle + plan.png on the online site: R2 bucket `scans/<owner>/<capture>_<tag>/` + that owner's `index.json`; `unpublish` archives in the bucket, `list`; Python + boto3 (Linux and Windows), keys from `.env`; `--target dir:` for tests (D-076). Linux: `scripts/buildscan publish / unpublish / published` |
 | `jobs.bat` / `jobs.py` | Job manager CLI (list, watch, logs, retry, reprocess, mode) |
 | `release.bat` | Bumps the app version and tags a release |
 | `run_train.bat`, `run_train_fast.bat`, `run_post.bat`, `run_post_fast.bat`, `run_viewer.bat` | [dead] first splatfacto runs on roomAttemptSadness (Sept/Oct 2026): ns-train / ns-eval / ns-export / ns-viewer with MSVC set up |
@@ -224,7 +233,8 @@ from the logo with bottom navigation Capture / Scans / Server (D-064). Code in
 | `BottomNav.java` | The bottom navigation bar (`res/layout/view_bottom_nav.xml`) |
 | `CaptureLogger.java` | Writes poses, tracking, points, depth, `camera.csv`, `anchors.csv`, lens metadata on a background thread |
 | `QualityMonitor.java` | Live IQA: predicted blur, dark / overexposed, low texture, tracking; `quality.csv` |
-| `CoverageMap.java`, `CoverageOverlayView.java` | Live coverage map (red / yellow / green dots) |
+| `CoverageMap.java`, `CoverageOverlayView.java` | Live coverage map (red / yellow / green dots). Since 2026-11-15 the dots are drawn by the GL renderer every frame (`CaptureActivity.drawCoverage`, shader `assets/shaders/coverage_point.frag`); `CoverageOverlayView` only gets cleared |
+| `FeatureMap.java` | Persistent, smoothed map of ARCore feature points for the camera preview (by point id, shown after 3 observations, reset on a > 15 cm jump); replaces drawing ARCore's per-update point set (2026-11-15) |
 | `UpdateChecker.java` | Update check against GitHub Releases at start and on return to the app (at most every 6 h, not while recording) and from the Server tab / menu; the dialog shows the release notes ("What's new"), after an update the installed version's notes are shown once; downloads the APK and opens Android's installer (FileProvider `res/xml/update_paths.xml`), continuing by itself after the "install unknown apps" permission |
 | `common/` | Google's helpers (rendering, camera permission, display rotation, ...), sample code, only the package renamed |
 
@@ -260,13 +270,18 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | Path | What |
 |---|---|
 | `src/app/` | Routes: `/` login, `/dashboard`, `/projects`, `/projects/new`, `/viewer/[id]`, `/floorplan/[id]`, `/workspace/boiler-room` |
+| `src/app/api/scans/route.ts`, `src/app/api/scans/[folder]/plan/route.ts` | Lists every bundle in `public/scans/` as a project (JSON) and serves each run's `layout/plan.png` as its thumbnail (D-074) |
+| `src/lib/scanBundles.ts` | Server side: reads the bundles' `scan.json`, `dataset/.scan_numbers.tsv` and the TRAINING.md headings (run ID, date) into project cards |
+| `src/lib/useAllProjects.ts`, `src/lib/mergeProjects.ts` | Client hook: `mockData.ts` projects + the listed bundles (no duplicates; a hand-written card opens the published copy when its folder is not on the server); used by `/projects` and `/viewer/run-<folder>` |
+| `src/lib/remoteBundles.ts` | Server side: scans published to the R2 bucket (`SCANS_BASE_URL`: `owners.json`, `scans/<owner>/index.json`) as project cards, id `run-<owner>-<folder>` (D-076) |
 | `src/components/Viewer3D/SplatCanvas.tsx` | **Real scan viewer** (Spark, `.spz`, label groups, mesh mode, measuring) |
 | `src/components/Viewer3D/Canvas3D.tsx`, `SceneBuilder.ts`, `MeasurementTool.ts` | Mock 3D scene (procedural room) and measuring for mock projects |
 | `src/components/ProjectDetail/ScanLayersPanel.tsx` | Scan Layers panel for real scans |
 | `src/components/...` | Dashboard, projects, floor plan, notifications, modals (mostly mock data) |
-| `src/lib/mockData.ts` | All mock projects / scans (the real scan is `newroom-scan`) |
+| `src/lib/mockData.ts` | Mock projects and the hand-written real ones (`newroom-scan`, `scan-008`); other processed scans are listed automatically (`scanBundles.ts`) |
 | `public/scans/newroom/` | The real labelled scan bundle (from `export_web.py`) |
-| `public/scans/scan_<id>_<tag>/` | Per-run bundles written by every `run_full.sh` run; gitignored (D-061), live only on the machine that ran it |
+| `public/scans/scan_<id>_<tag>/` | Per-run bundles written by every `run_full.sh` run; gitignored (D-061), live only on the machine that ran it; each one appears in the Projects tab by itself (D-074) |
+| `scans_archive/` | Older per-run bundles moved out of `public/scans/` (not served, not listed in Projects); gitignored, this PC only (D-075) |
 | `public/splats/` | Empty. The old v6 splat (`newroom_v6.spz`, 12.5 MB, unused since the labelled bundle) was taken out of git on 2026-11-06 (D-055); local copy in `saved_models/web/` on the Ubuntu PC |
 
 ## 8. `docs/`
@@ -275,6 +290,8 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 |---|---|
 | `progress/STATUS.md`, `DECISIONS.md`, `LOG.md`, `TRAINING.md` | The four live project records (CLAUDE.md §1) |
 | `progress/COMPLETION_PLAN.md` | **current** · Plan to finish by 2026-12-04: every open task by pipeline step, with done-when, dependencies, priority, week; snapshot of the shared doc (link inside) |
+| `progress/runs.tsv` | **current** · One row per run and room with start / end, wall, model and after-model minutes, every stage's minutes and COLMAP map phase seconds; filled from the run's files by `scripts/run_times.py update`, older / other-PC runs by hand from TRAINING.md (`source` column); empty = not measured (D-090) |
+| `progress/CHECKS_FOR_UMAIR.md` | **current** · Step 4 checks only Umair can do, on one page (room names #23, fixture sheets #21, newRoom detections #22, tape #20, browser #24, scan #3 platform #17), with the pipeline values to compare; written 2026-11-23 |
 | `progress/Problems_and_Solutions.md` | Technical evidence for every problem and fix (P&S §x) |
 | `progress/Research_Notes_2026-10-24.md` | Literature behind v8/v9 |
 | `progress/archive/` | Retired files (old TODO, Training_Analysis, early notes) |
@@ -307,8 +324,11 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `tests/conftest.py` | Shared fixtures (synthetic captures) |
 | `tests/test_common_*.py`, `test_imu.py`, `test_fallback.py`, `test_relocalize_and_sfm.py` | Pipeline maths: capture loading, poses, IMU, fallback, SfM helpers |
 | `tests/test_process_dataset.py` | First-prototype script |
+| `tests/test_run_times.py` | `scripts/run_times.py`: times from the files, map log only for its own tag, hand values kept, every check (D-090) |
 | `tests/test_server_api.py`, `test_server_pipeline.py`, `test_runpod_client.py`, `test_scan_numbers.py` | Upload server, local runner, RunPod client, scan numbers |
 | `tests/test_apk_checks.py` | APK / manifest checker and signing keys |
+| `tests/test_openings.py`, `tests/test_plan_export.py` | Wall-gap openings and the floor-plan export on synthetic rooms (#9, #12) |
+| `tests/test_publish_scan.py` | `publish_scan.py` against a folder bucket: index, owners, republish, unpublish to archive, refusals (D-076) |
 | `tests/test_changelog.py` | App changelog tool (`.github/android/changelog.py`) and that `android/CHANGELOG.md` has the current version |
 | `tests/test_sources_compile.py` | Every Python file compiles |
 | `tests/requirements.txt` | Light test dependencies (no GPU) |
@@ -340,7 +360,7 @@ tell what is current. **Nothing is ever deleted: retired files are archived** (`
      train/      run_v8.py geo_splatfacto.py export_nerfstudio.py
      scene/      layout.py semantic2d.py semantic3d.py verify_fixtures.py mesh.py mesh_labels.py
      export/     export_web.py to_spz.mjs
-     eval/       eval_offpath.py fair_compare.py compare_models.py fit_diag.py diagnose.py view.py ...
+     eval/       eval_offpath.py make_split.py sfm_scale_check.py tape_check.py fair_compare.py compare_models.py fit_diag.py diagnose.py view.py ...
      legacy/     ba.py mvs.py align_fuse.py pocket_prior.py make_init.py colmap_mvs.py train.py prepare.py ...
    ```
 

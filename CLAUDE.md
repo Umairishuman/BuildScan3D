@@ -125,6 +125,16 @@ and changes need agreement.
 - **Branches:** wants to use (and try out) the feature-branch flow: a new branch per piece of work, tested before it is
   merged.
 - **Decisions:** do not decide for him. Bring every choice to him with options and a recommendation; record his answer in DECISIONS.md.
+- **Runs are always closed** (2026-11-23): every TRAINING.md entry gets its end time, stage times, result and verdict
+  as soon as the run ends (failed, stopped or never started too: say so and why), and its index row gets the time and
+  verdict; never leave "(running)", "(pending)", "none so far" or "waiting" on a run that is over. At the start of every
+  session, check TRAINING.md (entries and index) for runs that are over but not closed, close them from the run's files
+  (`stages.tsv`, `timing.json`, logs) and tell Umair which ones were open. Every run also gets its row(s) in
+  `docs/progress/runs.tsv`; then `python3 scripts/run_times.py update` and `... check` (add `--training git:<branch>` for
+  the other branches' TRAINING.md) must end with 0 FAIL (D-090).
+- **Online storage (R2) never above 10 GB** (2026-11-19, D-077): no money for more than the free tier. Never upload
+  scans if the bucket total would pass 10 GB; `scripts/publish_scan.py` enforces a 9.5 GB cap and refuses otherwise.
+  Do not raise or work around the cap; if a publish is refused, tell him and let him choose what to free.
 - **His machine:** this Ubuntu PC (`gpu-lab-Precision-3680`, RTX 4000 Ada). Git identity configured (2026-11-06); GitHub
   over SSH. Do not install Docker on this PC for now (2026-11-06). The capture app is in `android/` (MAP.md §6); this
   PC has no Android SDK, so app changes are compiled by CI on push. `adb` (for USB uploads) is installed by Umair

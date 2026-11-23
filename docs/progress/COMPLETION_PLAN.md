@@ -32,7 +32,7 @@ evaluation needs new rooms recorded with tape measurements.
 | 1.2 | Install v0.3.5 on the phone: Play Protect warning, server search finds the PC, "Check for updates" works | All three checked on the Infinix, noted in STATUS 7.7 | 2.1 | Must | W1 | Umair | Done 2026-11-12 (Umair) |
 | 1.3 | Upload one recording from v0.3.5 | `camera.csv`, `anchors.csv` and the lens files arrive on the server | 2.1 | Must | W1 | Umair | Done 2026-11-12 (scan #3 (classroom, 2026-11-12) from v0.3.6 over USB, all files arrived) |
 | 1.4 | Record 2–3 real rooms with the capture protocol (two loops at chest and knee height, 360° turns from 2–3 points, every wall at two heights, close passes, all lights on) | Rooms on the PC, each checked READY by `buildscan check` | 1.2 | Must | W1 | Umair | In progress: scan #3 (classroom, 2026-11-12) processing (R-031) |
-| 1.5 | Tape-measure every recorded room: lengths, room height, doors, one switch and one socket height, 3 repeated readings each | Tape sheet per room saved next to the dataset | 1.4 | Must | W1 | Umair | Measured (Umair); sheet not yet in the dataset folder |
+| 1.5 | Tape-measure every recorded room: lengths, room height, doors, one switch and one socket height, 3 repeated readings each | Tape sheet per room saved next to the dataset | 1.4 | Must | W1 | Umair | Not measured yet (Umair, 2026-11-12: corrected; the room was needed for a class); expected within a few days |
 | 1.6 | Re-measure dropped frames (NFR1, ≥ 30 FPS) and the quality-check time per frame (NFR2, < 16 ms) | Both numbers measured on the phone, in STATUS §4 | 1.2 | Should | W2 |  | In progress: NFR1 measured on scan #3 (classroom, 2026-11-12), not met (3.3% dropped, 28.9 fps, R-031); NFR2 timing added to the app (`iqa_ms`, `feature/iqa-timing`), needs a phone recording |
 | 1.7 | Find out why ARCore depth was stale in newRoomAttemptSadness (all maps identical, confidence ≈ 0) | Cause found and fixed, or depth turned off (1.12) | — | Should | W2 |  | Closed 2026-11-12: not reproduced on scan #3 (782 distinct maps, R-031), D-067 |
 | 1.8 | Tune the quality thresholds on the phone (predicted blur warn > 5 px, bad > 10 px) | Thresholds checked on a test walk, values recorded | 1.2 | Should | W2 |  |  |
@@ -50,12 +50,12 @@ only runs from the command line.
 
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2.1 | Run the upload server from a checkout that includes PR #4 (local `master` is behind; the server runs from `exp/first-linux-run`) | `/health` answers from the updated code; a v0.3.5 upload keeps all files | — | Must | W1 |  |  |
-| 2.2 | Port `server/pipeline.py` to Linux (last part of STATUS 7.1 1f) | Server starts a job on this PC without Windows paths | — | Must | W1 |  |  |
-| 2.3 | Server jobs run the v9/v10 pipeline (`scripts/run_full.sh`) instead of v3 (OD-7) | An uploaded recording produces splat, layout, semantics, mesh and web bundle | 2.2, OD-7 | Must | W1 |  |  |
-| 2.4 | Job progress and results go back to the app and the dashboard (stage, percent, model link) | App shows progress; the finished scan opens in the dashboard | 2.3, 5.3 | Must | W2 |  |  |
+| 2.1 | Run the upload server from a checkout that includes PR #4 (local `master` is behind; the server runs from `exp/first-linux-run`) | `/health` answers from the updated code; a v0.3.5 upload keeps all files | — | Must | W1 |  | Issue #31 (2026-11-19). |
+| 2.2 | Port `server/pipeline.py` to Linux (last part of STATUS 7.1 1f) | Server starts a job on this PC without Windows paths | — | Must | W1 |  | Issue #31 (2026-11-19). · Tayyab: In progress 2026-11-14 (Tayyab, `exp/overnight-2026-11-14`): `server/pipeline.py` uses `toolpaths.ns_cmd`; not yet run on Linux |
+| 2.3 | Server jobs run the v9/v10 pipeline (`scripts/run_full.sh`) instead of v3 (OD-7) | An uploaded recording produces splat, layout, semantics, mesh and web bundle | 2.2, OD-7 | Must | W1 |  | Issue #31 (+ #32 auto-publish) (2026-11-19). · Tayyab: Option built 2026-11-14: `BUILDSCAN_PIPELINE=v9` runs `scripts/run_full.sh`; default v3 until OD-7; not yet run through an upload |
+| 2.4 | Job progress and results go back to the app and the dashboard (stage, percent, model link) | App shows progress; the finished scan opens in the dashboard | 2.3, 5.3 | Must | W2 |  | Issue #33 (2026-11-19). |
 | 2.5 | Final-1 exit gate (a): a 60 s capture uploads and triggers processing end to end | One logged run (TRAINING R-NNN) from phone to model | 2.3, 1.3 | Must | W2 |  |  |
-| 2.6 | Back up the release signing key `~/.buildscan3d-keys/` off this PC | Copy stored in an agreed safe place | — | Should | W1 |  |  |
+| 2.6 | Back up the release signing key `~/.buildscan3d-keys/` off this PC | Copy stored in an agreed safe place | — | Should | W1 |  | Issue #34 (2026-11-19). |
 | 2.7 | Docker image from `scripts/setup_linux.sh` (2a), built on GitHub Actions (2b), tested (2c) | Image runs the v9 pipeline on RunPod | 2.3 | Should | W2 |  |  |
 | 2.8 | RunPod end to end: create pod, process, download, terminate; find why it works poorly | One logged RunPod run with every error | 2.7 | Should | W2 |  |  |
 | 2.9 | Run the pipeline on the friend's PC (owner, GPU, OS in STATUS §6) | One logged run there | — | Could | W2 |  |  |
@@ -70,12 +70,12 @@ The v9 recipe gives the best model (R-023) but has been tested on one room only 
 
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 3.1 | Machine agreement: copy newRoomAttemptSadness here, run v9, compare with R-020 / R-023 | Logged run; PSNR / SSIM / scale within run-to-run noise of the 3070 | — | Must | W1 |  |  |
-| 3.2 | Process roomAttemptSadness2 and every new room (1.4) with the full v9 pipeline | One logged run per room, models kept in `saved_models/` | 1.4 | Must | W1 |  |  |
-| 3.3 | Optimise the processing time end to end; measure every change with the stage times | Before / after stage table for each change in TRAINING | 3.1 | Must | W2 |  |  |
-| 3.4 | Speed ideas to test in 3.3: blur only in the last third, photometric-only PatchMatch, ViT-S depth prior, faster `fast_mvs` (photometric or every 10th frame), faster `plane_seg` (~11 min CPU) | Each tried and kept or rejected with numbers | 3.3 | Must | W2 |  |  |
+| 3.1 | Machine agreement: copy newRoomAttemptSadness here, run v9, compare with R-020 / R-023 | Logged run; PSNR / SSIM / scale within run-to-run noise of the 3070 | — | Must | W1 |  | Partly done: R-037 (R-023 recipe, all frames, 103.0 min, no errors, 2026-11-12): room 6.63 × 4.37 m vs R-023 6.60 × 4.36 m; height 2.81 vs 2.72 m (D-072 took a higher plane, open); 18 vs 15 fixtures (unchecked); PSNR / SSIM need the R-014 split from Tayyab; scale vs R-023 not measured |
+| 3.2 | Process roomAttemptSadness2 and every new room (1.4) with the full v9 pipeline | One logged run per room, models kept in `saved_models/` | 1.4 | Must | W1 |  | scan #3 done (R-031, 2026-11-12, `saved_models/2026-11-12_r1112_scan003/`); new rooms to be recorded 2026-11-13 · Tayyab: In progress 2026-11-14: roomAttemptSadness2 v9 + PGSR model and layout done (R-069), semantics → web resuming |
+| 3.3 | Optimise the processing time end to end; measure every change with the stage times | Before / after stage table for each change in TRAINING | 3.1 | Must | W2 |  | Baseline stage times from R-031; Tayyab is doing it on the 3070 PC (SfM, priors I/O, photometric PatchMatch, training; LOG 2026-11-12); check his recipe on scan #3 vs R-031; runs on scan #3 (D-069) Issue #36 (2026-11-19). · Tayyab: In progress (Tayyab): training 42.5 → 28.2 min, init 20.1 → 7.5 min at equal quality (R-062, R-063), with PGSR 46 → 33 min (R-041); adoption OD-10 |
+| 3.4 | Speed ideas to test in 3.3: blur only in the last third, photometric-only PatchMatch, ViT-S depth prior, faster `fast_mvs` (photometric or every 10th frame), faster `plane_seg` (~11 min CPU) | Each tried and kept or rejected with numbers | 3.3 | Must | W2 |  | In progress: photometric PatchMatch kept (R-063); MCMC rejected (R-070); more in TRAINING R-042, R-043 |
 | 3.5 | Time the pipeline on a cloud RTX 4090 (NFR3 is stated for a 4090) | Measured total and stage times on a 4090 | 2.8 | Should | W2 |  |  |
-| 3.6 | Repeat runs of one setting to measure run-to-run noise | ≥ 3 runs, spread of PSNR / SSIM / scale reported | 3.1 | Should | W2 |  |  |
+| 3.6 | Repeat runs of one setting to measure run-to-run noise | ≥ 3 runs, spread of PSNR / SSIM / scale reported | 3.1 | Should | W2 |  | Prepared: held-out split for scan #3 (D-070, `make_split.py`); the 3 repeats not started Issue #36 (2026-11-19). |
 | 3.7 | Ceiling and upper walls are the weakest surfaces: capture guidance to look up, or stronger planar priors | Ceiling quality improved on one room, measured | 3.2 | Should | W2 |  |  |
 | 3.8 | IMU fallback (the stated novelty): decide whether v9 uses it (OD-6) | Decision recorded with a reason for the report | OD-6 | Should | W1 |  |  |
 | 3.9 | IMU fallback: tune BA pass 2 so it keeps PnP accuracy (8.2 → 15.1 px today); use bridged frames with per-frame pose refinement | Accuracy kept after BA; bridged frames used in training | 3.8 | Should | W2 |  |  |
@@ -87,6 +87,7 @@ The v9 recipe gives the best model (R-023) but has been tested on one room only 
 | 3.15 | Anti-aliasing (Mip-Splatting idea, gsplat `antialiased`) with an antialiased-aware viewer | Zoomed views compared | 5.10 | Could | W3 |  |  |
 | 3.16 | Faster 3DGS methods with their own CUDA rasterizer (FastGS, Taming-3DGS budget), cloud only | Tried on RunPod, or recorded as future work | 2.8 | Could | W3 |  |  |
 | 3.17 | Legacy own-trainer items (block-wise training, `diagnose.py`, Census + SGM, PocketGS, `--near_cam`, 7.4% floaters): confirm obsolete | Each marked obsolete in STATUS with the reason | — | Could | W3 |  |  |
+| 3.18 | Optional: SfM memory for long recordings. Add COLMAP `hierarchical_mapper` (images in overlapping groups, solved one group at a time, then merged) as a `sfm_colmap.py --mapper` choice; test it on newRoomAttemptSadness against R-037 (registered frames 1157 / 1166, Sim3 median 3.3 cm, room 6.63 × 4.37 m, PSNR / SSIM where a split exists) and on scan_008; also compare `--max_features 4096` | Peak RAM, time and quality measured for each option against R-037; kept or rejected in DECISIONS (follows D-073) | — | Could | W1 | Umair | Planned for Thursday 2026-11-19 (Umair). Why: R-038 killed by OOM in `global_mapper` (26.1 GB, 16.2 M observations); scan_008 gives ~4–6× more observations per frame than earlier rooms (R-038 9,877 per frame, R-039 9,638; R-037 1,523, scan #3 `r1112` 2,380); R-039 (window 9, 10.8 M) passed with ~2 GB RAM to spare, global positioning 28.3 min vs 1.7 min in R-037 Issue #35 (2026-11-19). |
 
 ## Step 4 · Room layout, semantics and mesh
 
@@ -95,18 +96,37 @@ layout picked a wrong ceiling in R-030 (1.50 m in a room ~3.1 m tall).
 
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 4.1 | Fix the ceiling detection in `layout.py` (R-030: 1.50 m; model extent 3.08 m) | R-030 and the new rooms give the right height against tape | 1.5 | Must | W1 |  |  |
-| 4.2 | Run semantics v10 on roomAttemptSadness2 and every new room; a person checks each fixture | Per-room table of found / missed / false fixtures | 3.2 | Must | W2 |  |  |
-| 4.3 | Fixture dimensions in the viewer (width, height, height above floor, area) (FR10) | Clicking a fixture shows its size; checked against tape on one room | 4.2 | Must | W2 |  |  |
-| 4.4 | Confirm the three new v10 detections on newRoom (`door_1`, `door_6`, `tube_light_1`) | Checked by the person who knows the room | — | Should | W1 |  |  |
-| 4.5 | Open doorways (no door leaf) from gaps in the layout walls; windows on room 2 | Doorways found on one room | 4.1 | Should | W2 |  |  |
-| 4.6 | Fix the two misses on newRoom: socket under the ironing table, round light #14 (the "clock" decoy wins) | Both found without new false positives | — | Should | W2 |  |  |
-| 4.7 | Widen the thin CLIP margins (false sockets 0.45–0.47 vs threshold 0.5) and re-check the 25% switchboard rule (3 plates) | Rule checked on the new rooms | 4.2 | Should | W2 |  |  |
-| 4.8 | Small switch plates need ~30 confirming frames: lower the need or add capture guidance | A fast walk past a switch still finds it | 4.2 | Should | W3 |  |  |
-| 4.9 | Right-angle priors and an as-built floor-plan export (format agreed) | Plan exported for each room | 4.1 | Should | W2 |  |  |
-| 4.10 | Layout for spaces that are not rooms (R-029 corridor end: 1 wall, 0 corners) | Corridor gives sensible walls or a clear warning | 4.1 | Could | W3 |  |  |
-| 4.11 | Edge-based corner and blank-wall detection (gravity-aware lines, wall–floor boundary) | Plain walls found on one room | 4.1 | Could | W3 |  |  |
-| 4.12 | Mesh: wall 3 and the ceiling stay rough (> 2.5 cm); mark `structure.py` superseded by `layout.py` | Roughness reduced and measured; STATUS updated | — | Could | W3 |  |  |
+| 4.1 | Fix the ceiling detection in `layout.py` (R-030: 1.50 m; model extent 3.08 m) | R-030 and the new rooms give the right height against tape | 1.5 | Must | W1 |  | Cause found and fixed 2026-11-12: models 9–12° off gravity (R-032); SfM export levels with ARCore gravity (D-071), `level_model.py` for old models, ceiling not below wall tops (D-072). scan #3 2.52 m / 4 walls (R-035), scan #2 2.41 m (R-036); tape pending; 2026-11-19: no-roof spaces fixed (#8, R-053: scan #7 walls 3.12 m, other rooms unchanged); tape still pending (#20) · Tayyab: Fix on `exp/overnight-2026-11-14` (strongest ceiling candidate with < 3% of the model above it); needs a rerun of R-030's layout and a tape check |
+| 4.2 | Run semantics v10 on roomAttemptSadness2 and every new room; a person checks each fixture | Per-room table of found / missed / false fixtures | 3.2 | Must | W2 |  | scan #3 check sheet ready (`gs_r1112lev/semantic_v10/fixture_check.md`, 18 fixtures, `fixture_checklist.py`); waiting for Umair's check; 2026-11-19: scan #8 (R-039) 11 fixtures, no sheet yet; scan #7 (R-040) **0 fixtures, 29 rejected** (STATUS §7.5); Sheets for scans #7 / #8 written with the rejected candidates (#13); filling them in is Umair's (#21); 2026-11-23: scan #6 (R-059) 11 fixtures, 84 rejected, sheet R-103; all sheets listed in `docs/progress/CHECKS_FOR_UMAIR.md` |
+| 4.3 | Fixture dimensions in the viewer (width, height, height above floor, area) (FR10) | Clicking a fixture shows its size; checked against tape on one room | 4.2 | Must | W2 |  | Built 2026-11-12: size card in Scan Layers + clickable markers; `export_web.py` adds bottom / top; not checked in a browser or against tape; Browser check (#24) and tape (#20) are Umair's |
+| 4.4 | Confirm the three new v10 detections on newRoom (`door_1`, `door_6`, `tube_light_1`) | Checked by the person who knows the room | — | Should | W1 |  | Umair (#22) |
+| 4.5 | Open doorways (no door leaf) from gaps in the layout walls; windows on room 2 | Doorways found on one room | 4.1 | Should | W2 |  | 2026-11-19 built (#9): `openings.py`, gaps in the walls with the model seen through them; R-054 / R-055; real rooms to confirm (#21) |
+| 4.6 | Fix the two misses on newRoom: socket under the ironing table, round light #14 (the "clock" decoy wins) | Both found without new false positives | — | Should | W2 |  | 2026-11-19 blocked (#16): positions in `audit_ground_truth.json` on the 3070 PC |
+| 4.7 | Widen the thin CLIP margins (false sockets 0.45–0.47 vs threshold 0.5) and re-check the 25% switchboard rule (3 plates) | Rule checked on the new rooms | 4.2 | Should | W2 |  | 2026-11-19 measured (#14): 17 of 80 candidates within ±0.1 of 0.5; blocked on #21; 2026-11-23 + scan #6: 22 of 99 |
+| 4.8 | Small switch plates need ~30 confirming frames: lower the need or add capture guidance | A fast walk past a switch still finds it | 4.2 | Should | W3 |  | 2026-11-19 measured (#15): accepted plates have 19–82 frames, only 2 dropped for < 6; blocked on #21; 2026-11-23 scan #6: 12–69 frames, none dropped for < 6 |
+| 4.9 | Right-angle priors and an as-built floor-plan export (format agreed) | Plan exported for each room | 4.1 | Should | W2 |  | 2026-11-19 built (#12): `plan_export.py`, plan.json / .svg / .dxf per run (stage 16), `--square` optional; format to agree |
+| 4.10 | Layout for spaces that are not rooms (R-029 corridor end: 1 wall, 0 corners) | Corridor gives sensible walls or a clear warning | 4.1 | Could | W3 |  | 2026-11-19 built (#10): `room_closed` + warnings; floor area only for a closed outline (scan #3's was a triangle); `--infer_gap` optional |
+| 4.11 | Edge-based corner and blank-wall detection (gravity-aware lines, wall–floor boundary) | Plain walls found on one room | 4.1 | Could | W3 |  | 2026-11-19 (#11): scan #7's plank faces analysed; `--raised_max 1.5` on in `run_full.sh` (D-075); R-057: scans #7 / #8 closed 4-wall rooms; #11 closed |
+| 4.12 | Mesh: wall 3 and the ceiling stay rough (> 2.5 cm); mark `structure.py` superseded by `layout.py` | Roughness reduced and measured; STATUS updated | — | Could | W3 |  | 2026-11-19 (#18): roughness measured; `--clean_ceiling 0.04` on (D-075), R-057 ceilings 4.35 / 4.31 → 0.04 cm; `structure.py` marked obsolete; #18 closed; rough walls left; 2026-11-23 R-104: 16 of 20 walls ≤ 0.26 cm; the rough ones are offset stretches joined into one wall (scan #8 wall 1, scan #6 wall 5) or a bowed wall (newRoom wall 3), not noise; options to Umair |
+
+### Step 4: what is blocked, and on whom (2026-11-19)
+
+Everything an agent can do without the people below is done or running; GitHub issues #8 – #25 (label `step-4`).
+Code changes that alter results are on, only where they fix a plain bug; new heuristics are off by default.
+
+| Blocked item | Waiting for | Issue |
+|---|---|---|
+| (2026-11-23) All of Umair's checks below on one page, with the pipeline values to compare | Umair | `docs/progress/CHECKS_FOR_UMAIR.md` |
+| Height check of every room (4.1), fixture size card vs tape (4.3), NFR6 (E2) | Umair: tape measurements | #20 |
+| Found / missed / false per room (4.2, E3); threshold choices for the crop check (4.7) and frame minimum (4.8); are the wall-gap openings real (4.5) | Umair: fill in `fixture_check.md` for scans #3, #7, #8, newRoom | #21 |
+| newRoom's three new detections (4.4) | Umair | #22 |
+| newRoom misses (4.6) | `audit_ground_truth.json` from the 3070 PC (Tayyab), or Umair marks them | #16 |
+| Room names on the web cards | Umair | #23 |
+| Splats / start view / size card in a real browser | Umair | #24 |
+| ~~Merge `origin/master`~~ (done 2026-11-19, PR #39; numbering D-079). Still open: both ceiling rules (`d052301` then D-072 / #8) run in sequence, rerun the R-057 rooms | Agent, after R-061 (GPU) | #25 |
+| ~~Scans #5 / #6 processed~~ | Unblocked 2026-11-19 (`run-r1118` closed by Umair): scan #6 R-058 running, scan #5 R-059 next | #19 |
+| ~~Defaults to confirm~~ (no-roof thresholds, view-through minimum, `--infer_gap`, `--raised_max`, `--clean_ceiling 0.04`, `--square`, plan format) | **Settled 2026-11-19 by D-075 (Umair: all on).** Checked together in R-057 (four rooms; scan #8's lost plate was on furniture, Umair) | OD-13 |
+| Floor platform on scan #3 (fit the dominant floor level only?) | Umair: is there a raised platform, how high | #17 (`--floor_win 0.06` now on by D-075; R-057: semantic ceiling 2.582 m vs layout 2.525 m on scan #3; the tape check still open) |
 
 ## Step 5 · Compression and web delivery
 
@@ -116,12 +136,12 @@ visually lossless); the `.ksplat` converter itself is not in the repo.
 
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 5.1 | Decide `.spz` (in use) or `.ksplat` (proposal) for delivery (OD-1) | Decision in DECISIONS.md with sizes and quality of both | 5.4 | Must | W1 |  |  |
-| 5.2 | Merge or close `feat/splat-compress` and `exp/trainer-arkitscenes` (OD-4); if kept, add the `.ksplat` converter or its install step | Branches merged through a PR or closed with a note | 5.1 | Must | W1 |  |  |
-| 5.3 | Every processed scan appears in the dashboard without hand-editing `mockData.ts` | A new run's bundle shows up and opens | 2.3 | Must | W2 |  |  |
+| 5.1 | Decide `.spz` (in use) or `.ksplat` (proposal) for delivery (OD-1) | Decision in DECISIONS.md with sizes and quality of both | 5.4 | Must | W1 |  | Issue #37 (2026-11-19). |
+| 5.2 | Merge or close `feat/splat-compress` and `exp/trainer-arkitscenes` (OD-4); if kept, add the `.ksplat` converter or its install step | Branches merged through a PR or closed with a note | 5.1 | Must | W1 |  | Issue #37 (2026-11-19). |
+| 5.3 | Every processed scan appears in the dashboard without hand-editing `mockData.ts` | A new run's bundle shows up and opens | 2.3 | Must | W2 | Umair | Done on this PC 2026-11-19 (D-074): Projects tab lists every bundle in `public/scans/` (`/api/scans`), opens at `/viewer/run-<folder>`; splats not yet seen in a real browser. Bundles from server jobs follow once 2.3 runs `run_full.sh`. 2026-11-19: online site decided (D-076: Vercel `https://build-scan-3d.vercel.app/` + Cloudflare R2, one prefix per person); code for #27 – #29 on `feature/vercel-deploy`; waits for Umair's bucket and keys (#26), then deploy + browser check (#30) |
 | 5.4 | Measure compression quality: render original and compressed at the same views (PSNR / SSIM) on a real GPU, for `.spz` and `.ksplat` | Table of size and quality for both formats on 2 scans | — | Must | W1 |  |  |
-| 5.5 | Web UI step 8: empty and error states (S9) | All pages handle no data and failed loads | — | Must | W2 |  |  |
-| 5.6 | Fix the web UI known issues: list view toggle, `globals.css` conflicts, stub buttons, every floor-plan room opens the same model, inert measurement types, missing thumbnails | Each issue closed in `prototype/web-ui/STATUS.md` §6 | — | Should | W2 |  |  |
+| 5.5 | Web UI step 8: empty and error states (S9) | All pages handle no data and failed loads | — | Must | W2 |  | Issue #38 (2026-11-19). |
+| 5.6 | Fix the web UI known issues: list view toggle, `globals.css` conflicts, stub buttons, every floor-plan room opens the same model, inert measurement types, missing thumbnails | Each issue closed in `prototype/web-ui/STATUS.md` §6 | — | Should | W2 |  | Issue #38 (2026-11-19). |
 | 5.7 | Try Zaid's opacity pruning + colour reduction before the `.spz` export; check quality (D-040 found floater pruning hurt) | Kept or rejected with numbers | 5.4 | Should | W2 |  |  |
 | 5.8 | Adaptive splat budget / level of detail for weak devices (FR9, NFR5) | Viewer holds ≥ 30 FPS on the target phone | E5 | Should | W2 |  |  |
 | 5.9 | Measuring: snap clicks to corners and edges (removes the endpoint bias) | Snapping on; tape comparison repeated | 4.1 | Should | W2 |  |  |
@@ -135,7 +155,7 @@ NFR6 (accuracy, on v3) are met with measurements.
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | E1 | Final-1 exit gate (d) / contribution 1: COLMAP with vs without ARCore priors on low-texture captures (ATE, track completion) | Table for ≥ 2 rooms in the report | 3.2 | Must | W2 |  |  |
-| E2 | Accuracy vs tape (NFR6 ≤ 5%): script that compares model measurements with tape, mean / max error in cm, on ≥ 2 rooms with v9 | Script in repo; numbers per room | 1.5, 3.2, 4.1 | Must | W2 |  |  |
+| E2 | Accuracy vs tape (NFR6 ≤ 5%): script that compares model measurements with tape, mean / max error in cm, on ≥ 2 rooms with v9 | Script in repo; numbers per room | 1.5, 3.2, 4.1 | Must | W2 |  | Script done 2026-11-14 (`tape_check.py`); newRoom: room length −1.49%; other rooms need tape sheets |
 | E3 | Semantic precision / recall / mIoU on rooms the rules were not tuned on (contribution 3) | Per-class table on ≥ 2 rooms | 4.2 | Must | W2 |  |  |
 | E4 | Pipeline time per stage, per machine (NFR3: 60 s video in 15 min on a 4090) | Table: this PC, 3070, 4090 if available | 3.3, 3.5 | Must | W2 |  |  |
 | E5 | Viewer FPS, GPU memory and load time on a mid-range Android browser vs an unoptimised viewer (NFR5 ≥ 30 FPS, contribution 4) | Measured table for 2 scans | 5.3 | Must | W2 |  |  |
@@ -151,8 +171,8 @@ NFR6 (accuracy, on v3) are met with measurements.
 
 | # | Task | Done when | Needs | Priority | Week | Owner | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| I1 | Merge `exp/first-linux-run` (Linux scripts, `buildscan`, records) into `master` through a PR | PR merged with CI green | — | Must | W1 |  |  |
-| I2 | Write the missing tests; raise the coverage gate back to 40% (D-054; now 35%, measured 37.4%) | CI passes at 40% | — | Must | W3 |  |  |
+| I1 | Merge `exp/first-linux-run` (Linux scripts, `buildscan`, records) into `master` through a PR | PR merged with CI green | — | Must | W1 |  | Done 2026-11-12 (merged in PR #5) |
+| I2 | Write the missing tests; raise the coverage gate back to 40% (D-054; now 35%, measured 37.4%) | CI passes at 40% | — | Must | W3 |  | Tests added 2026-11-14: 45% locally; gate back to 40% after CI confirms (D-054, Umair) |
 | I3 | Update README and AGENTS.md: folder tree, dropped MEP / YOLOv8 layers, ~75 min, `structure.py` (OD-9) | Both match the current pipeline | OD-9 | Must | W3 |  |  |
 | I4 | Keep the records current: a TRAINING entry for every run, LOG per session, STATUS at the end of each session | Checked at each weekly gate | — | Must | W1–W3 |  |  |
 | I5 | Archive the dead files with their owners' agreement: `train_fixed2_backup.py`, `train_v3_backup.py`, old `run_*.bat`, `scratch/`, `ViewerHUD.tsx` (OD-8) | Moved to archive folders, MAP updated | OD-8 | Should | W3 |  |  |

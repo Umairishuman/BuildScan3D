@@ -45,7 +45,11 @@ import java.util.concurrent.TimeUnit;
  *                 frame (map merge / loop closure); a jump in an anchor's logged pose = a re-anchor event, and
  *                 its size is the correction (newRoomAttemptSadness had an unlogged ~1 m / 28 deg one).
  *   lens_metadata.json, camera_characteristics.json   lens calibration/distortion (ARCore metadata, Camera2)
- *   depth/<timestamp_ns>.depth  raw uint16 mm, depth/<timestamp_ns>.conf  uint8 (ARCore raw depth)
+ *   depth/<timestamp_ns>.depth  raw uint16 mm, depth/<timestamp_ns>.conf  uint8 (ARCore raw depth). Named by the
+ *                 timestamp of the camera frame the depth map was computed from (Image.getTimestamp()), which can be
+ *                 older than the frame it was acquired on; before 2026-11-15 it was the acquiring frame's timestamp.
+ *   depth/timestamps.csv  frame_ts_ns,depth_ts_ns,pose_source (matched = pose of the depth's own frame,
+ *                 current = depth ts not among the recent poses, so the acquiring frame's pose/ts were used)
  *   meta.json     camera config, image + depth resolution, device
  */
 public class CaptureLogger {
@@ -57,7 +61,13 @@ public class CaptureLogger {
 
   private final File dir;
   private final ExecutorService io = Executors.newSingleThreadExecutor();
-  private BufferedWriter poses, tracking, points, quality, cameraMeta, anchorsOut;
+  private BufferedWriter poses, tracking, points, quality, cameraMeta, anchorsOut, depthTimes;
+  // Recent tracked camera poses by frame timestamp (GL thread only), to give each raw depth map the pose of the
+  // frame it was computed from instead of the pose of the (later) frame it was acquired on.
+  private static final int POSE_RING = 32;
+  private final long[] ringTs = new long[POSE_RING];
+  private final Pose[] ringPose = new Pose[POSE_RING];
+  private int ringNext = 0;
   private long lastDepthTs = 0;
   private long lastDepthImageTs = -1;
   private final List<Anchor> anchors = new ArrayList<>();
@@ -83,6 +93,15 @@ public class CaptureLogger {
     cameraMeta.write("timestamp_ns,exposure_ns,rolling_shutter_skew_ns,frame_duration_ns,iso,focus_distance_diopter,ae_state,awb_state,lens_state\n");
     anchorsOut = new BufferedWriter(new FileWriter(new File(dir, "anchors.csv")), 1 << 16);
     anchorsOut.write("timestamp_ns,anchor_id,tracking_state,tx,ty,tz,qx,qy,qz,qw\n");
+    depthTimes = new BufferedWriter(new FileWriter(new File(dir, "depth/timestamps.csv")), 1 << 14);
+    depthTimes.write("frame_ts_ns,depth_ts_ns,pose_source\n");
+  }
+
+  private Pose poseAt(long ts) {
+    for (int i = 0; i < POSE_RING; i++) {
+      if (ringPose[i] != null && ringTs[i] == ts) return ringPose[i];
+    }
+    return null;
   }
 
   /** Per-frame live-IQA record (see QualityMonitor). */
@@ -102,6 +121,9 @@ public class CaptureLogger {
     if (state != TrackingState.TRACKING) return;
 
     Pose pose = camera.getPose();
+    ringTs[ringNext] = ts;
+    ringPose[ringNext] = pose;
+    ringNext = (ringNext + 1) % POSE_RING;
     float[] t = pose.getTranslation();
     float[] q = pose.getRotationQuaternion();
     CameraIntrinsics intr = camera.getImageIntrinsics();
@@ -140,10 +162,19 @@ public class CaptureLogger {
   private boolean saveRawDepth(Frame frame, long ts, Pose pose, CameraIntrinsics intr) {
     try (Image depth = frame.acquireRawDepthImage16Bits();
          Image conf = frame.acquireRawDepthConfidenceImage()) {
-      if (depth.getTimestamp() == lastDepthImageTs) {
+      final long dts = depth.getTimestamp();
+      if (dts == lastDepthImageTs) {
         return false;                                   // ARCore has not produced a new depth map yet
       }
-      lastDepthImageTs = depth.getTimestamp();
+      lastDepthImageTs = dts;
+      // The depth map belongs to the frame it was computed from; using the acquiring frame's pose misplaces it
+      // by however far the phone moved in between (coverage dots trailed / floated while walking).
+      final Pose dPose = poseAt(dts);
+      final boolean matched = dPose != null;
+      final long nameTs = matched ? dts : ts;
+      final Pose usePose = matched ? dPose : pose;
+      final String tsLine = ts + "," + dts + "," + (matched ? "matched" : "current") + "\n";
+      post(() -> write(depthTimes, tsLine));
       final byte[] d = copyPlane(depth);
       final byte[] cf = copyPlane(conf);
       final int w = depth.getWidth(), h = depth.getHeight();
@@ -151,11 +182,11 @@ public class CaptureLogger {
       if (cov != null) {
         final float[] fl = intr.getFocalLength(), pp = intr.getPrincipalPoint();
         final int[] dims = intr.getImageDimensions();
-        post(() -> cov.addDepth(d, cf, w, h, pose, fl, pp, dims[0], dims[1]));
+        post(() -> cov.addDepth(d, cf, w, h, usePose, fl, pp, dims[0], dims[1]));
       }
       post(() -> {
-        writeBytes(new File(dir, "depth/" + ts + ".depth"), d);
-        writeBytes(new File(dir, "depth/" + ts + ".conf"), cf);
+        writeBytes(new File(dir, "depth/" + nameTs + ".depth"), d);
+        writeBytes(new File(dir, "depth/" + nameTs + ".conf"), cf);
         if (!new File(dir, "depth/size.txt").exists()) {
           writeBytes(new File(dir, "depth/size.txt"), (w + " " + h + "\n").getBytes());
         }
@@ -349,6 +380,7 @@ public class CaptureLogger {
         quality.close();
         cameraMeta.close();
         anchorsOut.close();
+        depthTimes.close();
       } catch (IOException e) {
         Log.e(TAG, "close failed", e);
       }
