@@ -149,6 +149,7 @@ R-032 – R-040 now always mean Umair's runs on the Ubuntu PC; R-041 – R-046 (
 | R-100 | 2026-11-22 | scan_009: floater clean-up (`clean_splats.py --mono`) on R-096's model, no retraining | 3070 | 37 min (3 cleanings 20 s, evaluations 36 min) | aligned on 63 held-out frames: both rules 23.31, see-through rule only 23.54, camera-path rule only 23.40 (R-096 23.63); bathroom doorway (125 s) unchanged | Rejected as the doorway fix; see-through rule neutral, camera-path rule harmful |
 | R-101 | 2026-11-22 | scan_009: R-096 plus camera refinement in training (`--pose_opt`, `v9plo`) | 3070 | 30.4 min (train 24.3, R-096 22.5) | aligned 23.96 vs R-096 23.63 (63 frames), SSIM 0.896 vs 0.888; 35 frames > 0.5 dB better, 13 worse; doorway (125 s) unchanged | Kept (modest gain, +1.8 min training) |
 | R-102 | 2026-11-22 | scan_009: second loop round with a pair check (`loop_path.py --gate 10`), R-096's recipe (`v9plg`) | 3070 | 28.5 min + 1.5 min solve / BA | aligned 22.91 vs R-096 23.58 on 60 common frames; 30 – 90 s +1.6 – 1.8 dB, 134 – 140 s broken again (20.10 → 15.83); path hole 125.4 – 133.2 s found | Rejected (the hole, not the pairs, breaks 134 – 140 s) |
+| R-103 | 2026-11-23 | scan_009: R-101's recipe (R-096 cameras + `--pose_opt`) on all frames, for the viewer (`v9plq`) | 3070 | running | | |
 
 ## Runs
 
@@ -2893,3 +2894,18 @@ igs.txt`):
   break the stretch after the 125 – 133 s hole. Finding for the analyzer (PIPELINE_ANALYZER_PLAN): detect path holes
   (unplaced keyframes, blur, no ARCore pose) and keep a loop correction from moving one side of a hole against the
   other unless pairs tie both sides.
+
+### R-103 · 2026-11-23 · scan_009_057ed3beb4fc: R-101's recipe on all frames, for the viewer (`v9plq`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `docs/featureless-tracking-plan` @ 0179ca3
+- **Dataset:** `work_v9pfz` → `work_v9plq`; R-096's cameras `work_v9pfy_sfm/sparse_loop2_pba` → `work_v9plq_sfm/sparse/0`
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r103.sh` (log `r103.log`): as `r099.sh` with tag `v9plq` and
+  `--pose_opt`, no `--split`; `offpath_views.py` with R-096
+- **Goal:** plan step 5 (Tayyab "you can resume", 2026-11-23, after the agent recommended it): the best recipe so far
+  (R-101, +0.33 dB aligned over R-096) on every frame, as the model for the viewer (replaces R-099 / `scan-009-loops`
+  if Tayyab agrees). No held-out score possible.
+- **Start → end:**
+- **Errors during the run:**
+- **Result:**
+- **Verdict:**
