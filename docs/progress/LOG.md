@@ -1013,3 +1013,9 @@ plan updated (detect path holes; hole-aware loop checks).
 - Next: Tayyab looks at `scan-009-poseopt`; then the analyzer (D-095) or a hole-aware loop round, his choice.
 - Umair's notice (2026-11-23, D-091) read: our unpushed R-101 – R-103 / D-082 clashed with his renumbered ones; ours
   moved to R-120 – R-122 / D-095 (D-096, Tayyab "do whats best"). Disk: 4.2 → 7.0 GB free (rejected-run bulk).
+- Merge of `origin/master` and `origin/docs/tayyab-notice` into `docs/featureless-tracking-plan` (2026-11-23): conflicts
+  only in DECISIONS / LOG / STATUS / TRAINING; master's closed entries kept (R-059's start / errors lines on this branch
+  were a stray copy of R-082's, which R-082 still has). Umair's notice acted on and archived: R-120 – R-122 rows in
+  runs.tsv, 22 of Tayyab's rows given their model folder (exact times from `timing.json`); `run_times.py check`: 3 FAIL,
+  all Umair's unpushed `exp/colmap-cudss` runs (R-061, R-101, R-102), the same on `master` alone. On Windows the script
+  needs `PYTHONIOENCODING=utf-8` (it crashes printing "→" to a cp1252 console). Not touched: `android/CHANGELOG.md`.
