@@ -107,6 +107,16 @@ class GeoSplatfactoModelConfig(SplatfactoModelConfig):
     path_prune_radius: float = 0.1
     path_prune_sigmas: float = 2.0
     path_prune_every: int = 500
+    # room-plane anchoring (plane_anchor.py, 2026-11-24): one shared plane per wall / floor / ceiling found from the
+    # splats every plane_fit_every steps, splats near it moved plane_alpha of the way onto it every plane_proj_every
+    plane_anchor: bool = False
+    plane_start: int = 5000
+    plane_fit_every: int = 500
+    plane_proj_every: int = 100
+    plane_alpha: float = 0.5
+    plane_cam_y: float = float("nan")     # median camera height (one floor / one ceiling rule); nan = off
+    plane_merge: float = 0.9
+    plane_level_merge: float = 0.8
 
 
 class GeoSplatfactoModel(SplatfactoModel):
@@ -138,6 +148,13 @@ class GeoSplatfactoModel(SplatfactoModel):
         if self.config.path_prune_points and os.path.exists(self.config.path_prune_points):
             self._path_pts = torch.from_numpy(np.load(self.config.path_prune_points)).float()
             self._path_pruned = 0
+        self._planes = None
+        if self.config.plane_anchor:
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from plane_anchor import PlaneAnchor
+            cy = self.config.plane_cam_y
+            self._planes = PlaneAnchor(cam_y=None if cy != cy else cy, alpha=self.config.plane_alpha,
+                                       merge=self.config.plane_merge, level_merge=self.config.plane_level_merge)
         if self.config.revised_opacity and self.config.mcmc_cap <= 0:
             self.strategy.revised_opacity = True
         if self.config.mcmc_cap > 0:
@@ -283,6 +300,18 @@ class GeoSplatfactoModel(SplatfactoModel):
         super().step_post_backward(step)
         if self._path_pts is not None and self.step > 0 and self.step % self.config.path_prune_every == 0:
             self._prune_near_path()
+        cfg = self.config
+        if self._planes is not None and self.step >= cfg.plane_start:
+            if (self.step - cfg.plane_start) % cfg.plane_fit_every == 0:
+                pl = self._planes.fit(self.means, self.quats, self.scales, self.opacities)
+                fl = sorted(round(p["offset"], 2) for p in pl if p["axis"] == 1)
+                print(f"plane anchor at step {self.step}: {len(pl)} planes (horizontal at {fl}), "
+                      f"{sum(len(p['copies']) for p in pl)} copies merged", flush=True)
+            if (self.step - cfg.plane_start) % cfg.plane_proj_every == 0:
+                n, d = self._planes.project(self.means, self.quats, self.scales)
+                if (self.step - cfg.plane_start) % cfg.plane_fit_every == 0:
+                    print(f"plane anchor at step {self.step}: {n} of {len(self.means)} splats moved, mean distance "
+                          f"before {d:.3f} units", flush=True)
 
     @torch.no_grad()
     def _prune_near_path(self):
@@ -453,6 +482,12 @@ if __name__ == "__main__":
                          "every --path_prune_every steps (FEATURELESS 10.e); path from frames.json next to --data")
     ap.add_argument("--path_prune_sigmas", type=float, default=2.0)
     ap.add_argument("--path_prune_every", type=int, default=500)
+    ap.add_argument("--plane_anchor", action="store_true",
+                    help="room-plane anchoring (plane_anchor.py): splats near one shared plane per wall / floor / "
+                         "ceiling are moved onto it during training; camera height from frames.json next to --data")
+    ap.add_argument("--plane_start", type=int, default=5000); ap.add_argument("--plane_fit_every", type=int, default=500)
+    ap.add_argument("--plane_proj_every", type=int, default=100); ap.add_argument("--plane_alpha", type=float, default=0.5)
+    ap.add_argument("--plane_merge", type=float, default=0.9); ap.add_argument("--plane_level_merge", type=float, default=0.8)
     args = ap.parse_args()
     from nerfstudio.configs.method_configs import method_configs
     from nerfstudio.data.dataparsers.nerfstudio_dataparser import NerfstudioDataParserConfig
@@ -500,6 +535,16 @@ if __name__ == "__main__":
         kw.update(path_prune_points=os.path.join(wk, "path_points.npy"), path_prune_radius=args.path_prune,
                   path_prune_sigmas=args.path_prune_sigmas, path_prune_every=args.path_prune_every)
         print(f"path prune: {len(pp)} path points, radius {args.path_prune:g}, every {args.path_prune_every} steps")
+    if args.plane_anchor:
+        import json as _json
+        wk = os.path.dirname(os.path.abspath(args.data))
+        cy = float(np.median([np.array(f["c2w"])[1, 3] for f in _json.load(open(os.path.join(wk, "frames.json")))["frames"]
+                              if f.get("c2w") is not None]))
+        kw.update(plane_anchor=True, plane_start=args.plane_start, plane_fit_every=args.plane_fit_every,
+                  plane_proj_every=args.plane_proj_every, plane_alpha=args.plane_alpha, plane_cam_y=cy,
+                  plane_merge=args.plane_merge, plane_level_merge=args.plane_level_merge)
+        print(f"plane anchor: from step {args.plane_start}, fit every {args.plane_fit_every}, move {args.plane_alpha:g} "
+              f"every {args.plane_proj_every} steps; camera height {cy:.3f}")
     # import this file under its module name so the saved config references geo_splatfacto.* (not __main__),
     # which ns-export can re-import with PYTHONPATH=src/arcore3dgs
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

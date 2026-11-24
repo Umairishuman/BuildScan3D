@@ -166,6 +166,7 @@ Umair's side continues at R-105.
 | R-123 | 2026-11-23 | scan_009: R-121's gated loop round with path holes held (`loop_path.py --hole_dt 2.5`), R-120's recipe (`v9plh`) | 3070 | 35.1 min (train 28.66) + 2 min solve / BA | aligned 22.83 vs R-120 23.97 (60 frames); 134 – 140 s still broken (15.52); R-121's 30 – 90 s gains lost | Rejected (the holes are not why 134 – 140 s breaks) |
 | R-124 | 2026-11-23 | Analyzer, first part (`analyze_recording.py`) on the four test recordings (read-only, CPU) | 3070 | < 10 s per recording | newRoom / bedroom textured → normal SfM; lecture hall 68 % placed, 34 % holes → sensor path; scan_009 normal SfM 37 % placed → sensor path; labels match the known stretches | Kept (first thresholds by hand, not tuned) |
 | R-125 | 2026-11-24 | scan_009: room-plane anchoring preview, splats near one shared plane per wall / floor snapped onto it (`plane_snap.py`) on R-120's model, no training | 3070 | snap 8 s, evaluation 11 min | aligned 20.32 vs R-120 23.96 (63 frames); 20 % of splats snapped onto 68 planes; planes form the room outline; glittery walls; two floor levels 0.56 units apart | Preview only: snapping must happen in training |
+| R-126 | 2026-11-24 | scan_009: R-120's recipe with room-plane anchoring in training (`--plane_anchor`, `v9pla`) | 3070 | not started: waiting for Tayyab's go | | |
 
 ## Runs
 
@@ -3110,3 +3111,29 @@ igs.txt`):
   footprint works; snapping after training breaks appearance (−3.6 dB) and misses the non-flat splats that make
   the thick walls. The anchoring has to act during training (colours re-fit, all splats near a plane pulled in),
   and the floor needs a one-floor rule (stepped floor = height drift).
+
+### R-126 · 2026-11-24 · scan_009_057ed3beb4fc: R-120's recipe with room-plane anchoring during training (`v9pla`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/featureless-holes` (new `plane_anchor.py`, `geo_splatfacto.py --plane_anchor`; committed
+  before the run)
+- **Dataset:** R-096's cameras `work_v9pfy_sfm/sparse_loop2_pba`; `work_v9pfz` → `work_v9pla`
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r126.sh` (log `r126.log`): as `r101.sh` (R-120) with tag `v9pla` and
+  `--train_args "--path_prune 0.1 --plane_anchor"` (defaults: from step 5,000, planes refitted every 500 steps, splats
+  moved half-way onto their plane every 100 steps, copies within 0.9 units with >= 30 % footprint overlap merged,
+  one floor / one ceiling within 0.8 units, camera height from `frames.json`); `eval_offpath.py`, `eval_align.py`,
+  `offpath_views.py` with R-120
+- **Goal:** Tayyab (2026-11-24): floating splats detached from the walls / floor need a technique that brings major
+  change. R-125 showed the planes can be found from the model but snapping after training costs 3.6 dB; here the
+  anchoring acts during training so colours (and cameras, `--pose_opt`) re-fit. Judged on off-path views, wall layer
+  thickness and held-out aligned PSNR vs R-120 (23.96).
+- **Before the run (2026-11-24):** synthetic test (two copies of a wall 0.4 apart, a floor, random splats): copy pulled
+  to the wall (2.4 → 2.007 after 6 moves), tilted splats turned to the wall normal, floor unchanged, float32 / float64,
+  CPU / GPU; quaternion round trip error 7e-16. Smoke test: 400 training steps with anchoring from step 200
+  (`smoke_plane_anchor.log`): runs to the end, 6 planes and 4,480 of 23,511 splats moved at step 300; checkpoint
+  removed afterwards. First smoke attempt crashed on the Windows console encoding (nerfstudio output piped without
+  UTF-8; run_v8.py already sets PYTHONUTF8): not a code error.
+- **Start → end:**
+- **Errors during the run:**
+- **Result:**
+- **Verdict:**
