@@ -238,6 +238,28 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [-0.15, -0.03, -0.11], target: [-0.22, -0.21, 0.87] },
   },
   {
+    // R-126 (2026-11-24): R-120's recipe with room-plane anchoring during training (plane_anchor.py,
+    // --plane_anchor), 69 frames held out. File is local only (git-ignored).
+    id: "scan-009-planes",
+    name: "Scan 009 · plane anchoring in training (R-126)",
+    floor: "—",
+    block: "Residence",
+    area: "Not measured",
+    location: "scan_009_057ed3beb4fc • walls / floor / ceiling held on shared planes while training",
+    dateCaptured: "Nov 15, 2026",
+    status: "draft",
+    statusLabel: "Experimental · 518 training keyframes · scale not measured",
+    thumbnail: "/thumbnails/scan009_v9pgsr.jpg",
+    scansCount: 1,
+    gaussianCount: "413,544",
+    accuracy: "Scale not measured",
+    captureDevice: "realme RMX5111 (ARCore)",
+    description:
+      "Same cameras and recipe as R-120, but while training, the splats near each wall, the floor and the ceiling are moved onto one shared plane per surface every 100 steps, so copies of a wall merge. Walls are flatter (3.8 cm vs 6.1 cm) and straighter from above; held-out frames match the photos less well (−1.9 dB). Compare it with R-120.",
+    splatUrl: "/splats/scan009_v9pla.spz",
+    splatStart: { position: [-0.47, 0.06, -0.41], target: [-0.51, -0.12, 0.57] },
+  },
+  {
     // R-125 (2026-11-24): preview, no training. R-120's model (69 frames held out) with the splats near one shared
     // plane per wall / floor / ceiling snapped onto it (plane_snap.py). File is local only (git-ignored).
     id: "scan-009-planesnap",

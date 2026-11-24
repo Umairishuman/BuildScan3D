@@ -166,7 +166,7 @@ Umair's side continues at R-105.
 | R-123 | 2026-11-23 | scan_009: R-121's gated loop round with path holes held (`loop_path.py --hole_dt 2.5`), R-120's recipe (`v9plh`) | 3070 | 35.1 min (train 28.66) + 2 min solve / BA | aligned 22.83 vs R-120 23.97 (60 frames); 134 – 140 s still broken (15.52); R-121's 30 – 90 s gains lost | Rejected (the holes are not why 134 – 140 s breaks) |
 | R-124 | 2026-11-23 | Analyzer, first part (`analyze_recording.py`) on the four test recordings (read-only, CPU) | 3070 | < 10 s per recording | newRoom / bedroom textured → normal SfM; lecture hall 68 % placed, 34 % holes → sensor path; scan_009 normal SfM 37 % placed → sensor path; labels match the known stretches | Kept (first thresholds by hand, not tuned) |
 | R-125 | 2026-11-24 | scan_009: room-plane anchoring preview, splats near one shared plane per wall / floor snapped onto it (`plane_snap.py`) on R-120's model, no training | 3070 | snap 8 s, evaluation 11 min | aligned 20.32 vs R-120 23.96 (63 frames); 20 % of splats snapped onto 68 planes; planes form the room outline; glittery walls; two floor levels 0.56 units apart | Preview only: snapping must happen in training |
-| R-126 | 2026-11-24 | scan_009: R-120's recipe with room-plane anchoring in training (`--plane_anchor`, `v9pla`) | 3070 | not started: waiting for Tayyab's go | | |
+| R-126 | 2026-11-24 | scan_009: R-120's recipe with room-plane anchoring in training (`--plane_anchor`, `v9pla`) | 3070 | 31.5 min (train 24.93) | aligned 22.07 vs R-120 23.96 (63 frames); flatness 3.81 vs 6.12 cm; straight walls from above; 134 – 140 s broken (15.87); ~95 % of splats moved | Inconclusive: flatter walls, −1.9 dB; anchoring too broad |
 
 ## Runs
 
@@ -3133,7 +3133,22 @@ igs.txt`):
   (`smoke_plane_anchor.log`): runs to the end, 6 planes and 4,480 of 23,511 splats moved at step 300; checkpoint
   removed afterwards. First smoke attempt crashed on the Windows console encoding (nerfstudio output piped without
   UTF-8; run_v8.py already sets PYTHONUTF8): not a code error.
-- **Start → end:**
-- **Errors during the run:**
-- **Result:**
-- **Verdict:**
+- **Start → end:** 17:36 → 18:16 (export 0.01, prior 3.90, init 1.99, train 24.93, ply 0.56 min, total 31.5; evaluations
+  8 min, views 4 s). R-120's training: 24.26 min, so anchoring costs ~0.7 min.
+- **Errors during the run:** none. The plane-anchor lines go to `gs_v9pla/train.log` (not `r126.log`). One fit (step
+  6,000) found 0 planes (not investigated); the next one found 22 again.
+- **Result:** `work_v9pla_sfm/gs_v9pla/splat.ply`, 413,544 splats (R-120: 521,417). Anchoring (train.log): step
+  5,000: 54 planes, 41 copies merged, 689,814 of 721,628 splats moved, mean distance before 0.208 units; from step
+  6,500 on 21 – 23 planes, 2 – 7 copies merged per fit, ~405,000 of ~428,000 splats moved per fit with mean distance
+  before 0.006 – 0.011 units (held flat). The horizontal planes creep up over the run (floor −1.92 → −1.81,
+  ceiling 2.08 → 2.21; not investigated, likely the whole model moving with `--pose_opt`). `eval_offpath.py`: PSNR
+  19.65, SSIM 0.847, **flatness 3.81 cm** (R-120 6.12), 0 blocked views. `eval_align.py` (63 frames): **22.07 vs
+  R-120 23.96**, SSIM 0.868 vs 0.896; per stretch (R-120 → R-126): 0 – 30 s 26.46 → 25.24, 30 – 90 s 23.89 → 21.82,
+  90 – 134 s 30.30 → 29.39, 134 – 140 s 19.76 → 15.87, 140 – 200 s 24.15 → 24.50. Views (`offpath_views_r126/`):
+  plan slice shows the walls as straight lines forming the room's rectangle (R-120: thick scattered bands), but
+  large soft splats still sit on some wall lines; room-centre depth smoother. In the viewer as `scan-009-planes`
+  (`public/splats/scan009_v9pla.spz`, 7.3 MB, local only).
+- **Verdict:** inconclusive: the geometry is clearly more regular (flatness −38 %, straight walls), the photo match
+  is 1.9 dB worse and 134 – 140 s breaks as in R-121 / R-123. The anchoring is too broad (~95 % of splats moved:
+  the reach includes merged copies up to 0.9 units away, so objects near walls are pulled in too). Next if kept:
+  narrower reach after the first merge, move only flat or wall-facing splats, smaller step. Tayyab to look.
