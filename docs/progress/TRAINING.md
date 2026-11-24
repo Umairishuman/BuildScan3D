@@ -165,6 +165,7 @@ Umair's side continues at R-105.
 | R-122 | 2026-11-23 | scan_009: R-120's recipe (R-096 cameras + `--pose_opt`) on all frames, for the viewer (`v9plq`) | 3070 | 32.8 min (train 25.95) | no held-out score (all frames); 521,715 splats | Kept (viewer `scan-009-poseopt`) |
 | R-123 | 2026-11-23 | scan_009: R-121's gated loop round with path holes held (`loop_path.py --hole_dt 2.5`), R-120's recipe (`v9plh`) | 3070 | 35.1 min (train 28.66) + 2 min solve / BA | aligned 22.83 vs R-120 23.97 (60 frames); 134 – 140 s still broken (15.52); R-121's 30 – 90 s gains lost | Rejected (the holes are not why 134 – 140 s breaks) |
 | R-124 | 2026-11-23 | Analyzer, first part (`analyze_recording.py`) on the four test recordings (read-only, CPU) | 3070 | < 10 s per recording | newRoom / bedroom textured → normal SfM; lecture hall 68 % placed, 34 % holes → sensor path; scan_009 normal SfM 37 % placed → sensor path; labels match the known stretches | Kept (first thresholds by hand, not tuned) |
+| R-125 | 2026-11-24 | scan_009: room-plane anchoring preview, splats near one shared plane per wall / floor snapped onto it (`plane_snap.py`) on R-120's model, no training | 3070 | snap 8 s, evaluation 11 min | aligned 20.32 vs R-120 23.96 (63 frames); 20 % of splats snapped onto 68 planes; planes form the room outline; glittery walls; two floor levels 0.56 units apart | Preview only: snapping must happen in training |
 
 ## Runs
 
@@ -3075,3 +3076,37 @@ igs.txt`):
 - **Verdict:** kept as the analyzer's first part: the labels and routes agree with what each recording is known to be.
   Thresholds are hand-set first guesses (obs 30 / 100, blur 15 px, placed 95 %, holes 5 %), not tuned; four
   recordings only. Next: use the labels in the pipeline (route choice, hole-aware loop step R-123, frame weights).
+
+### R-125 · 2026-11-24 · scan_009_057ed3beb4fc: room-plane anchoring preview on R-120's model (no training)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/featureless-holes` (new `src/arcore3dgs/plane_snap.py`, committed with the result)
+- **Dataset:** R-120's model `work_v9plo_sfm/gs_v9plo/splat.ply` (not changed); output
+  `work_v9plo_sfm/gs_v9plo/splat_snap_r125.ply`
+- **Command(s):** `nerfstudio-env/Scripts/python.exe src/arcore3dgs/plane_snap.py --ply …/splat.ply --out
+  …/splat_snap_r125.ply` (defaults: normal within 15° of an axis, flat splats vote, peaks within 0.35 units merged as
+  copies, band 0.3 units); `eval_align.py` (R-120's held-out frames), `offpath_views.py`, scratch `door_views.py`
+- **Goal:** Tayyab (2026-11-24): "the room still has major imperfections, floating splats that are supposed to be on
+  the wall / floor are detached from them; we need some technique to bring major changes". Preview of one shared
+  plane per surface: does a model with single, thin walls look better off-path, and how much photo match does it
+  cost? Decides whether to build the anchoring into training.
+- **Start → end:** 2026-11-24, snap 8 s (two passes), evaluation 17:07 → 17:18, views 17:18.
+- **Errors during the run:** first pass merged only peaks within 0.35 units and kept copies 0.4 – 0.6 units apart
+  as separate planes (61 planes, e.g. walls at z = 3.94 and 4.36); its layer thickness used the 25th percentile of
+  the smallest scales, which is ~0 for PGSR's flat splats (printed 0.0000). Fixed: copies are peaks within 0.9 units
+  whose footprints overlap >= 30 %; thin scale = median smallest scale of flat splats, >= 1e-4. Rerun.
+- **Result:** 521,417 splats, 400,564 flat; 104,496 (20.0 %) snapped onto 68 planes (`splat_snap_r125_planes.json`).
+  Strongest planes and the layers merged into them: wall z = 4.36 (26,894 splats, copies at 3.94 / 4.12 / 3.58 /
+  4.98, layer thickness before 0.31 units), x = 2.36 (copies 2.12 – 3.18, 0.51), z = 1.00 (0.30 – 1.88, 0.45),
+  x = −2.78 / −1.84, z = −0.60 / −1.22, ceiling y = 2.15 (copies 1.37 – 2.71, 0.38). **Floor: two levels, y = −2.47
+  and −1.91 (0.56 units apart), over different areas** (footprints do not overlap): a stepped floor, i.e. height
+  drift between parts of the walk, not stacked copies. `eval_align.py` (63 frames): **aligned 20.32 vs R-120 23.96**,
+  SSIM 0.826 vs 0.896. Views (`offpath_views_r125/`): plan slice shows the snapped walls as thin straight lines
+  forming the room's rectangle around the walk; the thick soft wall layers (non-flat splats) are untouched; ring views
+  show glittery / speckled walls (colours and opacities fitted for the old positions). In the viewer (local only):
+  `scan-009-planesnap` and the unsnapped R-120 as `scan-009-r120` (`public/splats/scan009_r125snap.spz` 9.7 MB,
+  `scan009_v9plo.spz` 9.9 MB).
+- **Verdict:** preview only, not a model to keep. The room's planes are found from the model, and merging copies by
+  footprint works; snapping after training breaks appearance (−3.6 dB) and misses the non-flat splats that make
+  the thick walls. The anchoring has to act during training (colours re-fit, all splats near a plane pulled in),
+  and the floor needs a one-floor rule (stepped floor = height drift).

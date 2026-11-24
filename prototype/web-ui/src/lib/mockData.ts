@@ -238,6 +238,50 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [-0.15, -0.03, -0.11], target: [-0.22, -0.21, 0.87] },
   },
   {
+    // R-125 (2026-11-24): preview, no training. R-120's model (69 frames held out) with the splats near one shared
+    // plane per wall / floor / ceiling snapped onto it (plane_snap.py). File is local only (git-ignored).
+    id: "scan-009-planesnap",
+    name: "Scan 009 · plane-snap preview (R-125)",
+    floor: "—",
+    block: "Residence",
+    area: "Not measured",
+    location: "scan_009_057ed3beb4fc • R-120 with walls / floor snapped to shared planes",
+    dateCaptured: "Nov 15, 2026",
+    status: "draft",
+    statusLabel: "Preview · no training · scale not measured",
+    thumbnail: "/thumbnails/scan009_v9pgsr.jpg",
+    scansCount: 1,
+    gaussianCount: "521,417",
+    accuracy: "Scale not measured",
+    captureDevice: "realme RMX5111 (ARCore)",
+    description:
+      "A preview of room-plane anchoring, made without retraining: in the camera-refined model (R-120), the splats lying along a wall, the floor or the ceiling are moved onto one shared plane per surface, so copies of the same wall merge into one thin layer. Furniture and other splats are unchanged. Compare it with 'loops closed + camera refinement (R-120)'.",
+    splatUrl: "/splats/scan009_r125snap.spz",
+    splatStart: { position: [-0.47, 0.06, -0.41], target: [-0.51, -0.12, 0.57] },
+  },
+  {
+    // R-120 (2026-11-22): R-096's cameras + --pose_opt, 69 frames held out; the model R-125's preview starts from.
+    // File is local only (git-ignored).
+    id: "scan-009-r120",
+    name: "Scan 009 · loops closed + camera refinement (R-120)",
+    floor: "—",
+    block: "Residence",
+    area: "Not measured",
+    location: "scan_009_057ed3beb4fc • loop-closed cameras, refined in training, 69 frames held out",
+    dateCaptured: "Nov 15, 2026",
+    status: "draft",
+    statusLabel: "Experimental · 518 training keyframes · scale not measured",
+    thumbnail: "/thumbnails/scan009_v9pgsr.jpg",
+    scansCount: 1,
+    gaussianCount: "521,417",
+    accuracy: "Scale not measured",
+    captureDevice: "realme RMX5111 (ARCore)",
+    description:
+      "The camera-refined model as trained for scoring (69 frames held out). Shown next to the plane-snap preview (R-125), which starts from exactly this model.",
+    splatUrl: "/splats/scan009_v9plo.spz",
+    splatStart: { position: [-0.47, 0.06, -0.41], target: [-0.51, -0.12, 0.57] },
+  },
+  {
     // R-122 (2026-11-23): R-096's loop-closed cameras plus camera refinement during training (--pose_opt, R-120's
     // recipe), trained on all 581 frames. File is local only (git-ignored).
     id: "scan-009-poseopt",
