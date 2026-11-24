@@ -1022,3 +1022,15 @@ plan updated (detect path holes; hole-aware loop checks).
 - PR #43 (`docs/featureless-tracking-plan` → `master`) merged by Tayyab on 2026-11-23 (`3165033`). CI red only on the
   known `test_changelog` failure that `master` already had (v0.3.9 has no line in `android/CHANGELOG.md`, Umair's notice
   §3); ruff and every other test passed locally, coverage 39.9 %. Umair to be told.
+
+## 2026-11-24 · Tayyab (agent, `exp/featureless-holes`)
+
+- R-125: room-plane anchoring preview (`plane_snap.py`) on R-120: planes found from the model, copies merged by
+  footprint (the room's rectangle shows); snapping after training costs 3.6 dB and misses the non-flat splats: the
+  anchoring must act in training. Floor is stepped (two levels 0.56 units apart). R-120 and the preview in the viewer.
+- Disk: C: at 2.1 GB (about 3 GB used since 2026-11-23 by something other than these runs). Tayyab approved hard
+  links for exact duplicates: 55 copies of files > 20 MB (md5-checked) in `dataset/`, `saved_models/`, `outputs/`,
+  `public/` now share storage, 9.59 GB freed (2.1 → 11 GB); list `dataset/hardlinks_2026-11-24.txt`. Left out: the
+  COLMAP databases still read by current work (`work_v9pfy_sfm`, `work_v9pfm_sfm`). Caveat: a program that edits one
+  linked file in place changes all its paths.
+- Next: plane anchoring inside training (b), Tayyab's go.
