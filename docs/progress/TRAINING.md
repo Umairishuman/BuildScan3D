@@ -167,6 +167,7 @@ Umair's side continues at R-105.
 | R-124 | 2026-11-23 | Analyzer, first part (`analyze_recording.py`) on the four test recordings (read-only, CPU) | 3070 | < 10 s per recording | newRoom / bedroom textured → normal SfM; lecture hall 68 % placed, 34 % holes → sensor path; scan_009 normal SfM 37 % placed → sensor path; labels match the known stretches | Kept (first thresholds by hand, not tuned) |
 | R-125 | 2026-11-24 | scan_009: room-plane anchoring preview, splats near one shared plane per wall / floor snapped onto it (`plane_snap.py`) on R-120's model, no training | 3070 | snap 8 s, evaluation 11 min | aligned 20.32 vs R-120 23.96 (63 frames); 20 % of splats snapped onto 68 planes; planes form the room outline; glittery walls; two floor levels 0.56 units apart | Preview only: snapping must happen in training |
 | R-126 | 2026-11-24 | scan_009: R-120's recipe with room-plane anchoring in training (`--plane_anchor`, `v9pla`) | 3070 | 31.5 min (train 24.93) | aligned 22.07 vs R-120 23.96 (63 frames); flatness 3.81 vs 6.12 cm; straight walls from above; 134 – 140 s broken (15.87); ~95 % of splats moved | Inconclusive: flatter walls, −1.9 dB; anchoring too broad |
+| R-127 | 2026-11-25 | scan_009: unplaced keyframes in path holes placed from image directions + gyro (`direction_fill.py`; `arcore_fill.py` rejected), R-120's recipe (`v9plb`) | 3070 | running | | |
 
 ## Runs
 
@@ -3162,3 +3163,38 @@ igs.txt`):
   is 1.9 dB worse and 134 – 140 s breaks as in R-121 / R-123. The anchoring is too broad (~95 % of splats moved:
   the reach includes merged copies up to 0.9 units away, so objects near walls are pulled in too). Next if kept:
   narrower reach after the first merge, move only flat or wall-facing splats, smaller step. Tayyab to look.
+
+### R-127 · 2026-11-25 · scan_009_057ed3beb4fc: ARCore-tracked keyframes placed in the holes of R-096's camera path, R-120's recipe (`v9plb`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/featureless-holes` (new `src/arcore3dgs/arcore_fill.py`, committed with the result)
+- **Dataset:** R-096's cameras `work_v9pfy_sfm/sparse_loop2_pba`, selection `work_v9pfz/frames.json`, database
+  `work_v9pfm_sfm/database.db` (read only); `work_v9pfz` → `work_v9plb`
+- **Command(s):** `python src/arcore3dgs/arcore_fill.py …/sparse_loop2_pba …/work_v9pfz …/sparse_loop2_arc --database
+  …/work_v9pfm_sfm/database.db` (holes >= 2.5 s; local Sim3 ARCore → model on tracked placed frames within 10 s on each
+  side, >= 3 per side; accepted if rotation residual <= 5° and cross-side prediction <= 0.3 units; new frames with a
+  median Sampson error > 4 px over their verified pairs dropped); then `dataset/scan_009_057ed3beb4fc/r127.sh`:
+  R-120's recipe (`--pose_opt`, `--split`) on the filled model; `eval_align.py`, `offpath_views.py`, doorway views
+- **Goal:** Tayyab "complete these" (2026-11-25), item 1: the bathroom doorway frames (125 – 133 s) are tracked by
+  ARCore and textured but unplaced (R-121 correction); give the doorway real content. Compared with R-120.
+- **Camera fill before training (2026-11-25):**
+  1. `arcore_fill.py` (as in the command above): **rejected by its own checks**. ARCore's rotations agree with the
+     model (relative rotation 0.80° median with the OpenGL→OpenCV flip), its positions do not: an ARCore jump of
+     3.48 m in 0.11 s at 127.53 → 127.64 s (relocalisation), 1.3 – 2 m/s of motion logged at 114 – 120 s, scale
+     0.27 – 0.29 model units per ARCore metre, centre residual 0.52 units on 42 frames before the hole; the one segment
+     that fitted (130.7 – 132.7 s) failed the image check (Sampson 6 – 27 px, 10 of 11 dropped). First version also
+     fitted the world rotation from the centres (174° residual): fixed (rotation from the orientations), and split
+     at ARCore jumps / tracking gaps.
+  2. New `direction_fill.py`: gyro rotations (`gyro_check.fill_rotations`; gyro check on the model: 0.32° pair error
+     median) + directions of the verified pairs (1,201 touching hole frames) → centres by least squares, placed
+     frames fixed; a frame is added with >= 2 pairs to placed frames and Sampson median <= 4 px. Result
+     (`work_v9pfy_sfm/sparse_loop2_dir`, 44 s): **29 of 152 unplaced frames in 8 holes added**: 68.4 – 71.7 s (16),
+     131.2 – 132.7 s (7, the top of the doorway), 48.2, 49.3, 97.4, 98.2, 98.9, 109.5, 115.3 s. Not placed: the
+     bathroom interior frames 126.2 – 129.6 s (0 – 1 pairs to placed frames, Sampson 7 – 20 px: they match only each
+     other, the bathroom is seen nowhere else) and the featureless frames (50 – 51, 55 – 58, 99 – 100, 107, 167 – 168 s:
+     no usable pairs). Added frames moved up to 2.1 units from the straight interpolation across their hole (97 – 99 s).
+  Training therefore uses `sparse_loop2_dir` (600 + 29 frames): `r127.sh` = `r101.sh` with tag `v9plb` and that model.
+- **Start → end:**
+- **Errors during the run:**
+- **Result:**
+- **Verdict:**
