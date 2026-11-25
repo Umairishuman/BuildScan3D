@@ -168,6 +168,7 @@ Umair's side continues at R-105.
 | R-125 | 2026-11-24 | scan_009: room-plane anchoring preview, splats near one shared plane per wall / floor snapped onto it (`plane_snap.py`) on R-120's model, no training | 3070 | snap 8 s, evaluation 11 min | aligned 20.32 vs R-120 23.96 (63 frames); 20 % of splats snapped onto 68 planes; planes form the room outline; glittery walls; two floor levels 0.56 units apart | Preview only: snapping must happen in training |
 | R-126 | 2026-11-24 | scan_009: R-120's recipe with room-plane anchoring in training (`--plane_anchor`, `v9pla`) | 3070 | 31.5 min (train 24.93) | aligned 22.07 vs R-120 23.96 (63 frames); flatness 3.81 vs 6.12 cm; straight walls from above; 134 – 140 s broken (15.87); ~95 % of splats moved | Inconclusive: flatter walls, −1.9 dB; anchoring too broad |
 | R-127 | 2026-11-25 | scan_009: unplaced keyframes in path holes placed from image directions + gyro (`direction_fill.py`; `arcore_fill.py` rejected), R-120's recipe (`v9plb`) | 3070 | 33.4 min (train 26.46) + fill 1 min | aligned 23.22 vs R-120 23.96 (63 frames); 60 – 90 s −1.1, 134 – 140 s −2.1, 30 – 60 s +1.1 dB; 19 of 29 added frames survived the export jump filter | Rejected (added frames conflict) |
+| R-128 | 2026-11-25 | scan_009: R-120 plus extra video frames between keyframes in weak / featureless windows (`densify_frames.py`, `v9pld`) | 3070 | running | | |
 
 ## Runs
 
@@ -3207,3 +3208,22 @@ igs.txt`):
   cannot see a wrong distance along the line of sight, and their centres moved up to ~1 unit from the interpolated
   path. The bathroom interior frames (126 – 129.6 s) could not be placed at all (they match only each other).
   `direction_fill.py` / `arcore_fill.py` kept as tools; R-128 / R-129 build on R-120's cameras instead.
+
+### R-128 · 2026-11-25 · scan_009_057ed3beb4fc: R-120 plus extra video frames in weak windows (`v9pld`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/featureless-holes` @ 72f10fb (`densify_frames.py`)
+- **Dataset:** R-096's cameras `work_v9pfy_sfm/sparse_loop2_pba`; `work_v9pfz` → `work_v9pld` (extra frames extracted
+  from `dataset.mp4` into its `images/` and `frames.json`); windows from `work_v9plp_sfm/analysis.json` (R-124)
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r128.sh` (log `r128.log`): `densify_frames.py` (1 extra video frame
+  between consecutive placed keyframes <= 0.5 s apart in windows labelled weak / featureless, at most 300; rotation
+  from the gyro, position interpolated) → `sparse_loop2_dense`; R-120's recipe with `--split`; `eval_align.py`,
+  `offpath_views.py` with R-120
+- **Goal:** Tayyab "complete these", item 2: keyframe selection keeps 1 of 6 video frames; in fast pans the dropped
+  frames carry coverage. Measure quality and the added processing time vs R-120 (23.96, 30.4 min).
+- **Before the run:** `--blur_learn` smoke test (300 steps, R-120's data, `smoke_blur_learn.log`): runs, the
+  per-frame parameters (518 × 7) are saved with their optimizer, 27 frames updated; checkpoint removed.
+- **Start → end:**
+- **Errors during the run:**
+- **Result:**
+- **Verdict:**
