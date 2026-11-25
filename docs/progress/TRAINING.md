@@ -169,7 +169,7 @@ Umair's side continues at R-105.
 | R-126 | 2026-11-24 | scan_009: R-120's recipe with room-plane anchoring in training (`--plane_anchor`, `v9pla`) | 3070 | 31.5 min (train 24.93) | aligned 22.07 vs R-120 23.96 (63 frames); flatness 3.81 vs 6.12 cm; straight walls from above; 134 – 140 s broken (15.87); ~95 % of splats moved | Inconclusive: flatter walls, −1.9 dB; anchoring too broad |
 | R-127 | 2026-11-25 | scan_009: unplaced keyframes in path holes placed from image directions + gyro (`direction_fill.py`; `arcore_fill.py` rejected), R-120's recipe (`v9plb`) | 3070 | 33.4 min (train 26.46) + fill 1 min | aligned 23.22 vs R-120 23.96 (63 frames); 60 – 90 s −1.1, 134 – 140 s −2.1, 30 – 60 s +1.1 dB; 19 of 29 added frames survived the export jump filter | Rejected (added frames conflict) |
 | R-128 | 2026-11-25 | scan_009: R-120 plus extra video frames between keyframes in weak / featureless windows (`densify_frames.py`, `v9pld`) | 3070 | 34.0 min (R-120 30.4; prior +2.1, init +1.0, train +0.8) | **aligned 24.25 vs R-120 23.96**, SSIM 0.898; 30 – 60 s +4.7 dB (4 frames), 0 – 30 s +0.9, 134 – 140 s −1.5; 266 frames added | **Kept** (new best, +3.6 min) |
-| R-129 | 2026-11-25 | scan_009: R-128 plus learnable blur motion (`--blur_learn`, `v9plk`) | 3070 | running | | |
+| R-129 | 2026-11-25 | scan_009: R-128 plus learnable blur motion (`--blur_learn`, `v9plk`) | 3070 | 37.1 min (train 27.7, R-128 25.07) | aligned 24.09 vs R-128 24.25 (63 frames), SSIM 0.892 vs 0.898; 60 – 90 s +0.7, 134 – 140 s −1.2 | Not adopted (no gain, +2.6 min) |
 | R-130 | 2026-11-25 | scan_009: Depth Anything 3 (DA3-LARGE) feasibility on four chunks, same checks as VGGT in R-093 (no training) | 3070 | planned (after R-129) | | |
 
 ## Runs
@@ -3247,10 +3247,15 @@ igs.txt`):
   offsets, from 0, Adam lr 1e-3, L2 0.01); `eval_align.py`, `offpath_views.py` with R-128
 - **Goal:** Tayyab "complete these", item 3: the gyro blur estimate is often off (100 % crops, 2026-11-25); learn it.
   Compared with R-128 (24.25).
-- **Start → end:**
-- **Errors during the run:**
-- **Result:**
-- **Verdict:**
+- **Start → end:** 20:08 → 20:54 (export 0.01, prior 6.20, init 2.66, train 27.70, ply 0.52 min, total 37.1;
+  evaluation 8 min).
+- **Errors during the run:** none.
+- **Result:** `work_v9plk_sfm/gs_v9plk/splat.ply`. `eval_align.py`, 63 frames: **24.09 vs R-128 24.25** (R-120
+  23.96), SSIM 0.892 vs 0.898; per frame vs R-128 median −0.10 dB (14 better, 12 worse by > 0.5). Per stretch
+  (R-128 → R-129): 0 – 30 s 27.39 → 27.21, 30 – 60 s 24.92 → 24.89, 60 – 90 s 25.16 → 25.84, 90 – 134 s 28.50 →
+  29.09, 134 – 140 s 18.29 → 17.10, 140 – 200 s 24.62 → 24.65.
+- **Verdict:** not adopted: −0.16 dB is within the run-to-run spread, SSIM lower, training +2.6 min. The option
+  stays (off by default).
 
 ### R-130 · 2026-11-25 · scan_009_057ed3beb4fc: Depth Anything 3 feasibility, same checks as R-093 (no training)
 
