@@ -94,7 +94,11 @@ def depth_consistency(D, K, c2w, pairs, valid=None, stride=4):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("dataset"); ap.add_argument("sfm"); ap.add_argument("model"); ap.add_argument("out")
-    ap.add_argument("--vggt_dir", required=True); ap.add_argument("--weights", required=True)
+    ap.add_argument("--vggt_dir", default=None); ap.add_argument("--weights", default=None)
+    ap.add_argument("--da3", default=None,
+                    help="Depth Anything 3 (ByteDance, 2025) instead of VGGT: Hugging Face id or local dir, e.g. "
+                         "depth-anything/DA3-LARGE; the package must be importable (D-097)")
+    ap.add_argument("--da3_res", type=int, default=504)
     ap.add_argument("--t0", type=float, default=42.0); ap.add_argument("--t1", type=float, default=63.0)
     ap.add_argument("--n", type=int, default=32)
     ap.add_argument("--bg_json", default=None); ap.add_argument("--calib", default=None)
@@ -131,6 +135,32 @@ def main():
         img_paths = [os.path.join(a.sfm, "images", n + ".jpg") for n in names]
         print(f"{len(names)} keyframes {T[0]:.1f} - {T[-1]:.1f} s", flush=True)
 
+    if a.da3:                                                   # ---- Depth Anything 3 (same checks below) ----
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import da3_loader
+        DepthAnything3, stubbed = da3_loader.load_api()
+        dev = "cuda"; t = time.time()
+        model = DepthAnything3.from_pretrained(a.da3).to(dev).eval()
+        torch.cuda.reset_peak_memory_stats()
+        with torch.no_grad():
+            pred = model.inference(img_paths, process_res=a.da3_res)
+        ext = np.asarray(pred.extrinsics)[:, :3, :4].astype(np.float64); intr = np.asarray(pred.intrinsics).astype(np.float64)
+        depth = np.asarray(pred.depth, np.float32)
+        conf = np.asarray(pred.conf, np.float32) if pred.conf is not None else np.ones_like(depth)
+        peak = torch.cuda.max_memory_allocated() / 2 ** 30
+        print(f"DA3 ({a.da3}): {len(names)} images {depth.shape[2]}x{depth.shape[1]}, {time.time() - t:.0f} s incl. loading, "
+              f"peak GPU {peak:.1f} GB (stand-ins for unused export modules: {stubbed})", flush=True)
+        np.savez_compressed(os.path.join(a.out, "da3.npz"), extrinsic=ext, intrinsic=intr, depth=depth.astype(np.float16),
+                            conf=conf.astype(np.float16), names=np.array(names), t=T)
+        del model; torch.cuda.empty_cache()
+        imgs = torch.zeros(1, 1, depth.shape[1], depth.shape[2])     # only its shape is used below
+    else:
+        ext, intr, depth, conf, peak, imgs = run_vggt(a, img_paths, names, T)
+    Cv = np.stack([np.linalg.inv(np.r_[e, [[0, 0, 0, 1]]]) for e in ext])        # c2w OpenCV, model world
+    _after_model(a, meta, pick, names, T, ext, intr, depth, conf, peak, imgs, Cv)
+
+
+def run_vggt(a, img_paths, names, T):
     # ---- VGGT ----
     sys.path.insert(0, a.vggt_dir)
     sys.path.append(os.path.join(os.path.dirname(a.vggt_dir.rstrip("/\\")), "vggt_deps"))
@@ -161,8 +191,10 @@ def main():
     np.savez_compressed(os.path.join(a.out, "vggt.npz"), extrinsic=ext, intrinsic=intr, depth=depth.astype(np.float16),
                         conf=conf.astype(np.float16), names=np.array(names), t=T)
     del model, tok; torch.cuda.empty_cache()
-    Cv = np.stack([np.linalg.inv(np.r_[e, [[0, 0, 0, 1]]]) for e in ext])        # c2w OpenCV, VGGT world
+    return ext, intr, depth, conf, peak, imgs
 
+
+def _after_model(a, meta, pick, names, T, ext, intr, depth, conf, peak, imgs, Cv):
     res = dict(names=names, t=T.tolist(), peak_gpu_gb=peak, size=[int(imgs.shape[-1]), int(imgs.shape[-2])])
     # ---- 1. rotations vs the gyro ----
     import rs_rectify

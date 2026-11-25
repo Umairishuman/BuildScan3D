@@ -94,6 +94,10 @@ class GeoSplatfactoModelConfig(SplatfactoModelConfig):
     blur_px_per_sub: float = 3.0     # one extra sub-render per this many px of blur (at the current resolution)
     blur_max_sub: int = 5
     blur_grid_per_sub: bool = False  # True = old behaviour: bilateral grid on every sub-render (~2.8x its cost)
+    # learnable blur motion (2026-11-25, BAD-Gaussians / MBA-SLAM idea): per training frame a log-scale on the gyro
+    # motion and small additive rotation / translation velocity corrections, starting at 0 (= the gyro motion)
+    blur_learn: bool = False
+    blur_learn_reg: float = 0.01
     pgsr: bool = False
     flat_lambda: float = 100.0       # PGSR's minimum-scale loss weight
     sv_lambda: float = 0.05          # single-view depth-normal consistency
@@ -144,6 +148,9 @@ class GeoSplatfactoModel(SplatfactoModel):
             self.prior_planes = torch.from_numpy(z["planes"]) if "planes" in z.files else None   # [N, h, w] uint8
             self.blur_motion = torch.from_numpy(z["motion"]).float() if "motion" in z.files else None  # [N, 6]
         self._blur_n = 1
+        self._blur_delta = None
+        if self.config.blur_learn and self.has_prior and self.blur_motion is not None:
+            self._blur_delta = torch.nn.Parameter(torch.zeros(len(self.blur_motion), 7))
         self._path_pts = None
         if self.config.path_prune_points and os.path.exists(self.config.path_prune_points):
             self._path_pts = torch.from_numpy(np.load(self.config.path_prune_points)).float()
@@ -242,7 +249,10 @@ class GeoSplatfactoModel(SplatfactoModel):
                 and self._geo_idx is not None and self.step >= cfg.blur_start):
             m = self.blur_motion[self._geo_idx].to(camera.camera_to_worlds.device)
             w, v = m[:3], m[3:]
-            px = float(w[:2].norm()) * cfg.blur_exposure * float(camera.fx) / self._get_downscale_factor()
+            if self._blur_delta is not None:                         # learnable correction of the gyro motion
+                p = self._blur_delta[self._geo_idx]
+                w = w * torch.exp(p[0]) + p[1:4]; v = v * torch.exp(p[0]) + p[4:7]
+            px = float(w[:2].detach().norm()) * cfg.blur_exposure * float(camera.fx) / self._get_downscale_factor()
             n = min(cfg.blur_max_sub, 1 + int(px / cfg.blur_px_per_sub))
             if n >= 2:
                 from nerfstudio.cameras.cameras import Cameras
@@ -350,9 +360,17 @@ class GeoSplatfactoModel(SplatfactoModel):
         grad = (gx + gy).clamp(max=1.0)
         return (1 - grad / (grad.max() + 1e-6)) ** 2
 
+    def get_param_groups(self):
+        gps = super().get_param_groups()
+        if self._blur_delta is not None:
+            gps["blur_opt"] = [self._blur_delta]
+        return gps
+
     def get_loss_dict(self, outputs, batch, metrics_dict=None):
         loss = super().get_loss_dict(outputs, batch, metrics_dict)
         cfg = self.config
+        if self.training and self._blur_delta is not None:
+            loss["blur_reg"] = cfg.blur_learn_reg * (self._blur_delta ** 2).sum(1).mean()
         if self.training and cfg.mcmc_cap > 0:
             loss["mcmc_opacity"] = cfg.mcmc_reg * torch.sigmoid(self.opacities).mean()
             loss["mcmc_scale"] = cfg.mcmc_reg * torch.exp(self.scales).mean()
@@ -468,6 +486,9 @@ if __name__ == "__main__":
     ap.add_argument("--blur_exposure", type=float, default=0.0, help="> 0 (s): motion-blur model (needs blur_motion.json)")
     ap.add_argument("--blur_start", type=int, default=0)
     ap.add_argument("--blur_grid_per_sub", action="store_true", help="old behaviour: bilateral grid on every blur sub-render")
+    ap.add_argument("--blur_learn", action="store_true",
+                    help="learn a per-frame correction of the gyro blur motion (scale + velocity offsets, from 0)")
+    ap.add_argument("--blur_learn_lr", type=float, default=1e-3); ap.add_argument("--blur_learn_reg", type=float, default=0.01)
     ap.add_argument("--pgsr", action="store_true", help="PGSR-lite: flat Gaussians, unbiased depth, rendered normals")
     ap.add_argument("--flat_lambda", type=float, default=100.0); ap.add_argument("--sv_lambda", type=float, default=0.05)
     ap.add_argument("--pgsr_start", type=int, default=3000)
@@ -545,6 +566,8 @@ if __name__ == "__main__":
                   plane_merge=args.plane_merge, plane_level_merge=args.plane_level_merge)
         print(f"plane anchor: from step {args.plane_start}, fit every {args.plane_fit_every}, move {args.plane_alpha:g} "
               f"every {args.plane_proj_every} steps; camera height {cy:.3f}")
+    if args.blur_learn:
+        kw.update(blur_learn=True, blur_learn_reg=args.blur_learn_reg)
     # import this file under its module name so the saved config references geo_splatfacto.* (not __main__),
     # which ns-export can re-import with PYTHONPATH=src/arcore3dgs
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -563,6 +586,9 @@ if __name__ == "__main__":
         # nerfstudio runs max_num_iterations MORE steps after a checkpoint: give it only what is left
         cfg.max_num_iterations = max(1, args.iters - (int(last.stem.split("-")[1]) + 1))
         print(f"resuming from {last.name}: {cfg.max_num_iterations} steps left")
+    if args.blur_learn:
+        from nerfstudio.engine.optimizers import AdamOptimizerConfig
+        cfg.optimizers["blur_opt"] = {"optimizer": AdamOptimizerConfig(lr=args.blur_learn_lr, eps=1e-15), "scheduler": None}
     for k in ("means", "bilateral_grid", "camera_opt"):
         if k in cfg.optimizers and cfg.optimizers[k]["scheduler"] is not None:
             cfg.optimizers[k]["scheduler"].max_steps = args.iters

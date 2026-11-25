@@ -842,6 +842,23 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **By:** Muhammad Tayyab ("ok do whats best", 2026-11-23, after the agent recommended a separate block).
 - **Status:** Active.
 
+## D-097 · 2026-11-25 · Run Depth Anything 3 for the featureless test (outside the repo)
+
+- **Decision:** test ByteDance's Depth Anything 3 (`depth_anything_3` 0.1.1 wheel from PyPI, Apache-2.0 code; model
+  weights from Hugging Face, `depth-anything/DA3-LARGE`) on scan_009 chunks with `vggt_chunk.py --da3`, the same
+  checks as VGGT in R-093. Installed outside the repo and outside `nerfstudio-env`: `C:/Users/tyb/.cache/buildscan/da3`
+  (package) and `…/da3_deps` (einops, addict, omegaconf + antlr4 4.9.3, huggingface_hub 0.25.2, safetensors, with
+  `pip --target --no-deps`); modules only its export helpers need (moviepy, pycolmap, evo) are replaced by empty
+  stand-ins at import (`src/arcore3dgs/da3_loader.py`). Weight licences per model card (the largest DA3 models are
+  CC BY-NC: fine for this research test; a shipped product needs a licence check).
+- **Why:** VGGT could not place the blank-wall frames (R-093); DA3 reports better pose and geometry than VGGT and gives
+  depth consistent across frames, which targets the detached splat layers (Metric3D priors disagree 7 – 15 % between
+  frames). Literature search 2026-11-25 (LOG).
+- **Rejected alternatives:** installing DA3 with all its dependencies into `nerfstudio-env` (xformers, open3d,
+  gradio, moviepy: risk to the training environment); MapAnything first (kept as the second candidate).
+- **By:** Muhammad Tayyab ("ok complete these", 2026-11-25, the list included the DA3 test with its download).
+- **Status:** Active.
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |
