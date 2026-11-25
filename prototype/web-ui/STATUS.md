@@ -155,8 +155,8 @@ real path.** Currently only `/dashboard` has a href.
 - **Verification:** `npx tsc --noEmit` silent; `npx eslint src` 0 errors, 1 known warning (ExportModal.tsx:29).
   Headless Chrome (1440 × 860) on `next dev` 127.0.0.1:4173: `/viewer/sector-4-mep` renders the demo scene with the
   new chrome; `/viewer/scan-009-loops` shows the chrome and "Loading Gaussian splat scan…" (software rendering does
-  not finish loading splats, as before). `next build` not run (dev server running). Not yet checked by Tayyab in a
-  real browser.
+  not finish loading splats, as before). `npx next build` ok after both changes (2026-11-25, all routes compile).
+  Tayyab looked at it in his browser: "this looks neat for now".
 - **Follow-up 2026-11-25 (Tayyab: "add the mesh view and have it grayed out in case it's not available, also
   semantic options ... greyed out if not available"):** the render menu always lists Splats and Mesh; Mesh is greyed
   out with its reason on single-file scans (no `mesh.glb`). The Semantic layers button is always shown; on scans
