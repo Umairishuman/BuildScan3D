@@ -1,7 +1,7 @@
 # BuildScan 3D — Build Status & Handoff
 
 **Single source of truth for what is built, what is next, and what has already been decided.**
-Last updated: 2026-11-23 (`scan-009-poseopt`: R-122, loop-closed cameras refined during training, all frames, added to the project list); before that 2026-11-22 (`scan-009-loops`: R-099, scan_009 with the camera-path loops closed, trained on all frames, added to the project list); before that 2026-11-21 (`scan-009-depthfill`: R-092, scan_009 with filled depth priors and path pruning, added to the project list); before that 2026-11-20 (`scan-009-tracks`: R-081, scan_009 with the track-corrected camera path, added to the project list); before that 2026-11-19 (`scan-009-loop`: R-071, the loop-closed scan_009 model, added to the project list) Merged with `master` the same day; before that: 2026-11-19 (published scans from the R2 bucket listed for the Vercel site, D-076; earlier: wall-gap openings and no-roof / open-outline flags shown; earlier the same day: every scan bundle listed in the Projects tab); merged with `master`: 2026-11-15 (real models in the project list: bedroom, lecture hall, scan 009 + its pose-free model, newRoom v9e2e / v6 / v3; local-only files)
+Last updated: 2026-11-25 (full-window 3D viewer with floating controls, D10; placeholders removed from real scans) on `feature/viewer-ui`; before that 2026-11-23 (`scan-009-poseopt`: R-122, loop-closed cameras refined during training, all frames, added to the project list); before that 2026-11-22 (`scan-009-loops`: R-099, scan_009 with the camera-path loops closed, trained on all frames, added to the project list); before that 2026-11-21 (`scan-009-depthfill`: R-092, scan_009 with filled depth priors and path pruning, added to the project list); before that 2026-11-20 (`scan-009-tracks`: R-081, scan_009 with the track-corrected camera path, added to the project list); before that 2026-11-19 (`scan-009-loop`: R-071, the loop-closed scan_009 model, added to the project list) Merged with `master` the same day; before that: 2026-11-19 (published scans from the R2 bucket listed for the Vercel site, D-076; earlier: wall-gap openings and no-roof / open-outline flags shown; earlier the same day: every scan bundle listed in the Projects tab); merged with `master`: 2026-11-15 (real models in the project list: bedroom, lecture hall, scan 009 + its pose-free model, newRoom v9e2e / v6 / v3; local-only files)
 
 ---
 
@@ -84,6 +84,7 @@ purpose.** Do not "fix" them back.
 | D6 | **Keep Geist + Geist Mono.** Do **not** switch to Inter / JetBrains Mono. | The spec §1 asks for Inter + JetBrains Mono. The user explicitly declined. |
 | D7 | **Floor-plan artwork is hand-authored inline SVG.** Do not scrape or download a blueprint image. | Licensing risk on an FYP submission, and SVG lets status nodes anchor to real room geometry. |
 | D8 | **`/dashboard` is an Operations Overview**, not a project-workspace hero and not a project list. It shows portfolio KPIs, a featured active scan, quick actions, recent projects, an activity feed, and worker status. The full project grid lives at `/projects` (Projects nav item). | The initial "workspace hero" redesign duplicated the flow already covered by `/projects → /viewer/[id]`, leaving the landing page without genuine dashboard value. Keeps the bespoke top bar (search + four status pills) built in the previous iteration. Hamburger still opens the drawer `Sidebar` so nav is preserved. |
+| D10 | **The 3D viewer fills the whole browser window; its controls float over the model** (2026-11-25, Tayyab: the navbar + breadcrumb + project bar took ~150 px above the model, "overcrowded", "way too many placeholder stuff that doesnt work"; "floating options that dont completely block the model … whatever you think is more fluid"). Top left: menu, back, name, status dot, details card; top right: icon buttons (Layers, Measure, Download, Full screen); bottom centre: one slim toolbar that dims when the mouse is idle; bottom right: coordinates + axis gizmo. Real scans show only working controls; the demo projects keep their sample tabs behind a "…" menu. | Supersedes the viewer part of D2 (the tab bar stays only for the demo projects' Overview / History / Files / Report). |
 | D9 | **The featured project card on `/dashboard` uses the static hero PNG** (`/images/dashboard background.png`) as its render, small. | The reference render is a marketing-grade isometric that the WebGL scene can't match yet; the real 3D viewer stays at `/viewer/[id]`. |
 
 ---
@@ -131,6 +132,31 @@ real path.** Currently only `/dashboard` has a href.
 ---
 
 ## 4. Completed
+
+### Full-window 3D viewer with floating controls ✅ (2026-11-25, Tayyab's ask, D10, branch `feature/viewer-ui`)
+- **Why:** three bars (navbar 64 px, breadcrumb 44 px, project bar ~40 px) sat above the model, and many controls were
+  placeholders on real scans: the Export dialog (says "Downloaded!", writes nothing), the Measurements "Saved" list
+  (sample data) and "Tools" chips (inert), Orbit / Pan buttons (not wired for splats), the Overview / History / Files /
+  Report tabs (sample content), and two sample measurements ("Main HVAC Duct Width", "Chilled Water Pipe Header Clear
+  Height") drawn at made-up spots inside every real scan.
+- **New** `src/components/ProjectDetail/ViewerChrome.tsx`: `ViewerTitleChip` (menu, back to `/projects`, status dot,
+  name, details toggle, "…" menu for the demo tabs), `ViewerInfoCard` (description, status, splats, accuracy, date,
+  device, location), `ChromeIconButton` (icon-only, tooltip, optional count badge or download link), `ViewerToolbar`
+  (views, zoom out / in, reset, render-mode dropdown, extra toggles; dims to 40 % while the mouse is idle, full on
+  hover), `CoordinateReadout` (only while hovering the model).
+- **Modified** `src/app/viewer/[id]/page.tsx`: the viewer tab renders full-window (no AppShell); the app menu (Sidebar)
+  opens from the chip. Real scans: views 3D / Top (the splat viewer has no side / front views), Splats / Mesh only for
+  labelled bundles, Download = the real `.spz` (single-file scans), Measure toggles measuring and opens the live list
+  (no sample tabs), no Export dialog. Demo projects: five views, Splats / Mesh / Points, X-Ray, the sample panels and
+  the Export dialog (marked "demo"). The other tabs (demo only) keep the AppShell + `ProjectDetailTopBar` layout.
+  `src/components/Viewer3D/MeasurementTool.ts`: the two sample measurements only when asked (`withDemoMeasurements`,
+  default true; `SplatCanvas.tsx` passes false). `SplatCanvas.tsx`: its help pill moved up (`bottom-16`) above the
+  toolbar.
+- **Verification:** `npx tsc --noEmit` silent; `npx eslint src` 0 errors, 1 known warning (ExportModal.tsx:29).
+  Headless Chrome (1440 × 860) on `next dev` 127.0.0.1:4173: `/viewer/sector-4-mep` renders the demo scene with the
+  new chrome; `/viewer/scan-009-loops` shows the chrome and "Loading Gaussian splat scan…" (software rendering does
+  not finish loading splats, as before). `next build` not run (dev server running). Not yet checked by Tayyab in a
+  real browser.
 
 ### Published scans from the R2 bucket (online site) ✅ code, not deployed yet (2026-11-19, repo D-076, issues #27 / #28 / #29)
 - **Why:** Umair wants Tayyab and evaluators to see the scans on `https://build-scan-3d.vercel.app/` without sharing
@@ -865,6 +891,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 | **List view does nothing** | `dashboard/page.tsx` | `viewMode` state drives only button styling; the grid is always 3-col. Either implement the list layout or remove the toggle. |
 | **`globals.css` conflicts** | `src/app/globals.css` | Duplicate `--background` declaration, plus a `prefers-color-scheme: dark` block setting `#0a0a0a`. Currently inert because `layout.tsx` hardcodes `bg-[#f8fafc]` on `<body>` — but it is a live trap. |
 | Hand-written scan cards on Vercel | `src/lib/mockData.ts` | `scan-008` opens the published `r1116w9`; `newroom-scan` (git-tracked `newroom/`, not published) is hidden there by design. Published card dates come from TRAINING.md headings naming the tag; scan #1 (`umair`, R-029 has no tag in its heading) shows the publish date. |
+| Unused viewer overlays | `ProjectDetail/ViewportOverlays.tsx` | Since D10 (2026-11-25) only `AxisGizmo` is used; `ViewModeToggle`, `ViewportToolRail`, `ViewportBottomBar` are dead code (kept; ask before removing). |
 | 1 pre-existing lint warning | `ExportModal.tsx:29` | Unused `filename` param. Harmless; clean up when touching the file. (FloorPlanView deleted — its 3 warnings gone with it.) |
 | Non-functional controls | dashboard date-range button, `View all activity →` footer link in the notifications panel, "Export as PDF" in `ReportTab.tsx` | Bell is now wired (Step 5); the rest stay stubs. `Generate Report` in ReportTab shows a spinner + updates the timestamp but doesn't produce a file. |
 | Search is shallow | `dashboard/page.tsx` | Filters name/block/floor only. |
@@ -901,6 +928,7 @@ Empty search results, empty measurements, failed-scan state, offline. Lowest pri
 
 ## 8. Changelog
 
+- **2026-11-25** — Full-window 3D viewer with floating controls (D10); placeholders removed from real scans (sample measurements, fake export, sample tabs).
 - **2026-11-23** — `scan-009-poseopt` (R-122, loop-closed cameras refined during training, all frames) added to the project list.
 - **2026-11-22** — `scan-009-loops` (R-099, camera-path loops closed, all frames) added to the project list.
 - **2026-11-21** — `scan-009-depthfill` (R-092, filled depth priors + path pruning) added to the project list.

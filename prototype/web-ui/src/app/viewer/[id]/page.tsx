@@ -2,19 +2,24 @@
 
 import React, { useCallback, useEffect, useRef, useState, use } from "react";
 import { notFound } from "next/navigation";
-import { Download, Layers as LayersIcon, Ruler as RulerIcon } from "lucide-react";
+import { Download, Layers as LayersIcon, Maximize2, Minimize2, Ruler as RulerIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Sidebar } from "@/components/Sidebar";
+import type { NavItem } from "@/lib/navigation";
+import {
+  ChromeIconButton,
+  CoordinateReadout,
+  ViewerInfoCard,
+  ViewerTitleChip,
+  ViewerToolbar,
+} from "@/components/ProjectDetail/ViewerChrome";
 import { AppShell } from "@/components/AppShell";
 import {
   DetailTab,
   DETAIL_TABS,
 } from "@/components/ProjectDetail/DetailSidebar";
 import { ProjectDetailTopBar } from "@/components/ProjectDetail/ProjectDetailTopBar";
-import {
-  ViewModeToggle,
-  ViewportToolRail,
-  AxisGizmo,
-  ViewportBottomBar,
-} from "@/components/ProjectDetail/ViewportOverlays";
+import { AxisGizmo } from "@/components/ProjectDetail/ViewportOverlays";
 import { FloatingSidePanel } from "@/components/ProjectDetail/FloatingSidePanel";
 import { ScanLayersPanel } from "@/components/ProjectDetail/ScanLayersPanel";
 import { MeasurementsPanel } from "@/components/ProjectDetail/MeasurementsPanel";
@@ -120,7 +125,8 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
   });
 
   const [viewMode, setViewMode] = useState<ViewMode>("3d");
-  const [interactionMode, setInteractionMode] = useState<InteractionMode>("orbit");
+  // Orbit / pan switch removed with the old tool rail (2026-11-25): dragging orbits; it was never wired for splat scans.
+  const interactionMode: InteractionMode = "orbit";
   const [renderMode, setRenderMode] = useState<RenderMode>("textured");
   const [measurements, setMeasurements] = useState<MeasurementRecord[]>([]);
   const [isMeasureMode, setIsMeasureMode] = useState(false);
@@ -138,6 +144,9 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
   const [selectedFixture, setSelectedFixture] = useState<string | null>(null);
   const isRealScan = Boolean(project.splatUrl || project.scanUrl);
   const chromeTimeoutRef = useRef<number | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const router = useRouter();
 
   const handleToggleLayer = (layer: keyof SemanticLayersState) => {
     setSemanticLayers((prev) => ({ ...prev, [layer]: !prev[layer] }));
@@ -185,7 +194,6 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
     }
   }, [detailTab]);
 
-  const isTopBarVisible = detailTab !== "viewer" || isChromeVisible;
 
   // "Measurements" tab in the top bar now opens the floating measurements
   // panel over the 3D viewport rather than swapping the centre content.
@@ -215,9 +223,250 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
     canvasRef.current?.deleteMeasurement(id);
   const handleClearMeasurements = () => canvasRef.current?.clearMeasurements();
 
-  const isPlanView = viewMode === "2d";
   const activeDetailTab = DETAIL_TABS.find((t) => t.id === detailTab);
 
+  if (detailTab === "viewer") {
+    // Full-window viewer (2026-11-25, web STATUS D10): no navbar / breadcrumb / project bar above the model; small
+    // floating controls, and only the ones that work for this project.
+    return (
+      <div
+        ref={viewportRef}
+        className="relative h-screen w-screen overflow-hidden bg-[#eef3f9] text-[#0f172a]"
+        onMouseMove={bumpChrome}
+      >
+        {isRealScan ? (
+          <SplatCanvas
+            ref={canvasRef}
+            splatUrl={project.scanUrl ? undefined : project.splatUrl}
+            scanUrl={project.scanUrl}
+            initialPosition={project.splatStart?.position ?? [0, 0, 0]}
+            initialTarget={project.splatStart?.target ?? [0, 0, -1]}
+            viewMode={viewMode}
+            interactionMode={interactionMode}
+            isMeasureMode={isMeasureMode}
+            hiddenGroups={hiddenGroups}
+            tintByClass={tintByClass}
+            showMesh={renderMode === "mesh"}
+            showFixtures={showFixtures}
+            onScanLoaded={setScanInfo}
+            onFixtureClick={(id) => {
+              setSelectedFixture(id);
+              setOpenPanel("layers");
+            }}
+            onMeasurementsChange={setMeasurements}
+            onHoverCoordinate={setHoveredCoordinate}
+            onOrbitChange={handleOrbitChange}
+          />
+        ) : (
+          <Canvas3D
+            ref={canvasRef}
+            semanticLayers={semanticLayers}
+            renderMode={renderMode}
+            viewMode={viewMode}
+            interactionMode={interactionMode}
+            isMeasureMode={isMeasureMode}
+            xrayMode={xrayMode}
+            onMeasurementsChange={setMeasurements}
+            onHoverCoordinate={setHoveredCoordinate}
+            onOrbitChange={handleOrbitChange}
+          />
+        )}
+
+        <Sidebar
+          isOpen={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          activeNav="projects"
+          onSelectNav={(item: NavItem) => {
+            if (item.href) router.push(item.href);
+          }}
+          onOpenRecentSite={(id: string) => router.push(`/viewer/${id}`)}
+        />
+
+        {/* top left: menu, back, identity, details */}
+        <div className="absolute top-3 left-3 z-30 flex flex-col items-start gap-2">
+          <ViewerTitleChip
+            project={project}
+            backHref="/projects"
+            onOpenMenu={() => setIsMenuOpen(true)}
+            infoOpen={isInfoOpen}
+            onToggleInfo={() => setIsInfoOpen((v) => !v)}
+            moreItems={
+              isRealScan
+                ? undefined
+                : (["overview", "history", "files", "report"] as const).map((id) => ({
+                    label: DETAIL_TABS.find((t) => t.id === id)?.label ?? id,
+                    onSelect: () => handleSelectDetailTab(id),
+                  }))
+            }
+          />
+          {isInfoOpen && <ViewerInfoCard project={project} onClose={() => setIsInfoOpen(false)} />}
+        </div>
+
+        {/* top right: tools; panels open underneath */}
+        <div className="absolute top-3 right-3 z-30 flex flex-col items-end gap-2">
+          <div className="flex items-center gap-1.5">
+            {(!isRealScan || project.scanUrl) && (
+              <ChromeIconButton
+                Icon={LayersIcon}
+                label="Layers"
+                active={openPanel === "layers"}
+                onClick={() => setOpenPanel((p) => (p === "layers" ? null : "layers"))}
+              />
+            )}
+            <ChromeIconButton
+              Icon={RulerIcon}
+              label={isMeasureMode ? "Measuring: click two points on the model (click here to stop)" : "Measure"}
+              active={isMeasureMode || openPanel === "measurements"}
+              badge={measurements.length}
+              onClick={() => {
+                if (isRealScan) {
+                  setMeasurementsSubTab("current");
+                  setIsMeasureMode((m) => !m);
+                  setOpenPanel("measurements");
+                } else {
+                  setOpenPanel((p) => (p === "measurements" ? null : "measurements"));
+                }
+              }}
+            />
+            {project.splatUrl && !project.scanUrl ? (
+              <ChromeIconButton Icon={Download} label="Download the model (.spz)" href={project.splatUrl} download />
+            ) : !isRealScan ? (
+              <ChromeIconButton Icon={Download} label="Export (demo)" onClick={() => setIsExportModalOpen(true)} />
+            ) : null}
+            <ChromeIconButton
+              Icon={isFullscreen ? Minimize2 : Maximize2}
+              label={isFullscreen ? "Exit full screen" : "Full screen"}
+              onClick={handleToggleFullscreen}
+            />
+          </div>
+
+          {openPanel === "layers" && project.scanUrl && (
+            <FloatingSidePanel title="Scan Layers" Icon={LayersIcon} onClose={() => setOpenPanel(null)}>
+              <ScanLayersPanel
+                scan={scanInfo}
+                hiddenGroups={hiddenGroups}
+                onToggleGroup={(key) =>
+                  setHiddenGroups((h) => (h.includes(key) ? h.filter((k) => k !== key) : [...h, key]))
+                }
+                tintByClass={tintByClass}
+                onToggleTint={() => setTintByClass((v) => !v)}
+                showFixtures={showFixtures}
+                onToggleFixtures={() => setShowFixtures((v) => !v)}
+                onFlyTo={(point) => canvasRef.current?.flyTo?.(point)}
+                selectedFixtureId={selectedFixture}
+                onSelectFixture={setSelectedFixture}
+              />
+            </FloatingSidePanel>
+          )}
+          {openPanel === "layers" && !isRealScan && (
+            <FloatingSidePanel title="Semantic Layers (demo)" Icon={LayersIcon} onClose={() => setOpenPanel(null)}>
+              <div className="space-y-2 pt-2">
+                {LAYERS.map((layer) => {
+                  const isVisible = semanticLayers[layer.key];
+                  return (
+                    <button
+                      key={layer.key}
+                      onClick={() => handleToggleLayer(layer.key)}
+                      aria-pressed={isVisible}
+                      className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                        isVisible
+                          ? "bg-white border-[#e2e8f0] shadow-sm text-[#0f172a]"
+                          : "bg-slate-50 border-transparent text-[#94a3b8]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${layer.dot} ${isVisible ? "" : "opacity-40"}`} />
+                        <span className="truncate">{layer.label}</span>
+                      </div>
+                      {isVisible ? (
+                        <Eye className="w-3.5 h-3.5 text-[#2563eb]" />
+                      ) : (
+                        <EyeOff className="w-3.5 h-3.5 text-[#cbd5e1]" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </FloatingSidePanel>
+          )}
+          {openPanel === "measurements" && (
+            <FloatingSidePanel
+              title="Measurements"
+              Icon={RulerIcon}
+              onClose={() => {
+                setOpenPanel(null);
+                setIsMeasureMode(false);
+              }}
+              header={
+                isRealScan ? undefined : (
+                  <div role="tablist" aria-label="Measurements section" className="flex items-center gap-0.5 p-1 rounded-xl bg-[#f1f5f9]">
+                    {(["saved", "current", "tools"] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        role="tab"
+                        aria-selected={measurementsSubTab === tab}
+                        onClick={() => setMeasurementsSubTab(tab)}
+                        className={`flex-1 px-2 py-1.5 rounded-lg text-[11px] font-bold capitalize cursor-pointer ${
+                          measurementsSubTab === tab
+                            ? "bg-white text-[#2563eb] shadow-sm"
+                            : "text-[#64748b] hover:text-[#0f172a]"
+                        }`}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+                )
+              }
+            >
+              <MeasurementsPanel
+                subTab={isRealScan ? "current" : measurementsSubTab}
+                measurements={measurements}
+                isMeasureMode={isMeasureMode}
+                onToggleMeasureMode={handleToggleMeasureMode}
+                onDeleteMeasurement={handleDeleteMeasurement}
+                onClearAll={handleClearMeasurements}
+              />
+            </FloatingSidePanel>
+          )}
+        </div>
+
+        {/* bottom right: coordinates while hovering + orientation */}
+        <div className="absolute bottom-3 right-3 z-20 flex items-end gap-2 pointer-events-none">
+          <CoordinateReadout value={hoveredCoordinate} />
+          <AxisGizmo theta={orbit.theta} phi={orbit.phi} />
+        </div>
+
+        {/* bottom centre: one slim toolbar, dimmed while the mouse is idle */}
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20">
+          <ViewerToolbar
+            viewModes={isRealScan ? ["3d", "top"] : ["3d", "top", "2d", "side", "front"]}
+            viewMode={viewMode}
+            onViewMode={setViewMode}
+            onZoomIn={() => canvasRef.current?.zoomIn()}
+            onZoomOut={() => canvasRef.current?.zoomOut()}
+            onReset={() => canvasRef.current?.resetView()}
+            renderModes={project.scanUrl ? ["textured", "mesh"] : isRealScan ? undefined : ["textured", "mesh", "pointcloud"]}
+            renderMode={renderMode}
+            onRenderMode={setRenderMode}
+            dimmed={!isChromeVisible}
+            toggles={isRealScan ? undefined : [{ label: "X-Ray", active: xrayMode, onClick: () => setXrayMode((v) => !v) }]}
+          />
+        </div>
+
+        {!isRealScan && (
+          <ExportModal
+            isOpen={isExportModalOpen}
+            onClose={() => setIsExportModalOpen(false)}
+            projectName={project.name}
+            measurementsCount={measurements.length}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // The other sections (demo projects only; real scans show just the viewer): the earlier shell with its tab bar.
   return (
     <AppShell
       variant="fluid"
@@ -228,31 +477,8 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
       ]}
     >
       <div className="flex-1 min-h-0 flex flex-col">
-        {/* Top strip — collapses to zero height when the mouse is idle in the
-            3D viewer so the canvas grows to fill the reclaimed space. Uses
-            `max-height` instead of absolute positioning so it never covers the
-            floating viewport overlays. */}
-        <div
-          className={`shrink-0 overflow-hidden transition-[max-height,opacity] duration-300 ease-out ${
-            isTopBarVisible
-              ? "max-h-16 opacity-100"
-              : "max-h-0 opacity-0 pointer-events-none"
-          }`}
-        >
-          <ProjectDetailTopBar
-            project={project}
-            activeTab={detailTab}
-            onSelectTab={handleSelectDetailTab}
-          />
-        </div>
-
-        <section
-          className="flex-1 min-h-0 flex flex-col bg-[#eef3f9]"
-          onMouseMove={detailTab === "viewer" ? bumpChrome : undefined}
-          onMouseLeave={
-            detailTab === "viewer" ? () => setIsChromeVisible(true) : undefined
-          }
-        >
+        <ProjectDetailTopBar project={project} activeTab={detailTab} onSelectTab={handleSelectDetailTab} />
+        <section className="flex-1 min-h-0 flex flex-col bg-[#eef3f9]">
           {detailTab === "history" ? (
             <ComparisonView onBack={() => setDetailTab("viewer")} />
           ) : detailTab === "overview" ? (
@@ -261,267 +487,12 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
             <FilesTab />
           ) : detailTab === "report" ? (
             <ReportTab project={project} />
-          ) : detailTab === "viewer" ? (
-            <div ref={viewportRef} className="relative flex-1 min-h-0 bg-[#eef3f9]">
-              {isRealScan ? (
-                <SplatCanvas
-                  ref={canvasRef}
-                  splatUrl={project.scanUrl ? undefined : project.splatUrl}
-                  scanUrl={project.scanUrl}
-                  initialPosition={project.splatStart?.position ?? [0, 0, 0]}
-                  initialTarget={project.splatStart?.target ?? [0, 0, -1]}
-                  viewMode={viewMode}
-                  interactionMode={interactionMode}
-                  isMeasureMode={isMeasureMode}
-                  hiddenGroups={hiddenGroups}
-                  tintByClass={tintByClass}
-                  showMesh={renderMode === "mesh"}
-                  showFixtures={showFixtures}
-                  onScanLoaded={setScanInfo}
-                  onFixtureClick={(id) => {
-                    setSelectedFixture(id);
-                    setOpenPanel("layers");
-                  }}
-                  onMeasurementsChange={setMeasurements}
-                  onHoverCoordinate={setHoveredCoordinate}
-                  onOrbitChange={handleOrbitChange}
-                />
-              ) : (
-                <Canvas3D
-                  ref={canvasRef}
-                  semanticLayers={semanticLayers}
-                  renderMode={renderMode}
-                  viewMode={viewMode}
-                  interactionMode={interactionMode}
-                  isMeasureMode={isMeasureMode}
-                  xrayMode={xrayMode}
-                  onMeasurementsChange={setMeasurements}
-                  onHoverCoordinate={setHoveredCoordinate}
-                  onOrbitChange={handleOrbitChange}
-                />
-              )}
-
-              {/* Top-left: view mode */}
-              <div className="absolute top-4 left-4 z-20">
-                <ViewModeToggle value={viewMode} onChange={setViewMode} />
-              </div>
-
-              {/* Top-right cluster: panel toggles + Export */}
-              <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-                {/* Layers: the mock scene's systems, or a labelled scan's semantic groups */}
-                {(!isRealScan || project.scanUrl) && (
-                  <PanelToggleButton
-                    Icon={LayersIcon}
-                    label="Layers"
-                    isActive={openPanel === "layers"}
-                    onClick={() =>
-                      setOpenPanel((p) => (p === "layers" ? null : "layers"))
-                    }
-                  />
-                )}
-                <PanelToggleButton
-                  Icon={RulerIcon}
-                  label="Measurements"
-                  isActive={openPanel === "measurements"}
-                  count={measurements.length}
-                  onClick={() =>
-                    setOpenPanel((p) => (p === "measurements" ? null : "measurements"))
-                  }
-                />
-                <button
-                  onClick={() => setIsExportModalOpen(true)}
-                  className="px-3.5 py-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[11px] font-bold shadow-md transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Export</span>
-                </button>
-              </div>
-
-              {/* Right edge: tool rail */}
-              <div className="absolute top-1/2 -translate-y-1/2 right-4 z-20">
-                <ViewportToolRail
-                  interactionMode={interactionMode}
-                  onSetInteractionMode={setInteractionMode}
-                  onZoomIn={() => canvasRef.current?.zoomIn()}
-                  onZoomOut={() => canvasRef.current?.zoomOut()}
-                  onResetView={() => canvasRef.current?.resetView()}
-                  onFitToScreen={() => canvasRef.current?.fitToScreen()}
-                  disableOrbit={isPlanView}
-                />
-              </div>
-
-              {/* Bottom-left: axis gizmo */}
-              <div className="absolute bottom-4 left-4 z-20">
-                <AxisGizmo theta={orbit.theta} phi={orbit.phi} />
-              </div>
-
-              {/* Bottom-centre: render controls */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
-                <ViewportBottomBar
-                  renderMode={renderMode}
-                  onChangeRenderMode={setRenderMode}
-                  splatsVisible={semanticLayers.pointcloud}
-                  onToggleSplats={() => handleToggleLayer("pointcloud")}
-                  systemsVisible={xrayMode}
-                  onToggleSystems={() => setXrayMode((v) => !v)}
-                  onToggleFullscreen={handleToggleFullscreen}
-                  isFullscreen={isFullscreen}
-                  sceneControls={!isRealScan}
-                  renderModes={project.scanUrl ? ["textured", "mesh"] : undefined}
-                />
-              </div>
-
-              {/* Bottom-right: live metric readout */}
-              <div className="absolute bottom-4 right-4 z-20 pointer-events-none">
-                <div className="px-3 py-2 rounded-xl bg-white/95 backdrop-blur-md border border-[#e2e8f0] shadow-sm flex items-center gap-2.5">
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      hoveredCoordinate ? "bg-[#2563eb] animate-pulse" : "bg-[#cbd5e1]"
-                    }`}
-                  />
-                  <span className="text-[11px] font-mono font-bold text-[#0f172a]">
-                    {hoveredCoordinate ?? "Hover the model for coordinates"}
-                  </span>
-                  <span className="text-[10px] text-[#64748b] font-medium">1:1 metric</span>
-                </div>
-              </div>
-
-              {/* Floating panels dock in the top-right column below the toolbar */}
-              {openPanel && (
-                <div className="absolute top-16 right-4 z-30">
-                  {openPanel === "layers" && project.scanUrl ? (
-                    <FloatingSidePanel
-                      title="Scan Layers"
-                      Icon={LayersIcon}
-                      badge={
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-[#2563eb] font-bold border border-blue-100">
-                          Auto-labelled
-                        </span>
-                      }
-                      onClose={() => setOpenPanel(null)}
-                    >
-                      <ScanLayersPanel
-                        scan={scanInfo}
-                        hiddenGroups={hiddenGroups}
-                        onToggleGroup={(key) =>
-                          setHiddenGroups((h) => (h.includes(key) ? h.filter((k) => k !== key) : [...h, key]))
-                        }
-                        tintByClass={tintByClass}
-                        onToggleTint={() => setTintByClass((v) => !v)}
-                        showFixtures={showFixtures}
-                        onToggleFixtures={() => setShowFixtures((v) => !v)}
-                        onFlyTo={(point) => canvasRef.current?.flyTo?.(point)}
-                        selectedFixtureId={selectedFixture}
-                        onSelectFixture={setSelectedFixture}
-                      />
-                    </FloatingSidePanel>
-                  ) : openPanel === "layers" ? (
-                    <FloatingSidePanel
-                      title="Semantic Layers"
-                      Icon={LayersIcon}
-                      badge={
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-[#2563eb] font-bold border border-blue-100">
-                          YOLOv8-Seg
-                        </span>
-                      }
-                      onClose={() => setOpenPanel(null)}
-                    >
-                      <div className="space-y-2 pt-2">
-                        {LAYERS.map((layer) => {
-                          const isVisible = semanticLayers[layer.key];
-                          return (
-                            <button
-                              key={layer.key}
-                              onClick={() => handleToggleLayer(layer.key)}
-                              aria-pressed={isVisible}
-                              className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                                isVisible
-                                  ? "bg-white border-[#e2e8f0] shadow-sm text-[#0f172a]"
-                                  : "bg-slate-50 border-transparent text-[#94a3b8]"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <span
-                                  className={`w-2.5 h-2.5 rounded-full shrink-0 ${layer.dot} ${
-                                    isVisible ? "" : "opacity-40"
-                                  }`}
-                                />
-                                <span className="truncate">{layer.label}</span>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0 pl-2">
-                                <span className="text-[10px] text-[#64748b]">
-                                  {layer.count}
-                                </span>
-                                {isVisible ? (
-                                  <Eye className="w-3.5 h-3.5 text-[#2563eb]" />
-                                ) : (
-                                  <EyeOff className="w-3.5 h-3.5 text-[#cbd5e1]" />
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </FloatingSidePanel>
-                  ) : (
-                    <FloatingSidePanel
-                      title="Measurements"
-                      Icon={RulerIcon}
-                      badge={
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-[#2563eb] font-bold border border-blue-100">
-                          {measurements.length} live
-                        </span>
-                      }
-                      onClose={() => setOpenPanel(null)}
-                      header={
-                        <div
-                          role="tablist"
-                          aria-label="Measurements section"
-                          className="flex items-center gap-0.5 p-1 rounded-xl bg-[#f1f5f9]"
-                        >
-                          {(["saved", "current", "tools"] as const).map((tab) => {
-                            const isActive = measurementsSubTab === tab;
-                            return (
-                              <button
-                                key={tab}
-                                role="tab"
-                                aria-selected={isActive}
-                                onClick={() => setMeasurementsSubTab(tab)}
-                                className={`flex-1 px-2 py-1.5 rounded-lg text-[11px] font-bold capitalize transition-all cursor-pointer ${
-                                  isActive
-                                    ? "bg-white text-[#2563eb] shadow-sm"
-                                    : "text-[#64748b] hover:text-[#0f172a]"
-                                }`}
-                              >
-                                {tab}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      }
-                    >
-                      <MeasurementsPanel
-                        subTab={measurementsSubTab}
-                        measurements={measurements}
-                        isMeasureMode={isMeasureMode}
-                        onToggleMeasureMode={handleToggleMeasureMode}
-                        onDeleteMeasurement={handleDeleteMeasurement}
-                        onClearAll={handleClearMeasurements}
-                      />
-                    </FloatingSidePanel>
-                  )}
-                </div>
-              )}
-            </div>
           ) : (
             <div className="flex-1 min-h-0 flex items-center justify-center p-8">
               <div className="max-w-sm text-center space-y-3 p-8 rounded-2xl bg-white border border-dashed border-[#e2e8f0] shadow-sm">
-                <h2 className="text-sm font-bold text-[#0f172a]">
-                  {activeDetailTab?.label} tab
-                </h2>
+                <h2 className="text-sm font-bold text-[#0f172a]">{activeDetailTab?.label} tab</h2>
                 <p className="text-xs text-[#64748b] leading-relaxed">
-                  This section is built in a later step. Switch back to the 3D
-                  Viewer to keep exploring the scan.
+                  This section is not built. Switch back to the 3D Viewer to keep exploring the scan.
                 </p>
                 <button
                   onClick={() => setDetailTab("viewer")}
@@ -534,45 +505,7 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
           )}
         </section>
       </div>
-
-      <ExportModal
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
-        projectName={project.name}
-        measurementsCount={measurements.length}
-      />
     </AppShell>
   );
 }
 
-/* ---------------------------- Panel toggle button ---------------------------- */
-
-const PanelToggleButton: React.FC<{
-  Icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  isActive: boolean;
-  count?: number;
-  onClick: () => void;
-}> = ({ Icon, label, isActive, count, onClick }) => (
-  <button
-    onClick={onClick}
-    aria-pressed={isActive}
-    className={`flex items-center gap-1.5 pl-2.5 pr-3 py-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer shadow-md ${
-      isActive
-        ? "bg-[#2563eb] text-white"
-        : "bg-white/95 backdrop-blur-md border border-[#e2e8f0] text-[#0f172a] hover:bg-white"
-    }`}
-  >
-    <Icon className="w-3.5 h-3.5" />
-    <span>{label}</span>
-    {typeof count === "number" && (
-      <span
-        className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full ${
-          isActive ? "bg-white/25 text-white" : "bg-blue-50 text-[#2563eb]"
-        }`}
-      >
-        {count}
-      </span>
-    )}
-  </button>
-);
