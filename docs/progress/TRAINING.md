@@ -170,7 +170,7 @@ Umair's side continues at R-105.
 | R-127 | 2026-11-25 | scan_009: unplaced keyframes in path holes placed from image directions + gyro (`direction_fill.py`; `arcore_fill.py` rejected), R-120's recipe (`v9plb`) | 3070 | 33.4 min (train 26.46) + fill 1 min | aligned 23.22 vs R-120 23.96 (63 frames); 60 – 90 s −1.1, 134 – 140 s −2.1, 30 – 60 s +1.1 dB; 19 of 29 added frames survived the export jump filter | Rejected (added frames conflict) |
 | R-128 | 2026-11-25 | scan_009: R-120 plus extra video frames between keyframes in weak / featureless windows (`densify_frames.py`, `v9pld`) | 3070 | 34.0 min (R-120 30.4; prior +2.1, init +1.0, train +0.8) | **aligned 24.25 vs R-120 23.96**, SSIM 0.898; 30 – 60 s +4.7 dB (4 frames), 0 – 30 s +0.9, 134 – 140 s −1.5; 266 frames added | **Kept** (new best, +3.6 min) |
 | R-129 | 2026-11-25 | scan_009: R-128 plus learnable blur motion (`--blur_learn`, `v9plk`) | 3070 | 37.1 min (train 27.7, R-128 25.07) | aligned 24.09 vs R-128 24.25 (63 frames), SSIM 0.892 vs 0.898; 60 – 90 s +0.7, 134 – 140 s −1.2 | Not adopted (no gain, +2.6 min) |
-| R-130 | 2026-11-25 | scan_009: Depth Anything 3 (DA3-LARGE) feasibility on four chunks, same checks as VGGT in R-093 (no training) | 3070 | planned (after R-129) | | |
+| R-130 | 2026-11-25 | scan_009: Depth Anything 3 (DA3-LARGE) feasibility on four chunks, same checks as VGGT in R-093 (no training) | 3070 | 7 – 15 s per chunk, peak GPU 5.5 – 5.9 GB | blank wall: rotations fail (113° / 64° median vs gyro); doorway 124 – 134 s: 2.6° median (tracks); depth consistency 0.5 – 5.5 % vs Metric3D 8.2 – 15.1 % | Kept (finding): DA3 depth as priors, DA3 for the doorway frames |
 
 ## Runs
 
@@ -3274,7 +3274,23 @@ igs.txt`):
   antlr4 4.9.3, safetensors, huggingface_hub 0.25.2 (the newest needs `httpx2`) to `…/buildscan/da3_deps`; moviepy,
   pycolmap, evo replaced by empty stand-ins (export helpers only). Weights: first download stopped at 1.26 GB with a
   consistency error while the disk was being written by R-129; second download complete and checksum-verified.
-- **Start → end:**
-- **Errors during the run:**
-- **Result:**
-- **Verdict:**
+- **Start → end:** 20:54 → ~21:00 (four chunks, 7 – 15 s each incl. model loading).
+- **Errors during the run:** none. The script's printout still says "VGGT" for the model (labels from R-093). The
+  extrinsics convention was checked afterwards (world-to-camera, as used: textured chunk consecutive rotations 0.85°
+  from the SfM model; read as camera-to-world they are 10.2° off).
+- **Result:** outputs `dataset/scan_009_057ed3beb4fc/da3_r130_*/` (`da3.npz`, `vggt_chunk.json`).
+
+  | Chunk | Frames | Rotation vs gyro, all pairs (median / p90) | vs SfM model | Positions vs SfM | Depth consistency DA3 / Metric3D |
+  |---|---|---|---|---|---|
+  | 15 – 30 s keyframes (textured) | 32 | 3.51° / 67.4° | consecutive 0.85° (all 3.59°) | Sim3 on 28 anchors: residual 0.90 units | **0.5 %** / 8.2 % |
+  | 42 – 63 s keyframes (R-093's chunk) | 32 | **112.6°** / 153° | consecutive 6.44° (SfM step 7.6°) | residual 0.28 on 19 anchors; 13 weak frames 1.56 units off | **5.5 %** / 15.1 % |
+  | 44 – 60 s video, every 0.5 s | 33 | **64.1°** / 95.1° | – | no anchors | 3.8 % |
+  | 124 – 134 s video, every 0.25 s (doorway) | 41 | **2.60° / 6.58°** | – | no anchors | 1.1 % |
+
+  For comparison, VGGT in R-093 on the same 42 – 63 s chunk: steps 3.5 – 10° off on the blank wall (max 92°), depth
+  2.5 – 5.3 %. Peak GPU 5.5 – 5.9 GB (DA3-LARGE, 504 px).
+- **Verdict:** kept as a finding. DA3 does not track the blank wall (like VGGT); it does track the doorway stretch the
+  camera chain dropped (2.6° from the gyro), and its depth agrees across frames 3 – 16× better than the Metric3D
+  priors. Next: (a) DA3 depth as the training priors (aimed at the detached layers); (b) DA3 poses for the doorway
+  frames, anchored on placed frames. The textured chunk's p90 of 67° and its 0.90-unit position residual show a few
+  frames placed wrongly even there: DA3 poses need a check before use.

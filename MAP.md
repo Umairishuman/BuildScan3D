@@ -141,7 +141,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | File | Does | Status |
 |---|---|---|
 | `run_v8.py` | One-command driver for the v9 pipeline, times every stage. Finds the nerfstudio env through `toolpaths.py`; `--pose_opt`, `--train_args`, `--blur_gyro`, `--prior_args` (FEATURELESS 10.d – 10.f) | **[v9]** |
-| `geo_splatfacto.py` | Splatfacto subclass: DashGaussian, depth / normal / planar priors, blur model, PGSR-lite, checkpoints + `--resume`; `--pose_opt` (SO3xR3, applied once per view incl. blur / PGSR passes); `--path_prune <r>` (removes Gaussians reaching into the camera path every 500 steps) | **[v9]** |
+| `geo_splatfacto.py` | Splatfacto subclass: DashGaussian, depth / normal / planar priors, blur model, PGSR-lite, checkpoints + `--resume`; `--pose_opt` (SO3xR3, applied once per view incl. blur / PGSR passes); `--path_prune <r>` (removes Gaussians reaching into the camera path every 500 steps) | **[v9]** `--plane_anchor` (R-126), `--blur_learn` (R-129). |
 | `export_nerfstudio.py` | Writes `transforms.json` for nerfstudio | **[v9]** [v3] |
 | `train.py` | Own gsplat trainer (experiments only, D-010) | [exp] |
 | `train_fixed2_backup.py`, `train_v3_backup.py` | Old copies of `train.py` | [dead] |
@@ -180,9 +180,13 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `analyze_recording.py` | Analyzer, first part (D-095): per 5 s window placed share, 3D observations, blur, ARCore; labels textured / weak / featureless / hole; path holes; suggested camera route; writes `analysis.json` (R-124) | [exp] |
 | `plane_snap.py` | Room-plane anchoring preview: one shared plane per wall / floor / ceiling from the trained splats (copies merged by footprint), splats near it snapped on, no training (R-125) | [exp] |
 | `plane_anchor.py` | Room-plane anchoring during training (`geo_splatfacto.py --plane_anchor`): planes refitted from the splats (copies merged by footprint, one floor / ceiling), splats moved onto them every 100 steps (R-126) | [exp] |
+| `arcore_fill.py` | Places unplaced ARCore-tracked keyframes in path holes with a local ARCore → model Sim3 per ARCore segment, checked by image matches (R-127: rejected on scan_009, ARCore positions unreliable); also `sampson_check`, `write_with_new` helpers | [exp] |
+| `direction_fill.py` | Places unplaced keyframes in path holes from image-pair directions with gyro rotations, checked by Sampson error (R-127: 29 placed, model −0.74 dB) | [exp] |
+| `densify_frames.py` | Adds video frames between placed keyframes in weak / featureless windows (gyro rotation, interpolated position) (R-128: +0.29 dB, +3.6 min, kept) | [exp] |
+| `da3_loader.py` | Imports Depth Anything 3 from outside the repo with stand-ins for its unused export modules (D-097) | [exp] |
 | `loop_match.py` | Second loop round: picks pairs that see the same surfaces at different times with the corrected cameras + depth priors, matches them (ALIKED + LightGlue, copy of the database), pair directions in the model's world (R-097) | [v9] experiment |
 | `offpath_views.py` | Fixed off-path views of trained splats: 8 views from the room centre (colour + depth) and a top view of a horizontal slice (walls as lines vs ghost copies) (FEATURELESS §11.e) | [eval] |
-| `vggt_chunk.py` | VGGT (downloaded, outside the repo, D-081) on a chunk of keyframes or dense video frames: rotation vs the gyro / an SfM model, positions vs the model, depth consistency vs the Metric3D priors (R-093) | [experiment] |
+| `vggt_chunk.py` | VGGT (downloaded, outside the repo, D-081) on a chunk of keyframes or dense video frames: rotation vs the gyro / an SfM model, positions vs the model, depth consistency vs the Metric3D priors (R-093) | [experiment] `--da3`: Depth Anything 3 instead of VGGT (R-130). |
 | `eval_perframe.py` | Per held-out frame: PSNR of a held-out model vs a model that saw the frame, 3D support, time (R-084's per-stretch table) | [eval] current |
 | `stretch_stats.py` | Per SfM model: 3D observations per camera, path smoothness, overall and in time stretches; movement vs a reference model | [eval] current |
 | `track_dir_check.py` | Agreement of video-track pair directions with a model's path, by support and time stretch (R-077 – R-079) | [eval] current |

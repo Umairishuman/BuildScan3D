@@ -238,6 +238,28 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [-0.15, -0.03, -0.11], target: [-0.22, -0.21, 0.87] },
   },
   {
+    // R-128 (2026-11-25): R-120's recipe plus 266 extra video frames between keyframes in weak / featureless
+    // windows (densify_frames.py), 69 frames held out. Best held-out score so far. File is local only (git-ignored).
+    id: "scan-009-dense",
+    name: "Scan 009 · more frames in weak stretches (R-128)",
+    floor: "—",
+    block: "Residence",
+    area: "Not measured",
+    location: "scan_009_057ed3beb4fc • loop-closed cameras + extra video frames where tracking is weak",
+    dateCaptured: "Nov 15, 2026",
+    status: "draft",
+    statusLabel: "Experimental · 787 training frames · scale not measured",
+    thumbnail: "/thumbnails/scan009_v9pgsr.jpg",
+    scansCount: 1,
+    gaussianCount: "415,966",
+    accuracy: "Scale not measured",
+    captureDevice: "realme RMX5111 (ARCore)",
+    description:
+      "R-120's recipe, plus extra video frames (one between each pair of keyframes) in the stretches the analyzer marks weak or featureless: fast pans, blur, little texture. Held-out frames match the photos best of all scan_009 models so far (24.25 dB after pose alignment, R-120 23.96), most in the featureless 30–60 s stretch. Processing time +3.6 min. The bathroom doorway is still not reconstructed.",
+    splatUrl: "/splats/scan009_v9pld.spz",
+    splatStart: { position: [-0.47, 0.06, -0.41], target: [-0.51, -0.12, 0.57] },
+  },
+  {
     // R-126 (2026-11-24): R-120's recipe with room-plane anchoring during training (plane_anchor.py,
     // --plane_anchor), 69 frames held out. File is local only (git-ignored).
     id: "scan-009-planes",

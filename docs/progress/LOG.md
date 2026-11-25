@@ -1044,3 +1044,10 @@ plan updated (detect path holes; hole-aware loop checks).
   with an LED cove strip above (the featureless part); 125 – 129 s looks from the room into the bathroom. **Correction:**
   the 125 – 133 s frames have ARCore poses and are only mildly blurred (earlier records said "no ARCore pose", a
   misread field): TRAINING R-121 correction, STATUS, PIPELINE_ANALYZER_PLAN fixed.
+- Tayyab: "complete these" (the open list). Results (TRAINING R-127 – R-130): hole frames placed from ARCore
+  rejected by its own checks (ARCore positions unreliable: 3.48 m jump at 127.5 s), placed from image directions +
+  gyro (`direction_fill.py`, 29 frames) but the model got worse (R-127, −0.74 dB); **denser frames in weak windows
+  (`densify_frames.py`, R-128): 24.25 vs 23.96, +3.6 min, kept, best so far** (viewer `scan-009-dense`); learnable
+  blur (`--blur_learn`, R-129): no gain; Depth Anything 3 (D-097, R-130): fails on the blank wall like VGGT, tracks
+  the doorway, depth 3 – 16× more consistent than Metric3D. Disk 1.9 GB free.
+- Next: Tayyab to choose (DA3 depth priors; DA3 for the doorway frames; analyzer + densify into `run_v8.py`).
