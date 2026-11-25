@@ -157,6 +157,15 @@ real path.** Currently only `/dashboard` has a href.
   new chrome; `/viewer/scan-009-loops` shows the chrome and "Loading Gaussian splat scan…" (software rendering does
   not finish loading splats, as before). `next build` not run (dev server running). Not yet checked by Tayyab in a
   real browser.
+- **Follow-up 2026-11-25 (Tayyab: "add the mesh view and have it grayed out in case it's not available, also
+  semantic options ... greyed out if not available"):** the render menu always lists Splats and Mesh; Mesh is greyed
+  out with its reason on single-file scans (no `mesh.glb`). The Semantic layers button is always shown; on scans
+  without labels it is greyed out ("no semantic labels … come from the semantics stage"). Download is greyed out on
+  labelled bundles (several files, no single-file download). `ChromeIconButton.disabledReason`,
+  `ViewerToolbar.renderOptions` (mode + unavailable reason). Checked: tsc silent, eslint 1 known warning; headless
+  screenshots of `/viewer/scan-009-poseopt` (Layers greyed, Download active) and `/viewer/newroom-scan` (Layers
+  active, Download greyed), both with the Splats menu; the greyed Mesh entry inside the menu not seen (headless cannot
+  open it).
 
 ### Published scans from the R2 bucket (online site) ✅ code, not deployed yet (2026-11-19, repo D-076, issues #27 / #28 / #29)
 - **Why:** Umair wants Tayyab and evaluators to see the scans on `https://build-scan-3d.vercel.app/` without sharing

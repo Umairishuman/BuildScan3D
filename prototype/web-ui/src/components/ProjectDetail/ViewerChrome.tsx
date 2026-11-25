@@ -35,7 +35,22 @@ export const ChromeIconButton: React.FC<{
   download?: boolean;
   active?: boolean;
   badge?: number;
-}> = ({ Icon, label, onClick, href, download, active, badge }) => {
+  /** greyed out, not clickable; the reason is shown as the tooltip */
+  disabledReason?: string;
+}> = ({ Icon, label, onClick, href, download, active, badge, disabledReason }) => {
+  if (disabledReason) {
+    return (
+      <span
+        role="button"
+        aria-disabled="true"
+        aria-label={`${label}: ${disabledReason}`}
+        title={`${label}: ${disabledReason}`}
+        className={`relative inline-flex items-center justify-center w-9 h-9 rounded-xl cursor-not-allowed ${CARD} text-[#cbd5e1]`}
+      >
+        <Icon className="w-4 h-4" />
+      </span>
+    );
+  }
   const cls = `relative inline-flex items-center justify-center w-9 h-9 rounded-xl transition-colors cursor-pointer ${
     active ? "bg-[#2563eb] text-white shadow-md" : `${CARD} text-[#0f172a] hover:text-[#2563eb]`
   }`;
@@ -210,13 +225,14 @@ export const ViewerToolbar: React.FC<{
   onZoomIn: () => void;
   onZoomOut: () => void;
   onReset: () => void;
-  renderModes?: RenderMode[];
+  /** render modes; one that is not available for this scan is listed greyed out with its reason */
+  renderOptions?: { mode: RenderMode; unavailable?: string }[];
   renderMode: RenderMode;
   onRenderMode: (m: RenderMode) => void;
   dimmed: boolean;
   /** extra on / off switches (the demo scene's X-ray) */
   toggles?: { label: string; active: boolean; onClick: () => void }[];
-}> = ({ viewModes, viewMode, onViewMode, onZoomIn, onZoomOut, onReset, renderModes, renderMode, onRenderMode, dimmed, toggles }) => {
+}> = ({ viewModes, viewMode, onViewMode, onZoomIn, onZoomOut, onReset, renderOptions, renderMode, onRenderMode, dimmed, toggles }) => {
   const [renderOpen, setRenderOpen] = useState(false);
   const sep = <span className="w-px h-5 bg-[#e2e8f0] mx-0.5" />;
   const btn = "w-8 h-8 inline-flex items-center justify-center rounded-lg text-[#475569] hover:text-[#2563eb] hover:bg-slate-100 cursor-pointer";
@@ -271,7 +287,7 @@ export const ViewerToolbar: React.FC<{
           ))}
         </>
       )}
-      {renderModes && renderModes.length > 1 && (
+      {renderOptions && renderOptions.length > 0 && (
         <>
           {sep}
           <div className="relative">
@@ -284,21 +300,33 @@ export const ViewerToolbar: React.FC<{
               <ChevronDown className="w-3.5 h-3.5 text-[#94a3b8]" />
             </button>
             {renderOpen && (
-              <div className={`absolute bottom-full mb-2 right-0 w-32 p-1 rounded-xl ${CARD} shadow-xl`}>
-                {renderModes.map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => {
-                      onRenderMode(m);
-                      setRenderOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer ${
-                      m === renderMode ? "text-[#2563eb] bg-blue-50" : "text-[#0f172a] hover:bg-slate-50"
-                    }`}
-                  >
-                    {RENDER_LABEL[m] ?? m}
-                  </button>
-                ))}
+              <div className={`absolute bottom-full mb-2 right-0 w-48 p-1 rounded-xl ${CARD} shadow-xl`}>
+                {renderOptions.map(({ mode: m, unavailable }) =>
+                  unavailable ? (
+                    <div
+                      key={m}
+                      aria-disabled="true"
+                      title={unavailable}
+                      className="w-full px-3 py-1.5 rounded-lg text-[12px] font-semibold text-[#cbd5e1] cursor-not-allowed"
+                    >
+                      {RENDER_LABEL[m] ?? m}
+                      <span className="block text-[10px] font-medium text-[#94a3b8] leading-snug">{unavailable}</span>
+                    </div>
+                  ) : (
+                    <button
+                      key={m}
+                      onClick={() => {
+                        onRenderMode(m);
+                        setRenderOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer ${
+                        m === renderMode ? "text-[#2563eb] bg-blue-50" : "text-[#0f172a] hover:bg-slate-50"
+                      }`}
+                    >
+                      {RENDER_LABEL[m] ?? m}
+                    </button>
+                  )
+                )}
               </div>
             )}
           </div>

@@ -305,14 +305,17 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
         {/* top right: tools; panels open underneath */}
         <div className="absolute top-3 right-3 z-30 flex flex-col items-end gap-2">
           <div className="flex items-center gap-1.5">
-            {(!isRealScan || project.scanUrl) && (
-              <ChromeIconButton
-                Icon={LayersIcon}
-                label="Layers"
-                active={openPanel === "layers"}
-                onClick={() => setOpenPanel((p) => (p === "layers" ? null : "layers"))}
-              />
-            )}
+            <ChromeIconButton
+              Icon={LayersIcon}
+              label="Semantic layers"
+              active={openPanel === "layers"}
+              onClick={() => setOpenPanel((p) => (p === "layers" ? null : "layers"))}
+              disabledReason={
+                isRealScan && !project.scanUrl
+                  ? "this scan has no semantic labels (walls, floor, doors, fixtures); labelled scans come from the semantics stage"
+                  : undefined
+              }
+            />
             <ChromeIconButton
               Icon={RulerIcon}
               label={isMeasureMode ? "Measuring: click two points on the model (click here to stop)" : "Measure"}
@@ -332,7 +335,13 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
               <ChromeIconButton Icon={Download} label="Download the model (.spz)" href={project.splatUrl} download />
             ) : !isRealScan ? (
               <ChromeIconButton Icon={Download} label="Export (demo)" onClick={() => setIsExportModalOpen(true)} />
-            ) : null}
+            ) : (
+              <ChromeIconButton
+                Icon={Download}
+                label="Download"
+                disabledReason="this scan is several files (one per label group, plus a mesh); no single-file download yet"
+              />
+            )}
             <ChromeIconButton
               Icon={isFullscreen ? Minimize2 : Maximize2}
               label={isFullscreen ? "Exit full screen" : "Full screen"}
@@ -446,7 +455,19 @@ export function ViewerWorkspace({ project }: { project: (typeof MOCK_PROJECTS)[n
             onZoomIn={() => canvasRef.current?.zoomIn()}
             onZoomOut={() => canvasRef.current?.zoomOut()}
             onReset={() => canvasRef.current?.resetView()}
-            renderModes={project.scanUrl ? ["textured", "mesh"] : isRealScan ? undefined : ["textured", "mesh", "pointcloud"]}
+            renderOptions={
+              isRealScan
+                ? [
+                    { mode: "textured" },
+                    {
+                      mode: "mesh",
+                      unavailable: project.scanUrl
+                        ? undefined
+                        : "No mesh for this scan: only labelled scan bundles include one",
+                    },
+                  ]
+                : [{ mode: "textured" }, { mode: "mesh" }, { mode: "pointcloud" }]
+            }
             renderMode={renderMode}
             onRenderMode={setRenderMode}
             dimmed={!isChromeVisible}
