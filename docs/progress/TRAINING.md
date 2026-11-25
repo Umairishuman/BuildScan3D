@@ -167,7 +167,7 @@ Umair's side continues at R-105.
 | R-124 | 2026-11-23 | Analyzer, first part (`analyze_recording.py`) on the four test recordings (read-only, CPU) | 3070 | < 10 s per recording | newRoom / bedroom textured → normal SfM; lecture hall 68 % placed, 34 % holes → sensor path; scan_009 normal SfM 37 % placed → sensor path; labels match the known stretches | Kept (first thresholds by hand, not tuned) |
 | R-125 | 2026-11-24 | scan_009: room-plane anchoring preview, splats near one shared plane per wall / floor snapped onto it (`plane_snap.py`) on R-120's model, no training | 3070 | snap 8 s, evaluation 11 min | aligned 20.32 vs R-120 23.96 (63 frames); 20 % of splats snapped onto 68 planes; planes form the room outline; glittery walls; two floor levels 0.56 units apart | Preview only: snapping must happen in training |
 | R-126 | 2026-11-24 | scan_009: R-120's recipe with room-plane anchoring in training (`--plane_anchor`, `v9pla`) | 3070 | 31.5 min (train 24.93) | aligned 22.07 vs R-120 23.96 (63 frames); flatness 3.81 vs 6.12 cm; straight walls from above; 134 – 140 s broken (15.87); ~95 % of splats moved | Inconclusive: flatter walls, −1.9 dB; anchoring too broad |
-| R-127 | 2026-11-25 | scan_009: unplaced keyframes in path holes placed from image directions + gyro (`direction_fill.py`; `arcore_fill.py` rejected), R-120's recipe (`v9plb`) | 3070 | running | | |
+| R-127 | 2026-11-25 | scan_009: unplaced keyframes in path holes placed from image directions + gyro (`direction_fill.py`; `arcore_fill.py` rejected), R-120's recipe (`v9plb`) | 3070 | 33.4 min (train 26.46) + fill 1 min | aligned 23.22 vs R-120 23.96 (63 frames); 60 – 90 s −1.1, 134 – 140 s −2.1, 30 – 60 s +1.1 dB; 19 of 29 added frames survived the export jump filter | Rejected (added frames conflict) |
 
 ## Runs
 
@@ -3194,7 +3194,16 @@ igs.txt`):
      other, the bathroom is seen nowhere else) and the featureless frames (50 – 51, 55 – 58, 99 – 100, 107, 167 – 168 s:
      no usable pairs). Added frames moved up to 2.1 units from the straight interpolation across their hole (97 – 99 s).
   Training therefore uses `sparse_loop2_dir` (600 + 29 frames): `r127.sh` = `r101.sh` with tag `v9plb` and that model.
-- **Start → end:**
-- **Errors during the run:**
-- **Result:**
-- **Verdict:**
+- **Start → end:** 18:37 → 19:23 (export 0.02, prior 4.22, init 1.54, train 26.46, ply 0.61 min, total 33.4; evaluation
+  12 min). The export's jump filter (> 30 cm from temporal neighbours) dropped 28 frames (R-096: 19): 10 of the 29
+  added (the single frames at 48.2, 49.3, 68.4, 71.7, 97.4, 98.2, 98.9, 109.5, 115.3, 131.2 s); kept 19 (68.5 – 71.3 s
+  and 131.7 – 132.7 s); 601 frames exported, 538 train / 63 held out.
+- **Errors during the run:** none.
+- **Result:** `work_v9plb_sfm/gs_v9plb/splat.ply`, 532,713 splats. `eval_align.py`, the same 63 held-out frames:
+  **23.22 vs R-120 23.96**, SSIM 0.891 vs 0.896; per frame median −0.37 dB (8 better, 26 worse by > 0.5). Per
+  stretch (R-120 → R-127): 0 – 30 s 26.46 → 26.31, 30 – 60 s 20.22 → 21.34, 60 – 90 s 24.94 → 23.83, 90 – 134 s 30.30
+  → 29.71, 134 – 140 s 19.76 → 17.70, 140 – 200 s 24.15 → 24.11. Flatness 6.01 cm (R-120 6.12).
+- **Verdict:** rejected. The added frames pass the epipolar (Sampson) check but conflict in training: that check
+  cannot see a wrong distance along the line of sight, and their centres moved up to ~1 unit from the interpolated
+  path. The bathroom interior frames (126 – 129.6 s) could not be placed at all (they match only each other).
+  `direction_fill.py` / `arcore_fill.py` kept as tools; R-128 / R-129 build on R-120's cameras instead.
