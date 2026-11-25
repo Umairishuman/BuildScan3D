@@ -170,6 +170,7 @@ Umair's side continues at R-105.
 | R-127 | 2026-11-25 | scan_009: unplaced keyframes in path holes placed from image directions + gyro (`direction_fill.py`; `arcore_fill.py` rejected), R-120's recipe (`v9plb`) | 3070 | 33.4 min (train 26.46) + fill 1 min | aligned 23.22 vs R-120 23.96 (63 frames); 60 – 90 s −1.1, 134 – 140 s −2.1, 30 – 60 s +1.1 dB; 19 of 29 added frames survived the export jump filter | Rejected (added frames conflict) |
 | R-128 | 2026-11-25 | scan_009: R-120 plus extra video frames between keyframes in weak / featureless windows (`densify_frames.py`, `v9pld`) | 3070 | 34.0 min (R-120 30.4; prior +2.1, init +1.0, train +0.8) | **aligned 24.25 vs R-120 23.96**, SSIM 0.898; 30 – 60 s +4.7 dB (4 frames), 0 – 30 s +0.9, 134 – 140 s −1.5; 266 frames added | **Kept** (new best, +3.6 min) |
 | R-129 | 2026-11-25 | scan_009: R-128 plus learnable blur motion (`--blur_learn`, `v9plk`) | 3070 | running | | |
+| R-130 | 2026-11-25 | scan_009: Depth Anything 3 (DA3-LARGE) feasibility on four chunks, same checks as VGGT in R-093 (no training) | 3070 | planned (after R-129) | | |
 
 ## Runs
 
@@ -3246,6 +3247,28 @@ igs.txt`):
   offsets, from 0, Adam lr 1e-3, L2 0.01); `eval_align.py`, `offpath_views.py` with R-128
 - **Goal:** Tayyab "complete these", item 3: the gyro blur estimate is often off (100 % crops, 2026-11-25); learn it.
   Compared with R-128 (24.25).
+- **Start → end:**
+- **Errors during the run:**
+- **Result:**
+- **Verdict:**
+
+### R-130 · 2026-11-25 · scan_009_057ed3beb4fc: Depth Anything 3 feasibility, same checks as R-093 (no training)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/featureless-holes` @ 72f10fb (`vggt_chunk.py --da3`, `da3_loader.py`; D-097)
+- **Dataset:** as R-093: frames / priors `work_v9pfu_sfm`, SfM reference `work_v9pfy_sfm/sparse_vt_pba_adapt`, gyro
+  bias `gyro_loop_bias.json`, calibration `work_v9pfz_sfm`; model `depth-anything/DA3-LARGE` (1,643,843,860 bytes,
+  sha256 eaf2ae06…e421, verified; CC BY-NC 4.0) in `C:/Users/tyb/.cache/buildscan/da3_weights/`
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r130.sh` (log `r130.log`): `vggt_chunk.py … --da3 <weights>` on
+  (1) 32 keyframes 42 – 63 s (R-093's chunk), (2) video frames every 0.5 s 44 – 60 s, (3) video frames every 0.25 s
+  124 – 134 s (bathroom doorway), (4) 32 keyframes 15 – 30 s (textured control)
+- **Goal:** Tayyab "complete these", item 4: do DA3's rotations follow the gyro where VGGT's did not (blank wall,
+  R-093: 3.5 – 10°, max 92°), and is its depth more consistent across frames than the Metric3D priors (R-093: VGGT
+  2.5 – 5.3 % vs Metric3D 15.1 %)?
+- **Setup (2026-11-25, D-097):** package from the PyPI wheel unpacked to `…/buildscan/da3`; einops, addict, omegaconf +
+  antlr4 4.9.3, safetensors, huggingface_hub 0.25.2 (the newest needs `httpx2`) to `…/buildscan/da3_deps`; moviepy,
+  pycolmap, evo replaced by empty stand-ins (export helpers only). Weights: first download stopped at 1.26 GB with a
+  consistency error while the disk was being written by R-129; second download complete and checksum-verified.
 - **Start → end:**
 - **Errors during the run:**
 - **Result:**
