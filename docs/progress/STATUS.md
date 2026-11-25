@@ -746,6 +746,8 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
     - [x] Plan step 3, second loop round with a pair check (`loop_path.py --gate 10`, 2026-11-22, R-121): 30 – 90 s
       +1.6 – 1.8 dB but 134 – 140 s broken again (15.83, as R-097). Cause: the camera model has a hole at 125.4 – 133.2 s
       (35 keyframes, none placed: blur 12 – 42 px, no ARCore pose); the bathroom doorway (125 s) is at its start.
+      **Corrected 2026-11-25:** ARCore tracked all of them and they are only mildly blurred (view into the bathroom,
+      TRAINING R-121 correction); they look recoverable with ARCore's poses.
       Rejected. The doorway is a limit of the video there (fast blurred pan), not of the method.
     - [x] Plan step 5 (2026-11-23, R-122): R-120's recipe on all frames, 32.8 min, in the viewer as `scan-009-poseopt`.
     - [ ] Tayyab to decide: whether to try a hole-aware second loop round, or move to the analyzer (D-095) now.
@@ -754,7 +756,7 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       copies of `work_v9pfz` for rejected / inconclusive runs (`work_v9plg`, `plm`, `pcs`, `ppl`, `pfk`, `pfs`, `pfo`);
       list in `dataset/scan_009_057ed3beb4fc/cleanup_2026-11-22.txt`. Not touched: Windows Temp (3.4 GB), `outputs/`
       (14 GB of old checkpoints, kept on purpose 2026-11-21). The 13 → 4.2 GB drop on 2026-11-23 was not investigated. Analyzer must detect path
-      holes (unplaced keyframes, blur, no ARCore pose).
+      holes (unplaced keyframes, blur, ARCore state; R-121 correction 2026-11-25).
     - [ ] Analyzer-driven pipeline (D-095, [PIPELINE_ANALYZER_PLAN.md](PIPELINE_ANALYZER_PLAN.md)), after steps 4 / 3:
       analyzer `analysis.json` on the four test recordings; route decision and the sensor-path chain inside
       `run_v8.py` with per-step checks; test bench vs the reference results; frame weighting by camera trust.

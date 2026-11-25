@@ -2987,6 +2987,16 @@ igs.txt`):
   break the stretch after the 125 – 133 s hole. Finding for the analyzer (PIPELINE_ANALYZER_PLAN): detect path holes
   (unplaced keyframes, blur, no ARCore pose) and keep a loop correction from moving one side of a hole against the
   other unless pairs tie both sides.
+- **Correction (2026-11-25, frames inspected by the agent and confirmed by Tayyab):** the 125.4 – 133.2 s frames DO
+  have ARCore poses (all 39 keyframes 125 – 133.5 s tracked; the earlier check read `arcore_pose`, which is empty
+  exactly when ARCore tracks). They are not heavily blurred either: 125 – 129.6 s look from the room through the
+  bathroom doorway into the bathroom (door header close to the lens, open door, wall with a pipe, toilet; 130 –
+  1,300 ORB keypoints, predicted blur 9 – 29 px); 130.7 – 132.8 s show a ceiling cornice with a wall light and the
+  door header (blur 19 – 43 px). Why they are unplaced is not known; likely: the bathroom is seen nowhere else in
+  the walk (no pairs to the rest), the header close to the lens, some blur. Frames and notes:
+  `dataset/scan_009_057ed3beb4fc/inspect_blurry_125-133s/`. Also corrected: 45 – 60 s is not one blank wall (see
+  `inspect_blank_wall_45-60s/`): 45 – 49 s wooden panel / ceiling light (textured), 49 – 55 s smooth surface with a
+  lamp, 55 – 60 s a plain wall with an LED cove strip above (0 – 50 keypoints, the truly featureless part).
 
 ### R-122 · 2026-11-23 · (numbered R-103 until 2026-11-23, D-096; script and log names keep `r103`) scan_009_057ed3beb4fc: R-120's recipe on all frames, for the viewer (`v9plq`)
 

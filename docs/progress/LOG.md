@@ -1034,3 +1034,13 @@ plan updated (detect path holes; hole-aware loop checks).
   COLMAP databases still read by current work (`work_v9pfy_sfm`, `work_v9pfm_sfm`). Caveat: a program that edits one
   linked file in place changes all its paths.
 - Next: plane anchoring inside training (b), Tayyab's go.
+
+## 2026-11-25 · Tayyab (agent, `exp/featureless-holes`)
+
+- Tayyab on R-126 / R-120 in the viewer: "these both suck". Literature search on featureless tracking (DA3,
+  MapAnything, NopeRoomGS, PlanarGS, visual-inertial GS); DA3 feasibility test proposed (not started).
+- Inspected the 45 – 60 s and 125 – 133 s keyframes (`dataset/scan_009_057ed3beb4fc/inspect_*`), confirmed by Tayyab:
+  45 – 60 s is a wooden panel / ceiling light (textured) then a smooth surface with a lamp, and 55 – 60 s a plain wall
+  with an LED cove strip above (the featureless part); 125 – 129 s looks from the room into the bathroom. **Correction:**
+  the 125 – 133 s frames have ARCore poses and are only mildly blurred (earlier records said "no ARCore pose", a
+  misread field): TRAINING R-121 correction, STATUS, PIPELINE_ANALYZER_PLAN fixed.

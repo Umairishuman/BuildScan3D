@@ -41,7 +41,7 @@ Measures the recording per time window (e.g. 5 s) and writes `analysis.json`:
 | SfM rotation vs gyro agreement | `rot_sfm.py` / `gyro_loop_bias.py` |
 | ARCore tracking state, sensor-path jumps | `poses.csv` |
 | blur | `select_sharp.py` sharpness, `blur_motion.json` |
-| holes in the camera path: keyframes not placed, one long step | camera model vs `frames.json` (R-121: scan_009 125.4 – 133.2 s, 35 keyframes, none placed, blur 12 – 42 px, no ARCore pose) |
+| holes in the camera path: keyframes not placed, one long step | camera model vs `frames.json` (R-121: scan_009 125.4 – 133.2 s, 35 keyframes, none placed although ARCore tracked them and they show the bathroom with texture: corrected 2026-11-25) |
 | scale consistency | `sfm_scale_check.py` |
 
 Each window gets a label: **textured / weak / featureless**. The analyzer must not add a heavy pass of its own: it
