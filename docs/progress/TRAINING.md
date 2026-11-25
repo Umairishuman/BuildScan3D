@@ -168,7 +168,8 @@ Umair's side continues at R-105.
 | R-125 | 2026-11-24 | scan_009: room-plane anchoring preview, splats near one shared plane per wall / floor snapped onto it (`plane_snap.py`) on R-120's model, no training | 3070 | snap 8 s, evaluation 11 min | aligned 20.32 vs R-120 23.96 (63 frames); 20 % of splats snapped onto 68 planes; planes form the room outline; glittery walls; two floor levels 0.56 units apart | Preview only: snapping must happen in training |
 | R-126 | 2026-11-24 | scan_009: R-120's recipe with room-plane anchoring in training (`--plane_anchor`, `v9pla`) | 3070 | 31.5 min (train 24.93) | aligned 22.07 vs R-120 23.96 (63 frames); flatness 3.81 vs 6.12 cm; straight walls from above; 134 – 140 s broken (15.87); ~95 % of splats moved | Inconclusive: flatter walls, −1.9 dB; anchoring too broad |
 | R-127 | 2026-11-25 | scan_009: unplaced keyframes in path holes placed from image directions + gyro (`direction_fill.py`; `arcore_fill.py` rejected), R-120's recipe (`v9plb`) | 3070 | 33.4 min (train 26.46) + fill 1 min | aligned 23.22 vs R-120 23.96 (63 frames); 60 – 90 s −1.1, 134 – 140 s −2.1, 30 – 60 s +1.1 dB; 19 of 29 added frames survived the export jump filter | Rejected (added frames conflict) |
-| R-128 | 2026-11-25 | scan_009: R-120 plus extra video frames between keyframes in weak / featureless windows (`densify_frames.py`, `v9pld`) | 3070 | running | | |
+| R-128 | 2026-11-25 | scan_009: R-120 plus extra video frames between keyframes in weak / featureless windows (`densify_frames.py`, `v9pld`) | 3070 | 34.0 min (R-120 30.4; prior +2.1, init +1.0, train +0.8) | **aligned 24.25 vs R-120 23.96**, SSIM 0.898; 30 – 60 s +4.7 dB (4 frames), 0 – 30 s +0.9, 134 – 140 s −1.5; 266 frames added | **Kept** (new best, +3.6 min) |
+| R-129 | 2026-11-25 | scan_009: R-128 plus learnable blur motion (`--blur_learn`, `v9plk`) | 3070 | running | | |
 
 ## Runs
 
@@ -3223,6 +3224,28 @@ igs.txt`):
   frames carry coverage. Measure quality and the added processing time vs R-120 (23.96, 30.4 min).
 - **Before the run:** `--blur_learn` smoke test (300 steps, R-120's data, `smoke_blur_learn.log`): runs, the
   per-frame parameters (518 × 7) are saved with their optimizer, 27 frames updated; checkpoint removed.
+- **Start → end:** 19:25 → 20:08 (densify 54 s: 266 frames in 18 windows, gyro check 0.32° pair error; export
+  0.01, prior 5.74, init 2.73, train 25.07, ply 0.48 min, total 34.0; evaluation 8 min). R-120: prior 3.61, init
+  1.72, train 24.26, total 30.4. Exported 850 frames (16 dropped by the jump filter), 787 train / 63 held out.
+- **Errors during the run:** none.
+- **Result:** `work_v9pld_sfm/gs_v9pld/splat.ply`. `eval_align.py`, the same 63 held-out frames: **24.25 vs R-120
+  23.96**, SSIM 0.898 vs 0.896, pose correction median 0.95° / 0.082 units; per frame median +0.34 dB (28 better, 22
+  worse by > 0.5). Per stretch (R-120 → R-128): 0 – 30 s 26.46 → 27.39, 30 – 60 s 20.22 → 24.92, 60 – 90 s 24.94 →
+  25.16, 90 – 134 s 30.30 → 28.50, 134 – 140 s 19.76 → 18.29, 140 – 200 s 24.15 → 24.62. Off-path views
+  `offpath_views_r128/`.
+- **Verdict:** kept: the best held-out score so far, the gain where frames were added (featureless 30 – 60 s), for
+  +3.6 min (more depth priors and init points, training time nearly unchanged). 134 – 140 s still the weak spot.
+
+### R-129 · 2026-11-25 · scan_009_057ed3beb4fc: R-128 plus learnable blur motion (`v9plk`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/featureless-holes` @ 72f10fb (`geo_splatfacto.py --blur_learn`)
+- **Dataset:** R-128's densified selection (`work_v9pld` → `work_v9plk`) and cameras (`sparse_loop2_dense`)
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r129.sh` (log `r129.log`): R-128's run with `--train_args
+  "--path_prune 0.1 --blur_learn"` (per frame: log-scale on the gyro blur motion + rotation / translation velocity
+  offsets, from 0, Adam lr 1e-3, L2 0.01); `eval_align.py`, `offpath_views.py` with R-128
+- **Goal:** Tayyab "complete these", item 3: the gyro blur estimate is often off (100 % crops, 2026-11-25); learn it.
+  Compared with R-128 (24.25).
 - **Start → end:**
 - **Errors during the run:**
 - **Result:**
