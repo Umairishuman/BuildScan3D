@@ -1051,3 +1051,5 @@ plan updated (detect path holes; hole-aware loop checks).
   blur (`--blur_learn`, R-129): no gain; Depth Anything 3 (D-097, R-130): fails on the blank wall like VGGT, tracks
   the doorway, depth 3 – 16× more consistent than Metric3D. Disk 1.9 GB free.
 - Next: Tayyab to choose (DA3 depth priors; DA3 for the doorway frames; analyzer + densify into `run_v8.py`).
+- Tayyab on the viewer (2026-11-25): R-120 looks good from some angles; R-128 (`scan-009-dense`) looks better in some
+  places and worse in others. Featureless work paused; next: the web viewer layout (`feature/viewer-ui`).
