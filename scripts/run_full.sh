@@ -6,9 +6,12 @@
 #
 #   screen -dmS r028 bash -c 'scripts/run_full.sh dataset/scan_x v9 -- --sfm_args "--retrieval 20" --init fmvs \
 #       --planar 0.2 --blur 0.0222 --pgsr'          # detached; watch with `screen -r r028`
+#   scripts/run_full.sh dataset/scan_x auto1 -- --auto   # recipe + analyzer choices made by run_v8.py (D-099),
+#                                                        # its reasons in gs_auto1/auto.json
 #
 # Stages, in order (--from restarts at one; earlier outputs are reused):
-#   select sfm export prior init train ply   run_v8.py (bs-system; nerfstudio parts in bs-ns via toolpaths.ns_cmd)
+#   select sfm [analyze densify] export prior init train ply   run_v8.py (bs-system; nerfstudio parts in bs-ns via
+#                                            toolpaths.ns_cmd); analyze / densify only with --auto
 #   layout                                   layout.py                         (bs-ns)
 #   sem2d                                    semantic2d.py, 2D masks           (semantic-env)
 #   sem3d                                    semantic3d.py, labels on Gaussians (bs-ns)
@@ -40,7 +43,7 @@ S="$D/work_${TAG}_sfm"; M="$S/gs_${TAG}"
 NAME="$(basename "$D")_${TAG}"
 WEB_OUT="prototype/web-ui/public/scans/$NAME"
 
-ALL=(select sfm export prior init train ply layout sem2d sem3d verify sem3d2 mesh meshlabels web plan)
+ALL=(select sfm analyze densify export prior init train ply layout sem2d sem3d verify sem3d2 mesh meshlabels web plan)
 idx() { local i; for i in "${!ALL[@]}"; do [[ "${ALL[$i]}" == "$1" ]] && { echo "$i"; return; }; done; echo "unknown stage: $1" >&2; exit 1; }
 FROM_I=$(idx "$FROM")
 
@@ -105,11 +108,17 @@ fi
 # 2. room layout, 3. semantics, 4. mesh + web bundle (STATUS §5). Step 4 options on by default since 2026-11-19 (D-075):
 #    --raised_max 1.5 --infer_gap 6 (layout), --floor_win 0.06 (sem3d), --clean_ceiling 0.04 (mesh), --square (plan)
 stage layout     ns  "$HERE/layout.py" --ply "$M/splat.ply" --work "$S" --out "$M/layout" --raised_max 1.5 --infer_gap 6
-stage sem2d      sem "$HERE/semantic2d.py" --work "$S" --every 2 --box_thr 0.28 --tiles 640 --out semantic2d_v10
+# every 2nd frame, but at most ~300 frames (R-069: ~12 s per frame on the RTX 3070, 500 frames ~100 min)
+SEM_EVERY=2
+if [[ -f "$S/frames.json" ]]; then
+  NF=$(sys -c "import json,sys; print(len(json.load(open(sys.argv[1]))['frames']))" "$S/frames.json" 2>/dev/null || echo 0)
+  [[ "$NF" =~ ^[0-9]+$ && $NF -gt 600 ]] && SEM_EVERY=$(( (NF + 299) / 300 ))
+fi
+stage sem2d      sem "$HERE/semantic2d.py" --work "$S" --every "$SEM_EVERY" --box_thr 0.28 --tiles 640 --out semantic2d_v10
 stage sem3d      ns  "$HERE/semantic3d.py" --ply "$M/splat.ply" --work "$S" --layout "$M/layout/layout.json" --out "$M/semantic_v10" --sem2d semantic2d_v10 --floor_win 0.06
 stage verify     sem "$HERE/verify_fixtures.py" --work "$S" --sem2d semantic2d_v10 --semantic "$M/semantic_v10"
 stage sem3d2     ns  "$HERE/semantic3d.py" --ply "$M/splat.ply" --work "$S" --layout "$M/layout/layout.json" --out "$M/semantic_v10" --sem2d semantic2d_v10 --verdicts "$M/semantic_v10/verdicts.json" --floor_win 0.06
-DEPTH=(); [[ " ${V8_ARGS[*]} " == *" --pgsr "* ]] && DEPTH=(--depth unbiased)
+DEPTH=(); [[ " ${V8_ARGS[*]} " == *" --pgsr "* || " ${V8_ARGS[*]} " == *" --auto "* ]] && DEPTH=(--depth unbiased)   # --auto implies --pgsr
 stage mesh       ns  "$HERE/mesh.py" --ply "$M/splat.ply" --work "$S" --out "$M/mesh" "${DEPTH[@]}"
 stage meshlabels ns  "$HERE/mesh_labels.py" --mesh "$M/mesh/mesh.ply" --ply "$M/splat.ply" --semantic "$M/semantic_v10" --layout "$M/layout/layout.json" --clean 0.01 --clean_ceiling 0.04 --glb 400000
 stage web        ns  "$HERE/export_web.py" --ply "$M/splat.ply" --semantic "$M/semantic_v10" --glb "$M/mesh/mesh_web.glb" --out "$WEB_OUT"

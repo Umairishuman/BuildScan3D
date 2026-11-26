@@ -882,6 +882,26 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
   or do something with similar tools?", then "ok try", 2026-11-26).
 - **Status:** Active.
 
+## D-099 · 2026-11-27 · One automatic pipeline: `run_v8.py --auto`, the analyzer makes the per-recording choices
+
+- **Decision:** the user path is `scripts/run_full.sh <recording> <tag> -- --auto` (video in, web bundle with
+  splats, semantics and mesh out). `--auto` fixes the general recipe (frames without ARCore pose kept, retrieval
+  pairs, fast-MVS init, planar prior, blur model, PGSR-lite, camera refinement in training) and adds two stages:
+  `analyze` (`analyze_recording.py`: 5 s windows labelled textured / weak / featureless / hole, route) and `densify`
+  (extra video frames in weak / featureless windows, R-128). Depth priors: DA3-BASE with the confidence cut-off
+  (R-133, D-098) when the weights are present, else Metric3D. Every choice and its reason go to
+  `gs_<tag>/auto.json`. No hand-picked time ranges anywhere. Recordings normal SfM cannot place (route "sensor
+  path") are reported; the sensor-path camera chain (R-096) is not automated yet and comes next.
+- **Why:** Tayyab (2026-11-26): "currently we are nitpicking on the dataset by manually selecting what to run in which
+  parts of the video, i need this to be a generic pipeline or there to be an analyzer that can carry this out
+  properly ... the end goal is the user inputs video -> gets web viewer output with splat and semantics and mesh".
+- **Evidence:** R-128 (densify, +0.29 dB, +3.6 min), R-133 (DA3 + cut-off = best score, commercial-use model), R-120
+  (`--pose_opt`), R-023 (recipe). Test bench: R-134 onwards.
+- **Rejected alternatives:** a separate driver script (two places to keep in step with `run_v8.py`); automating the
+  sensor-path chain first (assembled over ~20 runs, never run end to end; too large for one night, PIPELINE_ANALYZER_PLAN).
+- **By:** Muhammad Tayyab (design proposed 2026-11-26, "ok continue and keep working over this night", 2026-11-27).
+- **Status:** Active.
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |

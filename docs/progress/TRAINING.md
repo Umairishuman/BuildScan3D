@@ -3436,3 +3436,19 @@ igs.txt`):
   model (D-098), most of R-132's loss at 134 – 140 s recovered, best 60 – 90 s so far, 2.6 min faster in total. Not
   yet checked by Tayyab in the viewer (blank wall 55 – 60 s, the point of this run); featureless work paused
   2026-11-26 (Tayyab: viewer performance, the new viewer on master, the generic pipeline first).
+
+### R-134 · 2026-11-27 · roomAttemptSadness2 (bedroom, textured): first `--auto` run, raw video → web bundle (`auto1`)
+
+- **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
+- **Branch / commit:** `feature/auto-pipeline` (`run_v8.py --auto`, `run_full.sh` stages; D-099)
+- **Dataset:** `dataset/roomAttemptSadness2` (on G: through the junction, `moved_to_G_2026-11-26.txt`); raw video,
+  nothing reused (the earlier intermediates were deleted 2026-11-26)
+- **Command(s):** `GPU_EVERY=120 bash scripts/run_full.sh dataset/roomAttemptSadness2 auto1 -- --auto` (log
+  `gs_auto1/run_full.log`, choices `gs_auto1/auto.json`)
+- **Goal:** test bench 1 of D-099: does the automatic pipeline run end to end on a textured recording with no
+  hand-set option, what does the analyzer decide, and how long does each stage take. Reference: R-069 (`v9pgsr8`,
+  hand-set `--window 8`, same recipe without the auto choices).
+- **Start → end:** (filled in when it ends)
+- **Errors during the run:** (filled in as they happen)
+- **Result:** (filled in when it ends)
+- **Verdict:** (filled in when it ends)
