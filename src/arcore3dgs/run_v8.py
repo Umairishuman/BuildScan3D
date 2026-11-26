@@ -178,7 +178,7 @@ if args.auto:
         AUTO["decisions"].append(f"route: normal SfM ({100 * an['placed_share']:.0f} % of the keyframes placed)")
     if sensor:
         if STAGES.index(args.from_stage) <= STAGES.index("sensor"):
-            run("sensor", [py, os.path.join(HERE, "sensor_path.py"), D, W, S, sensor_out, "--prior_args", da3_args],
+            run("sensor", [py, os.path.join(HERE, "sensor_path.py"), D, W, S, sensor_out, "--prior_args=" + da3_args],
                 log=os.path.join(OUT, "sensor_path.log"))
             if not os.path.isdir(os.path.join(S, "sparse_sfm")):
                 shutil.copytree(sp0, os.path.join(S, "sparse_sfm"))    # normal SfM's model, kept
