@@ -1070,3 +1070,21 @@ plan updated (detect path holes; hole-aware loop checks).
   missing `init_points.ply`, the `plane_seg` crash), all in the R-132 entry.
 - Next: Tayyab to look at R-132 in the viewer; then either keep DA3 everywhere or only for the unsupported frames,
   MapAnything (Apache) with ARCore poses for the doorway.
+- Later the same day: Tayyab in the viewer: R-132 has fewer holes but the blank wall at 55 – 60 s is much worse.
+  Offline prior checks (no training): DA3 given our cameras (`--da3_poses`) not better; the trained R-128 is no usable
+  depth reference (its depth at training views is near floaters); DA3's confidence is at its minimum on the blank wall.
+  **R-133** (DA3 + confidence cut-off 1.1): **24.25 = R-128**, best 60 – 90 s, 31.4 min total; viewer `scan-009-conf`.
+- Tayyab paused the featureless work: viewer lag, the new viewer on master, a generic pipeline. Viewer: the new
+  full-window viewer was already on `master` (fast-forward to 991f21d). Lag cause measured with a Chrome GPU frame-time
+  test: the hover readout raycast (150 – 290 ms per call on 1.8 – 2.5 M splats) ran while dragging; fixed on
+  `fix/viewer-perf` (scan #7 worst frame 195 → 15 ms; prototype/web-ui/STATUS.md). Push blocked for the agent.
+
+## 2026-11-27 · Tayyab (agent, night, `feature/auto-pipeline`)
+
+- Tayyab: "ok continue and keep working over this night" (the automatic-pipeline design of 2026-11-26): D-099.
+- `run_v8.py --auto`: fixed recipe, stages `analyze` (analyzer) / `sensor` (`sensor_path.py`, the scan_009 camera chain
+  R-071 – R-096 as one stage, for recordings SfM cannot place) / `densify` (weak windows), DA3 priors with the cut-off,
+  frame budget (keyframe window from the video length: RAM), choices in `gs_<tag>/auto.json`. `run_full.sh`: the new
+  stages, `--auto` implies the unbiased mesh depth, sem2d frame step capped at ~300 frames. `origin/master` merged in.
+- R-134: bedroom (`roomAttemptSadness2`) raw video → web bundle with `--auto` (running; window 8 chosen by itself,
+  as R-069 set by hand).
