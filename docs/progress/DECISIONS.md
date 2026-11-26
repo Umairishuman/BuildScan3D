@@ -857,6 +857,29 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **Rejected alternatives:** installing DA3 with all its dependencies into `nerfstudio-env` (xformers, open3d,
   gradio, moviepy: risk to the training environment); MapAnything first (kept as the second candidate).
 - **By:** Muhammad Tayyab ("ok complete these", 2026-11-25, the list included the DA3 test with its download).
+- **Status:** Active; the model choice is narrowed by D-098.
+
+## D-098 · 2026-11-26 · Only models whose weights allow commercial use go into the pipeline
+
+- **Decision:** the featureless work uses only models whose **weights** (not just code) are licensed for commercial
+  use. Depth Anything 3: DA3-BASE / DA3-SMALL (Apache 2.0, any-view) and DA3Metric-Large (Apache 2.0, single image)
+  are allowed; DA3-LARGE / DA3-GIANT (CC BY-NC 4.0, used in R-130) are research comparison only. Next candidate if
+  they fall short: MapAnything's Apache-2.0 checkpoint (`facebook/map-anything-apache`, accepts known poses and
+  intrinsics, so ARCore can be fed in). VGGT-1B-Commercial (Meta's own licence, gated, military use excluded) is
+  possible but second choice. The licence of every model already in the pipeline (Metric3D first) is to be checked.
+- **Why:** Tayyab: "these are not viable because our project has to be deployed". Training our own depth / pose model
+  is not feasible (data and GPU: 8 GB RTX 3070); our own part is the combination with ARCore, the analyzer and the
+  densify step.
+- **Evidence:** model cards checked 2026-11-26 (DA3-BASE, DA3-SMALL `license: apache-2.0` in the downloaded
+  README.md); web search for MapAnything, VGGT-1B-Commercial, MoGe-2 (MoGe code MIT, weights' licence not confirmed).
+  **Metric3D** (`mono_prior.py`, `torch.hub.load("yvanyin/metric3d")`, the current depth priors of v9): code
+  BSD-2-Clause, but the README marks it for non-commercial use and asks commercial users to contact the authors; no
+  separate weights licence found. So the current pipeline already has this problem: replacing Metric3D is part of
+  this work. First test: R-131.
+- **Rejected alternatives:** keep DA3-LARGE (non-commercial; a public non-commercial FYP demo would be allowed, but
+  the project is meant to be deployable); train a model from scratch (not feasible).
+- **By:** Muhammad Tayyab ("ok but these are not viable because our project has to be deployed, can we build our own
+  or do something with similar tools?", then "ok try", 2026-11-26).
 - **Status:** Active.
 
 ## Open decisions (need the team; agents must not decide these)

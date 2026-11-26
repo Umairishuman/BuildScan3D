@@ -171,6 +171,7 @@ Umair's side continues at R-105.
 | R-128 | 2026-11-25 | scan_009: R-120 plus extra video frames between keyframes in weak / featureless windows (`densify_frames.py`, `v9pld`) | 3070 | 34.0 min (R-120 30.4; prior +2.1, init +1.0, train +0.8) | **aligned 24.25 vs R-120 23.96**, SSIM 0.898; 30 – 60 s +4.7 dB (4 frames), 0 – 30 s +0.9, 134 – 140 s −1.5; 266 frames added | **Kept** (new best, +3.6 min) |
 | R-129 | 2026-11-25 | scan_009: R-128 plus learnable blur motion (`--blur_learn`, `v9plk`) | 3070 | 37.1 min (train 27.7, R-128 25.07) | aligned 24.09 vs R-128 24.25 (63 frames), SSIM 0.892 vs 0.898; 60 – 90 s +0.7, 134 – 140 s −1.2 | Not adopted (no gain, +2.6 min) |
 | R-130 | 2026-11-25 | scan_009: Depth Anything 3 (DA3-LARGE) feasibility on four chunks, same checks as VGGT in R-093 (no training) | 3070 | 7 – 15 s per chunk, peak GPU 5.5 – 5.9 GB | blank wall: rotations fail (113° / 64° median vs gyro); doorway 124 – 134 s: 2.6° median (tracks); depth consistency 0.5 – 5.5 % vs Metric3D 8.2 – 15.1 % | Kept (finding): DA3 depth as priors, DA3 for the doorway frames |
+| R-131 | 2026-11-26 | scan_009: R-130's checks with the Apache-2.0 DA3-BASE / DA3-SMALL (no training, D-098) | 3070 | 19:17 → 19:22; 2 – 4 s per chunk, peak GPU 1.3 – 3.1 GB | depth consistency BASE 1.5 – 3.9 % / SMALL 1.9 – 2.9 % vs Metric3D 8.2 – 15.1 % (keyframe chunks); doorway rotation median 13.5° / 12.8° (LARGE 2.6°); blank wall fails | Kept (finding): BASE usable for depth priors, not for doorway poses alone |
 
 ## Runs
 
@@ -3294,3 +3295,40 @@ igs.txt`):
   priors. Next: (a) DA3 depth as the training priors (aimed at the detached layers); (b) DA3 poses for the doorway
   frames, anchored on placed frames. The textured chunk's p90 of 67° and its 0.90-unit position residual show a few
   frames placed wrongly even there: DA3 poses need a check before use.
+
+### R-131 · 2026-11-26 · scan_009_057ed3beb4fc: R-130's checks with the Apache-2.0 DA3 models (BASE, SMALL; no training)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/featureless-holes` @ 5c2d23d (no code change; D-098)
+- **Dataset:** as R-130; models `depth-anything/DA3-BASE` (541,518,028 bytes, sha256 e01067dc…78b5) and
+  `depth-anything/DA3-SMALL` (137,248,940 bytes, sha256 364492e3…efcf), both checksum-verified against the Hub
+  metadata, model cards `license: apache-2.0`; in `C:/Users/tyb/.cache/buildscan/da3_weights/`
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r131.sh` (log `r131.log`): R-130's four chunks per model (42 – 63 s
+  keyframes, 44 – 60 s video every 0.5 s, 124 – 134 s doorway video every 0.25 s, 15 – 30 s textured keyframes)
+- **Goal:** Tayyab 2026-11-26: the project is deployed, so DA3-LARGE (CC BY-NC 4.0) is not usable. Do the
+  Apache-2.0 models keep LARGE's results (doorway 2.60° from the gyro, depth consistency 0.5 – 5.5 % vs Metric3D
+  8.2 – 15.1 %)?
+- **Start → end:** 2026-11-26 19:17:15 → 19:22:12 (8 chunks; BASE 3 – 4 s per chunk incl. loading, peak GPU
+  2.8 – 3.1 GB; SMALL 2 – 3 s, peak GPU 1.3 – 1.5 GB; the rest of each step is frame reading and the checks).
+- **Errors during the run:** none (omegaconf deprecation notices only; the printout still says "VGGT" for the model).
+- **Result:** outputs `dataset/scan_009_057ed3beb4fc/da3_r131_{base,small}_*/`. LARGE column from R-130.
+
+  | Check | LARGE (CC BY-NC) | BASE (Apache) | SMALL (Apache) | Metric3D |
+  |---|---|---|---|---|
+  | Doorway 124 – 134 s, rotation vs gyro all pairs, median / p90 | **2.60° / 6.58°** | 13.45° / 51.98° | 12.79° / 57.09° | – |
+  | Doorway, per-2 s-bin step error medians | (not tabulated in R-130) | 1.4 – 2.4° | 0.9 – 7.5° | – |
+  | Blank wall 42 – 63 s keyframes, rotation vs gyro median | 112.6° | 102.8° | 113.9° | – |
+  | Blank wall 44 – 60 s video, rotation vs gyro median | 64.1° | 80.1° | 81.6° | – |
+  | Depth consistency, 15 – 30 s keyframes (textured) | 0.5 % | 1.5 % | 1.9 % | 8.2 % |
+  | Depth consistency, 42 – 63 s keyframes | 5.5 % | 3.9 % | 2.9 % | 15.1 % |
+  | Depth consistency, 44 – 60 s video | 3.8 % | 8.4 % | 11.2 % | not measured |
+  | Depth consistency, doorway video | 1.1 % | 2.5 % | 2.8 % | not measured |
+
+  Depth consistency is each model's own depth warped with its own poses (DA3) or with the SfM poses (Metric3D
+  priors), as in R-093 / R-130: agreement between frames, not accuracy against a measured truth.
+- **Verdict:** kept as a finding. For **depth priors** the Apache models still agree across frames 2 – 5× better than
+  Metric3D on the keyframe chunks (1.5 – 3.9 % vs 8.2 – 15.1 %), so DA3-BASE is a usable replacement candidate
+  there. For **doorway poses** they lose what LARGE had: consecutive steps stay within ~1 – 2.5° (BASE), but over the
+  whole stretch the median is 13° and p90 52 – 57°, so they cannot place the doorway frames on their own. Neither
+  tracks the blank wall (as LARGE and VGGT). Next: DA3-BASE depth as training priors; for the doorway, MapAnything
+  (Apache) with ARCore poses / intrinsics as input, or BASE steps chained and anchored to the gyro (D-098).
