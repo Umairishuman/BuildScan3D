@@ -3391,3 +3391,36 @@ igs.txt`):
   licence reason (D-098) stands either way. Possible next steps: Metric3D-style per-frame fits where SfM support is
   strong and DA3 only for the filled frames (separates the two changes; still needs a commercial-use model for the
   supported frames), or a higher DA3 resolution for far views.
+- **Tayyab in the viewer (2026-11-26):** R-132 has fewer holes, but the blank wall at 55 – 60 s is much worse; R-128
+  keeps it flat.
+
+### R-133 · 2026-11-26 · scan_009_057ed3beb4fc: R-132 with DA3's confidence cut-off (`v9pdc`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/featureless-holes` (`mono_prior.py --da3_conf_min`, `--da3_poses`; `prior_vs_model.py`)
+- **Dataset:** R-132's `work_v9pda_sfm` copied to `work_v9pdc_sfm` without junctions (`robocopy /XJ`), without
+  R-132's outputs (`gs_v9pda`, `mono_prior*`, `init_fmvs.ply`, `transforms_fmvs.json`, eval)
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r133.sh` (log `r133.log`): `run_v8.py --tag v9pdc --from_stage prior`
+  with R-132's options and `--prior_args "--da3 <DA3-BASE> --fill_scale --da3_conf_min 1.1"`; `eval_align.py` R-128 /
+  R-132 / R-133; `offpath_views.py` R-128 vs R-133
+- **Goal:** Tayyab "ok try it" (2026-11-26; paths 1 + 2 offline, then one training run): keep DA3's filling where DA3
+  is sure, no prior where it is not (the blank wall, like R-128). Compared with R-128 (24.25) and R-132 (23.76).
+- **Offline tests before the run (no training), on R-128's frames:**
+  - Path 2, DA3 given our cameras (`--da3_poses`; DA3's evo-based Sim3 replaced by a numpy Umeyama in
+    `da3_loader.py`): per-frame scale after one global factor p10 0.64 / p90 1.97 (chained: 0.51 / 2.13); fill
+    leave-one-out 1.3 % / p90 15.0 % (chained 1.1 / 7.3 %). Neighbour consistency with our cameras (frames 1 – 3
+    apart, `prior_vs_model.py --consistency`): 50 – 55 s 4.8 % (chained 2.5 %), 55 – 60 s 22.9 % (chained 5.7 %),
+    elsewhere within ±1 point of chained. Not used.
+  - The trained R-128 as reference (`prior_vs_model.py`, its depth rendered at the training cameras): not usable;
+    its depth at many training views is near floaters (e.g. 136 s: the wall rendered far in front of the SfM points
+    that Metric3D fits to 1 – 5 %).
+  - Same-surface agreement with frames from other times (scratch check): 25 – 30 % median for every prior, Metric3D
+    included, on textured stretches too: dominated by occlusion / the camera path, does not separate the variants.
+  - DA3 confidence (median per frame, chained): 50 – 55 s 1.00 – 1.02 (minimum), 134 – 140 s 1.00, textured
+    stretches 2 – 4. Frames with median < 1.1: 50 – 55 s 18/18, 55 – 60 s 3/9 (the LED strip is confident), 134 – 140
+    s 23/29, 0 – 30 s 27/159, 60 – 90 s 42/162, 140 – 200 s 47/235. The cut-off is per pixel (all frames) plus no
+    filled prior for an unsupported frame with < 50 % confident pixels.
+- **Start → end:** (filled in when it ends)
+- **Errors during the run:** (filled in as they happen)
+- **Result:** (filled in when it ends)
+- **Verdict:** (filled in when it ends)

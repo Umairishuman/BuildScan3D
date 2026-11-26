@@ -36,6 +36,12 @@ ap.add_argument("--da3", default="",
 ap.add_argument("--da3_chunk", type=int, default=32, help="frames per DA3 forward pass")
 ap.add_argument("--da3_overlap", type=int, default=8, help="frames shared by consecutive chunks (scale chaining)")
 ap.add_argument("--da3_res", type=int, default=504, help="DA3 processing resolution (longest side)")
+ap.add_argument("--da3_poses", action="store_true",
+                help="give DA3 our cameras (frames.json c2w + intrinsics): its depth then follows the camera path and "
+                     "comes out in scene units, no chaining (R-133)")
+ap.add_argument("--da3_conf_min", type=float, default=0.0,
+                help="> 0: DA3 pixels below this confidence get no prior; a frame without SfM support whose confident "
+                     "pixels cover < 50 %% gets no prior at all (blank walls, R-132 / R-133)")
 args = ap.parse_args()
 meta = json.load(open(os.path.join(args.work, "frames.json"))); fr = meta["frames"]
 W, H, d = meta["W"], meta["H"], args.down
@@ -81,7 +87,17 @@ def normals_from_depth(D):
     return n
 
 
-def post(i, f, m):
+CONF = {}                                                              # DA3 confidence per frame index (k)
+
+
+def conf_mask(k):
+    """DA3 pixels confident enough for a prior (all pixels when --da3_conf_min is 0 or there is no confidence)"""
+    if args.da3_conf_min <= 0 or k not in CONF:
+        return np.ones((h, w), bool)
+    return CONF[k] >= args.da3_conf_min
+
+
+def post(i, f, m, k=None):
     """align one frame's Metric3D depth to its SfM points, derive normals, save (runs in a worker thread)"""
     o = cam == i
     c2w = np.array(f["c2w"]) @ G
@@ -104,7 +120,7 @@ def post(i, f, m):
         a = float(np.median(z / zm))
     D = a * m + b
     rel = np.abs(D[py[ok], px[ok]] - z) / z if len(z) else np.array([1.0])
-    valid = (D > 0.15) & (D < 15) & (len(z) >= 5)
+    valid = (D > 0.15) & (D < 15) & (len(z) >= 5) & conf_mask(k)
     Dn = cv2.medianBlur(D.astype(np.float32), 5)
     n = normals_from_depth(Dn)
     np.savez_compressed(os.path.join(out_dir, f["name"] + ".npz"), depth=D.astype(np.float16),
@@ -112,6 +128,8 @@ def post(i, f, m):
     stats[f["name"]] = dict(scale=float(a), shift=float(b), n_sfm=int(len(z)), inliers=n_in,
                             ratio=float(np.median(z / zm)) if len(z) else None,
                             median_rel_err=float(np.median(rel)), raw_median_rel_err=float(np.median(np.abs(zm - z) / z)) if len(z) else None)
+    if k in CONF:
+        stats[f["name"]]["conf_med"] = float(np.median(CONF[k]))
     if i % 100 == 0:
         print(f"{i}/{len(fr)}  aligned median err {100 * np.median(rel):.1f}% (raw Metric3D "
               f"{100 * stats[f['name']]['raw_median_rel_err'] if len(z) else -1:.1f}%), scale {a:.3f}", flush=True)
@@ -131,16 +149,26 @@ def da3_depths(todo):
     step = max(1, args.da3_chunk - args.da3_overlap)
     starts = list(range(0, max(1, len(order) - args.da3_overlap), step))
     out, links = {}, []
+    Kf = np.array([[meta["fx"], 0, meta["cx"]], [0, meta["fy"], meta["cy"]], [0, 0, 1.0]], np.float32)
     for c, s0 in enumerate(starts):
         ks = order[s0:s0 + args.da3_chunk]
         paths = [os.path.join(args.work, "images", todo[k][1]["name"] + ".jpg") for k in ks]
+        kw = {}
+        if args.da3_poses:
+            kw = dict(extrinsics=np.stack([np.linalg.inv(np.array(todo[k][1]["c2w"]) @ G) for k in ks]).astype(np.float32),
+                      intrinsics=np.stack([Kf] * len(ks)))
         with torch.no_grad():
-            pred = net.inference(paths, process_res=args.da3_res)
+            pred = net.inference(paths, process_res=args.da3_res, **kw)
         dep = torch.from_numpy(np.asarray(pred.depth, np.float32))[:, None]
         dep = torch.nn.functional.interpolate(dep, (h, w), mode="bilinear").squeeze(1).numpy()
+        if pred.conf is not None:
+            cf = torch.from_numpy(np.asarray(pred.conf, np.float32))[:, None]
+            cf = torch.nn.functional.interpolate(cf, (h, w), mode="bilinear").squeeze(1).numpy()
+            for j, k in enumerate(ks):
+                CONF.setdefault(k, cf[j])
         shared = [j for j, k in enumerate(ks) if k in out]
         s = 1.0
-        if shared:
+        if shared and not args.da3_poses:                               # with our poses the depth is in scene units
             r = [np.median(out[ks[j]][dep[j] > 1e-3] / dep[j][dep[j] > 1e-3]) for j in shared]
             s = float(np.median(r)); links.append((c, len(shared), s, float(np.std(np.log(r)))))
         for j, k in enumerate(ks):
@@ -180,7 +208,7 @@ if args.da3:
           f"p10 {np.percentile(rr, 10):.3f}, p90 {np.percentile(rr, 90):.3f} (1.0 = the chain holds one scale)", flush=True)
     dd = {k: v * g for k, v in dd.items()}
     with ThreadPoolExecutor(3) as writer:
-        for j in [writer.submit(post, i, f, dd[k]) for k, (i, f) in enumerate(todo)]:
+        for j in [writer.submit(post, i, f, dd[k], k) for k, (i, f) in enumerate(todo)]:
             j.result()
 else:
     with ThreadPoolExecutor(1) as reader, ThreadPoolExecutor(3) as writer:
@@ -204,18 +232,25 @@ if args.fill_scale and not args.limit:
                   if s["inliers"] >= 20 and s["median_rel_err"] < 0.15 and s["ratio"])
     gt = np.array([g[0] for g in good]); gl = np.array([g[1] for g in good])
     loo = [abs(np.exp(np.interp(gt[k], np.delete(gt, k), np.delete(gl, k)) - gl[k]) - 1) for k in range(1, len(gt) - 1)]
-    filled = 0
-    for f in fr:
+    filled = gated = 0
+    for k, f in enumerate(fr):
         s = stats[f["name"]]
         if s["n_sfm"] >= 5 or len(gt) < 2:
+            continue
+        cm = conf_mask(k)
+        if cm.mean() < 0.5:                                             # DA3 unsure about this frame (blank wall): no prior
+            s["conf_gated"] = float(cm.mean()); gated += 1
             continue
         a_f = float(np.exp(np.interp(t[f["name"]], gt, gl)))
         p = os.path.join(out_dir, f["name"] + ".npz")
         z_ = np.load(p); D = z_["depth"].astype(np.float32) * a_f       # saved with a = 1, b = 0 (raw Metric3D)
         n = normals_from_depth(cv2.medianBlur(D, 5))
         np.savez_compressed(p, depth=D.astype(np.float16), normal=np.clip(n * 127, -127, 127).astype(np.int8),
-                            valid=(D > 0.15) & (D < 15))
+                            valid=(D > 0.15) & (D < 15) & cm)
         s["scale_filled"] = a_f; filled += 1                            # "scale" stays the fitted value (sfm_scale_check)
+    if gated:
+        print(f"fill_scale: {gated} frames without SfM support left without a prior (DA3 confidence >= "
+              f"{args.da3_conf_min} on < 50 % of the frame)", flush=True)
     print(f"fill_scale: {filled} frames without SfM support got a time-interpolated scale from {len(gt)} well-fitted "
           f"frames; leave-one-out scale error on those: median {100 * np.median(loo):.1f} %, p90 "
           f"{100 * np.percentile(loo, 90):.1f} %", flush=True)

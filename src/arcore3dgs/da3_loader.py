@@ -23,11 +23,28 @@ def _stub(name):
             sys.modules[mn] = m
 
 
+def _umeyama_sim3_from_paths(pose_ref, pose_est):
+    """numpy stand-in for DA3's evo-based Sim3 fit (evo is not installed): camera centres of pose_est onto pose_ref,
+    ref ~ s * R @ est + t (Umeyama 1991). Used when DA3 is given known poses (mono_prior.py --da3_poses)."""
+    import numpy as np
+    X, Y = pose_est[:, :3, 3], pose_ref[:, :3, 3]
+    mx, my = X.mean(0), Y.mean(0); Xc, Yc = X - mx, Y - my
+    U, D, Vt = np.linalg.svd(Yc.T @ Xc / len(X))
+    Sg = np.diag([1.0, 1.0, np.sign(np.linalg.det(U) * np.linalg.det(Vt))])
+    R = U @ Sg @ Vt
+    s = float(np.trace(np.diag(D) @ Sg) / max((Xc ** 2).sum() / len(X), 1e-12))
+    t = my - s * R @ mx
+    import depth_anything_3.utils.pose_align as pa
+    return R, t, s, pa._apply_sim3_to_poses(pose_est, R, t, s)
+
+
 def load_api():
     stubbed = []
     for _ in range(20):
         try:
             from depth_anything_3.api import DepthAnything3
+            import depth_anything_3.utils.pose_align as pa
+            pa._umeyama_sim3_from_paths = _umeyama_sim3_from_paths
             return DepthAnything3, stubbed
         except ModuleNotFoundError as e:
             _stub(e.name); stubbed.append(e.name)
