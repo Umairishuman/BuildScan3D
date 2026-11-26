@@ -29,6 +29,13 @@ ap.add_argument("--out", default="mono_prior", help="output folder inside --work
 ap.add_argument("--limit", type=int, default=0, help="only the first N frames (benchmarking)")
 ap.add_argument("--fill_scale", action="store_true",
                 help="frames with < 5 SfM points get a scale interpolated in time instead of no prior (FEATURELESS §10)")
+ap.add_argument("--da3", default="",
+                help="Depth Anything 3 weights folder (DA3-BASE / DA3-SMALL, Apache 2.0, D-098) instead of Metric3D: "
+                     "overlapping chunks of consecutive frames, chunk scales chained so the whole walk shares one depth "
+                     "scale (R-131: depth 2 - 5x more consistent across frames than Metric3D)")
+ap.add_argument("--da3_chunk", type=int, default=32, help="frames per DA3 forward pass")
+ap.add_argument("--da3_overlap", type=int, default=8, help="frames shared by consecutive chunks (scale chaining)")
+ap.add_argument("--da3_res", type=int, default=504, help="DA3 processing resolution (longest side)")
 args = ap.parse_args()
 meta = json.load(open(os.path.join(args.work, "frames.json"))); fr = meta["frames"]
 W, H, d = meta["W"], meta["H"], args.down
@@ -37,7 +44,7 @@ out_dir = os.path.join(args.work, args.out); os.makedirs(out_dir, exist_ok=True)
 sp = np.load(os.path.join(args.work, "sparse.npz")); X, cam, pt, uv = sp["X"], sp["cam"], sp["pt"], sp["uv"]
 G = np.diag([1.0, -1.0, -1.0, 1.0])
 dev = torch.device("cuda")
-model = torch.hub.load("yvanyin/metric3d", f"metric3d_vit_{args.model}", pretrain=True).to(dev).eval()
+model = None if args.da3 else torch.hub.load("yvanyin/metric3d", f"metric3d_vit_{args.model}", pretrain=True).to(dev).eval()
 INPUT = (616, 1064)
 MEAN = torch.tensor([123.675, 116.28, 103.53], device=dev).view(1, 3, 1, 1)
 STD = torch.tensor([58.395, 57.12, 57.375], device=dev).view(1, 3, 1, 1)
@@ -110,20 +117,82 @@ def post(i, f, m):
               f"{100 * stats[f['name']]['raw_median_rel_err'] if len(z) else -1:.1f}%), scale {a:.3f}", flush=True)
 
 
+def da3_depths(todo):
+    """DA3 relative depth for every frame at (h, w), one shared scale along the walk.
+
+    DA3's any-view models return depth up to one unknown scale per forward pass. Chunks of consecutive frames
+    (time order) overlap; each chunk's depth is rescaled to the previous chunk by the median per-pixel ratio on
+    the shared frames, so frames without SfM points can take their scale from their neighbours (--fill_scale)."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import da3_loader
+    DepthAnything3, stubbed = da3_loader.load_api()
+    net = DepthAnything3.from_pretrained(args.da3).to(dev).eval()
+    order = sorted(range(len(todo)), key=lambda k: todo[k][1]["pts"])
+    step = max(1, args.da3_chunk - args.da3_overlap)
+    starts = list(range(0, max(1, len(order) - args.da3_overlap), step))
+    out, links = {}, []
+    for c, s0 in enumerate(starts):
+        ks = order[s0:s0 + args.da3_chunk]
+        paths = [os.path.join(args.work, "images", todo[k][1]["name"] + ".jpg") for k in ks]
+        with torch.no_grad():
+            pred = net.inference(paths, process_res=args.da3_res)
+        dep = torch.from_numpy(np.asarray(pred.depth, np.float32))[:, None]
+        dep = torch.nn.functional.interpolate(dep, (h, w), mode="bilinear").squeeze(1).numpy()
+        shared = [j for j, k in enumerate(ks) if k in out]
+        s = 1.0
+        if shared:
+            r = [np.median(out[ks[j]][dep[j] > 1e-3] / dep[j][dep[j] > 1e-3]) for j in shared]
+            s = float(np.median(r)); links.append((c, len(shared), s, float(np.std(np.log(r)))))
+        for j, k in enumerate(ks):
+            if k not in out:
+                out[k] = dep[j] * s
+        if c % 10 == 0:
+            print(f"DA3 chunk {c + 1}/{len(starts)}: {len(ks)} frames, chain scale {s:.3f}", flush=True)
+    del net; torch.cuda.empty_cache()
+    sp_ = np.array([l[3] for l in links]) if links else np.zeros(1)
+    print(f"DA3 ({args.da3}): {len(out)} frames in {len(starts)} chunks of {args.da3_chunk} (overlap {args.da3_overlap}); "
+          f"spread of the chaining ratio over shared frames (std log): median {np.median(sp_):.3f}, max {sp_.max():.3f}; "
+          f"stand-ins: {stubbed}", flush=True)
+    return out
+
+
 # the GPU only runs the network: the next JPEG is read and the previous frame aligned / saved in threads
 stats = {}; t0 = time.time()
 todo = list(enumerate(fr[:args.limit] if args.limit else fr))
 read = lambda f: cv2.imread(os.path.join(args.work, "images", f["name"] + ".jpg"))
-with ThreadPoolExecutor(1) as reader, ThreadPoolExecutor(3) as writer:
-    nxt = reader.submit(read, todo[0][1]) if todo else None
-    jobs = []
+if args.da3:
+    dd = da3_depths(todo)
+    # bring the chained DA3 depth to roughly metres (one global factor), so post()'s scale sanity bounds apply
+    rr = []
     for k, (i, f) in enumerate(todo):
-        img = nxt.result()
-        if k + 1 < len(todo):
-            nxt = reader.submit(read, todo[k + 1][1])
-        jobs.append(writer.submit(post, i, f, metric_depth(img)))
-    for j in jobs:
-        j.result()                                                      # re-raise any worker error
+        o = cam == i
+        if o.sum() < 20:
+            continue
+        c2w = np.array(f["c2w"]) @ G
+        z = ((X[pt[o]] - c2w[:3, 3]) @ c2w[:3, :3])[:, 2]
+        px = np.clip((uv[o, 0] / d).astype(int), 0, w - 1); py = np.clip((uv[o, 1] / d).astype(int), 0, h - 1)
+        zm = dd[k][py, px]; ok = (z > 0.1) & (zm > 1e-3)
+        if ok.sum() >= 20:
+            rr.append(np.median(z[ok] / zm[ok]))
+    g = float(np.median(rr)) if rr else 1.0
+    rr = np.array(rr) / g
+    print(f"DA3 global scale {g:.4f} from {len(rr)} frames with >= 20 SfM points; per-frame ratio after it: "
+          f"p10 {np.percentile(rr, 10):.3f}, p90 {np.percentile(rr, 90):.3f} (1.0 = the chain holds one scale)", flush=True)
+    dd = {k: v * g for k, v in dd.items()}
+    with ThreadPoolExecutor(3) as writer:
+        for j in [writer.submit(post, i, f, dd[k]) for k, (i, f) in enumerate(todo)]:
+            j.result()
+else:
+    with ThreadPoolExecutor(1) as reader, ThreadPoolExecutor(3) as writer:
+        nxt = reader.submit(read, todo[0][1]) if todo else None
+        jobs = []
+        for k, (i, f) in enumerate(todo):
+            img = nxt.result()
+            if k + 1 < len(todo):
+                nxt = reader.submit(read, todo[k + 1][1])
+            jobs.append(writer.submit(post, i, f, metric_depth(img)))
+        for j in jobs:
+            j.result()                                                  # re-raise any worker error
 if args.fill_scale and not args.limit:
     # Frames with < 5 SfM points (no image support: textureless walls, FEATURELESS_TRACKING_PLAN §10) would get no
     # depth / normal prior at all, so 3DGS is free to put their surfaces at any depth that fits the training view.
