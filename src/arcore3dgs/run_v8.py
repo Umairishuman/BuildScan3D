@@ -20,8 +20,10 @@ PIPELINE_ANALYZER_PLAN): the recipe and the per-recording choices are made here,
             R-128: +0.29 dB for +3.6 min); SfM model and frames re-exported with them
   prior     Depth Anything 3 (DA3-BASE, Apache 2.0, D-098) with the confidence cut-off (R-133) when its weights are
             found (--da3), else Metric3D (non-commercial licence, D-098)
-Every choice and its reason goes to gs_<tag>/auto.json. A recording SfM cannot place (route "sensor path") is
-reported there; the sensor-path camera chain is not automated yet, so the run continues with the frames SfM placed.
+  sensor    when normal SfM did not place the recording (route "sensor path": < 95 % of the keyframes or holes
+            >= 5 % of the time): sensor_path.py, the scan_009 camera chain (gyro bias, gyro rotations, prior BA, video
+            tracks, scale drift, loop closure; R-071 - R-096) as one stage; the analyzer labels again on its cameras
+Every choice and its reason goes to gs_<tag>/auto.json. --no_sensor_path keeps the frames SfM placed instead.
 """
 import os, sys, json, time, shutil, argparse, subprocess
 import toolpaths
@@ -38,7 +40,7 @@ ap.add_argument("--mono_model", default="large", choices=["large", "small"],
 ap.add_argument("--no_fp16", action="store_true", help="Metric3D in full precision (2x slower, same aligned error)")
 ap.add_argument("--split", default="", help="file with held-out frame names (e.g. offpath_test.txt)")
 ap.add_argument("--from_stage", default="select",
-                choices=["select", "sfm", "analyze", "densify", "export", "prior", "init", "train", "ply"])
+                choices=["select", "sfm", "analyze", "sensor", "densify", "export", "prior", "init", "train", "ply"])
 ap.add_argument("--auto", action="store_true",
                 help="recipe + analyzer-driven choices (see the docstring); writes gs_<tag>/auto.json")
 ap.add_argument("--da3", default=os.path.join(os.environ.get("BUILDSCAN_CACHE", os.path.join(os.path.expanduser("~"), ".cache", "buildscan")),
@@ -46,6 +48,8 @@ ap.add_argument("--da3", default=os.path.join(os.environ.get("BUILDSCAN_CACHE", 
                 help="--auto: DA3 weights folder for the depth priors (Metric3D when it does not exist)")
 ap.add_argument("--da3_conf_min", type=float, default=1.1, help="--auto: DA3 confidence cut-off (R-133)")
 ap.add_argument("--no_densify", action="store_true", help="--auto: do not add frames in weak windows")
+ap.add_argument("--no_sensor_path", action="store_true",
+                help="--auto: never run the sensor-path chain (continue with the frames SfM placed)")
 ap.add_argument("--frame_budget", type=int, default=1100,
                 help="--auto: most training frames (keyframes + densified); RAM, ~5.8 MB each")
 ap.add_argument("--sfm_args", default="", help='extra sfm_colmap.py args, e.g. "--retrieval 20" or "--feature aliked"')
@@ -95,7 +99,7 @@ W, S = os.path.join(D, f"work_{args.tag}"), os.path.join(D, f"work_{args.tag}_sf
 NAME = f"{os.path.basename(D)}_{args.tag}"
 OUT = os.path.join(S, f"gs_{args.tag}")
 env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
-STAGES = ["select", "sfm", "analyze", "densify", "export", "prior", "init", "train", "ply"]
+STAGES = ["select", "sfm", "analyze", "sensor", "densify", "export", "prior", "init", "train", "ply"]
 timing_file = os.path.join(OUT, "timing.json")
 os.makedirs(OUT, exist_ok=True)
 timing = json.load(open(timing_file)) if os.path.exists(timing_file) else {}
@@ -131,20 +135,64 @@ def save_auto():
 
 
 if args.auto:
+    if os.path.isdir(args.da3) and os.path.exists(os.path.join(args.da3, "model.safetensors")):
+        da3_args = f"--da3 {args.da3} --fill_scale --da3_conf_min {args.da3_conf_min}"
+        args.prior_args = (args.prior_args + " " + da3_args).strip()
+        prior_note = (f"depth priors: Depth Anything 3 ({os.path.basename(args.da3)}, Apache 2.0) with the confidence "
+                      f"cut-off {args.da3_conf_min}; frames without SfM points get a filled prior where DA3 is confident (R-133)")
+    else:
+        da3_args = ""
+        prior_note = (f"depth priors: Metric3D (DA3 weights not found at {args.da3}); NOTE: Metric3D's licence is "
+                      "non-commercial (D-098)")
+    sp0 = os.path.join(S, "sparse", "0")
+    sensor_out = os.path.join(S, "sensor_path")
+
+    def label_string(a_):
+        return "".join({"textured": "T", "weak": "w", "featureless": "f", "hole": "_"}[w["label"]] for w in a_["windows"])
+
+    def re_export(stage_name, sim3):
+        """undistort + Sim3 / frames.json again after sparse/0 changed (sensor path or densified frames)"""
+        for st in ("undistort", "export"):
+            t0 = time.time()
+            r = subprocess.run([py, os.path.join(HERE, "sfm_colmap.py"), "--work", W, "--out", S, "--stage", st]
+                               + args.sfm_args.split() + (["--sim3", "none"] if not sim3 else []), cwd=ROOT, env=env)
+            if r.returncode:
+                sys.exit(f"{stage_name}: sfm_colmap --stage {st} failed ({r.returncode})")
+            timing[stage_name] = round(timing.get(stage_name, 0) + (time.time() - t0) / 60, 2)
+        json.dump(timing, open(timing_file, "w"), indent=1)
+
     analysis = os.path.join(S, "analysis.json")
     run("analyze", [py, os.path.join(HERE, "analyze_recording.py"), "--selection", W, "--model", S, "--out", analysis])
     an = json.load(open(analysis))
     AUTO["analysis"] = {k: an[k] for k in ("duration_s", "selected", "placed", "placed_share", "obs_median",
                                            "arcore_tracked", "hole_time_s", "labels", "route")}
-    AUTO["analysis"]["windows"] = "".join({"textured": "T", "weak": "w", "featureless": "f", "hole": "_"}[w["label"]]
-                                          for w in an["windows"])
+    AUTO["analysis"]["windows"] = label_string(an)
+    sensor = an["route"] != "normal SfM" and not args.no_sensor_path
     if an["route"] != "normal SfM":
         AUTO["decisions"].append(
             f"route: SfM placed {100 * an['placed_share']:.0f} % of the keyframes, holes {an['hole_time_s']:.0f} s of "
-            f"{an['duration_s']:.0f} s: this recording needs the sensor-path camera chain (not automated yet, "
-            "PIPELINE_ANALYZER_PLAN §2.2); continuing with the frames SfM placed")
+            f"{an['duration_s']:.0f} s -> " + ("sensor-path camera chain (sensor_path.py: gyro bias, gyro rotations, "
+            "prior BA, video tracks, scale drift, loop closure; R-071 - R-096)" if sensor else
+            "sensor path needed but off (--no_sensor_path); continuing with the frames SfM placed"))
     else:
         AUTO["decisions"].append(f"route: normal SfM ({100 * an['placed_share']:.0f} % of the keyframes placed)")
+    if sensor:
+        if STAGES.index(args.from_stage) <= STAGES.index("sensor"):
+            run("sensor", [py, os.path.join(HERE, "sensor_path.py"), D, W, S, sensor_out, "--prior_args", da3_args],
+                log=os.path.join(OUT, "sensor_path.log"))
+            if not os.path.isdir(os.path.join(S, "sparse_sfm")):
+                shutil.copytree(sp0, os.path.join(S, "sparse_sfm"))    # normal SfM's model, kept
+            shutil.rmtree(sp0); shutil.copytree(os.path.join(sensor_out, "model"), sp0)
+            re_export("sensor", sim3=False)                      # the chain's model is metric and +Y up
+        sp_rep = os.path.join(sensor_out, "sensor_path.json")
+        if os.path.exists(sp_rep):
+            AUTO["sensor_path_min"] = json.load(open(sp_rep)).get("steps")
+        analysis = os.path.join(S, "analysis_sensor.json")       # the labels again, on the new cameras
+        subprocess.run([py, os.path.join(HERE, "analyze_recording.py"), "--selection", W, "--model", S, "--out", analysis],
+                       cwd=ROOT, env=env, check=True)
+        an = json.load(open(analysis))
+        AUTO["analysis_after_sensor_path"] = {"placed_share": an["placed_share"], "labels": an["labels"],
+                                              "windows": label_string(an), "route": an["route"]}
     n_weak = an["labels"].get("weak", 0) + an["labels"].get("featureless", 0)
     room = min(300, args.frame_budget - an["selected"])            # densify cap within the RAM budget
     if args.no_densify or n_weak == 0 or room < 20:
@@ -154,33 +202,17 @@ if args.auto:
     else:
         AUTO["decisions"].append(f"densify: yes, {n_weak} weak / featureless windows of {len(an['windows'])} get the "
                                  "video frames between their placed keyframes (R-128)")
-        sp0, keep = os.path.join(S, "sparse", "0"), os.path.join(S, "sparse_sfm")
         if STAGES.index(args.from_stage) <= STAGES.index("densify"):
-            if not os.path.isdir(keep):
-                shutil.copytree(sp0, keep)                   # the SfM model as mapped, kept for a re-run
+            before = os.path.join(S, "sparse_predensify")
+            shutil.rmtree(before, ignore_errors=True); shutil.copytree(sp0, before)
             dense = os.path.join(S, "sparse_dense")
             shutil.rmtree(dense, ignore_errors=True)
-            run("densify", [py, os.path.join(HERE, "densify_frames.py"), D, W, keep, analysis, dense,
+            run("densify", [py, os.path.join(HERE, "densify_frames.py"), D, W, before, analysis, dense,
                             "--max_new", str(room)])
             shutil.rmtree(sp0); shutil.copytree(dense, sp0)
-            for st in ("undistort", "export"):              # undistort the added frames, Sim3 + frames.json again
-                t0 = time.time()
-                r = subprocess.run([py, os.path.join(HERE, "sfm_colmap.py"), "--work", W, "--out", S, "--stage", st]
-                                   + args.sfm_args.split(), cwd=ROOT, env=env)
-                if r.returncode:
-                    sys.exit(f"densify: sfm_colmap --stage {st} failed ({r.returncode})")
-                timing["densify"] = round(timing.get("densify", 0) + (time.time() - t0) / 60, 2)
-            json.dump(timing, open(timing_file, "w"), indent=1)
-            add = json.load(open(os.path.join(dense, "densify.json")))
-            AUTO["densify_added"] = len(add["added"])
-    if os.path.isdir(args.da3) and os.path.exists(os.path.join(args.da3, "model.safetensors")):
-        args.prior_args = (args.prior_args + f" --da3 {args.da3} --fill_scale --da3_conf_min {args.da3_conf_min}").strip()
-        AUTO["decisions"].append(f"depth priors: Depth Anything 3 ({os.path.basename(args.da3)}, Apache 2.0) with the "
-                                 f"confidence cut-off {args.da3_conf_min}; frames without SfM points get a filled prior "
-                                 "where DA3 is confident (R-133)")
-    else:
-        AUTO["decisions"].append(f"depth priors: Metric3D (DA3 weights not found at {args.da3}); NOTE: Metric3D's "
-                                 "licence is non-commercial (D-098)")
+            re_export("densify", sim3=not sensor)
+            AUTO["densify_added"] = len(json.load(open(os.path.join(dense, "densify.json")))["added"])
+    AUTO["decisions"].append(prior_note)
     save_auto()
 if STAGES.index(args.from_stage) <= STAGES.index("export"):
     shutil.rmtree(os.path.join(S, "undist", "images"), ignore_errors=True)   # export copies what it needs
