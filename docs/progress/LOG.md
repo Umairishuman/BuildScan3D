@@ -1053,3 +1053,20 @@ plan updated (detect path holes; hole-aware loop checks).
 - Next: Tayyab to choose (DA3 depth priors; DA3 for the doorway frames; analyzer + densify into `run_v8.py`).
 - Tayyab on the viewer (2026-11-25): R-120 looks good from some angles; R-128 (`scan-009-dense`) looks better in some
   places and worse in others. Featureless work paused; next: the web viewer layout (`feature/viewer-ui`).
+
+## 2026-11-26 · Tayyab (agent, `exp/featureless-holes`)
+
+- Featureless work resumed. Tayyab: DA3-LARGE is not usable because the project has to be deployed; only models whose
+  weights allow commercial use (D-098). Metric3D, the current depth prior, is non-commercial too (its README), so it
+  has to be replaced as well.
+- R-131: R-130's checks with the Apache-2.0 DA3-BASE / DA3-SMALL: depth still 2 – 5× more consistent than Metric3D;
+  doorway rotations 13° median (LARGE 2.6°), so not usable alone for the doorway frames; blank wall fails (all models).
+- `mono_prior.py --da3` (DA3 in overlapping chunks, chained to one scale; frames without SfM points get a scale from
+  their neighbours, leave-one-out 1.1 % median vs 5.3 % for Metric3D in R-092). In R-128, 338 of 850 frames had no
+  depth prior at all. `plane_seg.py` fix (empty refit crashed on the new priors).
+- R-132 (R-128 + DA3-BASE priors): **23.76 vs 24.25**, all of the loss in the 134 – 140 s held-out block (15.98 vs
+  18.30), equal or better elsewhere (26.20 vs 26.12 outside it); off-path views visibly cleaner (no floating blobs in
+  front of the door / wall). Inconclusive. Prior stage 1.5 min instead of 5.7. Three restarts (copied junction,
+  missing `init_points.ply`, the `plane_seg` crash), all in the R-132 entry.
+- Next: Tayyab to look at R-132 in the viewer; then either keep DA3 everywhere or only for the unsupported frames,
+  MapAnything (Apache) with ARCore poses for the doorway.

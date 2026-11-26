@@ -172,6 +172,7 @@ Umair's side continues at R-105.
 | R-129 | 2026-11-25 | scan_009: R-128 plus learnable blur motion (`--blur_learn`, `v9plk`) | 3070 | 37.1 min (train 27.7, R-128 25.07) | aligned 24.09 vs R-128 24.25 (63 frames), SSIM 0.892 vs 0.898; 60 – 90 s +0.7, 134 – 140 s −1.2 | Not adopted (no gain, +2.6 min) |
 | R-130 | 2026-11-25 | scan_009: Depth Anything 3 (DA3-LARGE) feasibility on four chunks, same checks as VGGT in R-093 (no training) | 3070 | 7 – 15 s per chunk, peak GPU 5.5 – 5.9 GB | blank wall: rotations fail (113° / 64° median vs gyro); doorway 124 – 134 s: 2.6° median (tracks); depth consistency 0.5 – 5.5 % vs Metric3D 8.2 – 15.1 % | Kept (finding): DA3 depth as priors, DA3 for the doorway frames |
 | R-131 | 2026-11-26 | scan_009: R-130's checks with the Apache-2.0 DA3-BASE / DA3-SMALL (no training, D-098) | 3070 | 19:17 → 19:22; 2 – 4 s per chunk, peak GPU 1.3 – 3.1 GB | depth consistency BASE 1.5 – 3.9 % / SMALL 1.9 – 2.9 % vs Metric3D 8.2 – 15.1 % (keyframe chunks); doorway rotation median 13.5° / 12.8° (LARGE 2.6°); blank wall fails | Kept (finding): BASE usable for depth priors, not for doorway poses alone |
+| R-132 | 2026-11-26 | scan_009: R-128 with DA3-BASE depth priors (chained chunks, 338 unsupported frames filled) instead of Metric3D (`v9pda`) | 3070 | 19:27 → 20:31; prior 1.5, init 2.5, train 29.1, total 33.7 min (3 restarts, see entry) | 23.76 vs R-128 24.25; outside 134 – 140 s 26.20 vs 26.12; 134 – 140 s 15.98 vs 18.30; off-path views cleaner | Inconclusive (Tayyab to look) |
 
 ## Runs
 
@@ -3332,3 +3333,61 @@ igs.txt`):
   whole stretch the median is 13° and p90 52 – 57°, so they cannot place the doorway frames on their own. Neither
   tracks the blank wall (as LARGE and VGGT). Next: DA3-BASE depth as training priors; for the doorway, MapAnything
   (Apache) with ARCore poses / intrinsics as input, or BASE steps chained and anchored to the gyro (D-098).
+
+### R-132 · 2026-11-26 · scan_009_057ed3beb4fc: R-128 with DA3-BASE depth priors instead of Metric3D (`v9pda`)
+
+- **Who / machine:** Tayyab (agent) · RTX 3070 PC
+- **Branch / commit:** `exp/featureless-holes` @ f57a200 (`mono_prior.py --da3`)
+- **Dataset:** R-128's `work_v9pld_sfm` (850 frames, cameras `sparse_loop2_dense`, split, export) copied to
+  `work_v9pda_sfm`; only the prior stage is re-run
+- **Command(s):** `dataset/scan_009_057ed3beb4fc/r132.sh` (log `r132.log`): `run_v8.py --tag v9pda --from_stage prior`
+  with R-128's options and `--prior_args "--da3 <DA3-BASE> --fill_scale"` (chunks of 32, overlap 8, chained);
+  `eval_align.py` R-128 vs R-132; `offpath_views.py` R-128 vs R-132
+- **Goal:** Tayyab "ok try that" / "ok start" (2026-11-26): replace Metric3D (non-commercial, D-098) with DA3-BASE
+  (Apache 2.0) and give the 338 frames R-128 left without a prior a chained-scale DA3 prior. Compared with R-128
+  (24.25). Two changes at once (model + filled frames); split them in a follow-up if it wins.
+- **Before the run (prior test, same day):** `mono_prior.py --da3 … --fill_scale --out mono_prior_da3test` on R-128's
+  frames: 850 frames in 112 s (Metric3D in R-128: 5.74 min); chaining ratio spread std-log median 0.020, max 0.232;
+  per-frame scale after one global factor p10 0.51 / p90 2.13 (the chain drifts along the walk, locally consistent);
+  aligned error on the 464 frames with ≥ 20 SfM points median 5.1 % / p90 13.4 % (Metric3D 4.6 % / 14.3 %); 338
+  frames filled, leave-one-out scale error median 1.1 % / p90 7.3 % (Metric3D fill in R-092: 5.3 % / 16.9 %).
+- **Start → end:** 2026-11-26 19:27 (r132.sh) → 20:31 (end of the evaluation; training resumed 19:43 → 20:13).
+  Stages (`timing.json`): prior 1.5, init 2.53, train 29.08, ply 0.56 min, total 33.7 (R-128: prior 5.74, init 2.73,
+  train 25.07, ply 0.48, total 34.0). Evaluation 18 min.
+- **Errors during the run:**
+  - 2026-11-26, stage init (after prior 1.5 min): `fast_mvs.py` → `toolpaths.unlink_dir` `OSError: [WinError 145] The
+    directory is not empty: …work_v9pda_sfm\undist_fast\images`. Cause: in R-128's folder `undist_fast/images` is a
+    junction to `images/`; `cp -r` in `r132.sh` copied it as a real folder (866 files), which `fast_mvs.py` refuses
+    to remove (by design). Fix: removed that copied folder in `work_v9pda_sfm` only (checked: not a link), resumed
+    with `--from_stage init` (`r132b.sh`, log `r132b.log`); the prior stage's output is kept. Resolved.
+  - 19:34, stage init again: `mvs_init.py` `FileNotFoundError: …work_v9pda_sfm\init_points.ply`. Cause: `r132.sh`
+    copied only a list of top-level files and left out the export's `init_points.ply` (also `report.json` and two
+    COLMAP logs). Fix: copied every top-level file of `work_v9pld_sfm` except this run's own outputs
+    (`init_fmvs.ply`, `transforms_fmvs.json`, `eval_r128.csv`); removed the half-made `undist_fast/fused.ply*`;
+    `r132b.sh` re-run (log overwritten). Resolved.
+  - 19:39, after init (2.5 min, 10,150 fused + 19,850 SfM points → 29,358): `plane_seg.py` (CPU side job)
+    `IndexError: index 2 is out of bounds` in the least-squares plane refit: a hypothesis whose refit had no inliers
+    (empty SVD). Never hit with Metric3D, where the 338 unsupported frames had no valid prior. Fix (commit on the
+    branch): skip the refit when it has < 3 inliers and keep the seed plane. `plane_seg.py` re-run by hand: median 4
+    planes covering 79 % of pixels (R-128 with Metric3D: 3 planes, 59 %). `blur_motion.py` had finished (same as
+    R-128). Resumed at train (`r132c.sh`, log `r132c.log`). Resolved.
+  - Note, not an error: `sfm_scale_check` now compares SfM with the DA3 priors; its per-block ratios (0.51 – 3.54)
+    show the DA3 chain drift along the walk (see the prior test above), verdict "ok".
+  - `r132c.sh` was written with a UTF-8 BOM, so its first line (`set -e`) failed ("command not found") and the
+    script ran without stop-on-error; every step succeeded, so no effect on the result.
+- **Result:** `work_v9pda_sfm/gs_v9pda/splat.ply`. `eval_align.py`, the same held-out frames (63; 6 not in the
+  model skipped as in R-128): **23.76 vs R-128 24.25**, SSIM 0.887 vs 0.898, pose correction median 1.40° / 0.087
+  units (R-128 0.95° / 0.082). Per frame median −0.13 dB (14 better, 20 worse by > 0.5). Per stretch (R-128 → R-132):
+  0 – 30 s 27.39 → 27.40, 30 – 60 s 24.92 → 25.17, 60 – 90 s 25.16 → 25.63, 90 – 134 s 28.50 → 28.69, **134 – 140 s
+  18.30 → 15.98 (15 frames)**, 140 – 200 s 24.61 → 24.09. Outside 134 – 140 s (48 frames): 26.12 → 26.20.
+  At 134 – 140 s every training frame has SfM support (88 – 408 points; nothing filled); DA3-BASE fits them worse than
+  Metric3D (aligned error 3 – 9 % vs 1 – 5 %) on these far views (median depth ~7 units). The stretch is a block
+  of 15 held-out frames and swings between runs (R-120 → R-128: 19.76 → 18.29). Off-path views
+  `offpath_views_r132/`: from the room centre R-132 shows the walls and the door without the floating blobs R-128
+  has in front of them (yaw 0, 315), one new floater at yaw 45; top-view slice similar, walls slightly more
+  continuous.
+- **Verdict:** inconclusive. Held-out score 0.49 dB lower, all of it in 134 – 140 s; equal or better everywhere
+  else and visibly cleaner from off-path viewpoints. Not adopted as the best run until Tayyab has looked at it; the
+  licence reason (D-098) stands either way. Possible next steps: Metric3D-style per-frame fits where SfM support is
+  strong and DA3 only for the filled frames (separates the two changes; still needs a commercial-use model for the
+  supported frames), or a higher DA3 resolution for far views.
