@@ -238,6 +238,28 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [-0.15, -0.03, -0.11], target: [-0.22, -0.21, 0.87] },
   },
   {
+    // R-132 (2026-11-26): R-128 with Depth Anything 3 (DA3-BASE, Apache 2.0, D-098) depth priors instead of
+    // Metric3D; frames without SfM points get a chained-scale prior. File is local only (git-ignored).
+    id: "scan-009-da3",
+    name: "Scan 009 · DA3 depth priors (R-132)",
+    floor: "—",
+    block: "Residence",
+    area: "Not measured",
+    location: "scan_009_057ed3beb4fc • R-128 with Depth Anything 3 (BASE) depth guidance on every frame",
+    dateCaptured: "Nov 15, 2026",
+    status: "draft",
+    statusLabel: "Experimental · 787 training frames · scale not measured",
+    thumbnail: "/thumbnails/scan009_v9pgsr.jpg",
+    scansCount: 1,
+    gaussianCount: "409,397",
+    accuracy: "Scale not measured",
+    captureDevice: "realme RMX5111 (ARCore)",
+    description:
+      "R-128 (same frames, cameras and settings) with depth guidance from Depth Anything 3 (BASE, Apache 2.0) instead of Metric3D, including the 338 frames that had none before. Held-out frames 23.76 dB (R-128 24.25): equal or better everywhere except 134–140 s (15.98 vs 18.30). From off-path viewpoints the walls and door look cleaner.",
+    splatUrl: "/splats/scan009_v9pda.spz",
+    splatStart: { position: [-0.47, 0.06, -0.41], target: [-0.51, -0.12, 0.57] },
+  },
+  {
     // R-128 (2026-11-25): R-120's recipe plus 266 extra video frames between keyframes in weak / featureless
     // windows (densify_frames.py), 69 frames held out. Best held-out score so far. File is local only (git-ignored).
     id: "scan-009-dense",
