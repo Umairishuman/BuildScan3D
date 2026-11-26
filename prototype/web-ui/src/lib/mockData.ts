@@ -238,6 +238,28 @@ export const MOCK_PROJECTS: Project[] = [
     splatStart: { position: [-0.15, -0.03, -0.11], target: [-0.22, -0.21, 0.87] },
   },
   {
+    // R-133 (2026-11-26): R-132 with DA3's confidence cut-off (no depth prior where DA3 is unsure, e.g. the blank
+    // wall). File is local only (git-ignored).
+    id: "scan-009-conf",
+    name: "Scan 009 · DA3 depth where confident (R-133)",
+    floor: "—",
+    block: "Residence",
+    area: "Not measured",
+    location: "scan_009_057ed3beb4fc • R-132 without DA3 depth where DA3 itself is unsure (blank wall)",
+    dateCaptured: "Nov 15, 2026",
+    status: "draft",
+    statusLabel: "Experimental · 787 training frames · scale not measured",
+    thumbnail: "/thumbnails/scan009_v9pgsr.jpg",
+    scansCount: 1,
+    gaussianCount: "398,401",
+    accuracy: "Scale not measured",
+    captureDevice: "realme RMX5111 (ARCore)",
+    description:
+      "R-132 with a confidence cut-off: frames and pixels where Depth Anything 3 is unsure (the blank wall, far views) get no depth guidance, as in R-128. Held-out frames 24.25 dB, the same as R-128 (R-132 23.78), with a commercial-use depth model and 2.6 min less processing.",
+    splatUrl: "/splats/scan009_v9pdc.spz",
+    splatStart: { position: [-0.47, 0.06, -0.41], target: [-0.51, -0.12, 0.57] },
+  },
+  {
     // R-132 (2026-11-26): R-128 with Depth Anything 3 (DA3-BASE, Apache 2.0, D-098) depth priors instead of
     // Metric3D; frames without SfM points get a chained-scale prior. File is local only (git-ignored).
     id: "scan-009-da3",

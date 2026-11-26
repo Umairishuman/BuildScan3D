@@ -173,6 +173,7 @@ Umair's side continues at R-105.
 | R-130 | 2026-11-25 | scan_009: Depth Anything 3 (DA3-LARGE) feasibility on four chunks, same checks as VGGT in R-093 (no training) | 3070 | 7 – 15 s per chunk, peak GPU 5.5 – 5.9 GB | blank wall: rotations fail (113° / 64° median vs gyro); doorway 124 – 134 s: 2.6° median (tracks); depth consistency 0.5 – 5.5 % vs Metric3D 8.2 – 15.1 % | Kept (finding): DA3 depth as priors, DA3 for the doorway frames |
 | R-131 | 2026-11-26 | scan_009: R-130's checks with the Apache-2.0 DA3-BASE / DA3-SMALL (no training, D-098) | 3070 | 19:17 → 19:22; 2 – 4 s per chunk, peak GPU 1.3 – 3.1 GB | depth consistency BASE 1.5 – 3.9 % / SMALL 1.9 – 2.9 % vs Metric3D 8.2 – 15.1 % (keyframe chunks); doorway rotation median 13.5° / 12.8° (LARGE 2.6°); blank wall fails | Kept (finding): BASE usable for depth priors, not for doorway poses alone |
 | R-132 | 2026-11-26 | scan_009: R-128 with DA3-BASE depth priors (chained chunks, 338 unsupported frames filled) instead of Metric3D (`v9pda`) | 3070 | 19:27 → 20:31; prior 1.5, init 2.5, train 29.1, total 33.7 min (3 restarts, see entry) | 23.76 vs R-128 24.25; outside 134 – 140 s 26.20 vs 26.12; 134 – 140 s 15.98 vs 18.30; off-path views cleaner | Inconclusive (Tayyab to look) |
+| R-133 | 2026-11-26 | scan_009: R-132 with DA3's confidence cut-off 1.1 (81 unsure frames without prior) (`v9pdc`) | 3070 | ~21:16 → 22:30; prior 1.6, init 2.5, train 26.7, total 31.4 min | 24.25 (= R-128; R-132 23.78); 60 – 90 s 26.56 (best); 134 – 140 s 17.11; off-path views cleaner than R-128 | Kept (DA3 candidate); Tayyab to look; work paused |
 
 ## Runs
 
@@ -3420,7 +3421,18 @@ igs.txt`):
     stretches 2 – 4. Frames with median < 1.1: 50 – 55 s 18/18, 55 – 60 s 3/9 (the LED strip is confident), 134 – 140
     s 23/29, 0 – 30 s 27/159, 60 – 90 s 42/162, 140 – 200 s 47/235. The cut-off is per pixel (all frames) plus no
     filled prior for an unsupported frame with < 50 % confident pixels.
-- **Start → end:** (filled in when it ends)
-- **Errors during the run:** (filled in as they happen)
-- **Result:** (filled in when it ends)
-- **Verdict:** (filled in when it ends)
+- **Start → end:** 2026-11-26 ~21:16 → 22:30 (incl. evaluation). Stages (`timing.json`): prior 1.63, init 2.48,
+  train 26.72, ply 0.54 min, total 31.4 (R-128 34.0, R-132 33.7). Prior: 81 unsupported frames left without a prior
+  (DA3 not confident), 257 filled (leave-one-out 1.1 % / p90 7.3 %).
+- **Errors during the run:** none. (A log-watch timeout only.)
+- **Result:** `work_v9pdc_sfm/gs_v9pdc/splat.ply`. `eval_align.py`, same 63 held-out frames: **R-133 24.25**, R-128
+  24.25, R-132 23.78 (R-132 re-evaluated in the same call: 23.78 vs 23.76 in its own run); SSIM 0.892 / 0.898 /
+  0.887; pose correction median 1.11° / 0.95° / 1.40°. Per stretch (R-128 / R-132 / R-133): 0 – 30 s 27.38 / 27.40 /
+  27.43, 30 – 60 s 24.92 / 25.31 / 24.03 (4 frames), 60 – 90 s 25.16 / 25.63 / **26.56**, 90 – 134 s 28.50 / 28.69 /
+  29.18 (2 frames), 134 – 140 s 18.30 / 15.98 / 17.11, 140 – 200 s 24.61 / 24.10 / 24.47. R-133 vs R-128 per frame
+  median −0.18 dB (20 better, 22 worse by > 0.5). Off-path views `offpath_views_r133/`: like R-132, no floating
+  blobs in front of the door / wall at yaw 0 / 315 (R-128 has them), a few floaters on the left at yaw 0.
+- **Verdict:** kept as the DA3 candidate: same held-out score as the best run (R-128) with a commercial-use depth
+  model (D-098), most of R-132's loss at 134 – 140 s recovered, best 60 – 90 s so far, 2.6 min faster in total. Not
+  yet checked by Tayyab in the viewer (blank wall 55 – 60 s, the point of this run); featureless work paused
+  2026-11-26 (Tayyab: viewer performance, the new viewer on master, the generic pipeline first).

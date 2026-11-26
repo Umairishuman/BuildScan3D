@@ -128,3 +128,4 @@ R-129	scan_009_057ed3beb4fc	v9plk	2026-11-25	Tayyab	RTX 3070 PC	done	dataset/sca
 R-130	scan_009_057ed3beb4fc		2026-11-25	Tayyab	RTX 3070 PC	done																											TRAINING	Depth Anything 3 feasibility, no training, 7 - 15 s per chunk
 R-131	scan_009_057ed3beb4fc		2026-11-26	Tayyab	RTX 3070 PC	done																											TRAINING	DA3-BASE / DA3-SMALL (Apache) feasibility, no training, 2 - 4 s per chunk
 R-132	scan_009_057ed3beb4fc	v9pda	2026-11-26	Tayyab	RTX 3070 PC	done	dataset/scan_009_057ed3beb4fc/work_v9pda_sfm/gs_v9pda				33.7					1.50	2.53	29.08	0.56														files	DA3-BASE depth priors instead of Metric3D; inconclusive
+R-133	scan_009_057ed3beb4fc	v9pdc	2026-11-26	Tayyab	RTX 3070 PC	done	dataset/scan_009_057ed3beb4fc/work_v9pdc_sfm/gs_v9pdc				31.4					1.63	2.48	26.72	0.54														files	DA3-BASE priors with confidence cut-off; = R-128, DA3 candidate
