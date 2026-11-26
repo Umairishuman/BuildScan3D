@@ -74,8 +74,10 @@ phone app (android/) ──── dataset/<capture>/  (dataset.mp4, poses.csv, .
 run_v8.py  [system Python; calls nerfstudio-env for export/train]
    select   select_sharp.py      gyro-aware sharpest frame per 0.2 s            -> dataset/<c>/work_v9/
    sfm      sfm_colmap.py        COLMAP 4.2 SfM, lens, undistort, Sim3 to ARCore -> dataset/<c>/work_v9_sfm/
+   analyze  analyze_recording.py 5 s windows textured / weak / featureless / hole, route   (--auto only, D-099)
+   densify  densify_frames.py    extra video frames in weak windows, SfM export again     (--auto only)
    export   export_nerfstudio.py transforms.json for nerfstudio
-   prior    mono_prior.py        Metric3D depth + normals aligned to SfM points
+   prior    mono_prior.py        Metric3D depth + normals aligned to SfM points (--auto: DA3-BASE + confidence cut-off)
             plane_seg.py         planar regions (CPU, in parallel)               (--planar)
             blur_motion.py       camera motion during exposure (in parallel)     (--blur)
    init     fast_mvs.py          fast PatchMatch dense init (or mono_init.py)    (--init fmvs)
@@ -124,8 +126,8 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does | Status |
 |---|---|---|
-| `mono_prior.py` | Metric3D depth + normals per frame, aligned to SfM points (fp16 default); `--fill_scale`: frames with < 5 SfM points get a time-interpolated scale instead of no prior (R-092) | **[v9]** |
-| `plane_seg.py` | Per-frame planar regions for the planar prior | **[v9]** |
+| `mono_prior.py` | Metric3D depth + normals per frame, aligned to SfM points (fp16 default); `--fill_scale`: frames with < 5 SfM points get a time-interpolated scale instead of no prior (R-092); `--da3 <weights>`: Depth Anything 3 (DA3-BASE, Apache 2.0, D-098) in overlapping chained chunks instead of Metric3D, `--da3_conf_min` (R-133: 1.1) no prior where DA3 is unsure, `--da3_poses` (tested, not used) | **[v9]** |
+| `plane_seg.py` | Per-frame planar regions for the planar prior (empty refit skipped, R-132) | **[v9]** |
 | `blur_motion.py` | Per-frame camera motion during exposure for the blur model; `--source gyro --gyro_calib --per_frame_exposure` for captures without ARCore (`run_v8.py --blur_gyro`, FEATURELESS 10.f) | **[v9]** |
 | `fast_mvs.py` | Fast dense init: PatchMatch on every 7th frame at 640 px | **[v9]** |
 | `mono_init.py` | Dense init from aligned mono depth (12 s, loses few-view detail) | [exp] option `--init mono` |
@@ -140,7 +142,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 
 | File | Does | Status |
 |---|---|---|
-| `run_v8.py` | One-command driver for the v9 pipeline, times every stage. Finds the nerfstudio env through `toolpaths.py`; `--pose_opt`, `--train_args`, `--blur_gyro`, `--prior_args` (FEATURELESS 10.d – 10.f) | **[v9]** |
+| `run_v8.py` | One-command driver for the v9 pipeline, times every stage. Finds the nerfstudio env through `toolpaths.py`; `--pose_opt`, `--train_args`, `--blur_gyro`, `--prior_args` (FEATURELESS 10.d – 10.f); **`--auto`** (D-099): the recipe + stages `analyze` / `densify`, DA3 priors, frame budget, choices in `gs_<tag>/auto.json` | **[v9]** |
 | `geo_splatfacto.py` | Splatfacto subclass: DashGaussian, depth / normal / planar priors, blur model, PGSR-lite, checkpoints + `--resume`; `--pose_opt` (SO3xR3, applied once per view incl. blur / PGSR passes); `--path_prune <r>` (removes Gaussians reaching into the camera path every 500 steps) | **[v9]** `--plane_anchor` (R-126), `--blur_learn` (R-129). |
 | `export_nerfstudio.py` | Writes `transforms.json` for nerfstudio | **[v9]** [v3] |
 | `train.py` | Own gsplat trainer (experiments only, D-010) | [exp] |
@@ -177,13 +179,14 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `prior_consistency.py` | Switches off depth-prior pixels that other views contradict (free space in front of them in time neighbours / loop partners); each frame keeps its own depth (FEATURELESS §11.c second form, R-098) | [v9] experiment |
 | `scale_drift.py` | Corrects the scale drift of a sensor camera path with the room height (floor / ceiling distances per frame), re-triangulates the points (R-094); its `read_model` / `write_model` are used by loop_path.py | [v9] experiment |
 | `loop_path.py` | Closes the loops of a camera path: camera centres solved again from the path's steps + the direction of verified image pairs >= 5 s apart (validation on held-out pairs), points re-triangulated, `loop_pairs.json` for `prior_ba.py --pair_priors` (FEATURELESS §11.d, R-096) | [v9] experiment |
-| `analyze_recording.py` | Analyzer, first part (D-095): per 5 s window placed share, 3D observations, blur, ARCore; labels textured / weak / featureless / hole; path holes; suggested camera route; writes `analysis.json` (R-124) | [exp] |
+| `analyze_recording.py` | Analyzer, first part (D-095): per 5 s window placed share, 3D observations, blur, ARCore; labels textured / weak / featureless / hole; path holes; suggested camera route; writes `analysis.json` (R-124); the `analyze` stage of `run_v8.py --auto` (D-099) | **[v9]** |
 | `plane_snap.py` | Room-plane anchoring preview: one shared plane per wall / floor / ceiling from the trained splats (copies merged by footprint), splats near it snapped on, no training (R-125) | [exp] |
 | `plane_anchor.py` | Room-plane anchoring during training (`geo_splatfacto.py --plane_anchor`): planes refitted from the splats (copies merged by footprint, one floor / ceiling), splats moved onto them every 100 steps (R-126) | [exp] |
 | `arcore_fill.py` | Places unplaced ARCore-tracked keyframes in path holes with a local ARCore → model Sim3 per ARCore segment, checked by image matches (R-127: rejected on scan_009, ARCore positions unreliable); also `sampson_check`, `write_with_new` helpers | [exp] |
 | `direction_fill.py` | Places unplaced keyframes in path holes from image-pair directions with gyro rotations, checked by Sampson error (R-127: 29 placed, model −0.74 dB) | [exp] |
-| `densify_frames.py` | Adds video frames between placed keyframes in weak / featureless windows (gyro rotation, interpolated position) (R-128: +0.29 dB, +3.6 min, kept) | [exp] |
-| `da3_loader.py` | Imports Depth Anything 3 from outside the repo with stand-ins for its unused export modules (D-097) | [exp] |
+| `densify_frames.py` | Adds video frames between placed keyframes in weak / featureless windows (gyro rotation, interpolated position) (R-128: +0.29 dB, +3.6 min, kept); the `densify` stage of `run_v8.py --auto` (D-099) | **[v9]** |
+| `da3_loader.py` | Imports Depth Anything 3 from outside the repo with stand-ins for its unused export modules (D-097); numpy Umeyama in place of DA3's evo-based pose alignment | **[v9]** (`mono_prior.py --da3`) |
+| `prior_vs_model.py` | Depth-prior variants against a trained model's rendered depth, or (`--consistency`) neighbour agreement with our cameras (R-133) | [eval] |
 | `loop_match.py` | Second loop round: picks pairs that see the same surfaces at different times with the corrected cameras + depth priors, matches them (ALIKED + LightGlue, copy of the database), pair directions in the model's world (R-097) | [v9] experiment |
 | `offpath_views.py` | Fixed off-path views of trained splats: 8 views from the room centre (colour + depth) and a top view of a horizontal slice (walls as lines vs ghost copies) (FEATURELESS §11.e) | [eval] |
 | `vggt_chunk.py` | VGGT (downloaded, outside the repo, D-081) on a chunk of keyframes or dense video frames: rotation vs the gyro / an SfM model, positions vs the model, depth consistency vs the Metric3D priors (R-093) | [experiment] `--da3`: Depth Anything 3 instead of VGGT (R-130). |
