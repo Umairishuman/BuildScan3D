@@ -62,6 +62,8 @@ for fi, f in enumerate(frames):
         n, dd = Ns[best], ds[best]
         for _ in range(2):                                   # least-squares refit on all free inliers
             inl = free & (np.abs(P @ n - dd) < args.tau * D) & ((N @ n) > cosT)
+            if inl.sum() < 3:                                # degenerate refit (R-132, DA3 priors): keep the seed plane
+                break
             Q = P[inl]; c = Q.mean(0); _, _, Vt = np.linalg.svd(Q - c, full_matrices=False)
             n = Vt[2] * np.sign(Vt[2] @ n); dd = n @ c
         inl = free & (np.abs(P @ n - dd) < args.tau * D) & ((N @ n) > cosT)
