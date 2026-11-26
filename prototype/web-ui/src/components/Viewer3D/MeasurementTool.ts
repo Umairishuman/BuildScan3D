@@ -21,7 +21,7 @@ export class MeasurementManager {
   private previewLine: THREE.Line | null = null;
   private previewMarker: THREE.Mesh | null = null;
 
-  constructor(scene: THREE.Scene, camera: THREE.Camera, container: HTMLElement) {
+  constructor(scene: THREE.Scene, camera: THREE.Camera, container: HTMLElement, withDemoMeasurements = true) {
     this.scene = scene;
     this.camera = camera;
     this.container = container;
@@ -29,7 +29,9 @@ export class MeasurementManager {
     this.activeMarkersGroup = new THREE.Group();
     this.scene.add(this.activeMarkersGroup);
 
-    // Initial default measurements to show immediately for defense demonstration
+    // Two sample measurements for the demo MEP scene only: on a real scan they would be fake lines at made-up spots
+    // (2026-11-25, Tayyab: no placeholders on real scans)
+    if (!withDemoMeasurements) return;
     this.addDefaultMeasurement(
       new THREE.Vector3(-0.71, 3.4, 0.8),
       new THREE.Vector3(0.71, 3.4, 0.8),

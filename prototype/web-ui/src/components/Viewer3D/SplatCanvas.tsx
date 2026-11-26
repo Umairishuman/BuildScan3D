@@ -201,7 +201,7 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
       container.appendChild(renderer.domElement);
       cleanups.push(() => renderer.dispose());
 
-      const measurement = new MeasurementManager(scene, camera, container);
+      const measurement = new MeasurementManager(scene, camera, container, false);
       measurementRef.current = measurement;
       onMeasurementsChangeRef.current([...measurement.measurements]);
 
@@ -407,7 +407,7 @@ export const SplatCanvas = forwardRef<Canvas3DHandle, SplatCanvasProps>(
             Click two points on the scan to measure metric distance
           </div>
         )}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full bg-white/80 border border-[#e2e8f0] text-[10px] text-[#64748b] pointer-events-none">
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full bg-white/80 border border-[#e2e8f0] text-[10px] text-[#64748b] pointer-events-none">
           Drag to look · Scroll or W/A/S/D to move · E/Q up/down
         </div>
       </div>
