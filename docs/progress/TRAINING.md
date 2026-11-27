@@ -3533,13 +3533,20 @@ igs.txt`):
 - **Branch / commit:** `feature/auto-pipeline` (D-099)
 - **Dataset:** `dataset/newRoomAttemptSadness`, raw video (240 s); nothing reused
 - **Command(s):** `dataset/night_r136.sh`: `GPU_EVERY=120 bash scripts/run_full.sh dataset/newRoomAttemptSadness auto1
-  -- --auto --split dataset/newRoomAttemptSadness/work_sharp_sfm/offpath_test.txt` (log `r136.log`), then
+  -- --auto --split dataset/newRoomAttemptSadness/work_sharp_sfm/offpath_test.txt` (log `r136.log`; split changed at the restart, see Errors), then
   `eval_align.py` on R-136 and on the reference `work_v9e2e_sfm/gs_v9e2e` (same split, each on its own cameras), and
   `tape_check.py` against `dataset/newRoomAttemptSadness/tape.csv`
 - **Goal:** test bench 3 of D-099 and the report's main validation: does the automatic pipeline match the hand-set
   best recipe on the room with ground truth? Reference `v9_e2e` (`saved_models/2026-10-26_v9_e2e`, 96 min,
   held-out PSNR(cf) 25.16, room 6.617 m vs tape 6.70 m), semantics v10 15 / 17 fixtures (R-023 room).
 - **Start → end:** (filled in when it ends)
-- **Errors during the run:** (filled in as they happen)
+- **Errors during the run:**
+  - 01:21:24 started; select 2.1 min chose `--window 7` (auto: 7,200 video frames / budget 1100) and 1005 frames.
+    The v9_e2e split was made on window-6 frames, so most held-out names would not exist in this selection.
+    01:23 stopped by the agent during SfM (`stage sfm failed (4294967295)` in the log = the stop, not an error);
+    the split mapped to the nearest selected frame (`dataset/newRoomAttemptSadness/offpath_test_auto1.txt`: 49 of 79
+    exact, the rest <= 6 video frames = 0.2 s away, 62 distinct frames); partial COLMAP database removed;
+    01:24:20 restarted `--from sfm -- --auto --split offpath_test_auto1.txt` (select output kept). The comparison
+    with v9_e2e pairs each original held-out frame with its mapped frame.
 - **Result:** (filled in when it ends)
 - **Verdict:** (filled in when it ends)
