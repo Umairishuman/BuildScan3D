@@ -53,7 +53,8 @@ v6 (mid report) & 42 & 26.52 & 0.8886 & mid report \\
 v9 end to end & 79 & 25.16$^a$ & 0.8247 & P\&S 4.16 \\
 v9, faster training & 79 & 25.14$^a$ & 0.8251 & R-062 \\
 v9, faster training + photometric init & 79 & 25.16$^a$ & 0.8240 & R-063 \\
-Automatic pipeline (\texttt{--auto}) & 62$^b$ & TODO & TODO & R-136 \\
+Automatic pipeline (\texttt{--auto}) & 62$^b$ & 24.61$^a$ (25.33 aligned) & 0.8222 (0.8350) & R-136 \\
+% TODO(agent): v9 end to end with eval_align on the rebuilt frames (same tool as R-136), after R-143.
 \bottomrule
 \end{tabular}
 
@@ -104,7 +105,7 @@ Section~\ref{sec:eval-layout}.
 \midrule
 Bedroom (textured), R-134 & normal SfM (97\,\% placed); 2 of 59 windows densified & model 83.5, layout 5.0, 2D labels 12.7, rest 2.8; 104.0 in all & 1.43\,M Gaussians, 5 walls, 19 fixtures, mesh 0.89\,M triangles, 33\,MB bundle; outline not closed \\
 scan\_009 (featureless), R-135 & sensor path (41\,\% placed); 27 of 38 windows densified & model 56.4 (sensor chain 17.6), after 15.4; 71.9 in all & 23.07\,dB vs 24.46 (hand chain); layout failed (room height 7.28\,m) \\
-Main test room, R-136 & TODO & TODO & TODO \\
+Main test room, R-136 & normal SfM (100\,\% placed); 5 of 48 windows densified & model 86.0, after 20.1; 106.1 in all & 25.33\,dB aligned; closed room 6.575 $\times$ 4.380\,m, tape $-1.86$\,\%; 17 fixtures (unchecked) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -122,7 +123,7 @@ v9, main room (3070) & 240 & 22.4 & 8.1 & 20.4 & 42.5 & 96 & & \\
 R-031, classroom (RTX 4000 Ada) & 185 & & & & & 64.7 & & 81.0 \\
 R-134, bedroom, \texttt{--auto} & & 18.2 & 2.3 & 19.3 & 36.6 & 83.5 & 20.5 & 104.0$^f$ \\
 R-135, scan\_009, \texttt{--auto} & 188 & 3.9 + 17.6$^e$ & 1.8 & 1.4 & 27.2 & 56.4 & 15.4 & 71.9 \\
-R-136, main room, \texttt{--auto} & 240 & TODO & & & & & & \\
+R-136, main room, \texttt{--auto} & 240 & 28.4 & 1.9 & 17.5 & 32.9 & 86.0 & 20.1 & 106.1 \\
 \bottomrule
 \end{tabular}
 
@@ -137,9 +138,11 @@ decision OD-10).
 \section{Metric Accuracy}
 \label{sec:eval-accuracy}
 On the v3 model, six tape-measured lengths from 0.46 to 6.70\,m differed by 4.8\,mm on average (0.19\,\%) and at most
-0.29\,\%, well inside NFR6 ($\leq$\,5\,\%). The faster v9 SfM made the main room 6.60\,m long against 6.70\,m on the tape
-($-1.5\,\%$), still inside NFR6; its scale changes between SfM runs (known limit).
-% TODO(agent): R-136 tape_check.py result. TODO(Umair): tape sheets for scans #3, #6, #7, #8 (issue #20).
+0.29\,\%, well inside NFR6 ($\leq$\,5\,\%). The faster v9 SfM made the main room 6.617\,m long (v9 end to end; 6.60\,m in the all-frames model) against
+6.70\,m on the tape ($-1.24$ to $-1.5$\,\%), still inside NFR6; its scale changes between SfM runs (known limit).
+With the automatic pipeline (R-136) the main room comes out as a closed room of 6.575 $\times$ 4.380\,m; the tape
+gives 6.700\,m for its length ($-1.86$\,\%, inside NFR6; the hand-set v9: 6.617\,m, $-1.24$\,\%).
+% TODO(Umair): tape sheets for scans #3, #6, #7, #8 (issue #20).
 
 \section{Room Layout}
 \label{sec:eval-layout}
@@ -181,10 +184,10 @@ NFR2 (quality check under 16\,ms per frame) is logged by the app but not yet mea
 \midrule
 NFR1 & capture at $\geq$\,30\,FPS & 28.9\,FPS, 3.3\,\% gaps & no \\
 NFR2 & quality check $<$\,16\,ms per frame & not measured & -- \\
-NFR3 & 60\,s video in 15\,min on an RTX~4090 & 71.9--104\,min for 188--240\,s videos on an RTX~3070 & no \\
+NFR3 & 60\,s video in 15\,min on an RTX~4090 & 71.9--106.1\,min for 188--240\,s videos on an RTX~3070 & no \\
 NFR4 & compression $\geq$\,60\,\% & 92\,\% (\texttt{.spz}) & yes \\
 NFR5 & $\geq$\,30\,FPS in a mid-range browser & desktop only (worst frame 15\,ms) & not on a phone \\
-NFR6 & measurement error $\leq$\,5\,\% & 0.19\,\% mean (v3), $-1.5\,\%$ (v9) & yes \\
+NFR6 & measurement error $\leq$\,5\,\% & 0.19\,\% mean (v3); room length $-1.24$\,\% (v9), $-1.86$\,\% (automatic) & yes \\
 \bottomrule
 \end{tabular}
 \end{table}
