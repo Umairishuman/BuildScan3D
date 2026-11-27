@@ -3495,6 +3495,10 @@ igs.txt`):
   `sensor_path.py` rebuild the hand-made camera chain (R-071 → R-096) in one go, the chain's time end to end (never
   measured, PIPELINE_ANALYZER_PLAN §4), and the score against R-128 / R-133 (24.25) without any hand choice.
 - **Start → end:** (filled in when it ends)
-- **Errors during the run:** (filled in as they happen)
+- **Errors during the run:**
+  - none so far that stopped anything. Started 23:21:33 (chain `dataset/night_r134_r135.sh`, right after R-134).
+    23:45 prior (DA3) prints `[transformers] Disabling PyTorch because PyTorch >= 2.4 is required but found
+    2.1.2+cu121`, `No module named 'triton'` and once per chunk `Error registering eval resolver: resolver 'eval' is
+    already registered`: warnings, DA3 runs on (the first two are in the earlier scan_009 logs too, R-081 - R-092).
 - **Result:** (filled in when it ends)
 - **Verdict:** (filled in when it ends)
