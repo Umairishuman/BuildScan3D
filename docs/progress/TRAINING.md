@@ -182,6 +182,7 @@ Umair's side continues at R-105.
 | R-139 | 2026-11-28 | `.spz` vs `.ply` size and render quality on four bundles (`spz_quality.py`, E6) | 3070 | queued after R-138 | queued | queued |
 | R-140 | 2026-11-28 | scan_009: `--auto --track_dirs` (R-079 step in the sensor path), R-128's split (`auto2`) | 3070 | queued after R-139 | queued | queued |
 | R-141 | 2026-11-28 | ARCore-only camera path vs our cameras on three rooms (E1 part, CPU) | 3070 | ~02:00, < 1 min | median 0.245 / 0.138 / 1.328; ARCore tracked 100 / 88 / 26 % of keyframes (newRoom / bedroom / scan_009) | Kept (report evidence) |
+| R-142 | 2026-11-28 | E1: visual-only SfM vs ARCore-guided on the same keyframes, newRoom + scan_009 (SfM only) | 3070 | queued after R-140 | queued | queued |
 
 ## Runs
 
@@ -3679,3 +3680,20 @@ igs.txt`):
 - **Verdict:** kept as evidence for the report (E1 part): ARCore's path is 0.14 - 0.25 m (median) from the SfM cameras
   on textured rooms and tracks only a quarter of the featureless walk. Not done: visual-only COLMAP without ARCore
   priors vs with them (the other half of E1).
+
+### R-142 · 2026-11-28 · E1 second half: visual-only SfM against ARCore-guided SfM on the same keyframes (SfM only)
+
+- **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
+- **Branch / commit:** `feature/auto-pipeline` (`sfm_colmap.py --pairs visual`, `sfm_compare.py`, new)
+- **Dataset:** the keyframes of R-136 (newRoomAttemptSadness, 1005) and R-135 (scan_009, 894), densified frames left out
+  (`work_e1vis/frames.json`, images linked from `work_auto1/images`)
+- **Command(s):** `dataset/night_r142.sh` (after R-140): `sfm_colmap.py --work <ds>/work_e1vis --out <ds>/work_e1vis_sfm
+  --pairs visual --retrieval 20 --stage {extract, match, map}` (the R-136 / R-135 SfM settings without the ARCore-pose
+  neighbours: temporal +-10 and 20 retrieval pairs per frame), then `sfm_compare.py` against R-136's
+  `sparse_predensify` / R-135's `sparse_sfm` (ARCore-guided, same keyframes)
+- **Goal:** COMPLETION_PLAN E1 / final-1 exit gate (d): what the ARCore guidance adds to SfM (frames placed per 15 s,
+  camera disagreement, SfM time). ARCore-only vs our cameras is R-141.
+- **Start → end:** (filled in when it ends)
+- **Errors during the run:** (filled in as they happen)
+- **Result:** (filled in when it ends)
+- **Verdict:** (filled in when it ends)

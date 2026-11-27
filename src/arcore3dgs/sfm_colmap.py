@@ -30,8 +30,10 @@ ap.add_argument("--skip_retriangulation", action="store_true",
                 help="global_mapper: skip the final retriangulation + refinement (6.5 of 14.3 min on newRoom; poses stay "
                      "within the mapper's own run-to-run differences, TRAINING R-064)")
 ap.add_argument("--extract_gpu", type=int, default=1, help="0 = CPU SIFT (e.g. while the GPU is training)")
-ap.add_argument("--pairs", default="exhaustive", choices=["exhaustive", "arcore"],
-                help="arcore = match only temporal + ARCore-pose neighbours (much faster than exhaustive)")
+ap.add_argument("--pairs", default="exhaustive", choices=["exhaustive", "arcore", "visual"],
+                help="arcore = match only temporal + ARCore-pose neighbours (much faster than exhaustive); visual = the "
+                     "same without the ARCore-pose neighbours (temporal + --retrieval only): the visual-only baseline "
+                     "of COMPLETION_PLAN E1")
 ap.add_argument("--temporal", type=int, default=10)
 ap.add_argument("--spatial", type=int, default=20)
 ap.add_argument("--gyro_thr", type=float, default=0.0,
@@ -118,6 +120,8 @@ if run("match"):
         # temporal ones (+ retrieval); SfM places them from the images.
         C = np.array([arcore_c2w(x)[:3, 3] for x in fr])
         Dv = np.array([-arcore_c2w(x)[:3, 2] for x in fr])                                  # OpenGL: -z = forward
+        if args.pairs == "visual":                                  # E1 baseline: no ARCore-pose neighbours
+            C[:] = np.nan
         pairs = set()
         for i in range(len(fr)):
             for j in range(i + 1, min(len(fr), i + 1 + args.temporal)):
@@ -133,7 +137,7 @@ if run("match"):
         names = [x["name"] + ".jpg" for x in fr]
         with open(os.path.join(OUT, "pairs.txt"), "w") as f:
             f.write("\n".join(f"{names[i]} {names[j]}" for i, j in sorted(pairs)))
-        print(f"{len(pairs)} ARCore-guided pairs ({len(pairs) / len(fr):.1f}/frame, exhaustive would be "
+        print(f"{len(pairs)} {'visual-only (temporal)' if args.pairs == 'visual' else 'ARCore-guided'} pairs ({len(pairs) / len(fr):.1f}/frame, exhaustive would be "
               f"{len(fr) * (len(fr) - 1) // 2}); {int((~np.isfinite(C).all(1)).sum())} frames without an ARCore pose "
               f"(temporal + retrieval pairs only)", flush=True)
         colmap("matches_importer", "--database_path", db, "--match_list_path", os.path.join(OUT, "pairs.txt"),
