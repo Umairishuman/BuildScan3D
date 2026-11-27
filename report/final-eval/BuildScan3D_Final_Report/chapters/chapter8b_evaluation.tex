@@ -146,10 +146,13 @@ gives 6.700\,m for its length ($-1.86$\,\%, inside NFR6; the hand-set v9: 6.617\
 
 \section{Room Layout}
 \label{sec:eval-layout}
-% TODO(agent): before / after numbers of the layout fallback (2026-11-28) on R-134, R-135, R-136, R-069, v9.
-The layout found the walls, corners and height of the textured rooms (main room 2.70\,m, bedroom 2.78\,m in R-069,
-classroom 2.52\,m in R-035). It fails when the floor is not reconstructed: in scan\_009 a layer of floaters 3.4\,m
-below the cameras was taken as the floor (R-135).
+The layout found the walls, corners and height of the textured rooms: the main room as a closed four- to five-wall
+room (2.70 to 2.83\,m high depending on the code version; 2.81\,m in R-136), the bedroom (2.78 to 3.02\,m; 2.94\,m in
+R-134), the classroom (2.52\,m, R-035). It fails when the floor is not reconstructed: in scan\_009 a layer of floaters
+3.4\,m below the cameras was taken as the floor (7.28\,m room, R-135). A plausibility check (camera 0.5--2.2\,m above
+the floor, room 2--5\,m high) now replaces such a floor and leaves the textured rooms unchanged (R-137), but scan\_009
+still comes out 5.25\,m high: floaters make its walls look 4.4\,m tall and the rule that the ceiling may not lie below
+the wall tops (D-072) raises it again. Its height is reported with a warning and is not trustworthy.
 
 \section{Semantic Labels}
 On the main test room, 15 of 15 detected fixtures were correct and 15 of 17 visible fixtures were found (v10, P\&S
@@ -164,10 +167,27 @@ with a worst frame of 195\,ms before the fix and 1{,}174 frames with a worst fra
 the RTX~3070 PC; scan~\#8: 290 $\rightarrow$ 20\,ms). NFR5 ($\geq$\,30\,FPS in a mid-range phone browser) is not
 measured on a phone.
 % TODO(agent): load time and frame time for 3 - 4 bundles. TODO(Zaid): phone measurement (E5).
-\paragraph{Compression.} The \texttt{.spz} files are about 92\,\% smaller than the trained \texttt{.ply} (148
-$\rightarrow$ 12.5\,MB), meeting NFR4 ($\geq$\,60\,\%). Their image quality against the uncompressed model is
-% TODO(agent): .spz vs .ply render PSNR. TODO(Zaid): .ksplat numbers (OD-1).
-not yet measured.
+\paragraph{Compression.} The web bundle stores every Gaussian of the model as \texttt{.spz} (quantised positions,
+opacity, colour, scale, rotation and third-degree spherical harmonics, gzip). Decoding the bundle and rendering it from
+the same cameras as the uncompressed model gives the loss from compression alone (Table~\ref{tab:eval-spz}, R-139):
+the files are 92.3 to 92.8\,\% smaller (NFR4: $\geq$\,60\,\%) and their renders differ from the original's by
+35.8 to 36.5\,dB PSNR on average (SSIM 0.98 to 0.99), which is not visible.
+\begin{table}[htbp]
+\centering\small
+\caption{Web \texttt{.spz} against the trained \texttt{.ply}: size and render difference (R-139)}
+\label{tab:eval-spz}
+\begin{tabular}{p{3.6cm}p{1.6cm}p{1.2cm}p{1.2cm}p{1.4cm}p{2.4cm}p{1.2cm}}
+\toprule
+\textbf{Model} & \textbf{Gaussians} & \textbf{.ply MB} & \textbf{.spz MB} & \textbf{smaller} & \textbf{PSNR mean / min} & \textbf{SSIM} \
+\midrule
+Bedroom, automatic (R-134) & 1{,}425{,}538 & 353.5 & 25.6 & 92.8\,\% & 36.12 / 30.90 & 0.990 \
+Bedroom, hand-set (R-069) & 1{,}445{,}529 & 358.5 & 26.0 & 92.7\,\% & 36.52 / 30.42 & 0.990 \
+Main room, best model & 605{,}481 & 150.2 & 11.5 & 92.3\,\% & 35.82 / 34.11 & 0.983 \
+Main room, automatic (R-136) & 637{,}000 & 158.0 & 12.1 & 92.3\,\% & 36.49 / 34.48 & 0.983 \
+\bottomrule
+\end{tabular}
+\end{table}
+% TODO(Zaid): .ksplat numbers on the same models (OD-1).
 
 \section{Capture}
 NFR1 (30\,FPS) is not met: 28.9\,FPS on average with 3.3\,\% dropped-frame gaps on a 185-second recording (R-031).
