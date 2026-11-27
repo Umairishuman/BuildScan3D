@@ -43,7 +43,7 @@ S="$D/work_${TAG}_sfm"; M="$S/gs_${TAG}"
 NAME="$(basename "$D")_${TAG}"
 WEB_OUT="prototype/web-ui/public/scans/$NAME"
 
-ALL=(select sfm analyze densify export prior init train ply layout sem2d sem3d verify sem3d2 mesh meshlabels web plan)
+ALL=(select sfm analyze sensor densify export prior init train ply layout sem2d sem3d verify sem3d2 mesh meshlabels web plan)
 idx() { local i; for i in "${!ALL[@]}"; do [[ "${ALL[$i]}" == "$1" ]] && { echo "$i"; return; }; done; echo "unknown stage: $1" >&2; exit 1; }
 FROM_I=$(idx "$FROM")
 
