@@ -133,3 +133,5 @@ R-134	roomAttemptSadness2	auto1	2026-11-27	Tayyab (agent)	RTX 3070 PC	done	datas
 R-135	scan_009_057ed3beb4fc	auto1	2026-11-27	Tayyab (agent)	RTX 3070 PC	done	dataset/scan_009_057ed3beb4fc/work_auto1_sfm/gs_auto1	2026-11-27 23:21	2026-11-28 00:33	71.9	56.4	15.4	1.69	3.92	0.01	1.77	1.36	27.22	0.52	0.1	11.3	0.1	0.2	0.1	0.8	2.7	0.1	0.0	8.06	26.54	24.96	60.07	files	--auto incl. sensor path (17.6 min); 23.07 vs R-128 24.46; layout wrong; inconclusive
 R-136	newRoomAttemptSadness	auto1	2026-11-28	Tayyab (agent)	RTX 3070 PC	running	dataset/newRoomAttemptSadness/work_auto1_sfm/gs_auto1																										files	--auto on the tape room with the v9_e2e split
 R-137	scan_009_057ed3beb4fc		2026-11-28	Tayyab (agent)	RTX 3070 PC	done				20																							TRAINING	layout fallback test on five existing models (layout only); about 20 min
+R-138	scan_009_057ed3beb4fc	auto1	2026-11-28	Tayyab (agent)	RTX 3070 PC	queued																											TRAINING	R-135 layout to plan again with the R-137 fallback
+R-139	newRoomAttemptSadness		2026-11-28	Tayyab (agent)	RTX 3070 PC	queued																											TRAINING	spz vs ply quality on four bundles
