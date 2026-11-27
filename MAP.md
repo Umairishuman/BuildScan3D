@@ -216,6 +216,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `gap_test.py` | Cut-gap test: removes windows of keyframes from a trusted model and predicts their rotation from the gyro (plan step 0 / 3) | [eval] |
 | `tape_check.py` | Model vs tape table for a room (`<dataset>/tape.csv`: layout room length / width / height or values measured in the viewer), mean / max error, NFR6 (≤ 5%) check (COMPLETION_PLAN E2) | [eval] current |
 | `spz_quality.py` | Web `.spz` splats against the trained `.ply`: decodes Spark's spz (v2 / v3), renders both from the same cameras, PSNR / SSIM of the compression alone and the size (COMPLETION_PLAN 5.4, E6; R-139) | [eval] current |
+| `sfm_compare.py` | Two SfM models of the same keyframes: frames placed (overall and per 15 s) and camera disagreement after a Sim3 fit; E1 visual-only vs ARCore-guided (`sfm_colmap.py --pairs visual`, R-142) | [eval] current |
 | `fair_compare.py` | Compares models from different SfM runs (trimmed Sim3 + test-pose refinement) | [eval] current |
 | `compare_models.py` | Photometric + geometric metrics and sheets on held-out frames | [eval] |
 | `compare.py` | Older held-out comparison | [eval] [legacy] |
@@ -251,6 +252,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `start_server.bat` | Loads `.env`, starts the FastAPI server on port 8000, prints the IP for the phone |
 | `start_server.sh` | Linux twin of `start_server.bat`: loads `.env`, mode defaults to `dry_run`, runs uvicorn on port 8000 in the small `bs-server` micromamba env (not the pipeline envs), prints the phone URLs. Detached: `screen -dmS bs-server scripts/start_server.sh` |
 | `run_times.py` | **Run times table**: `update` fills `docs/progress/runs.tsv` from each run's `timing.json` / `stages.tsv` / `global_mapper.log`; `check` tests it against the files and TRAINING.md (open runs, totals that do not add up, runs without a row, run folders without a row); `show <text>` prints a comparison; standard library only (D-090) |
+| `viewer_perf.mjs` | Web viewer load time and frame times through the Chrome DevTools protocol (headless Chrome on the GPU): load, idle, drag, hover; frame intervals, long tasks, context losses, a screenshot (viewer lag fix 2026-11-26, R-143) |
 | `publish_scan.py` | Puts a run's web bundle + plan.png on the online site: R2 bucket `scans/<owner>/<capture>_<tag>/` + that owner's `index.json`; `unpublish` archives in the bucket, `list`; Python + boto3 (Linux and Windows), keys from `.env`; `--target dir:` for tests (D-076). Linux: `scripts/buildscan publish / unpublish / published` |
 | `jobs.bat` / `jobs.py` | Job manager CLI (list, watch, logs, retry, reprocess, mode) |
 | `release.bat` | Bumps the app version and tags a release |

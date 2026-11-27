@@ -139,3 +139,4 @@ R-140	scan_009_057ed3beb4fc	auto2	2026-11-28	Tayyab (agent)	RTX 3070 PC	queued	d
 R-141	scan_009_057ed3beb4fc		2026-11-28	Tayyab (agent)	RTX 3070 PC	done																											TRAINING	ARCore vs our cameras on three rooms, read-only CPU, under a minute
 R-142	newRoomAttemptSadness	e1vis	2026-11-28	Tayyab (agent)	RTX 3070 PC	queued																											TRAINING	visual-only SfM (E1), SfM stages only
 R-142	scan_009_057ed3beb4fc	e1vis	2026-11-28	Tayyab (agent)	RTX 3070 PC	queued																											TRAINING	visual-only SfM (E1), SfM stages only
+R-143			2026-11-28	Tayyab (agent)	RTX 3070 PC	queued																											TRAINING	viewer load and frame times, seven scans (E5 desktop)

@@ -183,6 +183,7 @@ Umair's side continues at R-105.
 | R-140 | 2026-11-28 | scan_009: `--auto --track_dirs` (R-079 step in the sensor path), R-128's split (`auto2`) | 3070 | queued after R-139 | queued | queued |
 | R-141 | 2026-11-28 | ARCore-only camera path vs our cameras on three rooms (E1 part, CPU) | 3070 | ~02:00, < 1 min | median 0.245 / 0.138 / 1.328; ARCore tracked 100 / 88 / 26 % of keyframes (newRoom / bedroom / scan_009) | Kept (report evidence) |
 | R-142 | 2026-11-28 | E1: visual-only SfM vs ARCore-guided on the same keyframes, newRoom + scan_009 (SfM only) | 3070 | queued after R-140 | queued | queued |
+| R-143 | 2026-11-28 | Viewer load / frame times on the fixed viewer, seven scans (E5, desktop) | 3070 | queued after R-142 | queued | queued |
 
 ## Runs
 
@@ -3693,6 +3694,25 @@ igs.txt`):
   `sparse_predensify` / R-135's `sparse_sfm` (ARCore-guided, same keyframes)
 - **Goal:** COMPLETION_PLAN E1 / final-1 exit gate (d): what the ARCore guidance adds to SfM (frames placed per 15 s,
   camera disagreement, SfM time). ARCore-only vs our cameras is R-141.
+- **Start → end:** (filled in when it ends)
+- **Errors during the run:** (filled in as they happen)
+- **Result:** (filled in when it ends)
+- **Verdict:** (filled in when it ends)
+
+### R-143 · 2026-11-28 · Web viewer load time and frame times on the fixed viewer, seven scans (E5, desktop)
+
+- **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC (headless Chrome, ANGLE D3D11)
+- **Branch / commit:** viewer from `fix/viewer-perf` (214b9aa) built in a temporary worktree
+  (`scratchpad/wtv`, `npm ci` + `next build`; the scan bundles linked in from the main checkout);
+  `scripts/viewer_perf.mjs` (the 2026-11-26 harness, moved into the repo)
+- **Dataset:** web bundles R-134, R-136, R-138 (scan_009), R-069, R-023 (`newroom`), and scans #7 / #8 (`r1119c`) from
+  the R2 bucket (load time includes the download)
+- **Command(s):** `dataset/night_r143.sh` (after R-142): `next start -H 127.0.0.1 -p 4173` with `SCANS_BASE_URL` = the
+  R2 URL, then `node scripts/viewer_perf.mjs http://127.0.0.1:4173/viewer/<page> <label> 240` per scan (load until the
+  loading pill is gone, idle 4 s, drag 6 s, hover 4 s), output `dataset/r143_viewer/perf.txt` + screenshots; the server
+  is stopped at the end (`r143_stop.ps1`)
+- **Goal:** COMPLETION_PLAN E5 (desktop part): load time and frame times of the viewer that will be merged, on the
+  scans of the report. NFR5 asks for a mid-range phone browser: not measured here.
 - **Start → end:** (filled in when it ends)
 - **Errors during the run:** (filled in as they happen)
 - **Result:** (filled in when it ends)
