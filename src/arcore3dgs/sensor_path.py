@@ -17,8 +17,9 @@ from its own shell script). Here it runs in one go, with the settings those runs
   --track_dirs  after 3: video-track pair directions (video_tracks.py --pairs_out) into a second rot_sfm.py with the
                 same cache, weighted x30 (--extra_w 30 --extra_min_inliers 8), then prior_ba.py again (R-077 / R-079:
                 the path then follows the tracks through the blank wall, 4.3 vs 46.9 deg at 45 - 60 s). Left out of the
-                first version as "scan_009 only"; R-135 without it scored 23.07 vs the hand chain's 24.46 dB (R-140
-                tests it).
+                first version as "scan_009 only"; R-135 without it scored 23.07 vs the hand chain's 24.46 dB. R-140
+                with it: 21.81 vs R-135's 23.03 on 56 common frames, blank wall -4.6 dB (fewer cameras kept): rejected,
+                kept as an opt-in for experiments.
 Output: <out>/model (COLMAP text model, metric, +Y up: use sfm_colmap.py --sim3 none) and <out>/sensor_path.json
 (steps, times, the checks each script prints are in <out>/*.log).
 
