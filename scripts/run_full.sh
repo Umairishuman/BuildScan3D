@@ -73,8 +73,9 @@ gpu_monitor() {   # one status line every GPU_EVERY s: GPU use / memory / temper
     echo "$(date '+%F %T'),$u,$mu,$mt,$t,$p" >> "$M/gpu.csv"
     tr=""
     if [[ -n "$(find "$M/train.log" -mmin -1 2>/dev/null)" ]]; then   # training is writing its log
+      # || true: under set -e / pipefail a grep with no match here ended the monitor silently (R-136, R-140)
       tr=$(tail -c 4000 "$M/train.log" | tr '\r' '\n' | grep -aE '^[0-9]+ \([0-9.]+%\)' | tail -1 |
-           awk '{printf " | train step %s %s, ETA %s %s %s %s", $1, $2, $5, $6, $7, $8}')
+           awk '{printf " | train step %s %s, ETA %s %s %s %s", $1, $2, $5, $6, $7, $8}') || true
     fi
     warn=""; [[ "${t:-0}" =~ ^[0-9]+$ && $t -ge 85 ]] && warn="  << HOT"
     printf '  [gpu %s] %s%% | %s / %s MiB | %s C | %s W%s%s\n' "$(date '+%T')" "$u" "$mu" "$mt" "$t" "${p%.*}" "$tr" "$warn"
@@ -82,7 +83,9 @@ gpu_monitor() {   # one status line every GPU_EVERY s: GPU use / memory / temper
 }
 if [[ "${GPU_EVERY:-30}" != 0 ]]; then
   gpu_monitor & MON=$!
-  trap 'kill $MON 2>/dev/null' EXIT
+  # the trap's status is the script's exit status at a normal end: a monitor that had already stopped made a
+  # finished run exit 1 (R-136, R-140); keep the real status
+  trap 'rc=$?; kill $MON 2>/dev/null; exit $rc' EXIT
 fi
 
 stage() {   # stage <name> <command...>: skipped before --from, timed, recorded in stages.tsv
