@@ -3460,6 +3460,10 @@ igs.txt`):
   - 20:37 resumed (Tayyab "ok you can resume the training work on 134 and 135"): `run_full.sh … auto1 --from sem2d
     -- --auto` from `dataset/night_r134_r135.sh`, started as its own process (not a child of the agent session) so
     a session end cannot stop it again; R-135 follows in the same script. sem2d restarts from frame 0.
+  - 20:37 → 20:49:48 sem2d done in 12 min 43 s (261 frames, `--every 4`). **20:49:57 paused by the agent at
+    Tayyab's request** ("pause all processing by 9 pm max"): stopped at the start of sem3d (the `taskkill` of the
+    chain left the `run_full.sh` subshells and `semantic3d.py` running; stopped by PID, none left, GPU idle).
+    R-135 not started. Continue with `run_full.sh dataset/roomAttemptSadness2 auto1 --from sem3d -- --auto`.
 - **Result:** (filled in when it ends)
 - **Verdict:** (filled in when it ends)
 
