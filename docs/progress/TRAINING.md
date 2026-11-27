@@ -180,12 +180,12 @@ Umair's side continues at R-105.
 | R-137 | 2026-11-28 | Layout fallback for implausible floors / ceilings (`layout.py`), five existing models, no training | 3070 | 01:30 → 01:50 (~20 min) | R-135 7.28 → 5.25 m (first pick 3.56, raised by the D-072 wall-top rule on floater walls), 2 → 9 walls; R-134 / R-069 / v9_e2e choices unchanged; R-069 3.015 m with today's code (stored 2.78 m older code) | Kept |
 | R-138 | 2026-11-28 | scan_009 R-135: layout → plan again with the R-137 fallback (`auto1`) | 3070 | 03:17:58 → 03:22:38 (4.7 min) | height 5.25 m (R-135 7.28; D-072 raises the 3.56 m pick on floater walls), 9 walls, 4 fixtures | Kept (bundle), height not trustworthy |
 | R-139 | 2026-11-28 | `.spz` vs `.ply` size and render quality on four bundles (`spz_quality.py`, E6) | 3070 | 03:22:38 → 03:24:00 (1.4 min) | 92.3 – 92.8 % smaller; PSNR vs the `.ply` render 35.8 – 36.5 dB (min 30.4), SSIM 0.983 – 0.990 | Kept (NFR4 with quality) |
-| R-140 | 2026-11-28 | scan_009: `--auto --track_dirs` (R-079 step in the sensor path), R-128's split (`auto2`) | 3070 | running (queued after R-139) | running | running |
+| R-140 | 2026-11-28 | scan_009: `--auto --track_dirs` (R-079 step in the sensor path), R-128's split (`auto2`) | 3070 | 03:24 → 04:29 (eval 04:35); run_v8 49.2 (sensor 16.6), 65.1 min wall | 21.81 vs R-135 23.03 / R-128 24.33 (56 common); blank wall 17.60 vs 22.21; 69 % placed (R-135 81 %) | Rejected (`--track_dirs` stays off) |
 | R-141 | 2026-11-28 | ARCore-only camera path vs our cameras on three rooms (E1 part, CPU) | 3070 | ~02:00, < 1 min | median 0.245 / 0.138 / 1.328; ARCore tracked 100 / 88 / 26 % of keyframes (newRoom / bedroom / scan_009) | Kept (report evidence) |
 | R-142 | 2026-11-28 | E1: visual-only SfM vs ARCore-guided on the same keyframes, newRoom + scan_009 (SfM only) | 3070 | running (queued after R-140) | running | running |
 | R-143 | 2026-11-28 | Viewer load / frame times on the fixed viewer, seven scans (E5, desktop) | 3070 | running (queued after R-142) | running | running |
 | R-144 | 2026-11-28 | OD-10 under `--auto`: R-136 from `init` with the photometric PatchMatch (`auto3`), same split | 3070 | running (queued after R-143) | running | running |
-| R-145 | 2026-11-28 | scan_009: `--auto --track_dirs` with ALIKED matching (`auto4`), R-128's split | 3070 | running (queued after R-144) | running | running |
+| R-145 | 2026-11-28 | scan_009: `--auto` with ALIKED matching (`auto4`), R-128's split | 3070 | running (queued after R-144) | running | running |
 
 ## Runs
 
@@ -3696,10 +3696,27 @@ igs.txt`):
   video-track directions (the step that made the path follow the tracks through the blank wall), and the hand chain
   started from ALIKED matches (R-046 / R-048), the automatic one from SIFT. This run adds the first; if it closes the
   gap, `--track_dirs` becomes the sensor-path default (Tayyab to decide).
-- **Start → end:** (filled in when it ends)
-- **Errors during the run:** (filled in as they happen)
-- **Result:** (filled in when it ends)
-- **Verdict:** (filled in when it ends)
+- **Start → end:** 2026-11-28 03:24:19 → 04:29:23 (run_full.sh), evaluation to 04:34:49. run_v8 (`timing.json`): select 1.45, sfm
+  3.72, analyze 0.0, sensor 16.58 (gyro bias 0.82, rot_sfm 2.45, prior BA 2.41, **track_dirs 4.72**, video tracks 2.0, mid
+  export 2.55, scale drift 0.68, loop 0.72), densify 1.04, export 0.01, prior 1.35, init 1.18 + 0.45 CPU wait, train
+  22.88, ply 0.5 = 49.2 min; then layout 0.1, sem2d 12.6, sem3d 0.1, verify 0.1, sem3d2 0.1, mesh 0.8, meshlabels 1.8,
+  web 0.1, plan 0.0 min (65.1 min wall)
+- **Errors during the run:** `run_full.sh` ended with exit 1 after "all done" (as R-136): found and fixed the same night, see
+  `scripts/run_full.sh` commit 4beb0a3 (under `set -euo pipefail` the GPU monitor's step grep ended the monitor when
+  `train.log` had no step line; the EXIT trap's failed `kill` then became the script's exit status; reproduced with a
+  minimal script: old trap exit 1, new 0). While testing the fix, `run_full.sh … auto2 --from plan` ran three times
+  (~1 s each): three extra headers in `gs_auto2/run_full.log`; their `plan` lines were removed from `stages.tsv` again.
+  Evaluation: 8 held-out frames not in this model (export dropped them).
+- **Result:** track_dirs step: video tracks gave 4,403 keyframe pairs (median 23 correspondences); the second rot_sfm
+  kept 658 of 894 cameras (residual < 10 deg) (R-135's chain 734); loop solve: 2,799 pair directions, 863 loop pairs
+  (`--track_dirs` does not add to the image pair cache); placed after the sensor path 69 % (R-135 81 %). Model 419,001
+  Gaussians. Held-out (61 in the model): PSNR 18.65 → aligned 21.61, SSIM 0.866, correction median 3.89 deg (R-135:
+  0.63 deg). **On the 56 frames all four share (aligned): R-140 21.81, R-135 23.03, R-128 24.33, R-133 24.41**; 0 - 30 s
+  27.10 / 26.52 / 27.39 / 27.43; **60 - 90 s (blank wall) 17.60 / 22.21 / 25.16 / 26.56**; 134 - 140 s 17.35 / 18.51 /
+  18.50 / 17.29; 140 s + 23.16 / 22.95 / 25.23 / 25.09.
+- **Verdict:** rejected: `--track_dirs` (R-079's step alone, on SIFT matches) makes the automatic chain worse, most on
+  the blank wall (-4.6 dB vs R-135); it stays opt-in (default off). The ALIKED difference is tested next without it
+  (R-145, changed at 04:35 from `--track_dirs` + ALIKED to ALIKED only).
 
 ### R-141 · 2026-11-28 · ARCore-only camera path against our cameras on three rooms (E1 part; read-only, CPU)
 
@@ -3782,17 +3799,18 @@ igs.txt`):
 - **Result:** (filled in when it ends)
 - **Verdict:** (filled in when it ends)
 
-### R-145 · 2026-11-28 · scan_009: `--auto --track_dirs` with ALIKED matching (`auto4`)
+### R-145 · 2026-11-28 · scan_009: `--auto` with ALIKED matching (`auto4`)
 
 - **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
 - **Branch / commit:** `feature/auto-pipeline` (no code change: `run_v8.py --sfm_args "--feature aliked"`)
 - **Dataset:** `dataset/scan_009_057ed3beb4fc`, raw video
 - **Command(s):** `dataset/night_r145.sh` (after R-144): `GPU_EVERY=120 bash scripts/run_full.sh
-  dataset/scan_009_057ed3beb4fc auto4 -- --auto --track_dirs --sfm_args "--feature aliked" --split
+  dataset/scan_009_057ed3beb4fc auto4 -- --auto --sfm_args "--feature aliked" --split
   dataset/scan_009_057ed3beb4fc/s10_test.txt` (model and downstream), then `eval_align.py` and `offpath_views.py` vs R-128
 - **Goal:** the second difference between R-135 and the hand chain (R-140 goal): the hand chain's pair directions came
   from ALIKED matches (R-046 / R-048: 6,148 directions, 2,189 loop pairs); with SIFT the automatic chain had 3,031 / 926
-  (R-135) and 2,799 / 863 (R-140, `--track_dirs` does not add to that cache). Does ALIKED give the loop solve the pairs?
+  (R-135) and 2,799 / 863 (R-140, `--track_dirs` does not add to that cache). Does ALIKED give the loop solve the pairs? (Planned with `--track_dirs` too; dropped at 04:35 after R-140 rejected
+  it, before the run started: the chain was stopped while waiting and restarted.)
 - **Start → end:** (filled in when it ends)
 - **Errors during the run:** (filled in as they happen)
 - **Result:** (filled in when it ends)
