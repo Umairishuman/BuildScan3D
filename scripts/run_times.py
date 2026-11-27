@@ -30,6 +30,7 @@ from datetime import datetime, timedelta
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TSV = os.path.join(ROOT, "docs", "progress", "runs.tsv")
 MODEL_STAGES = ["select", "sfm", "export", "prior", "init", "train", "ply"]
+AUTO_STAGES = ["analyze", "sensor", "densify"]   # run_v8.py --auto (D-099): in timing.json, no columns of their own
 AFTER_STAGES = ["layout", "sem2d", "sem3d", "verify", "sem3d2", "mesh", "meshlabels", "web", "plan"]
 MAP = [("map_gp_s", "Global positioning"), ("map_ba_s", "Iterative bundle adjustment"),
        ("map_retri_s", "Iterative retriangulation and refinement"), ("map_total_s", "Reconstruction")]
@@ -178,12 +179,13 @@ def check(rows, training, root=ROOT):
         if os.path.exists(tj):
             t = json.load(open(tj))
             if "total" in t:
-                s = sum(t.get(k, 0) for k in MODEL_STAGES) + t.get("init_wait_cpu", 0)
+                s = sum(t.get(k, 0) for k in MODEL_STAGES + AUTO_STAGES) + t.get("init_wait_cpu", 0)
                 if abs(s - t["total"]) > 0.3:
                     fails.append(f"{key}: timing.json total {t['total']} min but its stages add up to {s:.2f}")
                 if os.path.exists(st):
                     v8 = [m for _, n, m in read_stages(st) if n == "run_v8"]
-                    if v8 and abs(v8[0] - t["total"]) > 0.15:
+                    tol = 0.25 if any(k in t for k in AUTO_STAGES) else 0.15   # --auto: ~0.2 min outside its stage timers (R-134)
+                    if v8 and abs(v8[0] - t["total"]) > tol:
                         fails.append(f"{key}: stages.tsv run_v8 {v8[0]} min vs timing.json total {t['total']}")
         finished = os.path.exists(st) and any(n in ("web", "plan") for _, n, _ in read_stages(st))
         log = os.path.join(d, "run_full.log")

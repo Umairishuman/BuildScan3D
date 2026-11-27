@@ -174,6 +174,8 @@ Umair's side continues at R-105.
 | R-131 | 2026-11-26 | scan_009: R-130's checks with the Apache-2.0 DA3-BASE / DA3-SMALL (no training, D-098) | 3070 | 19:17 → 19:22; 2 – 4 s per chunk, peak GPU 1.3 – 3.1 GB | depth consistency BASE 1.5 – 3.9 % / SMALL 1.9 – 2.9 % vs Metric3D 8.2 – 15.1 % (keyframe chunks); doorway rotation median 13.5° / 12.8° (LARGE 2.6°); blank wall fails | Kept (finding): BASE usable for depth priors, not for doorway poses alone |
 | R-132 | 2026-11-26 | scan_009: R-128 with DA3-BASE depth priors (chained chunks, 338 unsupported frames filled) instead of Metric3D (`v9pda`) | 3070 | 19:27 → 20:31; prior 1.5, init 2.5, train 29.1, total 33.7 min (3 restarts, see entry) | 23.76 vs R-128 24.25; outside 134 – 140 s 26.20 vs 26.12; 134 – 140 s 15.98 vs 18.30; off-path views cleaner | Inconclusive (Tayyab to look) |
 | R-133 | 2026-11-26 | scan_009: R-132 with DA3's confidence cut-off 1.1 (81 unsure frames without prior) (`v9pdc`) | 3070 | ~21:16 → 22:30; prior 1.6, init 2.5, train 26.7, total 31.4 min | 24.25 (= R-128; R-132 23.78); 60 – 90 s 26.56 (best); 134 – 140 s 17.11; off-path views cleaner than R-128 | Kept (DA3 candidate); Tayyab to look; work paused |
+| R-134 | 2026-11-27 | roomAttemptSadness2: first `--auto` run, raw video → web bundle, no hand-set option (`auto1`, D-099) | 3070 | 03:10 → 23:21 in three parts (session end, 9 pm pause); run_v8 83.5, layout 5.0, sem2d 12.7, rest 2.8 min | end to end, exit 0; 1.43 M Gaussians, 5 walls, 19 fixtures, mesh 892 k triangles, bundle 33 MB; outline not closed, ceiling 3.00 m vs R-069 2.82 m | Kept (auto pipeline works on a textured room); Tayyab to look |
+| R-135 | 2026-11-27 | scan_009: `--auto` from the raw video, sensor-path stage, R-128's split (`auto1`) | 3070 | 23:21 → running | running | running |
 
 ## Runs
 
@@ -3448,7 +3450,11 @@ igs.txt`):
 - **Goal:** test bench 1 of D-099: does the automatic pipeline run end to end on a textured recording with no
   hand-set option, what does the analyzer decide, and how long does each stage take. Reference: R-069 (`v9pgsr8`,
   hand-set `--window 8`, same recipe without the auto choices).
-- **Start → end:** (filled in when it ends)
+- **Start → end:** 2026-11-27 03:10:25 → 23:21:33 in three parts (03:10 → ~04:48 stopped by the session end;
+  20:37 → 20:49:57 paused at 9 pm; 23:18:41 → 23:21:33). Working time ~105 min: run_v8 select → ply 83.5 min
+  (`timing.json`: select 2.82, sfm 18.21, analyze 0.01, densify 2.88, export 0.02, prior 2.29, init 19.29, train
+  36.61, ply 1.4), then (`stages.tsv`) layout 5.0, sem2d 12.7, sem3d 0.7, verify 0.4, sem3d2 0.4, mesh 0.5,
+  meshlabels 0.7, web 0.1, plan 0.0 min
 - **Errors during the run:**
   - 04:39 sem2d: `Could not load the custom kernel for multi-scale deformable attention: DLL load failed while
     importing MultiScaleDeformableAttention` (Grounding DINO falls back to its PyTorch code; a warning, not a stop;
@@ -3466,8 +3472,16 @@ igs.txt`):
     R-135 not started. Continue with `run_full.sh dataset/roomAttemptSadness2 auto1 --from sem3d -- --auto`.
   - 23:19 resumed (Tayyab "resume"): same detached chain (`dataset/night_r134_r135.sh`), now `--from sem3d`; R-135
     follows in the same script.
-- **Result:** (filled in when it ends)
-- **Verdict:** (filled in when it ends)
+- **Result:** ran end to end from the raw video with no hand-set option (exit 0). Analyzer: normal SfM (97 % of
+  the keyframes placed), densify on 2 weak / featureless windows of 59, DA3-BASE priors with the cut-off 1.1
+  (`auto.json`). Model 1,425,538 Gaussians (R-069: 1,445,529). Semantics: 5 walls, 19 fixtures, 52 rejected
+  detections, ceiling height 3.002 m (R-069 `semantic.json`: 2.819 m; true height not measured), floor tilt 0.26°,
+  ceiling tilt 0.82°; one layout warning: "outline not closed: 4 corners for 5 walls … floor area is not computed".
+  Mesh 892,047 triangles (907,390 before clean-up, 522 frames fused). Web bundle
+  `prototype/web-ui/public/scans/roomAttemptSadness2_auto1/` 33 MB (same as R-069's). No held-out split, so no
+  PSNR; quality not compared with R-069 except by the numbers above; not looked at in the viewer yet.
+- **Verdict:** kept: test bench 1 of D-099 passes (the automatic pipeline runs end to end on a textured room).
+  Open: the open outline (floor area missing) and the 6 % higher ceiling than R-069; Tayyab to look in the viewer.
 
 ### R-135 · 2026-11-27 · scan_009_057ed3beb4fc (featureless): `--auto` from the raw video, sensor-path stage (`auto1`)
 
