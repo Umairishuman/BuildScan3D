@@ -787,10 +787,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
         aligned (62 frames), closed room 6.575 x 4.380 m, tape -1.86 %, 106.1 min; same-tool v9_e2e reference queued.
       - [x] 2026-11-28: layout fallback for implausible floors / ceilings (R-137, `layout.py`): R-135 7.28 → 5.25 m (first pick 3.56, raised by D-072 on floater walls),
         textured rooms unchanged. R-138 queued: R-135's downstream again with it.
-      - [ ] **R-140 (queued): `--track_dirs`**, R-079's track-direction rot_sfm step that `sensor_path.py` left out;
-        diagnosis of R-135: positions drift from ~45 s, loop solve had half the pair directions (3,031 vs 6,148).
-        If it closes the gap: Tayyab to decide whether it becomes the default. Second difference not tested: the hand
-        chain started from ALIKED matches, the automatic one from SIFT.
+      - [x] 2026-11-28 **R-140 `--track_dirs`** (R-079's track-direction rot_sfm, left out of `sensor_path.py`):
+        rejected, 21.81 vs R-135 23.03 on 56 common frames, blank wall 17.60 vs 22.21 (fewer cameras kept); opt-in only.
+      - [ ] **R-145 (queued): ALIKED matches** for the sensor route (the hand chain's pair directions came from ALIKED:
+        6,148 vs 2,799 - 3,031 with SIFT). If it closes the gap: OD-17 for Tayyab.
       - [ ] Tayyab to decide: `--auto` as the recipe for new rooms / the server (after R-136); OD-10 in `--auto`.
     - [ ] Disk on the RTX 3070 PC: 1.9 GB free after R-130 (2026-11-25); candidates to slim (Tayyab's call): R-127
       (`work_v9plb*`, rejected), R-129 (`work_v9plk*`, not adopted), R-126 (`work_v9pla*`), R-123 (`work_v9plh*`),
