@@ -3449,6 +3449,29 @@ igs.txt`):
   hand-set option, what does the analyzer decide, and how long does each stage take. Reference: R-069 (`v9pgsr8`,
   hand-set `--window 8`, same recipe without the auto choices).
 - **Start → end:** (filled in when it ends)
+- **Errors during the run:**
+  - 04:39 sem2d: `Could not load the custom kernel for multi-scale deformable attention: DLL load failed while
+    importing MultiScaleDeformableAttention` (Grounding DINO falls back to its PyTorch code; a warning, not a stop;
+    not in earlier records; a speed lead for this stage on Windows). Speed here ~4.6 s per frame (50 frames in ~4 min).
+  - **~04:48: run stopped in sem2d** (last output 04:47:31, 166 2D mask files of 261, `run_full.log` 04:46:49):
+    the agent's Claude Code session ended and its child processes ended with it (task notice "didn't finish before
+    the previous session ended"). Not a pipeline error. Done before the stop: run_v8 select → ply 83.7 min
+    (`timing.json`), layout 5.0 min (`stages.tsv`). Can continue with `run_full.sh … --from sem2d`.
+- **Result:** (filled in when it ends)
+- **Verdict:** (filled in when it ends)
+
+### R-135 · 2026-11-27 · scan_009_057ed3beb4fc (featureless): `--auto` from the raw video, sensor-path stage (`auto1`)
+
+- **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
+- **Branch / commit:** `feature/auto-pipeline` (`run_v8.py --auto` with the `sensor` stage, `sensor_path.py`; D-099)
+- **Dataset:** `dataset/scan_009_057ed3beb4fc`, raw video; nothing from the hand-made runs reused
+- **Command(s):** `GPU_EVERY=120 bash scripts/run_full.sh dataset/scan_009_057ed3beb4fc auto1 -- --auto --split
+  dataset/scan_009_057ed3beb4fc/s10_test.txt` (the split only for the comparison; log `r135.log`), then
+  `eval_align.py` on its own cameras
+- **Goal:** test bench 2 of D-099: does the analyzer send scan_009 to the sensor-path route by itself, does
+  `sensor_path.py` rebuild the hand-made camera chain (R-071 → R-096) in one go, the chain's time end to end (never
+  measured, PIPELINE_ANALYZER_PLAN §4), and the score against R-128 / R-133 (24.25) without any hand choice.
+- **Start → end:** (filled in when it ends)
 - **Errors during the run:** (filled in as they happen)
 - **Result:** (filled in when it ends)
 - **Verdict:** (filled in when it ends)
