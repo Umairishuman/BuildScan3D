@@ -180,6 +180,7 @@ Umair's side continues at R-105.
 | R-137 | 2026-11-28 | Layout fallback for implausible floors / ceilings (`layout.py`), five existing models, no training | 3070 | 01:30 → 01:50 (~20 min) | R-135 7.28 → 3.56 m, 2 → 9 walls; R-134 / R-069 / v9_e2e choices unchanged; R-069 3.015 m with today's code (stored 2.78 m older code) | Kept |
 | R-138 | 2026-11-28 | scan_009 R-135: layout → plan again with the R-137 fallback (`auto1`) | 3070 | queued after R-136 | queued | queued |
 | R-139 | 2026-11-28 | `.spz` vs `.ply` size and render quality on four bundles (`spz_quality.py`, E6) | 3070 | queued after R-138 | queued | queued |
+| R-140 | 2026-11-28 | scan_009: `--auto --track_dirs` (R-079 step in the sensor path), R-128's split (`auto2`) | 3070 | queued after R-139 | queued | queued |
 
 ## Runs
 
@@ -3624,6 +3625,27 @@ igs.txt`):
   OD-1): PSNR / SSIM of the decoded `.spz` render against the `.ply` render from the same cameras, and the size.
   Decoder checked on R-134's bundle before the run (CPU): same 1,425,538 Gaussians in the same order, positions within
   0.12 mm, rotations dot 0.9999998, spz version 3, SH degree 3.
+- **Start → end:** (filled in when it ends)
+- **Errors during the run:** (filled in as they happen)
+- **Result:** (filled in when it ends)
+- **Verdict:** (filled in when it ends)
+
+### R-140 · 2026-11-28 · scan_009: `--auto` with the R-079 step in the sensor path (`--track_dirs`, `auto2`)
+
+- **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
+- **Branch / commit:** `feature/auto-pipeline` (`sensor_path.py --track_dirs`, `run_v8.py --track_dirs`)
+- **Dataset:** `dataset/scan_009_057ed3beb4fc`, raw video; nothing reused
+- **Command(s):** `dataset/night_r140.sh` (starts when R-138 / R-139 have ended): `GPU_EVERY=120 bash
+  scripts/run_full.sh dataset/scan_009_057ed3beb4fc auto2 -- --auto --track_dirs --split
+  dataset/scan_009_057ed3beb4fc/s10_test.txt` (log `r140.log`), then `eval_align.py` and the comparison with R-128 /
+  R-135 on their common held-out frames
+- **Goal:** why R-135 (automatic) is 1.4 dB below the hand chain. Diagnosis 2026-11-28 (R-135 cameras vs R-128's,
+  611 common frames, Sim3 fit): rotations agree step by step (median 0.18 deg between consecutive frames), positions
+  drift apart from ~45 s (median 0.9, up to 1.7 units). The hand chain's loop solve had 6,148 pair directions and
+  2,189 loop pairs, R-135's 3,031 and 926. Two differences: `sensor_path.py` left out R-079's second rot_sfm with the
+  video-track directions (the step that made the path follow the tracks through the blank wall), and the hand chain
+  started from ALIKED matches (R-046 / R-048), the automatic one from SIFT. This run adds the first; if it closes the
+  gap, `--track_dirs` becomes the sensor-path default (Tayyab to decide).
 - **Start → end:** (filled in when it ends)
 - **Errors during the run:** (filled in as they happen)
 - **Result:** (filled in when it ends)

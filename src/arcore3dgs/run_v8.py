@@ -48,6 +48,7 @@ ap.add_argument("--da3", default=os.path.join(os.environ.get("BUILDSCAN_CACHE", 
                 help="--auto: DA3 weights folder for the depth priors (Metric3D when it does not exist)")
 ap.add_argument("--da3_conf_min", type=float, default=1.1, help="--auto: DA3 confidence cut-off (R-133)")
 ap.add_argument("--no_densify", action="store_true", help="--auto: do not add frames in weak windows")
+ap.add_argument("--track_dirs", action="store_true", help="--auto: sensor_path.py --track_dirs (R-079 step, R-140)")
 ap.add_argument("--no_sensor_path", action="store_true",
                 help="--auto: never run the sensor-path chain (continue with the frames SfM placed)")
 ap.add_argument("--frame_budget", type=int, default=1100,
@@ -178,7 +179,8 @@ if args.auto:
         AUTO["decisions"].append(f"route: normal SfM ({100 * an['placed_share']:.0f} % of the keyframes placed)")
     if sensor:
         if STAGES.index(args.from_stage) <= STAGES.index("sensor"):
-            run("sensor", [py, os.path.join(HERE, "sensor_path.py"), D, W, S, sensor_out, "--prior_args=" + da3_args],
+            run("sensor", [py, os.path.join(HERE, "sensor_path.py"), D, W, S, sensor_out, "--prior_args=" + da3_args]
+                + (["--track_dirs"] if args.track_dirs else []),
                 log=os.path.join(OUT, "sensor_path.log"))
             if not os.path.isdir(os.path.join(S, "sparse_sfm")):
                 shutil.copytree(sp0, os.path.join(S, "sparse_sfm"))    # normal SfM's model, kept

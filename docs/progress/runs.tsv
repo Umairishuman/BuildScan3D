@@ -135,3 +135,4 @@ R-136	newRoomAttemptSadness	auto1	2026-11-28	Tayyab (agent)	RTX 3070 PC	running	
 R-137	scan_009_057ed3beb4fc		2026-11-28	Tayyab (agent)	RTX 3070 PC	done				20																							TRAINING	layout fallback test on five existing models (layout only); about 20 min
 R-138	scan_009_057ed3beb4fc	auto1	2026-11-28	Tayyab (agent)	RTX 3070 PC	queued																											TRAINING	R-135 layout to plan again with the R-137 fallback
 R-139	newRoomAttemptSadness		2026-11-28	Tayyab (agent)	RTX 3070 PC	queued																											TRAINING	spz vs ply quality on four bundles
+R-140	scan_009_057ed3beb4fc	auto2	2026-11-28	Tayyab (agent)	RTX 3070 PC	queued	dataset/scan_009_057ed3beb4fc/work_auto2_sfm/gs_auto2																										files	--auto --track_dirs (R-079 step in the sensor path)

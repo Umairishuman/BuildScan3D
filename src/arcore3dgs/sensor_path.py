@@ -14,9 +14,13 @@ from its own shell script). Here it runs in one go, with the settings those runs
   6 scale_drift.py      scale drift corrected with the room height, then prior_ba.py again (R-094)
   7 loop_path.py        loops closed with the image pairs that see the same place at different times, then
                         prior_ba.py --pair_priors (R-096)
+  --track_dirs  after 3: video-track pair directions (video_tracks.py --pairs_out) into a second rot_sfm.py with the
+                same cache, weighted x30 (--extra_w 30 --extra_min_inliers 8), then prior_ba.py again (R-077 / R-079:
+                the path then follows the tracks through the blank wall, 4.3 vs 46.9 deg at 45 - 60 s). Left out of the
+                first version as "scan_009 only"; R-135 without it scored 23.07 vs the hand chain's 24.46 dB (R-140
+                tests it).
 Output: <out>/model (COLMAP text model, metric, +Y up: use sfm_colmap.py --sim3 none) and <out>/sensor_path.json
-(steps, times, the checks each script prints are in <out>/*.log). Not included (scan_009 only, not general):
-R-079's second rot_sfm with the track directions weighted up.
+(steps, times, the checks each script prints are in <out>/*.log).
 
   python src/arcore3dgs/sensor_path.py <dataset> <selection dir (frames.json, images/)> <sfm dir (sparse/0,
       database.db from sfm_colmap.py)> <out dir> [--prior_args "--da3 <weights> --fill_scale --da3_conf_min 1.1"]
@@ -41,6 +45,7 @@ def main():
     ap.add_argument("dataset"); ap.add_argument("work"); ap.add_argument("calib"); ap.add_argument("out")
     ap.add_argument("--prior_args", default="", help="mono_prior.py options for the mid export (scale_drift's depth)")
     ap.add_argument("--from_step", type=int, default=1, help="resume at this step (earlier outputs reused)")
+    ap.add_argument("--track_dirs", action="store_true", help="R-079's second rot_sfm with the video-track directions")
     a = ap.parse_args()
     py, O, W, D = sys.executable, os.path.abspath(a.out), os.path.abspath(a.work), os.path.abspath(a.dataset)
     os.makedirs(O, exist_ok=True)
@@ -71,7 +76,18 @@ def main():
     step(2, "rot_sfm", [[py, S("rot_sfm.py"), D, W, a.calib, p("rot"), "--max_dt", "300", "--bg_json", bias,
                           "--triangulate_only"]])
     step(3, "prior_ba", [[py, S("prior_ba.py"), p("rot", "sparse", "0"), W, p("pba"), *PBA, "--colmap", colmap]])
-    step(4, "video_tracks", [[py, S("video_tracks.py"), D, W, p("pba"), p("vt")],
+    base = p("pba")
+    if a.track_dirs:                                            # R-077 / R-079 (as track_loop.py's first round)
+        r2 = p("rot2"); os.makedirs(r2, exist_ok=True)
+        if 3 >= a.from_step:
+            shutil.copy(p("rot", "pair_directions_dt300_par1_bg.json"), r2)
+        step(3, "track_dirs", [[py, S("video_tracks.py"), D, W, p("pba"), p("vt0"), "--pairs_out", p("vt_pairs.npz")],
+                               [py, S("rot_sfm.py"), D, W, a.calib, r2, "--max_dt", "300", "--bg_json", bias,
+                                "--triangulate_only", "--extra_pairs", p("vt_pairs.npz"), "--extra_w", "30",
+                                "--extra_min_inliers", "8"],
+                               [py, S("prior_ba.py"), os.path.join(r2, "sparse", "0"), W, p("pba2"), *PBA, "--colmap", colmap]])
+        base = p("pba2")
+    step(4, "video_tracks", [[py, S("video_tracks.py"), D, W, base, p("vt")],
                              [py, S("prior_ba.py"), p("vt"), W, p("vt_pba"), *PBA, "--colmap", colmap]])
 
     mid = p("mid")                                            # an sfm dir for this model: frames, priors, planes
