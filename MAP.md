@@ -51,6 +51,7 @@ diagnostics · [v3] = the older SfM pipeline the server still runs · [legacy] =
 | `.github/` | CI (`ci.yml`), CD (`cd.yml`), Docker build (`docker-gpu.yml`), APK checks (`android/`), PR template |
 | `docs/` | Records, guides, proposal, papers (section 8) |
 | `report/mid-eval/` | Everything submitted for the FYP-1 mid evaluation (frozen) |
+| `report/final-eval/` | FYP-1 final report (due 2026-12-06), LaTeX draft started 2026-11-28 from the mid report's source; README inside |
 | `UI designs/` | Two design reference images for the web UI |
 | `scratch/` | One-off Python scripts that once patched web-UI files (dashboard, logo, login image). Not used; to be archived once the owner agrees (D-049) |
 | `envs/linux/` | Linux micromamba env files (`colmap.yml` → `bs-colmap`, `nerfstudio.yml` → `bs-ns`, `system.yml` → `bs-system`) `requirements-nerfstudio.txt` (the Windows freeze minus Windows-only packages) and `bs-ns-activate.sh` (CUDA paths for gsplat's JIT build, copied into the env's `activate.d`). Used by this PC and, later, the Docker image (D-047, D-048) |
@@ -75,6 +76,7 @@ run_v8.py  [system Python; calls nerfstudio-env for export/train]
    select   select_sharp.py      gyro-aware sharpest frame per 0.2 s            -> dataset/<c>/work_v9/
    sfm      sfm_colmap.py        COLMAP 4.2 SfM, lens, undistort, Sim3 to ARCore -> dataset/<c>/work_v9_sfm/
    analyze  analyze_recording.py 5 s windows textured / weak / featureless / hole, route   (--auto only, D-099)
+   sensor   sensor_path.py       camera chain from gyro / IMU + tracks when SfM fails      (--auto, sensor route)
    densify  densify_frames.py    extra video frames in weak windows, SfM export again     (--auto only)
    export   export_nerfstudio.py transforms.json for nerfstudio
    prior    mono_prior.py        Metric3D depth + normals aligned to SfM points (--auto: DA3-BASE + confidence cut-off)
@@ -185,6 +187,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `arcore_fill.py` | Places unplaced ARCore-tracked keyframes in path holes with a local ARCore → model Sim3 per ARCore segment, checked by image matches (R-127: rejected on scan_009, ARCore positions unreliable); also `sampson_check`, `write_with_new` helpers | [exp] |
 | `direction_fill.py` | Places unplaced keyframes in path holes from image-pair directions with gyro rotations, checked by Sampson error (R-127: 29 placed, model −0.74 dB) | [exp] |
 | `densify_frames.py` | Adds video frames between placed keyframes in weak / featureless windows (gyro rotation, interpolated position) (R-128: +0.29 dB, +3.6 min, kept); the `densify` stage of `run_v8.py --auto` (D-099) | **[v9]** |
+| `sensor_path.py` | The scan_009 camera chain as one stage (gyro bias, gyro rotations, prior BA, video tracks, mid export, scale drift, loop closure; R-071 → R-096) for recordings normal SfM cannot place; `--track_dirs` adds R-079's track-direction rot_sfm (R-140); the `sensor` stage of `run_v8.py --auto` (D-099, R-135) | **[v9]** |
 | `da3_loader.py` | Imports Depth Anything 3 from outside the repo with stand-ins for its unused export modules (D-097); numpy Umeyama in place of DA3's evo-based pose alignment | **[v9]** (`mono_prior.py --da3`) |
 | `prior_vs_model.py` | Depth-prior variants against a trained model's rendered depth, or (`--consistency`) neighbour agreement with our cameras (R-133) | [eval] |
 | `loop_match.py` | Second loop round: picks pairs that see the same surfaces at different times with the corrected cameras + depth priors, matches them (ALIKED + LightGlue, copy of the database), pair directions in the model's world (R-097) | [v9] experiment |
@@ -212,6 +215,7 @@ Scripts call each other by path from `run_v8.py` (`HERE = src/arcore3dgs`); the 
 | `vggt_poses.py` | VGGT (learned poses) on chunks of keyframes, chained, checked against gyro / accelerometer / ARCore, written in the export layout. Needs VGGT outside the repo; **never run** (needs Tayyab's OK) | [experiment] not run |
 | `gap_test.py` | Cut-gap test: removes windows of keyframes from a trusted model and predicts their rotation from the gyro (plan step 0 / 3) | [eval] |
 | `tape_check.py` | Model vs tape table for a room (`<dataset>/tape.csv`: layout room length / width / height or values measured in the viewer), mean / max error, NFR6 (≤ 5%) check (COMPLETION_PLAN E2) | [eval] current |
+| `spz_quality.py` | Web `.spz` splats against the trained `.ply`: decodes Spark's spz (v2 / v3), renders both from the same cameras, PSNR / SSIM of the compression alone and the size (COMPLETION_PLAN 5.4, E6; R-139) | [eval] current |
 | `fair_compare.py` | Compares models from different SfM runs (trimmed Sim3 + test-pose refinement) | [eval] current |
 | `compare_models.py` | Photometric + geometric metrics and sheets on held-out frames | [eval] |
 | `compare.py` | Older held-out comparison | [eval] [legacy] |
@@ -381,6 +385,7 @@ Own status file: [prototype/web-ui/STATUS.md](prototype/web-ui/STATUS.md) (and i
 | `envs/linux/` | Linux env files (section 1) |
 | `docker/` | `Dockerfile.gpu` (out of date, STATUS §6) |
 | `report/mid-eval/` | FYP-1 mid evaluation: LaTeX report, fix notes (frozen) |
+| `report/final-eval/` | FYP-1 final evaluation: LaTeX report draft (`BuildScan3D_Final_Report/`), not frozen until submitted |
 | `UI designs/`, `.vscode/`, `scratch/` | Design images, editor settings, old one-off scripts (section 1) |
 
 ## 10. Reorganisation plan (agreed 2026-11-06, DECISIONS D-049)
@@ -402,7 +407,7 @@ tell what is current. **Nothing is ever deleted: retired files are archived** (`
      train/      run_v8.py geo_splatfacto.py export_nerfstudio.py
      scene/      layout.py semantic2d.py semantic3d.py verify_fixtures.py mesh.py mesh_labels.py
      export/     export_web.py to_spz.mjs
-     eval/       eval_offpath.py eval_align.py prune_near_path.py make_split.py sfm_scale_check.py tape_check.py fair_compare.py compare_models.py fit_diag.py diagnose.py view.py ...
+     eval/       eval_offpath.py eval_align.py prune_near_path.py make_split.py sfm_scale_check.py tape_check.py spz_quality.py fair_compare.py compare_models.py fit_diag.py diagnose.py view.py ...
      legacy/     ba.py mvs.py align_fuse.py pocket_prior.py make_init.py colmap_mvs.py train.py prepare.py ...
    ```
 
