@@ -1088,3 +1088,32 @@ plan updated (detect path holes; hole-aware loop checks).
   stages, `--auto` implies the unbiased mesh depth, sem2d frame step capped at ~300 frames. `origin/master` merged in.
 - R-134: bedroom (`roomAttemptSadness2`) raw video → web bundle with `--auto` (running; window 8 chosen by itself,
   as R-069 set by hand).
+- Evening 2026-11-27: R-134 resumed 20:37 (Tayyab "ok you can resume the training work on 134 and 135") as a process
+  independent of the agent session (the first attempt died with the session at ~04:48); paused 20:49:57 at Tayyab's
+  request ("pause all processing by 9 pm"); resumed 23:18 (Tayyab "resume").
+
+## 2026-11-28 · Tayyab (agent, night, `feature/auto-pipeline`)
+
+- Tayyab: final deadline 2026-12-06, a finished product; Umair and Zaid away until Monday 2026-11-30; plan and work
+  through the night; close the servers (none of the agent's were running). Plan: [FINAL_PLAN.md](FINAL_PLAN.md).
+- **R-134 closed** (23:21, kept): bedroom raw video → web bundle with `--auto`, no hand choice; 104.0 min of stages;
+  5 walls, 19 fixtures; outline not closed. Its "6 % higher ceiling than R-069" is the layout code version (R-137).
+- **R-135 closed** (00:33, inconclusive): scan_009 `--auto`, the analyzer chose the sensor path by itself (41 → 81 %
+  placed), 71.9 min end to end (sensor chain 17.6 min, first time measured), but 23.07 vs the hand chain's 24.46 dB on
+  61 common held-out frames, layout 7.28 m (no floor reconstructed). Diagnosis: positions drift from ~45 s, loop solve
+  with half the pair directions; `sensor_path.py` had left out R-079's track-direction step: `--track_dirs` (R-140).
+- `run_times.py check` taught the `--auto` stages (analyze / sensor / densify in `timing.json`).
+- **R-136** (running): `--auto` on newRoomAttemptSadness (tape room) with the v9_e2e split mapped to its window-7 frames
+  (one restart at 01:24, see the entry).
+- **R-137** (kept): `layout.py` floor / ceiling fallback when the first pick cannot be right (camera 0.5 - 2.2 m above
+  the floor, room 2 - 5 m): R-135 7.28 → 3.56 m, 2 → 9 walls; R-134 / R-069 / v9_e2e choices unchanged.
+- **R-141**: ARCore's path vs our cameras (E1 part): median 0.25 / 0.14 / 1.33 m, ARCore tracked 100 / 88 / 26 % of
+  the keyframes (newRoom / bedroom / scan_009).
+- New tools: `spz_quality.py` (decoder checked; R-139 queued), `sfm_colmap.py --pairs visual` + `sfm_compare.py` (E1,
+  R-142 queued), `scripts/viewer_perf.mjs` (R-143 queued, viewer from `fix/viewer-perf` in a temporary worktree).
+- Final report: `report/final-eval/BuildScan3D_Final_Report/` (copy of the mid report source; new chapters Iteration 2
+  and Evaluation, abstract and conclusion drafted, `TODO(name)` markers; 123 pages).
+- Queue (one GPU job at a time, each chain waits for the one before): R-136 → R-138 (scan_009 downstream with the new
+  layout) + R-139 (`.spz` quality) → R-140 (`--track_dirs`) → R-142 (E1 visual-only SfM) → R-143 (viewer times).
+- Next: Tayyab to push the three branches and decide the section 4 choices of FINAL_PLAN.md.
+
