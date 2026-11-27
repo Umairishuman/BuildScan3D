@@ -185,6 +185,7 @@ Umair's side continues at R-105.
 | R-142 | 2026-11-28 | E1: visual-only SfM vs ARCore-guided on the same keyframes, newRoom + scan_009 (SfM only) | 3070 | running (queued after R-140) | running | running |
 | R-143 | 2026-11-28 | Viewer load / frame times on the fixed viewer, seven scans (E5, desktop) | 3070 | running (queued after R-142) | running | running |
 | R-144 | 2026-11-28 | OD-10 under `--auto`: R-136 from `init` with the photometric PatchMatch (`auto3`), same split | 3070 | running (queued after R-143) | running | running |
+| R-145 | 2026-11-28 | scan_009: `--auto --track_dirs` with ALIKED matching (`auto4`), R-128's split | 3070 | running (queued after R-144) | running | running |
 
 ## Runs
 
@@ -3776,6 +3777,22 @@ igs.txt`):
 - **Goal:** evidence for OD-10 inside the automatic recipe: R-063 measured the photometric init at 7.5 vs 20.1 min with
   equal quality on the old recipe; here R-136's init took 17.5 min. Same frames, same SfM, same priors: init time,
   training time and held-out PSNR / SSIM against R-136 (24.61 / aligned 25.33). Model only (no layout / semantics).
+- **Start → end:** (filled in when it ends)
+- **Errors during the run:** (filled in as they happen)
+- **Result:** (filled in when it ends)
+- **Verdict:** (filled in when it ends)
+
+### R-145 · 2026-11-28 · scan_009: `--auto --track_dirs` with ALIKED matching (`auto4`)
+
+- **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
+- **Branch / commit:** `feature/auto-pipeline` (no code change: `run_v8.py --sfm_args "--feature aliked"`)
+- **Dataset:** `dataset/scan_009_057ed3beb4fc`, raw video
+- **Command(s):** `dataset/night_r145.sh` (after R-144): `GPU_EVERY=120 bash scripts/run_full.sh
+  dataset/scan_009_057ed3beb4fc auto4 --from select -- --auto --track_dirs --sfm_args "--feature aliked" --split
+  dataset/scan_009_057ed3beb4fc/s10_test.txt` (model and downstream), then `eval_align.py` and `offpath_views.py` vs R-128
+- **Goal:** the second difference between R-135 and the hand chain (R-140 goal): the hand chain's pair directions came
+  from ALIKED matches (R-046 / R-048: 6,148 directions, 2,189 loop pairs); with SIFT the automatic chain had 3,031 / 926
+  (R-135) and 2,799 / 863 (R-140, `--track_dirs` does not add to that cache). Does ALIKED give the loop solve the pairs?
 - **Start → end:** (filled in when it ends)
 - **Errors during the run:** (filled in as they happen)
 - **Result:** (filled in when it ends)
