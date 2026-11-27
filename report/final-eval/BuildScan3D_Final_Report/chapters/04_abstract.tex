@@ -1,9 +1,21 @@
 \chapter*{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
 \markboth{Abstract}{Abstract}
+% DRAFT 2026-11-28 (Tayyab's agent). TODO(team): read; fill the R-136 numbers.
 
-Current 3D scanning solutions available for indoor locations either need costly LiDAR hardware or complicated step-up procedures that are impractical for construction site personnel, building administrators, and small design companies. The project \textbf{BuildScan~3D} is closing the gap by offering a total system capable of converting a footage captured by a usual Android smartphone (such as the realme phone, which has no LiDAR unit or any special equipment) into a metric-scale 3D Gaussian Splatting (3DGS) model, i.e. the one that can be taken for real-world measurements.
+Indoor 3D scanning today needs LiDAR hardware or expert photogrammetry. \textbf{BuildScan~3D} turns a video recorded
+with an ordinary Android phone (no LiDAR) into a metric 3D Gaussian Splatting (3DGS) model of the room, with room
+layout, semantic labels, a mesh and a floor plan, delivered to a web browser.
 
-The proposed system has five steps: (1) an individual Android app that uses ARCore to record video at the rate of 30\,FPS together with camera poses, depth maps, and image quality feedback; (2) a pose-prior stage that relates ARCore OpenGL coordinates to COLMAP/Nerfstudio ones; (3) a cloud-GPU reconstruction stage for which COLMAP Structure-from-Motion with Sim3 alignment of ARCore coordinates has been applied, and training has been performed with the use of Nerfstudio; (4) a structural layer that makes it possible to extract walls, corners, and lengths of walls and doors to create floor plans and measure objects (prototype built); (5) a planned web viewer for measurements and inspecting the model.
+The phone app records the video with ARCore poses, IMU data and live image-quality guidance. Camera poses come from
+Structure-from-Motion with lens self-calibration, scaled and levelled with ARCore; the model is trained with
+depth, normal and planar priors, a motion-blur model and flat (PGSR-lite) Gaussians. For walls with no texture, where
+SfM fails, a sensor-assisted chain recovers the camera path from the gyroscope, the accelerometer and point tracks
+through the whole video. Since November one command makes every choice from the recording itself and goes from the
+video to the web viewer output without hand-set options.
 
-At the mid-point evaluation, Iteration~1 stands at \emph{core pipeline complete, refinement ongoing}: the Android capture application processes all the necessary sensor data with live quality and coverage guidance, the FastAPI processing server receives uploads and sends work to RunPod GPU pods as needed, and the top reconstruction (version six) achieved 26.52\,dB PSNR/0.8886 SSIM on forty-two held-out frames; tape measure calculations show an average measurement error of 4.8\,mm (0.19\%) and a maximum error of 0.29\% which is far better than the five percent accuracy requirement. The most important technical issues that have been solved already are bridging the tracking gap with IMU, lens self-calibration using COLMAP, and discovering and fixing the problems with irregular Gaussian splat geometry. The open items remaining include refining the 3DGS, creating 3D mesh, completing the structural layer and creating a web workspace (including the floor maps and 1:1 measurements), which should be followed by full-scale field validation.
+On the main test room the model reaches 25.16\,dB PSNR on 79 held-out off-path frames; tape-measured lengths agreed
+within 0.19\,\% on average with an earlier model (v3), and the current recipe makes the room 1.5\,\% short. On a featureless recording, where normal SfM placed 87 of 5{,}629 frames, the sensor chain
+reached 24.25\,dB on held-out frames using only commercially usable networks. The automatic pipeline processed a
+textured bedroom end to end in 104 minutes on an RTX~3070; on the featureless recording it chose the sensor chain by
+itself but scored 1.4\,dB below the hand-built chain. TODO(R-136): main test room with the automatic pipeline.

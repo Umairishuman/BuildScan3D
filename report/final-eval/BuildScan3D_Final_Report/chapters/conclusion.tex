@@ -1,9 +1,24 @@
 \chapter{Conclusion}
+% DRAFT 2026-11-28 (Tayyab's agent). TODO(team): read; R-136 / R-140 numbers.
 
-BuildScan~3D takes a simple video recorded with a common Android phone and converts it into a metric-scale 3D Gaussian Splatting model of the room. At mid-evaluation, Iteration~1 stands at \emph{core pipeline complete, refinement ongoing}.
+BuildScan~3D turns a video from an ordinary Android phone into a metric 3D Gaussian Splatting model with room layout,
+semantic labels, a mesh and a floor plan, viewed in a web browser. At the end of FYP-1 the whole chain runs from one
+command, and the camera path can be recovered on walls that give image matching nothing.
 
-\paragraph{What we found.} The design was determined by four major findings: (1) image-based COLMAP poses replace ARCore poses for training: once ARCore's silent re-anchor and missing lens model were removed, the training-view fit increased from 21.9\,dB to 28\,dB and has improved the held-out SSIM from 0.78 to 0.86; (2) dense MVS initialization contributes to the geometry of splats; (3) excessive regularization brings the quality down when used along with Adam; (4) the choice of frames based on gyrosensor data performs better than the selection based on metrics of sharpness.
+\paragraph{What we found.} (1) Image-based SfM poses, scaled and levelled with ARCore, replace ARCore's own poses:
+ARCore's path lies 0.14 to 0.25\,m from the SfM cameras on textured rooms and tracks a quarter of a featureless walk
+(R-141). (2) Priors anchored to the SfM points, planar regions, a blur model and flat Gaussians give sharper, flatter
+models (v9, PGSR-lite). (3) On featureless walls the phone's sensors carry the camera path where the images cannot:
+the gyroscope for rotation, the accelerometer and the room height for scale, point tracks through the video and
+long-range image pairs for the loops (24.25\,dB on held-out frames, R-128 / R-133). (4) Every pretrained network must
+allow commercial use: Depth Anything~3 BASE (Apache~2.0) replaced Metric3D at the same quality (D-098, R-133).
 
-\paragraph{What we built and measured.} There is a three-tier system that consists of Android capture application with live IQA and coverage overlay, processing server with FastAPI and RunPod dispatch, and COLMAP + splatfacto pipeline with Sim3 metric alignment system working with CI/CD via GitHub Actions. The best current model (v6) has reached 26.52\,dB PSNR (target $\geq$ 25\,dB) and 0.8886 SSIM (target $\geq$ 0.85) over 42 held-out frames. Tape measure checks give a 4.8\,mm average error which is equal to 0.19\% over rigid objects with the worst case scenario being 0.29\% which is much better than the expected 5\% accuracy. Processing takes approximately 75 minutes on RTX 3070 video card while the target of below 35 minutes using an RTX 4090 video card is projected and not yet measured.
+\paragraph{What we built and measured.} The capture app, the upload server, the reconstruction pipeline and its
+automatic mode (Chapter~\ref{ch:iteration2}), and the web viewer; the measured results are in
+Chapter~\ref{ch:evaluation}. Met: NFR4 (compression, 92\,\%) and NFR6 (accuracy: 0.19\,\% mean error with v3, room length $-1.5$\,\% with v9). Not met:
+NFR1 (28.9 instead of 30\,FPS), NFR3 (72 to 104 minutes on an RTX~3070 instead of 15 on an RTX~4090); not measured:
+NFR2 and NFR5 on a phone.
 
-\paragraph{Risks and next steps.} Twelve risks have been identified and tracked in the risk register (Table~\ref{tab:risks}), of which the most prominent are cloud GPU costs (cost per scan not yet measured), the unmeasured RTX 4090 processing time, tracking loss on featureless surfaces, and providing the remaining project scope of the FYP-2. Mirrors and glass remain a known limitation. The FYP-2 implies working on 3DGS improvement, the structural layer with automatic floor plans, and the web workspace with 1:1 measurement, validated on more rooms. Moreover, 3D mesh creation is regarded as a planned task that has not been scheduled yet.
+\paragraph{Limits.} Semantics are scored only on the room they were tuned on; the automatic sensor chain is below the
+hand-built one on the featureless recording; the room layout needs a reconstructed floor; processing time is far from
+the proposal's target; the system has been tested on a handful of rooms recorded by the team.
