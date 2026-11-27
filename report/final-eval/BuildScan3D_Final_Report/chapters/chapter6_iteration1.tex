@@ -1,0 +1,149 @@
+\chapter{Iteration 1: Design and Implementation}
+
+\section{Iteration Objectives}
+Build the complete end-to-end pipeline: phone capture $\rightarrow$ automated upload $\rightarrow$ cloud GPU reconstruction $\rightarrow$ metric-scale 3D model. Validate reconstruction quality and metric accuracy on real indoor scans.
+
+\section{Selected Use Cases / Features}
+UC-1 Indoor Scan Recording (with live IQA and coverage guidance), UC-2 Upload and Processing (with process monitoring), and UC-3 Viewing of the completed model (for local viewing; web view will be taken up in FYP-2).
+
+\section{Design}
+The design of Iteration~1 covered three subsystems:
+\begin{enumerate}
+    \item \textbf{Capture subsystem}: ARCore session $\rightarrow$ CaptureLogger (background I/O) $\rightarrow$ QualityMonitor (frame analysis at a rate of 6\,FPS) $\rightarrow$ CoverageMap (depth $\rightarrow$ voxels $\rightarrow$ overlay).
+    \item \textbf{Upload subsystem}: OkHttp multipart POST $\rightarrow$ FastAPI \texttt{/upload} $\rightarrow$ Job creation $\rightarrow$ Pipeline dispatch (local or RunPod).
+    \item \textbf{Pipeline subsystem}: consists of six steps in a sequence, whereby each step has a timeout watchdog; all details are provided in Section~\ref{sec:process} and Figure~\ref{fig:pipelinesteps}.
+\end{enumerate}
+
+\section{Implementation}
+Java (for Android app) was used for the implementation as well as Python (for server and pipeline). The following are the important milestones of the project from realization perspective.
+
+\begin{enumerate}
+    \item \textbf{Week 1-2}: The \texttt{CaptureLogger} was added to the hello\_ar\_java sample from ARCore to store the sensor data. The synchronization of pose with video was confirmed (r=0.76-0.79 at the zero offset).
+    \item \textbf{Weeks 3-4}: The COLMAP pipeline was developed (\texttt{sfm\_colmap.py}) and the coordination aligned (OpenGL$\rightarrow$OpenCV) and Sim3 metric alignment was performed as well. The issues related to lens distortion were identified and resolved.
+    \item \textbf{Weeks 5-6}: The degenerate splat geometry was found out and fixed (6 sources of failure are outlined in \texttt{Training\_Analysis.md}). Gyroscope-based frame selection, live IQA and the coverage overlay were added.
+    \item \textbf{Weeks 7-8}: FastAPI server, RunPod integration with cloud GPU, the Android upload interface (\texttt{ProcessingActivity}) and the CI/CD pipeline were all set up and implemented as planned.
+\end{enumerate}
+
+\section{Completed Features / Module}
+\label{sec:completed}
+
+\paragraph{Android Capture App (implemented):} The feature allows for recording video at 30\,FPS, allowing each frame to be precisely logged regarding its pose, tracking state, the presence of feature points, and the depth, and provides metrics for quality and metadata of devices used for the recording. Live IQA (image quality assessment) can easily show when tracking is lost with the help of a banner that has a red colour, moving too fast is shown in orange, and when video quality is unacceptable by shading the information in yellow. Recording ends with a quality summary dialog and an Upload \& Process button that opens \texttt{ProcessingActivity}; the server URL is set in the settings menu and persisted in SharedPreferences.
+
+\paragraph{Processing Server (implemented):} The endpoints and modes of operation of FastAPI in section~\ref{sec:components} are switchable at runtime; the step-level watchdog timeout function (Figure~\ref{fig:pipelinesteps}); integration with RunPod via pod creation, SSH readiness checking, dependency installation, file upload/download and ending the pod; the API key can be set in the environment or stored in a \texttt{.env} file.
+
+\paragraph{Reconstruction Pipeline (core complete, refinement ongoing):} The six steps listed in Section~\ref{sec:process} are completed in one go: IMU gap bridging, keyframe extraction, COLMAP SfM utilizing lens self-calibration and Sim3 alignment (measured using tape with an error of 0.19\% on average and 0.29\% at maximum), splatfacto learning with exposure compensation using bilateral grids, and exports as \texttt{splat.ply}. Gyro-aware frame selection (\texttt{select\_sharp.py} focusing on exposure metadata) is validated for v4-v6 but not applied in the one-command pipeline yet; the one-command pipeline still uses \texttt{prepare.py}'s sharpest frame per window.
+
+\paragraph{CI/CD (implemented):} GitHub Actions CI (linting, tests with three versions of Python, web and APK building, repository hygiene), CD has been used for creation of built artifacts and releases as well as a pull request template. Details in Chapter~\ref{ch:evidence}.
+
+\section{Technical Implementation Details}
+
+\paragraph{Pose-to-video synchronization (\texttt{CaptureLogger.java}):} When ARCore records, it records video and poses of the same frames, but poses are captured only during the tracker's \texttt{TRACKING} state, meaning that the reported poses contain gaps. During the processing of the frames, we interpolate the poses for each frame's PTS (linear interpolation for position and spherical linear interpolation - slerp - for the rotation) and skip the frames within the gaps which lasted more than 0.12\,s.
+
+\paragraph{Sim3 metric alignment (\texttt{sfm\_colmap.py}):} COLMAP's global mapper generates a coordinate system of arbitrary scale. The 7-DOF similarity transform (i.e., rotation + translation + scale) is computed from the matched camera positions of COLMAP against the camera positions of ARCore using RANSAC (2,000 four-point samples, 10-centimeter inlier threshold), followed by a Umeyama refit on inliers, which resulted in an inlier median residual of about 2.5\,cm. Since ARCore does the re-anchoring silently, only the largest self-consistent segment ends up being considered an inlier. Any frame that jumps more than 30\,cm away from its temporal neighbours is treated as an SfM mis-registration. The resultant metric scale is compared against a tape measure (see Table~\ref{tab:tape}). Figure~\ref{fig:sim3} shows the steps.
+
+\paragraph{Recording fast-path (\texttt{HelloArActivity.java}):} During recording, the execution of the \texttt{onDrawFrame()} method is terminated early just after the rendering of the camera feed and quality overlay (at the rate of 2\,Hz). As a result, rendering of all the plane detection, virtual object placement, PBR lighting, work with the cubemaps, and taps is skipped, thus significantly lessening the load on the GL thread.
+
+\paragraph{Featureless-tracking fallback (\texttt{imu.py}, \texttt{fallback.py}, \texttt{relocalize\_pnp.py}):} If there are just flat walls, ARCore cannot track the position, gets lost, and at the moment of re-tracking can continue operating in terms of the new shifted world frame. However, the fallback processes the gyroscope and accelerometers (201\,Hz) recorded by ARCore while recalibrating the IMU-to-camera rotation and sensor offsets. It closes the gaps by using the gyro for rotation and accelerometer integration for positioning with minor cubic correction for both initial and final points of the gap. In case of heading discrepancies at re-tracking stage, the new frame of the map is revealed thus making it possible for the segment following the gap to be aligned with the map by matching its keyframes against the map (PnP).
+
+\begin{table}[htbp]
+\centering
+\caption{IMU fallback on simulated tracking gaps (position error, median / max)}
+\label{tab:imufallback}
+\begin{tabular}{p{2.2cm}p{3.6cm}p{3.6cm}}
+\toprule
+\textbf{Simulated gap} & \textbf{IMU fallback} & \textbf{Interpolation} \\
+\midrule
+2\,s & 0.6 / 2.8\,cm & 5.0 / 12.3\,cm \\
+5\,s & 1.5 / 3.4\,cm & 20.6 / 52.4\,cm \\
+\textbf{9\,s} & \textbf{3.8} / 8.5\,cm & \textbf{30.6} / 75.9\,cm \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+In an actual recording, all three heading jumps were successfully detected and re-alignment was able to reduce the error between specified post-gap frames and previous frames from \textbf{49.7\,px to 8.2\,px}. Constraints: Position by IMU can be trusted only if both ends of the gap are anchored and in order to re-align, the user needs to go back into the mapped area (the app warns when tracking failure occurs).
+
+\paragraph{Structural layer (\texttt{structure.py}, prototype):} The photorealistic splat model remains unaltered. The room shell is built around it instead: floor plane from splat height distribution; the outer wall in each direction selected separately; corners, which represent the intersections of walls, form a floor polygon; textures, with exclusions of the moving reflections; openings classified as doors. In the first room, wall planes of 6.65--6.68\,m $\times$ 4.45--4.48\,m are confirmed, and 5 doors are detected automatically. The output consists of \texttt{structure.json} (planes, corners, openings), which can be used for automatic floor planning and measurement. Ceiling-height detection is not yet reliable and is FYP-2 work.
+
+\paragraph{RunPod lifecycle (\texttt{runpod\_client.py}):} The function \texttt{run\_pipeline\_on\_runpod()} encompasses the complete lifecycle of a pod within a try/\texttt{finally} clause. It does so through its \texttt{finally} clause, which directly invokes \texttt{terminate\_pod()} whenever a pod is set in motion, and through the enforcement of a hard time limit via a watchdog thread, which ensures that a pod doesn't stay active, even in cases of exceptions, timeouts, or SSH failures.
+
+\section{Algorithms and Technical Decisions}
+
+\begin{enumerate}
+    \item \textbf{Gyro-based selection of frames}: For a window of length 0.2\,s, we calculate the expected motion blur defined as blur\_px = $\omega$ $\times$ t\_exp $\times$ f, where $\omega$ indicates the angular velocity derived from an inertial measurement unit (IMU) in rad/s, t\_exp describes the time of exposure and f refers to the focal length in pixels. The frame that possesses the minimum predicted motion blur shall be selected, which is better than the Laplacian measure of sharpness, whose correlation with the true motion blur is only r = 0.20.
+
+    \item \textbf{Coverage map}: 3D space is introduced as being represented with the help of voxels 10\,cm each side. Then, each voxel is evaluated according to how many from the 16 directions (from 8 azimuthal and 2 elevation angles) where its observation has taken place. The results are represented with dots: those are red in the case of only 1 direction observed or yellow if 2 or 3 directions were seen while green is used in the case of four or more directions. The maximum number of voxels to be processed is limited to 5000 and number of dots is restricted to 2000 to provide reasonable performance.
+
+    \item \textbf{Finding splat degeneration}: The statistics for each model were calculated (e.g. median values of thickness and width of splats, opacity) and these statistics were compared with respective statistics for the reference implementations of splats. It was found that the interaction of flattening regularizer with Adam method was the primary reason for the creation of zero-thickness splats.
+\end{enumerate}
+
+The coverage map is presented in Figure~\ref{fig:coverage}.
+
+\section{Tools, Frameworks and Technologies}
+
+Table~\ref{tab:tools} lists the tools used, with the version and the purpose of each.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Tools and technologies used}
+\label{tab:tools}
+\begin{tabular}{p{3.5cm}p{3cm}p{4.5cm}}
+\toprule
+\textbf{Tool} & \textbf{Version} & \textbf{Purpose} \\
+\midrule
+Android Studio & Ladybug & Android app development \\
+ARCore SDK & 1.44+ & Camera pose tracking, depth \\
+OkHttp & 4.12.0 & HTTP client for upload \\
+Python & 3.10--3.12 & Server and pipeline \\
+FastAPI & 0.110+ & REST API server \\
+COLMAP & 4.2 & Structure from Motion \\
+Nerfstudio & 1.1.5 & 3DGS training (splatfacto) \\
+PyTorch & 2.1+ & GPU computation \\
+OpenCV & 4.9+ & Image processing \\
+GitHub Actions & -- & CI/CD \\
+RunPod API & -- & Cloud GPU provisioning \\
+ruff & 0.6+ & Python linting \\
+pytest & 8+ & Unit testing \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Demonstration Evidence}
+It can be shown live:
+\begin{enumerate}
+    \item \textbf{Android app}: Capture a scan of the room with live IQA feedback and the coverage overlay.
+    \item \textbf{Upload process}: Click on ``Upload \& Process'' and spot progress screen.
+    \item \textbf{Server}: Set up a server via \texttt{scripts/start\_server.bat} and demo API docs at \texttt{/docs}.
+    \item \textbf{3D model}: Show reconstructed \texttt{splat.ply} file in local viewer (\texttt{scripts/view\_splat.bat}).
+    \item \textbf{Metric accuracy}: Measure the dimensions of table and wall and check against the tape-measure values in Table~\ref{tab:tape}.
+    \item \textbf{CI/CD}: Show that GitHub Actions are passing in the repository.
+\end{enumerate}
+
+\section{Contributions and Novelty}
+\label{sec:novelty}
+Summary of all key works based on the available data in this report:
+\begin{enumerate}
+    \item Demonstrated issues with commodity ARCore: a silent 1\,m / 28\textdegree{} spatial re-localization and the absence of a lens model ($k_1$ $\approx$ 0.09, $k_2$ $\approx$ -0.22). The present solution is to use image-based poses, keeping ARCore for scale and gravity (Table~\ref{tab:posefix}).
+    \item Fallback IMU tracking with no features, verified through simulations: the error was 3.8\,cm vs 30.6\,cm interpolated for the period of 9 seconds, and post-gap re-alignment which improved from 49.7\,px to 8.2\,px (Table~\ref{tab:imufallback}).
+    \item Guidance for the app capture quality in the process of live video capturing obtained: information on blurriness, speed, and darkness of the scene, as well as a vibration-based warning and the overlay of unaccounted areas in the image.
+    \item \textbf{Gyro-based frame selection, bringing measurable results}: improved quality by +0.26\,dB /+0.009 SSIM (the largest single gain on the way to v6; Table~\ref{tab:quality}).
+    \item Millimetric accuracy of measurements obtained from the video taken with the phone, without LiDAR: the average deviation = 4.8\,mm (0.19\%). Worst-case error = 0.29\% as compared to tape measurement (Table~\ref{tab:tape}).
+\end{enumerate}
+
+\section{Iteration Outcome}
+The Iteration~1 status is \textbf{core pipeline complete, refinement ongoing}. The results obtained thus far are:
+\begin{itemize}
+    \item The quality of the reconstruction is well above the required PSNR threshold of 25\,dB, with the best model (v6) achieving PSNR of 26.52\,dB (0.8886 SSIM) on the 42 frames that were used for testing.
+    \item The tape-measure average error is 4.8\,mm (0.19\%), with the maximum being 0.29\% against the target of 5\%.
+    \item The process takes roughly 75 minutes on the local RTX 3070 (matching takes 23 minutes, mapping 6 minutes and training 45 minutes). The target for the FYP-2 project on RTX 4090 is to get that under 35 minutes (the target is a projection and has not yet been measured).
+    \item The application provides real-time monitoring of quality and coverage.
+    \item The server is capable of running both local processing and cloud processing based on the requirements of the application.
+\end{itemize}
+
+The incomplete tasks include (for all tasks apart from mesh creation, please refer to the Remaining FYP Plan chapter):
+\begin{itemize}
+    \item \textbf{3DGS refinement}: the target is to use v6 recipe for the one-command pipeline and to verify it on the second room.
+    \item \textbf{3D mesh creation}: this work is planned but has not yet been scheduled.
+    \item \textbf{Structural layer completion}: wall-to-wall dimensions, doors and openings, ceiling-height detection, floor-plan export.
+    \item \textbf{Web workspace}: browser viewer with 1:1 measurement.
+\end{itemize}

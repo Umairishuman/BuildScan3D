@@ -1,0 +1,109 @@
+% DRAFT 2026-11-28 (Tayyab's agent, from the project records). Every number has its source in brackets
+% (R-NNN = docs/progress/TRAINING.md, D-NNN = DECISIONS.md, P&S = Problems_and_Solutions.md).
+% TODO(team): read, shorten, and add the capture-app and server parts (Umair) and compression (Zaid).
+\chapter{Iteration 2: From a Working Pipeline to an Automatic Product}
+\label{ch:iteration2}
+
+\section{Iteration Objectives}
+Iteration~1 ended with a pipeline that produced a metric 3DGS model from one phone recording, but needed hand-set
+options per recording, took about four hours (v6) and stopped at the splat model. Iteration~2 had four objectives:
+\begin{enumerate}
+    \item a better and faster reconstruction recipe (v7 $\rightarrow$ v9, PGSR-lite);
+    \item the layers that make the model useful on site: room layout, semantic labels, a mesh, a floor plan, a web viewer;
+    \item recordings that the normal recipe cannot handle: plain, featureless walls (the project's research problem);
+    \item one command that turns a video into the web viewer output without any hand-set option.
+\end{enumerate}
+
+\section{Reconstruction Recipe v7 to v9}
+\paragraph{v7 (rejected).} A 25-minute fast pipeline lost too much quality and was rejected; its ARCore-guided image
+matching and the pose-refined comparison tool were kept.
+\paragraph{v8.} DashGaussian training schedule, depth and normal priors from a monocular network anchored to the SfM
+points, Metric3D in half precision, off-path evaluation, and the first Spark web viewer with \texttt{.spz} files
+(P\&S~4.15).
+\paragraph{v9.} Image-retrieval pairs in SfM (1164 of 1166 frames registered), a fast PatchMatch initialisation, a
+planar-region prior, a motion-blur model from the exposure time, and the first room layout (\texttt{layout.py}); 96 minutes
+end to end on the RTX~3070 for a 240-second video (P\&S~4.16).
+\paragraph{PGSR-lite.} A single-view version of PGSR (flat Gaussians, unbiased depth) gives sharper surfaces and a depth
+that the mesh can use (P\&S~4.17).
+\paragraph{Speed.} Exact TV-loss and colour fixes cut training from 42.5 to 28.2 minutes and a photometric-only
+PatchMatch cut the initialisation from 20.1 to 7.5 minutes at the same held-out quality (R-062, R-063). MCMC
+densification and skipping SfM re-triangulation were tried and rejected on quality (R-070, R-065).
+% TODO(Tayyab): OD-10 (adopt R-063 in --auto) once decided.
+
+\section{Room Layout, Semantics, Mesh and Floor Plan}
+\paragraph{Room layout.} \texttt{layout.py} finds the floor, the ceiling and any number of walls from planar regions of
+the rendered model, then corners and wall-to-wall dimensions. Models are levelled with ARCore's gravity during the SfM
+export (D-071); the ceiling may not lie below the wall tops (D-072); open-to-the-sky spaces, doorways from wall gaps,
+a closed-room check and floor area only for closed outlines were added in the Step~4 work (R-053 to R-057, D-075). A
+floor or ceiling that a handheld recording cannot have (camera more than 2.2\,m above the floor) now falls back to a
+plausible plane with a warning (2026-11-28, after R-135).
+% TODO(agent): numbers of the layout fallback test once measured.
+\paragraph{Semantics v10.} Grounding DINO proposals with SAM masks on keyframes, decoy classes to absorb look-alikes,
+votes on the Gaussians with class-specific geometry rules, and a CLIP check of small fixtures (switches, sockets).
+On the room it was developed on, 15 of 15 detections were correct and 15 of 17 visible fixtures were found
+(P\&S~4.18). Material and MEP segmentation from the proposal were dropped by the team (D-033).
+\paragraph{Mesh.} TSDF fusion of the rendered PGSR depth, small pieces removed, the room shell pulled onto its planes,
+and a labelled \texttt{.glb} for the web (\texttt{mesh.py}, \texttt{mesh\_labels.py}).
+\paragraph{Floor plan.} \texttt{plan\_export.py} writes the layout as \texttt{.json}, \texttt{.svg} and \texttt{.dxf}
+(stage~16 of the pipeline).
+
+\section{Web Viewer and Delivery}
+The viewer (Next.js, Three.js, Spark) streams the model as six label groups in \texttt{.spz} plus the mesh, with
+layer toggles, a measure tool and a size card for fixtures. Every processed scan appears in the Projects tab without
+editing code (D-074). On heavy scans (1.8 to 2.5 million Gaussians) the viewer stalled because hovering ran a ray
+test on every Gaussian on the main thread (150 to 290\,ms per move); hover tests are now made only when the mouse
+rests, the orbit gizmo is throttled and the pixel ratio is capped. On the brick-room scan the worst frame while
+dragging fell from 195 to 15\,ms and long main-thread tasks from 5.4\,s to none in a six-second drag (measured on the
+RTX~3070 PC with a scripted Chrome; branch \texttt{fix/viewer-perf}).
+
+\section{Featureless Walls: the Sensor-Assisted Camera Chain}
+\label{sec:featureless}
+Plain walls give SfM nothing to match. On \texttt{scan\_009} (a 188-second walk past long white walls) normal SfM
+placed 87 of 5{,}629 frames (R-045). ARCore's own poses were no help there: they correlate poorly with the gyroscope
+(0.34, R-050). The chain that recovered the walk uses the phone's sensors where the images fail:
+\begin{enumerate}
+    \item gyroscope bias from far-apart frame pairs and camera rotations from the gyroscope (\texttt{gyro\_loop\_bias.py},
+          \texttt{rot\_sfm.py}, R-051, R-071);
+    \item bundle adjustment with gyroscope and accelerometer priors that are tight where images give few observations and
+          loose where they give many (\texttt{prior\_ba.py}, R-052, R-078);
+    \item point tracks through the full video, not only the keyframes (\texttt{video\_tracks.py}, R-080);
+    \item scale drift corrected with the room height (R-094) and loops closed with long-range image pairs
+          (\texttt{loop\_path.py}, R-096);
+    \item camera refinement during training (R-120) and extra video frames in weak stretches (R-128).
+\end{enumerate}
+On the same 63 held-out frames the aligned PSNR rose from 22.67\,dB before the loop closure (R-094) to 23.63\,dB with
+it (R-096, every stretch of the walk equal or better), 23.96\,dB with camera refinement (R-120) and 24.25\,dB with the
+extra frames (R-128); the first trained model of the chain scored 22.64\,dB on its 69 held-out frames (R-082). Each
+step was kept or rejected on that held-out score; other ideas (plane snapping and anchoring, rolling-shutter
+rectification, learned blur, hole filling, a second loop round, floater clean-up and others) were measured and not
+adopted (R-083 to R-129).
+
+\paragraph{Commercial-use models only (D-098).} Because the product is to be deployed, every pretrained network must allow
+commercial use. Metric3D (depth priors) does not; Depth Anything~3 BASE (Apache~2.0) replaced it. Its depth is two to
+five times more consistent between neighbouring frames (R-131); with a cut-off on its own confidence (no prior where
+it is unsure, as on the blank wall) the model scores 24.25\,dB, the same as with Metric3D, and 26.56\,dB on the blank-wall
+stretch, the best so far (R-133).
+% TODO(team): licence audit of the remaining models (Grounding DINO, SAM, CLIP) - STATUS 7.9.
+
+\section{The Automatic Pipeline}
+\label{sec:auto}
+Until November every recording needed hand choices: which recipe, which keyframe window, which stretches to treat
+specially. \texttt{run\_v8.py --auto} (D-099) makes these choices from the recording itself and writes every choice and
+its reason to \texttt{auto.json}:
+\begin{itemize}
+    \item one recipe for all recordings (pose-free keyframes, retrieval pairs, planar prior, blur model, PGSR-lite,
+          camera refinement);
+    \item the keyframe window from a frame budget (1100 training frames fit the 16\,GB of RAM);
+    \item an analyzer that labels every 5-second window of the walk textured, weak, featureless or hole from the SfM
+          result and sends the recording either to normal SfM or to the sensor-assisted chain of
+          Section~\ref{sec:featureless} (\texttt{sensor\_path.py}, the chain in one script);
+    \item extra video frames in the weak and featureless windows, and Depth Anything~3 priors with the confidence cut-off.
+\end{itemize}
+\texttt{scripts/run\_full.sh <recording> <tag> -- --auto} then runs the layout, semantics, mesh, web bundle and floor plan.
+The results are in Chapter~\ref{ch:evaluation}.
+% TODO(Umair): the server runs this command for phone uploads (COMPLETION_PLAN 2.3).
+
+\section{Capture App and Server}
+% TODO(Umair): app v0.3.5 - v0.3.7 (USB upload, new UI, update prompts, numbered scans, iqa_ms), server on Linux,
+% online site (Vercel + R2, D-076), CI/CD. Source: STATUS.md section 8 (2026-11-06 to 2026-11-23).
+\textit{To be written by the app and server owner.}

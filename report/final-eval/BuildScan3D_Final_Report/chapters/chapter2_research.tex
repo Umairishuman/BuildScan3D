@@ -1,0 +1,136 @@
+\chapter{Research and Existing Solutions}
+
+\section{Research Method / Approach}
+The methodology involved conducting a systematic literature review together with empirical experimentation. Recent articles covering the years 2023--2025 regarding the themes of 3D Gaussian Splatting, on-device 3D reconstruction, and visual-inertial SLAM were reviewed, with the focus on papers that describe systems operating with monocular video or video data captured in smartphones. After that, the prime candidates were implemented and tested on the ARCore-based data. Significant publications are kept in the research papers repository (\texttt{docs/Research Papers/}).
+
+\section{Existing Solutions / Products}
+
+\paragraph{Commercial products:}
+\begin{itemize}
+    \item \textbf{Matterport Pro3}: This professional LiDAR scanner is priced over \$6000 and can generate metric models accurately but has the disadvantage of needing specific hardware and charging extra fees for each scan carried out in the cloud.
+    \item \textbf{Polycam}: A mobile application based on LiDAR (iPhone Pro) or based on photogrammetry. Although it enables quick data collection, it has limited metric accuracy on non-LiDAR devices and does not have an automatic process in the cloud either.
+    \item \textbf{Luma AI}: It uses videos to produce a 3DGS that looks fantastic visually but does not have an option to scale and is missing various measuring options.
+    \item \textbf{RealityCapture}: The professional software for photogrammetry processes visual data very impressively but requires skills for the operator to take the photos on their own and to use a GPU for processing pictures.
+\end{itemize}
+
+\paragraph{Research systems:}
+\begin{itemize}
+    \item \textbf{3D Gaussian Splatting}~\cite{kerbl3dgs}: Kerbl et al. in the paper published in 2023 noted that the rendering of the radiance field in real time could take place due to the application of 3D Gaussians. The only prerequisite for this process is that the SfM poses should be computed before doing anything else.
+    \item \textbf{PocketGS}~\cite{pocketgs}: Conducting training of 3DGS on devices such as smartphones. The advantage of using dense multi-view stereo initialization is that it provides superior geometry compared to sparse points from Structure from Motion (SfM). However, it has the limitation of being applicable only to short sequences in small scenes.
+    \item \textbf{VIGS-SLAM}~\cite{vigsslam}: Visual inertial Gaussian splatting SLAM (simultaneous localization and mapping). It allows for real-time tracking and mapping; however, the obstacle here is the need for custom hardware integration, and hence this system cannot be called a turn-key solution.
+    \item \textbf{PGSR}~\cite{pgsr}: Planar Gaussian splatting method for surface reconstruction. It allows you to achieve a higher level of flatness of walls/floors, but the quality of reflection of the surfaces (mirrors, glossy floors) gets worse as a result.
+\end{itemize}
+
+\section{Comparison of Existing Solutions}
+
+Table~\ref{tab:comparison} compares the systems reviewed above against the capabilities this project needs.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of existing 3D scanning solutions}
+\label{tab:comparison}
+\begin{tabular}{p{2.8cm}ccccc}
+\toprule
+\textbf{Criterion} & \textbf{Matterport} & \textbf{Polycam} & \textbf{Luma AI} & \textbf{PocketGS} & \textbf{Ours} \\
+\midrule
+Hardware cost & \$6000+ & Phone & Phone & Phone & Phone \\
+Metric scale & Yes & Partial & No & No & Yes \\
+Measurements & Yes & Basic & No & No & Yes \\
+Auto processing & Yes & Yes & Yes & On-device & Cloud \\
+Quality (PSNR) & N/A & Medium & High & High & High \\
+Expert needed & No & No & No & No & No \\
+Capture guidance & No & No & No & No & Yes \\
+Floor plan from scan & Yes & LiDAR only & No & No & Prototype \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Limitations and Gaps}
+\label{sec:gaps}
+Here are the main drawbacks of the solutions available, which play an important role for us:
+\begin{enumerate}
+    \item \textbf{Price barrier}: Commercial solutions (Matterport, RealityCapture) require costly requirements for hardware or software licenses.
+    \item \textbf{No metric scale from video}: User apps (Luma AI) and research methods (3DGS, PocketGS) produce visually plausible models but without the metric scale, hence no measurement is possible.
+    \item \textbf{No guidance for capturing}: No system exists that provides real-time feedback on the quality of images, tracking status, and coverage during capture, which results in substantial quality failures.
+    \item \textbf{Manual pipeline}: Research methodologies provide manual workflow steps (choosing a photo, setting up COLMAP, configuring the training), which non-specialists are unable to perform.
+    \item \textbf{No structure from plain video}: 3DGS consumer applications and research have a radiance field but no explicit structure of the room (walls, wall length, doors), thus making it impossible to create floorplans or measure accurately; if floorplans exist, they are only based on LiDAR data or other specialized hardware.
+\end{enumerate}
+
+\section{Proposed Solution}
+BuildScan~3D fulfills the following functions:
+\begin{itemize}
+    \item \textbf{ARCore for metric scale}: With help of visual-inertial odometry of the phone it is possible to obtain metric-scale poses. The results are later fine-tuned with the use of COLMAP and corrected with Sim3.
+    \item \textbf{Live capture assistance}: Real-time assessment of the image, indicating its blurriness, exposure, and movement speed, along with the voxel-based assessment of coverage, facilitates the obtaining of images.
+    \item \textbf{Cloud-based pipeline}: FastAPI allows uploading files while RunPod GPU pod is used for processing, as it controls the process from start to finish without intervention from the user.
+    \item \textbf{State-of-the-art rendering}: Nerfstudio splatfacto 3DGS builds photorealistic models, which can be visualized in real-time.
+    \item \textbf{Structural layer}: the wall planes, corners, wall lengths and doors are taken from the splat model automatically through the use of \texttt{structure.py} (prototype); completion in FYP-2.
+\end{itemize}
+
+\section{Complex Computing Problem}
+The complicated problem in computing is: How can a sequence of single-lens mobile phone video frames, with noisy ARCore poses and sparse depth measurements, be turned automatically into a metrically scaled 3D Gaussian Splatting model that is good at giving precise measurements in the real world?
+
+This means accomplishing the following:
+\begin{itemize}
+    \item Strong Structure-from-Motion using casual, motion-blurred videos with tracking gaps and silent ARCore re-anchoring events.
+    \item The coordination of scales between COLMAP's arbitrary-scale coordinate system and ARCore's metric frame using a Sim3 transform with outlier rejection.
+    \item The good initialization of 3D Gaussians that were received from multi-view stereo points in order to avoid any problems with degenerate geometry (zero-thickness splats, opacity collapse).
+    \item The correct setting of GPU resources, managing each step with timeout watchdogs to prevent the outflow of expenses for cloud resources.
+\end{itemize}
+
+\section{Technical Challenges}
+\begin{enumerate}
+    \item \textbf{ARCore's unnoticed re-anchoring}: During the SLAM loop closure, ARCore continuously corrects the world frame, resulting in significant pose shifts of up to 1\,m and 28\textdegree{}. In our first test room, all poses taken in the first minute were off by about 1\,m and 28\textdegree{}, consequently, some parts of the room were captured double. But we eliminated this issue by introducing COLMAP poses into the team's workflow, as it utilizes an entirely different non-ARCore frame. The app now logs ARCore anchors, so re-anchoring events are directly detectable. Lost tracking moments are compensated by the inertial sensors (\texttt{fallback.py}).
+
+    \item \textbf{Lens Distortion}: The camera parameters provided by ARCore do not include the values accounting for lens distortions. Using COLMAP self-calibration, we computed radial distortions ($k_1$ $\approx$ 0.09, $k_2$ $\approx$ -0.22) critical for achieving sub-pixel accuracy.
+
+    \item \textbf{Degenerative Gaussian splats}: Our initial training recipe produced zero-thickness, semi-transparent splats (``cotton-like essence'') as a result of a flattening regularizer with adverse effects on Adam's gradient normalization. A detailed root-cause analysis (described in \texttt{Training\_Analysis.md}) allowed us to use Nerfstudio's splatfacto, along with measured-point initialization.
+
+    \item \textbf{Plain or untextured surfaces}: The presence of white walls and ceilings leads to losses in tracking and unreliable depth estimations. The solution is represented by the introduction of IQA warnings with texture awareness and capturing suggestions for the ceilings and the floors.
+
+    \item \textbf{Limitations of GPU memory}: With the RTX 3070 (8\,GB VRAM), the splat count can reach a maximum of roughly 3 million at full resolution. This was dealt with by training on a 24\,GB cloud GPU based on the RTX 4090 through RunPod and optimizing memory utilization (images in pinned CPU RAM).
+\end{enumerate}
+
+\section{Research Findings and Design Decisions}
+The main research conclusions that guided our development:
+
+\begin{enumerate}
+    \item The poses of SfM were superior to those of ARCore for 3DGS. When examining ARCore poses, their error by median reprojection, in pixels, was equal to 2.32\,px; after bundle adjustment, the error was reduced to 0.62\,px (626k observations), however, nonetheless, the error carried by re-anchoring in ARCore could not be corrected, nor can the lack of a lens model in ARCore be overcome. Switching to image-based COLMAP poses with lens self-calibration raised the training-view fit from 21.9\,dB (12--30\,px misaligned) to 28\,dB (2--3\,px), raised held-out SSIM from 0.78 to 0.86 (0.91 on a second room), and cut the surfaces placed with high errors from 7\%--23\% to 3\% (1\% on the second room). The most successful model trained with the earlier poses was our own trainer with COLMAP depth (\texttt{gs\_colmap\_nc}, 22.67\,dB / 0.782 held-out). Decided: use COLMAP SfM for training poses, with ARCore providing metric scale through Sim3 alignment.
+
+    \item An important point about dense initialization is made by PocketGS~\cite{pocketgs}, which shows that dense multi-view stereo points bring better reconstruction quality (SSIM 0.834 versus 0.791) in comparison to those obtained through sparse SfM points. The decision made is to begin the process from MVS-measured points that have gone through voxel downsampling to 1\,cm.
+
+    \item Regularization may introduce adverse effects. Our various loss metrics namely the flattening loss, the depth loss, or the pose refinement, performed worse when used together. In terms of performance, the splatfacto baseline recipe produced best results. The splatfacto baseline achieved 27.81\,dB held-out in a different scene (\texttt{roomAttemptSadness2}), compared to 24.70\,dB achieved by our own trainer with the corrected recipe. Conclusion: The best results can be obtained with standard splatfacto. The custom preprocessing needs to be kept.
+
+    \item Gyro-based frame selection leads to improved image sharpness. The motion blur in the frame is determined based on IMU angular velocity data. It has been determined that the PSNR increased by 0.26\,dB. \emph{Decision}: Implemented \texttt{select\_sharp.py} using the recorded per-frame exposure metadata.
+\end{enumerate}
+
+\section{Techniques Explored and Parked}
+\label{sec:parked}
+Prior to utilizing image-based poses, several methods were used by the team in an attempt to solve the issue of the blurred ``cottony'' models that appeared as floating blotches. None of the methods managed to resolve the root of the problem (ARCore's silent re-anchor and missing lens model; finding 1), and even the best model from this era showed results equal to only 22.67\,dB / 0.782 on the validation data. These methods were noted here just for historical purposes. All numbers come from the \texttt{docs/progress/}.
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{longtable}{p{0.19\textwidth}p{0.45\textwidth}p{0.31\textwidth}}
+\caption{Techniques explored and parked}\label{tab:parked}\\
+\toprule
+\textbf{Technique} & \textbf{What we tried and measured} & \textbf{Outcome} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Technique} & \textbf{What we tried and measured} & \textbf{Outcome} \\
+\midrule
+\endhead
+Own GPU bundle adjustment (\texttt{ba.py}) & Levenberg--Marquardt with the Schur complement accumulated on the GPU, ARCore as priors on relative and absolute pose. Median reprojection error 2.32\,px $\rightarrow$ 0.61\,px; trajectory length 0.998$\times$ ARCore. & Parked. Because it starts from ARCore and keeps ARCore priors, it kept the $\sim$1\,m\,/\,28\textdegree\ re-anchored segment. Replaced by COLMAP SfM. \\
+\midrule
+Metric3D monocular depth & Single-image metric depth as a dense prior. Per-frame scale varied 0.85$\times$--1.50$\times$ against ARCore points; walls came out wavy. A smooth log-depth correction cut its error against MVS from 2.4\% to 1.1\%. & Parked. Its errors are regional and consistent across neighbouring frames, so they passed consistency checks and produced floating copies of furniture. \\
+\midrule
+Own stereo matcher (\texttt{mvs.py}) & GPU plane-sweep MVS: 5 source views, 64 depth hypotheses, 7$\times$7 NCC, forward-backward consistency check. Only about 11\% of pixels per frame were measured, because of plain walls. & Parked. COLMAP dense MVS is used for initialisation instead (v5, v6). \\
+\midrule
+Depth supervision & Depth loss towards a fused surface that included single-image fill. Where stereo measured the true depth, the target was off by $>$5\% on $\sim$30\% of pixels and often lay behind the real surface. & Rejected. It fought the photometric loss and was one of the six causes of degenerate splats. \\
+\midrule
+Floater pruning (\texttt{clean\_splats.py}) & Delete splats contradicted by measured depth. Removed 1.4\% of splats for $-0.3$\,dB and no visible change; with filled depth as evidence it removed 9.8\% but deleted real surfaces. & Rejected. \\
+\midrule
+Median filtering & Hole-aware 5--9\,px median on stereo depth: outliers ($>$25\% error) 3.3\% $\rightarrow$ 2.4--2.7\%, but coverage was lost, and it does nothing for the Metric3D fill or for COLMAP depth. & Parked; kept only as an optional step in \texttt{colmap\_mvs.py}. \\
+\midrule
+Post-hoc flat-forcing (\texttt{planarize.py}) & Snapping walls and floor flat after training. & Rejected: it destroyed the glossy floor's reflections and crushed door frames. The structural layer is built next to the splat model instead. \\
+\bottomrule
+\end{longtable}
+}
