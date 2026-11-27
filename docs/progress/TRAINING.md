@@ -3788,7 +3788,7 @@ igs.txt`):
 - **Branch / commit:** `feature/auto-pipeline` (no code change: `run_v8.py --sfm_args "--feature aliked"`)
 - **Dataset:** `dataset/scan_009_057ed3beb4fc`, raw video
 - **Command(s):** `dataset/night_r145.sh` (after R-144): `GPU_EVERY=120 bash scripts/run_full.sh
-  dataset/scan_009_057ed3beb4fc auto4 --from select -- --auto --track_dirs --sfm_args "--feature aliked" --split
+  dataset/scan_009_057ed3beb4fc auto4 -- --auto --track_dirs --sfm_args "--feature aliked" --split
   dataset/scan_009_057ed3beb4fc/s10_test.txt` (model and downstream), then `eval_align.py` and `offpath_views.py` vs R-128
 - **Goal:** the second difference between R-135 and the hand chain (R-140 goal): the hand chain's pair directions came
   from ALIKED matches (R-046 / R-048: 6,148 directions, 2,189 loop pairs); with SIFT the automatic chain had 3,031 / 926
