@@ -3457,6 +3457,9 @@ igs.txt`):
     the agent's Claude Code session ended and its child processes ended with it (task notice "didn't finish before
     the previous session ended"). Not a pipeline error. Done before the stop: run_v8 select → ply 83.7 min
     (`timing.json`), layout 5.0 min (`stages.tsv`). Can continue with `run_full.sh … --from sem2d`.
+  - 20:37 resumed (Tayyab "ok you can resume the training work on 134 and 135"): `run_full.sh … auto1 --from sem2d
+    -- --auto` from `dataset/night_r134_r135.sh`, started as its own process (not a child of the agent session) so
+    a session end cannot stop it again; R-135 follows in the same script. sem2d restarts from frame 0.
 - **Result:** (filled in when it ends)
 - **Verdict:** (filled in when it ends)
 
