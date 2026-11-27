@@ -178,6 +178,8 @@ Umair's side continues at R-105.
 | R-135 | 2026-11-27 | scan_009: `--auto` from the raw video, sensor-path stage, R-128's split (`auto1`) | 3070 | 23:21 → 00:33 (+ eval to 00:38); run_v8 56.4 (sensor path 17.6, train 27.2), after 15.4 min; 71.9 min video → web bundle | 23.07 vs R-128 24.46 / R-133 24.47 (61 frames); 60 – 90 s 22.21; 134 – 140 s 18.51 (= R-128); layout wrong (7.28 m, 2 walls), 0 fixtures | Inconclusive: chain runs end to end, cameras worse than the hand-made chain |
 | R-136 | 2026-11-28 | newRoomAttemptSadness: `--auto` from the raw video with the v9_e2e held-out split (`auto1`), + tape check | 3070 | running | running | running |
 | R-137 | 2026-11-28 | Layout fallback for implausible floors / ceilings (`layout.py`), five existing models, no training | 3070 | 01:30 → 01:50 (~20 min) | R-135 7.28 → 3.56 m, 2 → 9 walls; R-134 / R-069 / v9_e2e choices unchanged; R-069 3.015 m with today's code (stored 2.78 m older code) | Kept |
+| R-138 | 2026-11-28 | scan_009 R-135: layout → plan again with the R-137 fallback (`auto1`) | 3070 | queued after R-136 | queued | queued |
+| R-139 | 2026-11-28 | `.spz` vs `.ply` size and render quality on four bundles (`spz_quality.py`, E6) | 3070 | queued after R-138 | queued | queued |
 
 ## Runs
 
@@ -3592,3 +3594,37 @@ igs.txt`):
 - **Verdict:** kept (committed on `feature/auto-pipeline`): no change on the textured rooms, R-135's 7.28 m gone.
   Heights of scan_009 not trustworthy (no tape). R-135's downstream (semantics, mesh, web) still uses the old layout;
   rerun after R-136.
+
+### R-138 · 2026-11-28 · scan_009 R-135: layout → plan again with the R-137 layout fallback (`auto1`)
+
+- **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
+- **Branch / commit:** `feature/auto-pipeline` (9f83a69 or later)
+- **Dataset:** R-135's model `dataset/scan_009_057ed3beb4fc/work_auto1_sfm/gs_auto1` (no retraining; its 2D masks
+  `semantic2d_v10` reused)
+- **Command(s):** in `dataset/night_after_r136.sh` (starts when R-136 has ended): `layout.py` with `run_full.sh`'s
+  options, then `GPU_EVERY=0 bash scripts/run_full.sh dataset/scan_009_057ed3beb4fc auto1 --from sem3d -- --auto`
+  (log `r138.log`); the old layout and web bundle are kept as `layout_r135/` and `…_auto1_r135/`
+- **Goal:** R-135's semantics, mesh labels, web bundle and plan on the plausible layout (R-137), so the scan_009
+  bundle no longer says 7.27 m.
+- **Start → end:** (filled in when it ends)
+- **Errors during the run:** (filled in as they happen)
+- **Result:** (filled in when it ends)
+- **Verdict:** (filled in when it ends)
+
+### R-139 · 2026-11-28 · `.spz` web splats against the trained `.ply`: size and render quality (5.4 / E6)
+
+- **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
+- **Branch / commit:** `feature/auto-pipeline` (`spz_quality.py`, new)
+- **Dataset:** four web bundles and the models they were made from: R-134 (`roomAttemptSadness2_auto1`), R-069
+  (`roomAttemptSadness2_v9pgsr8`), the best model R-023 (`newroom`, `saved_models/2026-10-27_v9_semantic_pgsr`, cameras
+  of `work_v9e2e_sfm`), R-136 (`newRoomAttemptSadness_auto1`)
+- **Command(s):** in `dataset/night_after_r136.sh`, after R-138: `spz_quality.py --ply <model>/splat.ply --spz <bundle>
+  --work <work_sfm> --out <model>/spz_quality.json` (log `dataset/r139.log`)
+- **Goal:** the quality cost of the `.spz` compression (never measured: COMPLETION_PLAN 5.4, report E6, input to
+  OD-1): PSNR / SSIM of the decoded `.spz` render against the `.ply` render from the same cameras, and the size.
+  Decoder checked on R-134's bundle before the run (CPU): same 1,425,538 Gaussians in the same order, positions within
+  0.12 mm, rotations dot 0.9999998, spz version 3, SH degree 3.
+- **Start → end:** (filled in when it ends)
+- **Errors during the run:** (filled in as they happen)
+- **Result:** (filled in when it ends)
+- **Verdict:** (filled in when it ends)
