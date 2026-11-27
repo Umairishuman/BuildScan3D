@@ -175,7 +175,7 @@ Umair's side continues at R-105.
 | R-132 | 2026-11-26 | scan_009: R-128 with DA3-BASE depth priors (chained chunks, 338 unsupported frames filled) instead of Metric3D (`v9pda`) | 3070 | 19:27 → 20:31; prior 1.5, init 2.5, train 29.1, total 33.7 min (3 restarts, see entry) | 23.76 vs R-128 24.25; outside 134 – 140 s 26.20 vs 26.12; 134 – 140 s 15.98 vs 18.30; off-path views cleaner | Inconclusive (Tayyab to look) |
 | R-133 | 2026-11-26 | scan_009: R-132 with DA3's confidence cut-off 1.1 (81 unsure frames without prior) (`v9pdc`) | 3070 | ~21:16 → 22:30; prior 1.6, init 2.5, train 26.7, total 31.4 min | 24.25 (= R-128; R-132 23.78); 60 – 90 s 26.56 (best); 134 – 140 s 17.11; off-path views cleaner than R-128 | Kept (DA3 candidate); Tayyab to look; work paused |
 | R-134 | 2026-11-27 | roomAttemptSadness2: first `--auto` run, raw video → web bundle, no hand-set option (`auto1`, D-099) | 3070 | 03:10 → 23:21 in three parts (session end, 9 pm pause); run_v8 83.5, layout 5.0, sem2d 12.7, rest 2.8 min | end to end, exit 0; 1.43 M Gaussians, 5 walls, 19 fixtures, mesh 892 k triangles, bundle 33 MB; outline not closed, ceiling 3.00 m vs R-069 2.82 m | Kept (auto pipeline works on a textured room); Tayyab to look |
-| R-135 | 2026-11-27 | scan_009: `--auto` from the raw video, sensor-path stage, R-128's split (`auto1`) | 3070 | 23:21 → running | running | running |
+| R-135 | 2026-11-27 | scan_009: `--auto` from the raw video, sensor-path stage, R-128's split (`auto1`) | 3070 | 23:21 → 00:33 (+ eval to 00:38); run_v8 56.4 (sensor path 17.6, train 27.2), after 15.4 min; 71.9 min video → web bundle | 23.07 vs R-128 24.46 / R-133 24.47 (61 frames); 60 – 90 s 22.21; 134 – 140 s 18.51 (= R-128); layout wrong (7.28 m, 2 walls), 0 fixtures | Inconclusive: chain runs end to end, cameras worse than the hand-made chain |
 
 ## Runs
 
@@ -3450,7 +3450,7 @@ igs.txt`):
 - **Goal:** test bench 1 of D-099: does the automatic pipeline run end to end on a textured recording with no
   hand-set option, what does the analyzer decide, and how long does each stage take. Reference: R-069 (`v9pgsr8`,
   hand-set `--window 8`, same recipe without the auto choices).
-- **Start → end:** 2026-11-27 03:10:25 → 23:21:33 in three parts (03:10 → ~04:48 stopped by the session end;
+- **Start → end:** 2026-11-27 03:10:25 → 23:21:33 in three parts, wall time 1211.1 min (03:10 → ~04:48 stopped by the session end;
   20:37 → 20:49:57 paused at 9 pm; 23:18:41 → 23:21:33). Working time ~105 min: run_v8 select → ply 83.5 min
   (`timing.json`: select 2.82, sfm 18.21, analyze 0.01, densify 2.88, export 0.02, prior 2.29, init 19.29, train
   36.61, ply 1.4), then (`stages.tsv`) layout 5.0, sem2d 12.7, sem3d 0.7, verify 0.4, sem3d2 0.4, mesh 0.5,
@@ -3494,11 +3494,33 @@ igs.txt`):
 - **Goal:** test bench 2 of D-099: does the analyzer send scan_009 to the sensor-path route by itself, does
   `sensor_path.py` rebuild the hand-made camera chain (R-071 → R-096) in one go, the chain's time end to end (never
   measured, PIPELINE_ANALYZER_PLAN §4), and the score against R-128 / R-133 (24.25) without any hand choice.
-- **Start → end:** (filled in when it ends)
+- **Start → end:** 2026-11-27 23:21:33 → 2026-11-28 00:33:26 (run_full.sh), evaluation to 00:38:16. run_v8 56.4 min
+  (`timing.json`: select 1.69, sfm 3.92, analyze 0.01, sensor 17.58, densify 1.08, export 0.01, prior 1.77, init
+  1.36 + 1.23 waiting for the CPU, train 27.22, ply 0.52); sensor path by step (`auto.json`): gyro bias 0.74, gyro
+  rotations 2.36, prior BA 1.83, video tracks 3.20, mid export 3.23, scale drift 4.92, loop closure 1.05; then
+  (`stages.tsv`) layout 0.1, sem2d 11.3, sem3d 0.1, verify 0.2, sem3d2 0.1, mesh 0.8, meshlabels 2.7, web 0.1, plan
+  0.0 min. Whole chain from the raw video to the web bundle: 71.9 min (the first end-to-end time for scan_009)
 - **Errors during the run:**
-  - none so far that stopped anything. Started 23:21:33 (chain `dataset/night_r134_r135.sh`, right after R-134).
+  - nothing stopped the run (exit 0). Started 23:21:33 (chain `dataset/night_r134_r135.sh`, right after R-134).
     23:45 prior (DA3) prints `[transformers] Disabling PyTorch because PyTorch >= 2.4 is required but found
     2.1.2+cu121`, `No module named 'triton'` and once per chunk `Error registering eval resolver: resolver 'eval' is
     already registered`: warnings, DA3 runs on (the first two are in the earlier scan_009 logs too, R-081 - R-092).
-- **Result:** (filled in when it ends)
-- **Verdict:** (filled in when it ends)
+  - 00:18 sem2d: the MultiScaleDeformableAttention DLL warning as in R-134 (PyTorch fallback, not a stop).
+  - 00:18 layout: **wrong room** (not a crash): floor y -3.305, ceiling y 3.979 -> room height 7.284 m, 2 walls
+    (9.39 m, 2.81 m), plane fit rms 4.5 cm (R-134 0.9 cm); the ceiling candidates show floaters (36 % of the
+    splats above the 3.95 m candidate). Everything after it inherits this: 0 fixtures, mesh surface 383 m2 "other"
+    against walls 3.7 + 2.2, floor 1.9, ceiling 2.3 m2; mesh 4.81 M triangles (R-134 0.89 M). The earlier scan_009
+    layouts were no better (v9pf: 2 walls, v9pgsr: 10 walls, both without a height); R-096 - R-133 ran no layout.
+- **Result:** the analyzer sent scan_009 to the sensor path by itself (SfM placed 41 % of 894 keyframes, holes
+  107 s of 188 s); after `sensor_path.py` 81 % placed, empty windows 22 -> 3 of 38; densify added 206 frames; DA3
+  priors with the cut-off. Model 327,831 Gaussians (R-133: 398,401). Aligned PSNR on the 61 held-out frames both
+  have (`eval_r135.csv` against `eval_r128.csv` / `eval_r133.csv`; 2 held-out frames dropped by the export):
+  **23.07 vs R-128 24.46, R-133 24.47**; 60 - 90 s (blank wall) 22.21 vs 25.16 / 26.56; 134 - 140 s 18.51 vs
+  18.50 / 17.29; outside 134 - 140 s 24.43 vs 26.24 / 26.61. On its own 67 frames: PSNR 21.25 -> aligned 22.86,
+  SSIM 0.898. Off-path views (`offpath_views_r135/compare_plan.jpg`): the camera path has a different shape from
+  R-128's (R-128's closes into a rectangle, R-135's does not), walls no cleaner. Web bundle
+  `prototype/web-ui/public/scans/scan_009_057ed3beb4fc_auto1/` 15 MB.
+- **Verdict:** inconclusive / not good enough yet: the automatic chain runs end to end on scan_009 in 72 min with no
+  hand choice, but its cameras are worse than the hand-made chain's (-1.4 dB, -3 dB on the blank wall) and the
+  layout fails. Likely cause (not checked): `sensor_path.py` does not reproduce R-096's loop closure (path shape);
+  next step is to compare `sensor_path/model` with R-096's cameras step by step.
