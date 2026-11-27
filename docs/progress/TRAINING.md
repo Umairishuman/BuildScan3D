@@ -177,6 +177,7 @@ Umair's side continues at R-105.
 | R-134 | 2026-11-27 | roomAttemptSadness2: first `--auto` run, raw video → web bundle, no hand-set option (`auto1`, D-099) | 3070 | 03:10 → 23:21 in three parts (session end, 9 pm pause); run_v8 83.5, layout 5.0, sem2d 12.7, rest 2.8 min | end to end, exit 0; 1.43 M Gaussians, 5 walls, 19 fixtures, mesh 892 k triangles, bundle 33 MB; outline not closed, ceiling 3.00 m vs R-069 2.82 m | Kept (auto pipeline works on a textured room); Tayyab to look |
 | R-135 | 2026-11-27 | scan_009: `--auto` from the raw video, sensor-path stage, R-128's split (`auto1`) | 3070 | 23:21 → 00:33 (+ eval to 00:38); run_v8 56.4 (sensor path 17.6, train 27.2), after 15.4 min; 71.9 min video → web bundle | 23.07 vs R-128 24.46 / R-133 24.47 (61 frames); 60 – 90 s 22.21; 134 – 140 s 18.51 (= R-128); layout wrong (7.28 m, 2 walls), 0 fixtures | Inconclusive: chain runs end to end, cameras worse than the hand-made chain |
 | R-136 | 2026-11-28 | newRoomAttemptSadness: `--auto` from the raw video with the v9_e2e held-out split (`auto1`), + tape check | 3070 | running | running | running |
+| R-137 | 2026-11-28 | Layout fallback for implausible floors / ceilings (`layout.py`), five existing models, no training | 3070 | 01:30 → 01:50 (~20 min) | R-135 7.28 → 3.56 m, 2 → 9 walls; R-134 / R-069 / v9_e2e choices unchanged; R-069 3.015 m with today's code (stored 2.78 m older code) | Kept |
 
 ## Runs
 
@@ -3483,6 +3484,8 @@ igs.txt`):
   PSNR; quality not compared with R-069 except by the numbers above; not looked at in the viewer yet.
 - **Verdict:** kept: test bench 1 of D-099 passes (the automatic pipeline runs end to end on a textured room).
   Open: the open outline (floor area missing) and the 6 % higher ceiling than R-069; Tayyab to look in the viewer.
+  (2026-11-28, R-137: the ceiling difference is the layout code version, not the model: today's `layout.py` gives
+  R-069 3.015 m against R-134's 2.937 m.)
 
 ### R-135 · 2026-11-27 · scan_009_057ed3beb4fc (featureless): `--auto` from the raw video, sensor-path stage (`auto1`)
 
@@ -3550,3 +3553,42 @@ igs.txt`):
     with v9_e2e pairs each original held-out frame with its mapped frame.
 - **Result:** (filled in when it ends)
 - **Verdict:** (filled in when it ends)
+
+### R-137 · 2026-11-28 · layout fallback for implausible floors / ceilings, tested on five models (layout only, no training)
+
+- **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
+- **Branch / commit:** `feature/auto-pipeline`, `layout.py` with the change uncommitted at test time (committed right
+  after, same session)
+- **Dataset:** existing models: R-135 (`scan_009…/work_auto1_sfm/gs_auto1`), R-133 (`work_v9pdc_sfm/gs_v9pdc`), R-134
+  (`roomAttemptSadness2/work_auto1_sfm/gs_auto1`), R-069 (`work_v9pgsr8_sfm/gs_v9pgsr8`), v9_e2e
+  (`newRoomAttemptSadness/work_v9e2e_sfm/gs_v9e2e`)
+- **Command(s):** `layout.py --ply <gs>/splat.ply --work <work> --out <scratchpad>/layout_test/<name> --raised_max 1.5
+  --infer_gap 6` for each (the `run_full.sh` options), started 01:30 while R-136 was in the CPU-only SfM mapper. Entry
+  written after the run (should have been before; the agent's slip).
+- **Goal:** the R-135 layout (floor 3.42 m below the cameras, room 7.28 m) must become plausible, and rooms with a
+  plausible floor and ceiling must not change. Change: a floor outside 0.5 - 2.2 m below the median camera falls back
+  to the strongest horizontal plane inside that band, else to an assumed floor 1.4 m below the median camera (median
+  camera 1.37 - 1.41 m above the floor in R-069, R-134, v9_e2e); ceiling candidates restricted to 2.0 - 5.0 m above the
+  floor and >= 0.4 m above the 98th-percentile camera; each fallback writes a warning and `floor_source`.
+- **Start → end:** 01:30:22 → 01:50 (about 20 min, ~6 min per textured model; the R-135 / R-133 layouts ~15 s)
+- **Errors during the run:** R-069 and v9_e2e exit 1 after `layout.json` was written: the `corners.jpg` picture needs
+  the keyframe images, deleted in the 2026-11-26 disk clean-up (`can't open/read file … images/frame_00007.jpg`). Not
+  related to the change.
+- **Result:**
+
+  | Model | Before (stored layout) | After |
+  |---|---|---|
+  | R-135 | floor 3.42 m below cameras, 7.28 m, 2 walls | floor not seen, assumed; 3.56 m (strongest plausible ceiling, warning: floaters); 9 walls, 7 corners, not closed |
+  | R-133 | (no stored layout; floor found 2.42 m below cameras) | floor plane 1.92 m below cameras; 2.86 m; 8 walls, not closed |
+  | R-134 | 2.937 m, 5 walls | 2.937 m, 5 walls, floor identical (unchanged) |
+  | R-069 | 2.78 m (stored, older `layout.py`) | first pick 2.775 m as before; 3.015 m after the D-072 wall-top rule |
+  | v9_e2e | 2.70 m (stored, older `layout.py`) | first pick 2.717 m as before; 2.833 m after the D-072 wall-top rule, closed, 4 walls |
+
+  In R-134, R-069 and v9_e2e the floor and the chosen ceiling candidate are the same as without the change (floor
+  plausible; first candidate plausible with < 3 % above). Their differences from the stored files come from layout
+  changes made after those files (D-072), which also explains R-134's 3.00 m vs R-069's stored 2.82 m (open point in
+  R-134): with today's code R-069 gives 3.015 m. scan_009's two models still disagree (3.56 vs 2.86 m): no floor is
+  reconstructed in that recording, so its height is not trustworthy either way (the warning says so).
+- **Verdict:** kept (committed on `feature/auto-pipeline`): no change on the textured rooms, R-135's 7.28 m gone.
+  Heights of scan_009 not trustworthy (no tape). R-135's downstream (semantics, mesh, web) still uses the old layout;
+  rerun after R-136.

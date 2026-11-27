@@ -39,6 +39,10 @@ ap.add_argument("--infer_gap", type=float, default=0.0, help="m, > 0: a missing 
                 "inferred (marked) when both walls stop at most this far short of it and it lies over the floor (#10); 0 = off")
 ap.add_argument("--raised_max", type=float, default=0.0, help="m, > 0: a wall shorter than this whose visible bottom is "
                 "more than 0.5 m above the floor is dropped (boards / material leaning on a wall, #11); 0 = off")
+ap.add_argument("--cam_band", type=float, nargs=2, default=[0.5, 2.2],
+                help="m: a floor this far below the median camera is plausible (handheld phone); outside it, see 2.")
+ap.add_argument("--cam_h", type=float, default=1.4, help="m: assumed camera height when no plausible floor is seen")
+ap.add_argument("--room_h", type=float, nargs=2, default=[2.0, 5.0], help="m: plausible floor-to-ceiling heights")
 ap.add_argument("--debug", action="store_true", help="print every wall candidate and the step that dropped it")
 ap.add_argument("--openings", type=int, default=1, help="1: find doorways / window openings from wall gaps (#9); 0: off")
 ap.add_argument("--open_cover", type=float, default=0.35, help="open to the sky if the ceiling plane covers less of the floor than this ...")
@@ -106,6 +110,22 @@ def mode_y(sel):
     y0 = e_[h_.argmax()] + 0.01
     return float(np.median(ys[sel & (np.abs(ys - y0) < 0.03)]))
 floor_y = mode_y(ys < cy_.min() - 0.5)
+# A handheld phone is 0.5 - 2.2 m above the floor (median camera 1.37 - 1.41 m above it in R-069, R-134, v9_e2e). A
+# floor outside that band is a floater layer: scan_009 (R-135) has no reconstructed floor at all and took one 3.4 m
+# below the cameras (room height 7.28 m). Then: the strongest horizontal plane inside the band, or, if there is none,
+# an assumed floor --cam_h below the median camera, with a warning. Rooms with a plausible floor are not changed.
+cmed, early_warn = float(np.median(cy_)), []
+floor_source = "strongest horizontal plane below every camera"
+if not (np.isfinite(floor_y) and args.cam_band[0] <= cmed - floor_y <= args.cam_band[1]):
+    first_floor = floor_y
+    alt = mode_y((ys < cmed - args.cam_band[0]) & (ys > cmed - args.cam_band[1]))
+    if np.isfinite(alt):
+        floor_y, floor_source = alt, f"strongest horizontal plane {args.cam_band[0]}-{args.cam_band[1]} m below the median camera"
+    else:
+        floor_y, floor_source = cmed - args.cam_h, f"not seen: assumed {args.cam_h} m below the median camera"
+    early_warn.append(f"floor {cmed - first_floor:.2f} m below the median camera is not plausible for a handheld phone "
+                      f"-> {floor_source}; heights are less certain")
+    print(f"floor y {first_floor:.3f} ({cmed - first_floor:.2f} m below the median camera) -> {floor_y:.3f} ({floor_source})")
 
 
 def ceiling_y():
@@ -135,8 +155,18 @@ def ceiling_y():
         print(f"  ceiling candidate y {y:.3f} (height {y - floor_y:.2f} m): weight {w:.2f}, splats above {100 * a:.1f}%")
     if not cands:
         return float("nan")
-    ok = [c for c in cands if c[2] < args.above_frac]
-    return (ok[0] if ok else max(cands))[0]
+    # only heights a room can have (R-135: floaters above a featureless room left every real candidate with > 3 % of
+    # the splats above it, and the highest one, 7.28 m, was taken)
+    top_cam = float(np.percentile(cy_, 98))
+    plaus = [c for c in cands if args.room_h[0] <= c[0] - floor_y <= args.room_h[1] and c[0] >= top_cam + 0.4]
+    ok = [c for c in (plaus or cands) if c[2] < args.above_frac]
+    if ok:
+        return ok[0][0]
+    if plaus:
+        early_warn.append(f"no ceiling candidate between {args.room_h[0]} and {args.room_h[1]} m has (almost) nothing "
+                          f"above it (floaters?): the strongest one is taken, {plaus[0][0] - floor_y:.2f} m")
+        return plaus[0][0]
+    return max(cands)[0]
 
 
 ceil_y = ceiling_y()
@@ -271,7 +301,7 @@ print(f"{len(clusters)} vertical plane clusters -> {len(walls) and len(cand)} ta
 # A white, textureless ceiling can be reconstructed too close to the cameras and glass reflects it (scan #2, R-032:
 # the strongest plane above the cameras was 1.50 m above the floor, its walls reach 2.3-2.7 m). Walls run up to the
 # ceiling, so candidates below the highest wall top (98th percentile of its points) are ignored.
-ceil_first, ceil_source, warnings = ceil_y, "horizontal plane above the cameras with almost nothing above it", []
+ceil_first, ceil_source, warnings = ceil_y, "horizontal plane above the cameras with almost nothing above it", list(early_warn)
 wall_top = max((w["y1"] for w in final), default=float("nan"))
 if np.isfinite(wall_top) and not (np.isfinite(ceil_y) and ceil_y >= wall_top):
     c_ = mode_y(ys > wall_top)
@@ -393,7 +423,7 @@ for i in range(len(final)):
         Qb = b["Q"][:, [0, 2]]; sep = float(np.median((Qb - a["cen"]) @ a["nrm"]))
         dims.append(dict(walls=[i, j], distance=abs(sep)))
         print(f"walls {i} <-> {j}: {abs(sep):.3f} m apart")
-res = dict(floor_y=floor_y, ceiling_y=ceil_y, height=height, ceiling_source=ceil_source, open_top=open_top,
+res = dict(floor_y=floor_y, floor_source=floor_source, ceiling_y=ceil_y, height=height, ceiling_source=ceil_source, open_top=open_top,
            room_closed=room_closed,
            ceiling_evidence=sky,
            ceiling_first_y=ceil_first, wall_top_y=wall_top, warnings=warnings, dimensions=dims,
