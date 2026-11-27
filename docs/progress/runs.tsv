@@ -140,3 +140,4 @@ R-141	scan_009_057ed3beb4fc		2026-11-28	Tayyab (agent)	RTX 3070 PC	done									
 R-142	newRoomAttemptSadness	e1vis	2026-11-28	Tayyab (agent)	RTX 3070 PC	running																											TRAINING	queued in the night chain; visual-only SfM (E1), SfM stages only
 R-142	scan_009_057ed3beb4fc	e1vis	2026-11-28	Tayyab (agent)	RTX 3070 PC	running																											TRAINING	queued in the night chain; visual-only SfM (E1), SfM stages only
 R-143			2026-11-28	Tayyab (agent)	RTX 3070 PC	running																											TRAINING	queued in the night chain; viewer load and frame times, seven scans (E5 desktop)
+R-144	newRoomAttemptSadness	auto3	2026-11-28	Tayyab (agent)	RTX 3070 PC	running	dataset/newRoomAttemptSadness/work_auto3_sfm/gs_auto3																										files	queued in the night chain; R-136 from init with --photometric (OD-10)

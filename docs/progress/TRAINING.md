@@ -184,6 +184,7 @@ Umair's side continues at R-105.
 | R-141 | 2026-11-28 | ARCore-only camera path vs our cameras on three rooms (E1 part, CPU) | 3070 | ~02:00, < 1 min | median 0.245 / 0.138 / 1.328; ARCore tracked 100 / 88 / 26 % of keyframes (newRoom / bedroom / scan_009) | Kept (report evidence) |
 | R-142 | 2026-11-28 | E1: visual-only SfM vs ARCore-guided on the same keyframes, newRoom + scan_009 (SfM only) | 3070 | running (queued after R-140) | running | running |
 | R-143 | 2026-11-28 | Viewer load / frame times on the fixed viewer, seven scans (E5, desktop) | 3070 | running (queued after R-142) | running | running |
+| R-144 | 2026-11-28 | OD-10 under `--auto`: R-136 from `init` with the photometric PatchMatch (`auto3`), same split | 3070 | running (queued after R-143) | running | running |
 
 ## Runs
 
@@ -3758,6 +3759,23 @@ igs.txt`):
   is stopped at the end (`r143_stop.ps1`)
 - **Goal:** COMPLETION_PLAN E5 (desktop part): load time and frame times of the viewer that will be merged, on the
   scans of the report. NFR5 asks for a mid-range phone browser: not measured here.
+- **Start → end:** (filled in when it ends)
+- **Errors during the run:** (filled in as they happen)
+- **Result:** (filled in when it ends)
+- **Verdict:** (filled in when it ends)
+
+### R-144 · 2026-11-28 · OD-10 under `--auto`: R-136 from `init` with the photometric PatchMatch (`auto3`)
+
+- **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC
+- **Branch / commit:** `feature/auto-pipeline`
+- **Dataset:** a copy of R-136's selection and SfM / priors (`work_auto1` → `work_auto3`, `work_auto1_sfm` →
+  `work_auto3_sfm` without `gs_auto1` and `semantic2d_v10`), so only the init differs
+- **Command(s):** `dataset/night_r144.sh` (after R-136's reference evaluation): `python src/arcore3dgs/run_v8.py --dataset
+  dataset/newRoomAttemptSadness --tag auto3 --from_stage init --auto --split dataset/newRoomAttemptSadness/offpath_test_auto1.txt
+  --init_args=--photometric` (log `r144.log`), then `eval_align.py` on the same 62 held-out frames as R-136
+- **Goal:** evidence for OD-10 inside the automatic recipe: R-063 measured the photometric init at 7.5 vs 20.1 min with
+  equal quality on the old recipe; here R-136's init took 17.5 min. Same frames, same SfM, same priors: init time,
+  training time and held-out PSNR / SSIM against R-136 (24.61 / aligned 25.33). Model only (no layout / semantics).
 - **Start → end:** (filled in when it ends)
 - **Errors during the run:** (filled in as they happen)
 - **Result:** (filled in when it ends)
