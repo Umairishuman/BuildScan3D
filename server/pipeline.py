@@ -33,9 +33,11 @@ NS_EXPORT = toolpaths.ns_cmd("ns-export")
 #   BUILDSCAN_PIPELINE=v3  fallback -> prepare -> COLMAP -> splatfacto (_build_commands)
 #   BUILDSCAN_PIPELINE=v9  scripts/run_full.sh: v9 3DGS -> layout -> semantics -> mesh -> web bundle
 # BUILDSCAN_V9_ARGS overrides the run_v8.py arguments, BUILDSCAN_BASH the bash used for run_full.sh.
-V9_STAGES = ["select", "sfm", "export", "prior", "init", "train", "ply", "layout", "sem2d", "sem3d", "verify",
-             "sem3d2", "mesh", "meshlabels", "web", "plan"]
-V9_LABELS = {"select": "Choosing sharp keyframes", "sfm": "COLMAP camera poses", "export": "Exporting cameras",
+V9_STAGES = ["select", "sfm", "analyze", "sensor", "densify", "export", "prior", "init", "train", "ply", "layout",
+             "sem2d", "sem3d", "verify", "sem3d2", "mesh", "meshlabels", "web", "plan"]   # = run_full.sh ALL (D-099)
+V9_LABELS = {"select": "Choosing sharp keyframes", "sfm": "COLMAP camera poses", "analyze": "Checking the recording",
+             "sensor": "Camera path from the phone sensors", "densify": "Adding frames in weak stretches",
+             "export": "Exporting cameras",
              "prior": "Depth / normal priors", "init": "Dense starting points", "train": "Training 3D Gaussian Splatting",
              "ply": "Exporting the model", "layout": "Room layout", "sem2d": "Finding fixtures in the images",
              "sem3d": "Labelling the model", "verify": "Checking fixtures", "sem3d2": "Final labels",

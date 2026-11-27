@@ -185,8 +185,15 @@ def check(rows, training, root=ROOT):
                 if os.path.exists(st):
                     v8 = [m for _, n, m in read_stages(st) if n == "run_v8"]
                     tol = 0.25 if any(k in t for k in AUTO_STAGES) else 0.15   # --auto: ~0.2 min outside its stage timers (R-134)
-                    if v8 and abs(v8[0] - t["total"]) > tol:
-                        fails.append(f"{key}: stages.tsv run_v8 {v8[0]} min vs timing.json total {t['total']}")
+                    # a run restarted with --from <stage> times only <stage> .. ply in its last run_v8 line (R-136)
+                    first = [ln.split("	")[1] for ln in open(st) if "	run_v8 (" in ln]
+                    m_ = re.match(r"run_v8 \((\w+)-ply\)", first[-1]) if first else None
+                    order = ["select", "sfm", "analyze", "sensor", "densify", "export", "prior", "init", "train", "ply"]
+                    skipped = order[:order.index(m_.group(1))] if m_ and m_.group(1) in order else []
+                    want = t["total"] - sum(t.get(k, 0) for k in skipped) if len(v8) == 1 else t["total"]
+                    if v8 and abs(v8[-1] - want) > tol:
+                        fails.append(f"{key}: stages.tsv run_v8 {v8[-1]} min vs timing.json total {t['total']}"
+                                     + (f" minus {'+'.join(skipped)}" if skipped else ""))
         finished = os.path.exists(st) and any(n in ("web", "plan") for _, n, _ in read_stages(st))
         log = os.path.join(d, "run_full.log")
         finished = finished or (os.path.exists(log) and "=== all done" in open(log, errors="replace").read())

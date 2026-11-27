@@ -176,14 +176,14 @@ Umair's side continues at R-105.
 | R-133 | 2026-11-26 | scan_009: R-132 with DA3's confidence cut-off 1.1 (81 unsure frames without prior) (`v9pdc`) | 3070 | ~21:16 → 22:30; prior 1.6, init 2.5, train 26.7, total 31.4 min | 24.25 (= R-128; R-132 23.78); 60 – 90 s 26.56 (best); 134 – 140 s 17.11; off-path views cleaner than R-128 | Kept (DA3 candidate); Tayyab to look; work paused |
 | R-134 | 2026-11-27 | roomAttemptSadness2: first `--auto` run, raw video → web bundle, no hand-set option (`auto1`, D-099) | 3070 | 03:10 → 23:21 in three parts (session end, 9 pm pause); run_v8 83.5, layout 5.0, sem2d 12.7, rest 2.8 min | end to end, exit 0; 1.43 M Gaussians, 5 walls, 19 fixtures, mesh 892 k triangles, bundle 33 MB; outline not closed, ceiling 3.00 m vs R-069 2.82 m | Kept (auto pipeline works on a textured room); Tayyab to look |
 | R-135 | 2026-11-27 | scan_009: `--auto` from the raw video, sensor-path stage, R-128's split (`auto1`) | 3070 | 23:21 → 00:33 (+ eval to 00:38); run_v8 56.4 (sensor path 17.6, train 27.2), after 15.4 min; 71.9 min video → web bundle | 23.07 vs R-128 24.46 / R-133 24.47 (61 frames); 60 – 90 s 22.21; 134 – 140 s 18.51 (= R-128); layout wrong (7.28 m, 2 walls), 0 fixtures | Inconclusive: chain runs end to end, cameras worse than the hand-made chain |
-| R-136 | 2026-11-28 | newRoomAttemptSadness: `--auto` from the raw video with the v9_e2e held-out split (`auto1`), + tape check | 3070 | running | running | running |
+| R-136 | 2026-11-28 | newRoomAttemptSadness: `--auto` from the raw video with the v9_e2e held-out split (`auto1`), + tape check | 3070 | 01:21 → 03:08 (eval 03:17); run_v8 86.0, after 20.1, 106.1 min of stages | held-out (62) 24.61 / aligned 25.33, SSIM 0.835; room 6.575 x 4.380 m closed, tape -1.86 %; 17 fixtures (unchecked) | Kept (auto pipeline matches the hand-set v9 on the tape room) |
 | R-137 | 2026-11-28 | Layout fallback for implausible floors / ceilings (`layout.py`), five existing models, no training | 3070 | 01:30 → 01:50 (~20 min) | R-135 7.28 → 3.56 m, 2 → 9 walls; R-134 / R-069 / v9_e2e choices unchanged; R-069 3.015 m with today's code (stored 2.78 m older code) | Kept |
-| R-138 | 2026-11-28 | scan_009 R-135: layout → plan again with the R-137 fallback (`auto1`) | 3070 | queued after R-136 | queued | queued |
-| R-139 | 2026-11-28 | `.spz` vs `.ply` size and render quality on four bundles (`spz_quality.py`, E6) | 3070 | queued after R-138 | queued | queued |
-| R-140 | 2026-11-28 | scan_009: `--auto --track_dirs` (R-079 step in the sensor path), R-128's split (`auto2`) | 3070 | queued after R-139 | queued | queued |
+| R-138 | 2026-11-28 | scan_009 R-135: layout → plan again with the R-137 fallback (`auto1`) | 3070 | running (queued after R-136) | running | running |
+| R-139 | 2026-11-28 | `.spz` vs `.ply` size and render quality on four bundles (`spz_quality.py`, E6) | 3070 | running (queued after R-138) | running | running |
+| R-140 | 2026-11-28 | scan_009: `--auto --track_dirs` (R-079 step in the sensor path), R-128's split (`auto2`) | 3070 | running (queued after R-139) | running | running |
 | R-141 | 2026-11-28 | ARCore-only camera path vs our cameras on three rooms (E1 part, CPU) | 3070 | ~02:00, < 1 min | median 0.245 / 0.138 / 1.328; ARCore tracked 100 / 88 / 26 % of keyframes (newRoom / bedroom / scan_009) | Kept (report evidence) |
-| R-142 | 2026-11-28 | E1: visual-only SfM vs ARCore-guided on the same keyframes, newRoom + scan_009 (SfM only) | 3070 | queued after R-140 | queued | queued |
-| R-143 | 2026-11-28 | Viewer load / frame times on the fixed viewer, seven scans (E5, desktop) | 3070 | queued after R-142 | queued | queued |
+| R-142 | 2026-11-28 | E1: visual-only SfM vs ARCore-guided on the same keyframes, newRoom + scan_009 (SfM only) | 3070 | running (queued after R-140) | running | running |
+| R-143 | 2026-11-28 | Viewer load / frame times on the fixed viewer, seven scans (E5, desktop) | 3070 | running (queued after R-142) | running | running |
 
 ## Runs
 
@@ -3548,7 +3548,10 @@ igs.txt`):
 - **Goal:** test bench 3 of D-099 and the report's main validation: does the automatic pipeline match the hand-set
   best recipe on the room with ground truth? Reference `v9_e2e` (`saved_models/2026-10-26_v9_e2e`, 96 min,
   held-out PSNR(cf) 25.16, room 6.617 m vs tape 6.70 m), semantics v10 15 / 17 fixtures (R-023 room).
-- **Start → end:** (filled in when it ends)
+- **Start → end:** 2026-11-28 01:21:24 → 03:08:24 (run_full.sh; 3 min lost to the restart; wall time 104.0 min from the restart), evaluation to 03:17:35.
+  run_v8 (`timing.json`): select 2.14, sfm 28.43, analyze 0.02, densify 2.31, export 0.01, prior 1.86, init 17.53,
+  train 32.85, ply 0.8 = 86.0 min; then (`stages.tsv`) layout 4.2, sem2d 13.3, sem3d 0.3, verify 0.2, sem3d2 0.2, mesh
+  0.5, meshlabels 1.3, web 0.1, plan 0.0 = 20.1 min; 106.1 min of stages from the raw video to the web bundle
 - **Errors during the run:**
   - 01:21:24 started; select 2.1 min chose `--window 7` (auto: 7,200 video frames / budget 1100) and 1005 frames.
     The v9_e2e split was made on window-6 frames, so most held-out names would not exist in this selection.
@@ -3557,8 +3560,28 @@ igs.txt`):
     exact, the rest <= 6 video frames = 0.2 s away, 62 distinct frames); partial COLMAP database removed;
     01:24:20 restarted `--from sfm -- --auto --split offpath_test_auto1.txt` (select output kept). The comparison
     with v9_e2e pairs each original held-out frame with its mapped frame.
-- **Result:** (filled in when it ends)
-- **Verdict:** (filled in when it ends)
+  - 03:08:24 `run_full.sh` ended with exit 1 although every stage finished and was timed ("all done", `stages.tsv`
+    complete); not from a stage (cause not checked; R-134 / R-135 ended with 0).
+  - 03:17 the reference evaluation (`eval_align.py` on v9_e2e) failed: `can't open/read file … work_v9e2e_sfm\images    frame_00424.jpg`: v9_e2e's undistorted images (and its keyframes) were deleted in the 2026-11-26 disk clean-up. The
+    79 held-out frames were rebuilt from the video (sequential read and JPEG step as `select_sharp.py`, OpenCV undistort
+    with the run's own OPENCV camera into its pinhole camera, 1900 x 1067); the reference evaluation reruns after R-143
+    (`dataset/night_r136ref.sh`, one GPU job at a time). Check: its unaligned score must come back near the 25.16
+    measured on 2026-10-26.
+  - `tape_check.py`'s summary line (mean 0.84 %, max 1.90 %) mixes R-136's room length with the six `manual` rows of
+    `tape.csv`, which hold values measured in the v3 viewer (2026-10-11), not in this model: only the room length is
+    R-136's.
+- **Result:** analyzer: normal SfM (100 % of 1005 keyframes placed), window 7, densify 5 of 48 windows (+94 frames),
+  DA3 priors (`auto.json`). Model 637,000 Gaussians (v9_e2e 619,056). **Held-out (62 frames, the mapped v9_e2e
+  split): PSNR 24.61 before / 25.33 after alignment, SSIM 0.8222 / 0.8350**, correction median 0.15 deg
+  (`eval_r136.csv`); v9_e2e on its 79 frames, colour-fit PSNR without alignment: 25.16 / SSIM 0.8247 (2026-10-26,
+  `eval_offpath.py`; same-tool comparison after R-143). **Room 6.575 x 4.380 m, closed, 5 walls, height 2.811 m**
+  (layout; semantics 2.838 m), floor 29.82 m2; tape room length 6.700 m: -12.5 cm, **-1.86 %** (v9_e2e 6.617 m,
+  -1.24 %). 17 fixtures (5 door, 3 power socket, 3 ceiling light, 2 light switch, window, tube light, lamp, doorway;
+  unchecked), 43 rejected. Mesh 1.84 M triangles (1.95 M before clean-up, 548 frames). Web bundle
+  `prototype/web-ui/public/scans/newRoomAttemptSadness_auto1/` 20 MB.
+- **Verdict:** kept: on the room with ground truth the automatic pipeline gives a closed room within 1.9 % of the tape
+  and held-out quality near the hand-set v9 (24.61 vs 25.16 dB unaligned, different frame lists; same-tool aligned
+  comparison after R-143), in 106 min of stages with no hand choice. Fixtures to be checked by a person.
 
 ### R-137 · 2026-11-28 · layout fallback for implausible floors / ceilings, tested on five models (layout only, no training)
 

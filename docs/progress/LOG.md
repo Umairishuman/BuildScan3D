@@ -1116,4 +1116,10 @@ plan updated (detect path holes; hole-aware loop checks).
 - Queue (one GPU job at a time, each chain waits for the one before): R-136 → R-138 (scan_009 downstream with the new
   layout) + R-139 (`.spz` quality) → R-140 (`--track_dirs`) → R-142 (E1 visual-only SfM) → R-143 (viewer times).
 - Next: Tayyab to push the three branches and decide the section 4 choices of FINAL_PLAN.md.
-
+- **R-136 closed** (03:08, kept): `--auto` on the tape room: held-out (62) 24.61 / aligned 25.33 dB, SSIM 0.835; closed
+  room 6.575 x 4.380 m, tape room length -1.86 % (v9_e2e -1.24 %); 106.1 min of stages. The v9_e2e reference images
+  were deleted on 2026-11-26: its 79 held-out frames rebuilt from the video, same-tool evaluation queued after R-143.
+- For Umair: `server/pipeline.py` `V9_STAGES` / `V9_LABELS` got the `analyze` / `sensor` / `densify` stages of
+  `run_full.sh` (D-099), or `test_v9_stages_match_run_full_sh` fails (it did on this branch since 2026-11-27).
+  `tests/test_changelog.py` fails on `master` too (not touched).
+- `run_times.py check`: a run restarted with `--from <stage>` compares its run_v8 line with the stages it ran (R-136).
