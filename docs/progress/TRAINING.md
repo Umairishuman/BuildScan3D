@@ -3464,6 +3464,8 @@ igs.txt`):
     Tayyab's request** ("pause all processing by 9 pm max"): stopped at the start of sem3d (the `taskkill` of the
     chain left the `run_full.sh` subshells and `semantic3d.py` running; stopped by PID, none left, GPU idle).
     R-135 not started. Continue with `run_full.sh dataset/roomAttemptSadness2 auto1 --from sem3d -- --auto`.
+  - 23:19 resumed (Tayyab "resume"): same detached chain (`dataset/night_r134_r135.sh`), now `--from sem3d`; R-135
+    follows in the same script.
 - **Result:** (filled in when it ends)
 - **Verdict:** (filled in when it ends)
 
