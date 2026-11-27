@@ -81,12 +81,14 @@ Sensor chain with scale-drift correction & 22.67 & & R-094 / R-096 \\
 + extra video frames in weak stretches & 24.25 & 0.898 & R-128 \\
 Same, Depth Anything 3 priors with confidence cut-off$^c$ & 24.25 & & R-133 \\
 Automatic pipeline (\texttt{--auto}, sensor path chosen by itself) & 23.07$^d$ & & R-135 \\
+Same + track directions in the rotation solve (rejected) & 21.81$^h$ & & R-140 \\
 \bottomrule
 \end{tabular}
 
 \smallskip
 \footnotesize $^c$ commercial-use weights (D-098); 26.56\,dB on the blank-wall stretch (60--90\,s), the best of all runs.
-$^d$ on the 61 frames it shares with R-128 (R-128: 24.46 on the same 61).
+$^d$ on the 61 frames it shares with R-128 (R-128: 24.46 on the same 61). $^h$ on the 56 frames shared by R-140,
+R-135, R-128 and R-133 (23.03, 24.33 and 24.41 on the same 56).
 \end{table}
 The automatic run reaches the sensor-assisted chain without a hand choice (SfM placed 41\,\% of the keyframes; after
 the chain 81\,\%), but its cameras are worse than the hand-built chain's, by 1.4\,dB overall and 3\,dB on the blank
