@@ -176,6 +176,7 @@ Umair's side continues at R-105.
 | R-133 | 2026-11-26 | scan_009: R-132 with DA3's confidence cut-off 1.1 (81 unsure frames without prior) (`v9pdc`) | 3070 | ~21:16 → 22:30; prior 1.6, init 2.5, train 26.7, total 31.4 min | 24.25 (= R-128; R-132 23.78); 60 – 90 s 26.56 (best); 134 – 140 s 17.11; off-path views cleaner than R-128 | Kept (DA3 candidate); Tayyab to look; work paused |
 | R-134 | 2026-11-27 | roomAttemptSadness2: first `--auto` run, raw video → web bundle, no hand-set option (`auto1`, D-099) | 3070 | 03:10 → 23:21 in three parts (session end, 9 pm pause); run_v8 83.5, layout 5.0, sem2d 12.7, rest 2.8 min | end to end, exit 0; 1.43 M Gaussians, 5 walls, 19 fixtures, mesh 892 k triangles, bundle 33 MB; outline not closed, ceiling 3.00 m vs R-069 2.82 m | Kept (auto pipeline works on a textured room); Tayyab to look |
 | R-135 | 2026-11-27 | scan_009: `--auto` from the raw video, sensor-path stage, R-128's split (`auto1`) | 3070 | 23:21 → 00:33 (+ eval to 00:38); run_v8 56.4 (sensor path 17.6, train 27.2), after 15.4 min; 71.9 min video → web bundle | 23.07 vs R-128 24.46 / R-133 24.47 (61 frames); 60 – 90 s 22.21; 134 – 140 s 18.51 (= R-128); layout wrong (7.28 m, 2 walls), 0 fixtures | Inconclusive: chain runs end to end, cameras worse than the hand-made chain |
+| R-136 | 2026-11-28 | newRoomAttemptSadness: `--auto` from the raw video with the v9_e2e held-out split (`auto1`), + tape check | 3070 | running | running | running |
 
 ## Runs
 
@@ -3524,3 +3525,21 @@ igs.txt`):
   hand choice, but its cameras are worse than the hand-made chain's (-1.4 dB, -3 dB on the blank wall) and the
   layout fails. Likely cause (not checked): `sensor_path.py` does not reproduce R-096's loop closure (path shape);
   next step is to compare `sensor_path/model` with R-096's cameras step by step.
+
+### R-136 · 2026-11-28 · newRoomAttemptSadness (best-model room, tape sheet): `--auto` from the raw video, held-out split (`auto1`)
+
+- **Who / machine:** Tayyab (agent, night session; Tayyab: "plan accordingly, you should work the entire night") ·
+  RTX 3070 PC
+- **Branch / commit:** `feature/auto-pipeline` (D-099)
+- **Dataset:** `dataset/newRoomAttemptSadness`, raw video (240 s); nothing reused
+- **Command(s):** `dataset/night_r136.sh`: `GPU_EVERY=120 bash scripts/run_full.sh dataset/newRoomAttemptSadness auto1
+  -- --auto --split dataset/newRoomAttemptSadness/work_sharp_sfm/offpath_test.txt` (log `r136.log`), then
+  `eval_align.py` on R-136 and on the reference `work_v9e2e_sfm/gs_v9e2e` (same split, each on its own cameras), and
+  `tape_check.py` against `dataset/newRoomAttemptSadness/tape.csv`
+- **Goal:** test bench 3 of D-099 and the report's main validation: does the automatic pipeline match the hand-set
+  best recipe on the room with ground truth? Reference `v9_e2e` (`saved_models/2026-10-26_v9_e2e`, 96 min,
+  held-out PSNR(cf) 25.16, room 6.617 m vs tape 6.70 m), semantics v10 15 / 17 fixtures (R-023 room).
+- **Start → end:** (filled in when it ends)
+- **Errors during the run:** (filled in as they happen)
+- **Result:** (filled in when it ends)
+- **Verdict:** (filled in when it ends)
