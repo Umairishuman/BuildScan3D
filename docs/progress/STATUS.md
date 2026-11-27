@@ -785,7 +785,7 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
         in 71.9 min, sensor path chosen by the analyzer (41 → 81 % placed), but 23.07 vs the hand chain's 24.46 dB
         (61 common frames) and layout 7.28 m: inconclusive. **R-136 newRoom** (tape room, kept): held-out 25.33 dB
         aligned (62 frames), closed room 6.575 x 4.380 m, tape -1.86 %, 106.1 min; same-tool v9_e2e reference queued.
-      - [x] 2026-11-28: layout fallback for implausible floors / ceilings (R-137, `layout.py`): R-135 7.28 → 3.56 m,
+      - [x] 2026-11-28: layout fallback for implausible floors / ceilings (R-137, `layout.py`): R-135 7.28 → 5.25 m (first pick 3.56, raised by D-072 on floater walls),
         textured rooms unchanged. R-138 queued: R-135's downstream again with it.
       - [ ] **R-140 (queued): `--track_dirs`**, R-079's track-direction rot_sfm step that `sensor_path.py` left out;
         diagnosis of R-135: positions drift from ~45 s, loop solve had half the pair directions (3,031 vs 6,148).

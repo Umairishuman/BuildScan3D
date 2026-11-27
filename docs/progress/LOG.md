@@ -1106,7 +1106,8 @@ plan updated (detect path holes; hole-aware loop checks).
 - **R-136** (running): `--auto` on newRoomAttemptSadness (tape room) with the v9_e2e split mapped to its window-7 frames
   (one restart at 01:24, see the entry).
 - **R-137** (kept): `layout.py` floor / ceiling fallback when the first pick cannot be right (camera 0.5 - 2.2 m above
-  the floor, room 2 - 5 m): R-135 7.28 → 3.56 m, 2 → 9 walls; R-134 / R-069 / v9_e2e choices unchanged.
+  the floor, room 2 - 5 m): R-135 7.28 → 5.25 m (first pick 3.56 m, raised again by D-072's wall-top rule on
+  floater walls), 2 → 9 walls; R-134 / R-069 / v9_e2e choices unchanged.
 - **R-141**: ARCore's path vs our cameras (E1 part): median 0.25 / 0.14 / 1.33 m, ARCore tracked 100 / 88 / 26 % of
   the keyframes (newRoom / bedroom / scan_009).
 - New tools: `spz_quality.py` (decoder checked; R-139 queued), `sfm_colmap.py --pairs visual` + `sfm_compare.py` (E1,

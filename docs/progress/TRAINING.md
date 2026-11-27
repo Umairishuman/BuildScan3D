@@ -177,9 +177,9 @@ Umair's side continues at R-105.
 | R-134 | 2026-11-27 | roomAttemptSadness2: first `--auto` run, raw video → web bundle, no hand-set option (`auto1`, D-099) | 3070 | 03:10 → 23:21 in three parts (session end, 9 pm pause); run_v8 83.5, layout 5.0, sem2d 12.7, rest 2.8 min | end to end, exit 0; 1.43 M Gaussians, 5 walls, 19 fixtures, mesh 892 k triangles, bundle 33 MB; outline not closed, ceiling 3.00 m vs R-069 2.82 m | Kept (auto pipeline works on a textured room); Tayyab to look |
 | R-135 | 2026-11-27 | scan_009: `--auto` from the raw video, sensor-path stage, R-128's split (`auto1`) | 3070 | 23:21 → 00:33 (+ eval to 00:38); run_v8 56.4 (sensor path 17.6, train 27.2), after 15.4 min; 71.9 min video → web bundle | 23.07 vs R-128 24.46 / R-133 24.47 (61 frames); 60 – 90 s 22.21; 134 – 140 s 18.51 (= R-128); layout wrong (7.28 m, 2 walls), 0 fixtures | Inconclusive: chain runs end to end, cameras worse than the hand-made chain |
 | R-136 | 2026-11-28 | newRoomAttemptSadness: `--auto` from the raw video with the v9_e2e held-out split (`auto1`), + tape check | 3070 | 01:21 → 03:08 (eval 03:17); run_v8 86.0, after 20.1, 106.1 min of stages | held-out (62) 24.61 / aligned 25.33, SSIM 0.835; room 6.575 x 4.380 m closed, tape -1.86 %; 17 fixtures (unchecked) | Kept (auto pipeline matches the hand-set v9 on the tape room) |
-| R-137 | 2026-11-28 | Layout fallback for implausible floors / ceilings (`layout.py`), five existing models, no training | 3070 | 01:30 → 01:50 (~20 min) | R-135 7.28 → 3.56 m, 2 → 9 walls; R-134 / R-069 / v9_e2e choices unchanged; R-069 3.015 m with today's code (stored 2.78 m older code) | Kept |
-| R-138 | 2026-11-28 | scan_009 R-135: layout → plan again with the R-137 fallback (`auto1`) | 3070 | running (queued after R-136) | running | running |
-| R-139 | 2026-11-28 | `.spz` vs `.ply` size and render quality on four bundles (`spz_quality.py`, E6) | 3070 | running (queued after R-138) | running | running |
+| R-137 | 2026-11-28 | Layout fallback for implausible floors / ceilings (`layout.py`), five existing models, no training | 3070 | 01:30 → 01:50 (~20 min) | R-135 7.28 → 5.25 m (first pick 3.56, raised by the D-072 wall-top rule on floater walls), 2 → 9 walls; R-134 / R-069 / v9_e2e choices unchanged; R-069 3.015 m with today's code (stored 2.78 m older code) | Kept |
+| R-138 | 2026-11-28 | scan_009 R-135: layout → plan again with the R-137 fallback (`auto1`) | 3070 | 03:17:58 → 03:22:38 (4.7 min) | height 5.25 m (R-135 7.28; D-072 raises the 3.56 m pick on floater walls), 9 walls, 4 fixtures | Kept (bundle), height not trustworthy |
+| R-139 | 2026-11-28 | `.spz` vs `.ply` size and render quality on four bundles (`spz_quality.py`, E6) | 3070 | 03:22:38 → 03:24:00 (1.4 min) | 92.3 – 92.8 % smaller; PSNR vs the `.ply` render 35.8 – 36.5 dB (min 30.4), SSIM 0.983 – 0.990 | Kept (NFR4 with quality) |
 | R-140 | 2026-11-28 | scan_009: `--auto --track_dirs` (R-079 step in the sensor path), R-128's split (`auto2`) | 3070 | running (queued after R-139) | running | running |
 | R-141 | 2026-11-28 | ARCore-only camera path vs our cameras on three rooms (E1 part, CPU) | 3070 | ~02:00, < 1 min | median 0.245 / 0.138 / 1.328; ARCore tracked 100 / 88 / 26 % of keyframes (newRoom / bedroom / scan_009) | Kept (report evidence) |
 | R-142 | 2026-11-28 | E1: visual-only SfM vs ARCore-guided on the same keyframes, newRoom + scan_009 (SfM only) | 3070 | running (queued after R-140) | running | running |
@@ -3607,8 +3607,8 @@ igs.txt`):
 
   | Model | Before (stored layout) | After |
   |---|---|---|
-  | R-135 | floor 3.42 m below cameras, 7.28 m, 2 walls | floor not seen, assumed; 3.56 m (strongest plausible ceiling, warning: floaters); 9 walls, 7 corners, not closed |
-  | R-133 | (no stored layout; floor found 2.42 m below cameras) | floor plane 1.92 m below cameras; 2.86 m; 8 walls, not closed |
+  | R-135 | floor 3.42 m below cameras, 7.28 m, 2 walls | floor not seen, assumed; first pick 3.56 m (strongest plausible ceiling, warning: floaters), **final 5.25 m** after the D-072 wall-top rule (walls reach 4.43 m: floaters); 9 walls, 7 corners, not closed |
+  | R-133 | (no stored layout; floor found 2.42 m below cameras) | floor plane 1.92 m below cameras; first pick 2.86 m, **final 4.86 m** after the wall-top rule (walls reach 4.74 m); 8 walls, not closed |
   | R-134 | 2.937 m, 5 walls | 2.937 m, 5 walls, floor identical (unchanged) |
   | R-069 | 2.78 m (stored, older `layout.py`) | first pick 2.775 m as before; 3.015 m after the D-072 wall-top rule |
   | v9_e2e | 2.70 m (stored, older `layout.py`) | first pick 2.717 m as before; 2.833 m after the D-072 wall-top rule, closed, 4 walls |
@@ -3616,9 +3616,12 @@ igs.txt`):
   In R-134, R-069 and v9_e2e the floor and the chosen ceiling candidate are the same as without the change (floor
   plausible; first candidate plausible with < 3 % above). Their differences from the stored files come from layout
   changes made after those files (D-072), which also explains R-134's 3.00 m vs R-069's stored 2.82 m (open point in
-  R-134): with today's code R-069 gives 3.015 m. scan_009's two models still disagree (3.56 vs 2.86 m): no floor is
-  reconstructed in that recording, so its height is not trustworthy either way (the warning says so).
-- **Verdict:** kept (committed on `feature/auto-pipeline`): no change on the textured rooms, R-135's 7.28 m gone.
+  R-134): with today's code R-069 gives 3.015 m. scan_009's two models still disagree (final 5.25 vs 4.86 m, first
+  picks 3.56 vs 2.86 m): no floor is reconstructed in that recording and floaters make its walls look 4.4 - 4.7 m tall,
+  so its height is not trustworthy either way (the warning says so). (Corrected 2026-11-28 03:30: this table first gave
+  only the first picks for R-135 / R-133; the final heights were read from the test's `layout.json`.)
+- **Verdict:** kept (committed on `feature/auto-pipeline`): no change on the textured rooms; R-135 7.28 → 5.25 m, still
+  not plausible because of D-072's wall-top rule on floater walls. No further rule without a tape height of scan_009.
   Heights of scan_009 not trustworthy (no tape). R-135's downstream (semantics, mesh, web) still uses the old layout;
   rerun after R-136.
 
@@ -3633,10 +3636,18 @@ igs.txt`):
   (log `r138.log`); the old layout and web bundle are kept as `layout_r135/` and `…_auto1_r135/`
 - **Goal:** R-135's semantics, mesh labels, web bundle and plan on the plausible layout (R-137), so the scan_009
   bundle no longer says 7.27 m.
-- **Start → end:** (filled in when it ends)
-- **Errors during the run:** (filled in as they happen)
-- **Result:** (filled in when it ends)
-- **Verdict:** (filled in when it ends)
+- **Start → end:** 2026-11-28 03:17:58 → 03:22:38 (4.7 min): layout 9 s, then (`gs_auto1/stages_r138.tsv`: `run_full.sh` appended them to R-135's `stages.tsv`, which made
+  `run_times.py update` mix the two runs; moved to their own file at 03:35, R-135's row restored) sem3d 0.1,
+  verify 0.2, sem3d2 0.2, mesh 1.0, meshlabels 2.8, web 0.1, plan 0.0 min
+- **Errors during the run:** none (exit 0). The old layout is in `gs_auto1/layout_r135/`, the old bundle moved to
+  `prototype/web-ui/scans_archive/scan_009_057ed3beb4fc_auto1_r135/` (it was copied into `public/scans/` first, where the
+  viewer would have listed it as a scan)
+- **Result:** layout: floor assumed (not seen), first ceiling 3.56 m, raised to **5.25 m** by D-072's wall-top rule (floater
+  walls reach 4.43 m); 9 walls, 7 corners, not closed. Semantics: ceiling 5.239 m, 4 fixtures (77 rejected; R-135: 0),
+  Gaussians per class: other 302,111, walls 14,742, floor 4,346, ceiling 4,128, door 1,027, air conditioner 1,477; mesh
+  surface still mostly "other" (376 m2). Bundle 15 MB.
+- **Verdict:** kept as the current scan_009 automatic bundle (better than R-135's 7.27 m and 0 fixtures), but its height is
+  not trustworthy: the recording has no reconstructed floor and floaters lengthen the walls (R-137).
 
 ### R-139 · 2026-11-28 · `.spz` web splats against the trained `.ply`: size and render quality (5.4 / E6)
 
@@ -3651,10 +3662,21 @@ igs.txt`):
   OD-1): PSNR / SSIM of the decoded `.spz` render against the `.ply` render from the same cameras, and the size.
   Decoder checked on R-134's bundle before the run (CPU): same 1,425,538 Gaussians in the same order, positions within
   0.12 mm, rotations dot 0.9999998, spz version 3, SH degree 3.
-- **Start → end:** (filled in when it ends)
-- **Errors during the run:** (filled in as they happen)
-- **Result:** (filled in when it ends)
-- **Verdict:** (filled in when it ends)
+- **Start → end:** 2026-11-28 03:22:38 → 03:24:00 (1.4 min for four bundles)
+- **Errors during the run:** none
+- **Result:** 
+
+  | Bundle (model) | Gaussians | `.ply` MB | `.spz` MB | Smaller | Frames | PSNR mean / min (dB) | SSIM |
+  |---|---|---|---|---|---|---|---|
+  | R-134 bedroom auto | 1,425,538 | 353.5 | 25.6 | 92.8 % | 53 (every 20th) | 36.12 / 30.90 | 0.9898 |
+  | R-069 bedroom | 1,445,529 | 358.5 | 26.0 | 92.7 % | 50 (every 20th) | 36.52 / 30.42 | 0.9898 |
+  | R-023 newroom (best model) | 605,481 | 150.2 | 11.5 | 92.3 % | 79 held-out | 35.82 / 34.11 | 0.9826 |
+  | R-136 newRoom auto | 637,000 | 158.0 | 12.1 | 92.3 % | 62 held-out | 36.49 / 34.48 | 0.9833 |
+
+  PSNR / SSIM of the decoded `.spz` render against the `.ply` render from the same camera (compression only, no photo).
+  Every bundle holds all the model's Gaussians (same count), SH degree 3 kept, same axes.
+- **Verdict:** kept: `.spz` is 92.3 - 92.8 % smaller and renders at 35.8 - 36.5 dB / SSIM 0.98 - 0.99 against the
+  uncompressed model (NFR4 met with the quality measured; input to OD-1, report E6).
 
 ### R-140 · 2026-11-28 · scan_009: `--auto` with the R-079 step in the sensor path (`--track_dirs`, `auto2`)
 
