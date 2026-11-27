@@ -181,6 +181,7 @@ Umair's side continues at R-105.
 | R-138 | 2026-11-28 | scan_009 R-135: layout → plan again with the R-137 fallback (`auto1`) | 3070 | queued after R-136 | queued | queued |
 | R-139 | 2026-11-28 | `.spz` vs `.ply` size and render quality on four bundles (`spz_quality.py`, E6) | 3070 | queued after R-138 | queued | queued |
 | R-140 | 2026-11-28 | scan_009: `--auto --track_dirs` (R-079 step in the sensor path), R-128's split (`auto2`) | 3070 | queued after R-139 | queued | queued |
+| R-141 | 2026-11-28 | ARCore-only camera path vs our cameras on three rooms (E1 part, CPU) | 3070 | ~02:00, < 1 min | median 0.245 / 0.138 / 1.328; ARCore tracked 100 / 88 / 26 % of keyframes (newRoom / bedroom / scan_009) | Kept (report evidence) |
 
 ## Runs
 
@@ -3650,3 +3651,31 @@ igs.txt`):
 - **Errors during the run:** (filled in as they happen)
 - **Result:** (filled in when it ends)
 - **Verdict:** (filled in when it ends)
+
+### R-141 · 2026-11-28 · ARCore-only camera path against our cameras on three rooms (E1 part; read-only, CPU)
+
+- **Who / machine:** Tayyab (agent, night session) · RTX 3070 PC, CPU only (while R-136 trained)
+- **Branch / commit:** `feature/auto-pipeline`; script inline (Python, Umeyama Sim3 fit), result
+  `scratchpad/e1_arcore_vs_sfm.json`
+- **Dataset:** the `--auto` runs' keyframes: newRoomAttemptSadness (R-136 `work_auto1`, SfM at 01:52), roomAttemptSadness2
+  (R-134), scan_009 (R-135, final cameras = sensor path)
+- **Command(s):** for every keyframe with a real ARCore pose (`c2w_arcore`, not an IMU-fallback or densified frame)
+  that our pipeline also placed: Sim3 fit of the ARCore camera centres onto ours, then the position error per frame
+- **Goal:** COMPLETION_PLAN E1 / final-1 exit gate (d), first part: how far is the phone's own tracking from the
+  cameras the pipeline uses, and how much of the walk does ARCore track
+- **Start → end:** 2026-11-28 ~02:00, under a minute
+- **Errors during the run:** first try counted IMU-fallback frames as ARCore frames and failed on a missing
+  `arcore_pose` key (normal frames do not have it); recomputed with `c2w_arcore` and `fallback`
+- **Result:**
+
+  | Room | Keyframes | ARCore tracked | Placed by us | ARCore vs ours: median / p90 / RMSE | Sim3 scale |
+  |---|---|---|---|---|---|
+  | newRoomAttemptSadness | 1005 | 1005 (100 %) | 1001 | 0.245 / 0.690 / 0.375 | 0.981 |
+  | roomAttemptSadness2 | 1060 | 938 (88 %) | 1025 | 0.138 / 0.337 / 0.360 | 0.830 |
+  | scan_009 | 894 | 230 (26 %) | 727 (81 %, sensor path) | 1.328 / 3.678 / 2.214 | 0.921 |
+
+  Units: metres for the two SfM rooms (SfM is Sim3-aligned to ARCore), sensor-path units for scan_009 (metric only
+  approximately). The reference is our own cameras, not ground truth.
+- **Verdict:** kept as evidence for the report (E1 part): ARCore's path is 0.14 - 0.25 m (median) from the SfM cameras
+  on textured rooms and tracks only a quarter of the featureless walk. Not done: visual-only COLMAP without ARCore
+  priors vs with them (the other half of E1).

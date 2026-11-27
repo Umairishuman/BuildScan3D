@@ -15,6 +15,31 @@ without pose alignment (\texttt{eval\_offpath.py}); the two are not mixed in one
 are listed in \texttt{docs/progress/runs.tsv} (D-090).
 \paragraph{Machine.} Unless stated, an RTX~3070 with 8\,GB, 16\,GB of RAM, Windows~11.
 
+\section{Phone Tracking against the Pipeline's Cameras}
+\label{sec:eval-arcore}
+The project's first change of plan (D-014) was to take the camera poses from SfM instead of ARCore. Table~\ref{tab:eval-arcore}
+shows why, on the keyframes of the automatic runs: ARCore's own camera path lies 0.14 to 0.25\,m (median) from the
+SfM cameras on textured rooms and tracks only a quarter of the featureless walk (R-141). The reference is the
+pipeline's own cameras, not ground truth.
+\begin{table}[htbp]
+\centering\small
+\caption{ARCore camera path against the pipeline's cameras (Sim3-aligned, position error)}
+\label{tab:eval-arcore}
+\begin{tabular}{p{3.4cm}p{1.6cm}p{2.2cm}p{1.8cm}p{3.4cm}}
+\toprule
+\textbf{Room} & \textbf{Keyframes} & \textbf{ARCore tracked} & \textbf{Placed} & \textbf{Error median / p90 (m)} \
+\midrule
+Main test room & 1005 & 100\,\% & 1001 & 0.245 / 0.690 \
+Bedroom & 1060 & 88\,\% & 1025 & 0.138 / 0.337 \
+scan\_009 (featureless) & 894 & 26\,\% & 727$^g$ & 1.33 / 3.68 \
+\bottomrule
+\end{tabular}
+
+\smallskip
+\footnotesize $^g$ placed by the sensor-assisted chain; its units are metric only approximately.
+\end{table}
+% TODO(team): E1 second half - visual-only COLMAP without ARCore pairs vs with them (track completion, ATE).
+
 \section{Reconstruction Quality}
 \begin{table}[htbp]
 \centering\small
