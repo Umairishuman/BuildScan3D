@@ -3888,5 +3888,9 @@ igs.txt`):
     run_full, tee) stopped by PID; GPU idle after. Resume with `--from sfm` (the extraction restarts; the partial
     `database.db` is removed by `sfm_colmap.py`). Tayyab also asked to skip the semantic labelling for now: the resume
     uses `SEMANTICS=0` (no fixture detection, walls / floor / ceiling still labelled).
+  - Resumed by the agent at Tayyab's request ("ok resume"), commit 910d856: `SEMANTICS=0 GPU_EVERY=120 bash
+    scripts/run_full.sh dataset/newRoomAttemptSadness auto5 --from sfm -- --auto --sfm_args "--feature aliked" --split
+    dataset/newRoomAttemptSadness/offpath_test_auto1.txt` (same `day_r146.sh`). Its stage times are not comparable
+    with R-136's for the semantic stages (skipped here).
 - **Result:** (filled in when it ends)
 - **Verdict:** (filled in when it ends)
