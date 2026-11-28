@@ -235,6 +235,24 @@ for w, cl in zip(walls, clusters):
 # a wall is tall and long
 hmin = 0.5 * height if np.isfinite(height) else 1.0
 cand = [w for w in walls if w["t1"] - w["t0"] >= args.min_len and (w["y1"] - w["y0"]) >= hmin]
+# free-standing furniture (a cupboard side or shelf back standing in the room): the cameras walking alongside it are on
+# both sides of it, and it stops well below the ceiling. It is no room boundary: dropped here, so it can neither become
+# a wall nor hide the real walls behind it as "outside" (R-146: a 2.25 m face, 1.83 m high, in the middle of the room
+# hid the far wall; cameras alongside it on both sides, every real wall 100 % one-sided). A partition wall reaching the
+# ceiling stays, wherever the cameras are.
+def cams_inside(w):
+    t = (C[:, [0, 2]] - w["cen"]) @ w["dir"]
+    sel = (t > w["t0"]) & (t < w["t1"])
+    if sel.sum() < 10:
+        return 1.0
+    return float(np.mean((C[sel][:, [0, 2]] - w["cen"]) @ w["nrm"] > 0))
+top_max = 0.75 * height if np.isfinite(height) else 1.9
+standing = [w for w in cand if cams_inside(w) < 0.8 and w["y1"] - floor_y < top_max]
+if standing:
+    cand = [w for w in cand if not any(w is x for x in standing)]
+    print(f"{len(standing)} free-standing surface(s) dropped (cameras on both sides, top below {top_max:.2f} m): "
+          + ", ".join(f"{w['t1'] - w['t0']:.2f} m long, {w['y1'] - floor_y:.2f} m high, {cams_inside(w):.0%} of the "
+                      f"cameras alongside on one side" for w in standing))
 # merge near-duplicates (same wall split by a slight bend in the model): parallel within 8 deg and 0.2 m
 merged = True
 while merged:
@@ -291,6 +309,7 @@ if args.debug:
     for w in sorted(walls, key=lambda w: -(w["t1"] - w["t0"])):
         st_ = ("WALL" if any(w is x for x in final) else "raised" if any(w is x for x in raised) else
                "outside" if any(w is x for x in inner) else
+               "free-standing" if any(w is x for x in standing) else
                "front" if any(w is x for x in cand) else "short, low or merged")
         print(f"  cand mid=({_mid(w)[0]:.2f},{_mid(w)[1]:.2f}) len {w['t1'] - w['t0']:.2f} h {w['y0'] - floor_y:.2f}-{w['y1'] - floor_y:.2f} "
               f"nrm ({w['nrm'][0]:.2f},{w['nrm'][1]:.2f}) area {w['area']} -> {st_}")

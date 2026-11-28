@@ -187,6 +187,7 @@ Umair's side continues at R-105.
 | R-144 | 2026-11-28 | OD-10 under `--auto`: R-136 from `init` with the photometric PatchMatch (`auto3`), same split | 3070 | 05:26 → 06:13 (eval 06:24); init 7.5 vs 17.5, train 35.8 vs 32.9, 44.1 vs 51.2 min | aligned 25.11 vs R-136 25.33 (same 62 frames) | Inconclusive (OD-10: -7 min, -0.22 dB) |
 | R-145 | 2026-11-28 | scan_009: `--auto` with ALIKED matching (`auto4`), R-128's split | 3070 | 06:24 → 07:56 (eval 08:02); run_v8 73.2 (sfm 20.5, sensor 20.7), 91.5 min wall | **25.68 vs R-128 24.46 / R-133 24.47 / R-135 23.07 (61 common)**; blank wall 28.66; 134 - 140 s 22.05 | Kept (best scan_009 model, automatic) |
 | R-146 | 2026-11-28 | newRoomAttemptSadness: `--auto` with ALIKED matching (`auto5`), R-136's split, + tape | 3070 | 12:45 → paused 13:02 → resumed 14:53 → 16:45 (eval 16:54); run_v8 109.9 (sfm 52.6 vs 28.4), after 4.2 min (`SEMANTICS=0`) | aligned 25.24 vs R-136 25.33 (same 62 frames); layout wrong (far wall dropped as `outside`), end walls about 6.56 m apart by hand (-2.2 %) | Inconclusive (OD-17: same quality, slower SfM); layout bug found |
+| R-147 | 2026-11-28 | Layout: free-standing furniture is no wall (R-146 far wall), nine existing models, no training | 3070 | 17:15 → 17:42 (27.3 min) + R-144 before 4.5 min | R-146 6.553 x 4.374 closed (was 4.374 m "length"), R-144 6.582 x 4.367 closed (was corners 49 - 72 deg); five models identical; scan_009 two fewer walls, still open | Kept |
 
 ## Runs
 
@@ -3925,3 +3926,51 @@ igs.txt`):
   the video. With R-145 (featureless scan_009: +1.22 dB) this supports ALIKED for weak-texture recordings and gives no
   reason to use it on textured ones; the decision stays with Tayyab (OD-17, licence check first, D-098). It exposed a
   layout bug that is not about ALIKED (above).
+
+### R-147 · 2026-11-28 · layout: free-standing furniture no longer counts as a wall (R-146's missing far wall), tested on nine models (layout only, no training)
+
+- **Who / machine:** Tayyab (agent; Tayyab: "after it ends you may continue") · RTX 3070 PC
+- **Branch / commit:** `feature/auto-pipeline` at 5e1b146 + the `layout.py` change uncommitted at test time (committed
+  right after if kept)
+- **Dataset:** existing models, nothing retrained: newRoomAttemptSadness R-146 (`work_auto5_sfm/gs_auto5`), R-136
+  (`auto1`), R-144 (`auto3`), v9_e2e (`work_v9e2e_sfm/gs_v9e2e`); roomAttemptSadness2 R-134 (`work_auto1_sfm/gs_auto1`),
+  R-069 (`work_v9pgsr8_sfm/gs_v9pgsr8`); scan_009 R-145 (`work_auto4_sfm/gs_auto4`), R-135 (`work_auto1_sfm/gs_auto1`);
+  scan_3028a4de8fa0 (`work_v10_sfm/gs_v10`, Umair's model, no run row here)
+- **Command(s):** `dataset/r147_layout.sh`: for each model `layout.py --ply <gs>/splat.ply --work <work> --out
+  <scratchpad>/r147/<name> --raised_max 1.5 --infer_gap 6 --debug` (the `run_full.sh` options), log per model in the
+  same folder. Stored layouts are not touched.
+- **Goal:** R-146's layout dropped the far wall as `outside` behind a 2.25 m long, 1.83 m high surface in the middle of
+  the room (`cam_side` 0.02: the cameras pass on both sides of it; every real wall in R-146 and R-136 has 1.00).
+  Change: before the wall steps, a candidate is dropped as free-standing when fewer than 80 % of the cameras alongside
+  it (within its length) are on its inner side **and** its top is below 75 % of the room height (a partition reaching
+  the ceiling stays). R-146 must give a closed room near R-136's 6.575 x 4.380 m; on every model where nothing is
+  dropped the layout is identical by construction (the step only removes candidates).
+- **Start → end:** 2026-11-28 17:15:11 → 17:42:28 (27.3 min; 160 - 315 s per textured model, 8 - 28 s for scan_009 /
+  scan_3028), plus 17:43:09 → 17:47:37 the "before" run on R-144 (`git show HEAD:src/arcore3dgs/layout.py`, same
+  options; R-144 has no stored layout)
+- **Errors during the run:** v9_e2e, R-069 and scan_3028 exit 1 after `layout.json` was written: `cv2.error ...
+  !ssize.empty() in function 'cv::resize'` while drawing `corners.jpg` (their keyframe images were deleted in the
+  2026-11-26 disk clean-up; the same as R-137). Not related to the change; their `layout.json` and `plan.png` are
+  complete.
+- **Result:** (scratchpad `r147/<name>/layout.json`, `plan.png`, logs)
+
+  | Model | Dropped as free-standing (length, top, cameras alongside on the inner side) | Before | After |
+  |---|---|---|---|
+  | R-146 (newRoom, ALIKED) | 2.25 m, 1.83 m, 41 % | far wall dropped as `outside`; 4.374 m "length"; corners 41 - 82 deg | **6.553 x 4.374 m, closed**, corners 88.3 / 88.8 deg at the far end (tape 6.70: -2.2 %) |
+  | R-144 (newRoom, PatchMatch init) | 5.04 m, 1.84 m, 54 % (diagonal, through the room) | 4 walls, corners 49.4 / 66.1 / 72.0 / 88.8 deg (no closed rectangle) | **6.582 x 4.367 m, closed**, corners 89.9 / 89.8 / 88.8 deg (-1.76 %) |
+  | R-136 (newRoom, SIFT) | none | 6.575 x 4.380 m, closed | identical |
+  | v9_e2e (newRoom) | none | 6.617 x 4.406 m, closed | identical |
+  | R-134 (roomAttemptSadness2) | none | 2.937 m, 5 walls, not closed | identical |
+  | R-069 (roomAttemptSadness2) | none | 3.015 m, 6 walls, not closed | identical |
+  | scan_3028 (Umair) | none | 3.273 m, 4 walls, not closed | identical |
+  | R-145 (scan_009, ALIKED) | 1.37 m / 1.96 m / 70 %, 2.65 m / 2.35 m / 13 %, 2.68 m / 2.16 m / 53 % | 10 walls, 4 corners, not closed | 8 walls, 2 corners, not closed; the two dropped walls in `plan.png` lie across the camera path (the cameras walk through them) |
+  | R-135 (scan_009, SIFT) | four (1.75 - 2.67 m long, 0.42 - 2.32 m high, 47 - 79 %) | 9 walls, 7 corners, not closed; 8.218 / 7.673 / 3.830 m | 8 walls, 5 corners, not closed; the same three distances |
+
+  "Identical" = nothing dropped, so every later step runs on the same candidates (the step only removes candidates).
+  In both changed newRoom models the near-end corner still has a short slanted wall (R-146: 2.72 m and a 0.02 m
+  sliver, corners 41 / 47 / 81.5 deg; R-144: 1.48 m, 72 deg); R-136 has the same (1.50 m, 69.6 deg): an older,
+  separate problem, not touched here. scan_009 has no tape and no closed outline either way (featureless, floaters).
+- **Verdict:** kept (committed on `feature/auto-pipeline`): the free-standing rule fixes the tape room's layout in two of
+  its four models (R-146, R-144; with today's code both were wrong before) and changes nothing where nothing stands in
+  the room. On the tape room it now gives 6.553 - 6.617 m (-1.2 to -2.2 %) in all four models. The stored R-146 /
+  R-144 outputs (semantics, mesh labels, web bundle) still use the old layout; R-136 stays the room's model.
