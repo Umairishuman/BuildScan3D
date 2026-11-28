@@ -186,7 +186,7 @@ Umair's side continues at R-105.
 | R-143 | 2026-11-28 | Viewer load / frame times on the fixed viewer, seven scans (E5, desktop) | 3070 | 04:55 → 05:12 | 3 of 7 loaded: best model 2.2 s, scans #7 / #8 from R2 6.1 / 7.6 s; median frame 5.0 ms, worst 15 ms; 4 linked bundles never loaded | Kept (3 scans); 4 not measured |
 | R-144 | 2026-11-28 | OD-10 under `--auto`: R-136 from `init` with the photometric PatchMatch (`auto3`), same split | 3070 | 05:26 → 06:13 (eval 06:24); init 7.5 vs 17.5, train 35.8 vs 32.9, 44.1 vs 51.2 min | aligned 25.11 vs R-136 25.33 (same 62 frames) | Inconclusive (OD-10: -7 min, -0.22 dB) |
 | R-145 | 2026-11-28 | scan_009: `--auto` with ALIKED matching (`auto4`), R-128's split | 3070 | 06:24 → 07:56 (eval 08:02); run_v8 73.2 (sfm 20.5, sensor 20.7), 91.5 min wall | **25.68 vs R-128 24.46 / R-133 24.47 / R-135 23.07 (61 common)**; blank wall 28.66; 134 - 140 s 22.05 | Kept (best scan_009 model, automatic) |
-| R-146 | 2026-11-28 | newRoomAttemptSadness: `--auto` with ALIKED matching (`auto5`), R-136's split, + tape | 3070 | 12:45 → paused 13:02 in SfM (Tayyab) | not finished: resume `--from sfm` with `SEMANTICS=0` | running (paused) |
+| R-146 | 2026-11-28 | newRoomAttemptSadness: `--auto` with ALIKED matching (`auto5`), R-136's split, + tape | 3070 | 12:45 → paused 13:02 → resumed 14:53 → 16:45 (eval 16:54); run_v8 109.9 (sfm 52.6 vs 28.4), after 4.2 min (`SEMANTICS=0`) | aligned 25.24 vs R-136 25.33 (same 62 frames); layout wrong (far wall dropped as `outside`), end walls about 6.56 m apart by hand (-2.2 %) | Inconclusive (OD-17: same quality, slower SfM); layout bug found |
 
 ## Runs
 
@@ -3880,7 +3880,11 @@ igs.txt`):
   or hurt on a textured room? Against R-136 (SIFT, same everything else): aligned 25.33 on the same 62 frames, tape
   -1.86 %, SfM 28.4 min, 106.1 min in all. Started while Tayyab views scans in the web viewer (the training stage may
   slow the viewer).
-- **Start → end:** (filled in when it ends)
+- **Start → end:** 2026-11-28 12:45:00 → paused 13:02 (in SfM) → resumed 14:53:27 → 16:45:02 (`run_full.sh`, exit 0),
+  evaluation and tape check to 16:54:08. From the resume 111.6 min wall. run_v8 (`timing.json`): select 2.57 (from the
+  first start, kept), sfm 52.63, analyze 0.01, densify 1.63, export 0.01, prior 2.05, init 17.68, train 32.51, ply 0.85
+  = 109.9 min; then (`stages.tsv`) layout 2.1, sem2d 0.0, sem3d 0.1, mesh 0.6, meshlabels 1.3, web 0.1, plan 0.0 = 4.2
+  min (fixture detection skipped, `SEMANTICS=0`; not comparable with R-136's 20.1)
 - **Errors during the run:**
   - 12:45 started; select 2.6 min (window 7, as R-136). **13:02 paused by the agent at Tayyab's request** ("pause the
     current training"), during SfM's ALIKED feature extraction (still running after ~15 min; on scan_009 R-145 the whole
@@ -3892,5 +3896,32 @@ igs.txt`):
     scripts/run_full.sh dataset/newRoomAttemptSadness auto5 --from sfm -- --auto --sfm_args "--feature aliked" --split
     dataset/newRoomAttemptSadness/offpath_test_auto1.txt` (same `day_r146.sh`). Its stage times are not comparable
     with R-136's for the semantic stages (skipped here).
-- **Result:** (filled in when it ends)
-- **Verdict:** (filled in when it ends)
+  - SfM took 52.6 min (R-136 SIFT: 28.4). Between 14:53 and about 15:50 the agent built and tested the web UI on the
+    same PC (`next build`, eslint, headless Chrome with software rendering, all CPU), so part of the difference may be
+    CPU contention: not measured how much. R-145 (scan_009, no contention noted) took 20.5 min for ALIKED SfM.
+  - **Layout wrong on this model (no error, wrong output):** 6 walls, corners 41 - 82 deg, "room length" 4.374 m (the
+    room's width). `layout.py --debug` (16:55, scratchpad `layout_r146_debug`): the far end wall (3.58 m long, the
+    largest vertical plane, area 1,340,099) was dropped as `outside` behind a 2.25 m long surface 0.09 - 1.83 m above
+    the floor in the middle of the room (furniture face, not checked visually), which counted as a wall and, being
+    >= 2 m long, could hide surfaces behind it (`layout.py` lines 270 - 281, the doorway rule). Not ALIKED-specific:
+    the same (current) `layout.py` on R-136's model still gives 4.380 x 6.575 m with 89 deg corners (scratchpad
+    `layout_r136_now`); in R-136's model that surface is not a wall candidate. Layout fix: see the next run.
+  - `tape_check.py` therefore compared the width with the tape length (-34.7 %); its six `manual` rows are the v3
+    viewer values from 2026-10-11 (as noted under R-136), not this model.
+- **Result:** analyzer: normal SfM, 1003 of 1005 keyframes placed, 3D observations per camera median 482 (`auto.json`),
+  window 7, densify 2 of 48 windows (+36 frames), DA3 priors. SfM-vs-ARCore scale check `ok` (median ratio 1.527, R-136
+  1.518) but 262 frames above double the median (R-136: 19), in blocks from frame_05489 to the end of the video (cause
+  not checked; the held-out frames there, 06681 - 06765, are as good as R-136's). **Held-out, the same 62 frames as
+  R-136: PSNR 24.05 before / 25.24 after alignment (R-136 24.61 / 25.33), SSIM 0.8091 / 0.8320 (R-136 0.8222 /
+  0.8350)**, correction median 0.18 deg (`eval_r146.csv`, `r146_eval.log`). Per 40 s of video, aligned R-146 minus
+  R-136: +0.20, -0.32, +0.07, -0.31, -1.54 (3 frames), +0.22 dB. Room: the layout outline is wrong (above); measured
+  from the debug wall candidates (by hand, positions printed to 1 cm, normals 2.3 deg apart) the end walls are about
+  6.56 m apart (tape 6.70 m, about -2.2 %; R-136 6.575 m, -1.86 %) and the side walls 4.37 m (R-136 4.380 m). Height
+  2.841 m. 0 fixtures (skipped). Mesh 400,000 triangles in `mesh_web.glb` (8.2 MB). Web bundle
+  `prototype/web-ui/public/scans/newRoomAttemptSadness_auto5/` 20.1 MB.
+- **Verdict:** inconclusive for OD-17, rejected as the room's model (wrong layout). On a textured room ALIKED gives the
+  same quality as SIFT (-0.09 dB aligned on the same 62 frames, within the spread between blocks) and the same room
+  size, with a slower SfM (52.6 vs 28.4 min, partly CPU contention) and more frames off the ARCore scale at the end of
+  the video. With R-145 (featureless scan_009: +1.22 dB) this supports ALIKED for weak-texture recordings and gives no
+  reason to use it on textured ones; the decision stays with Tayyab (OD-17, licence check first, D-098). It exposed a
+  layout bug that is not about ALIKED (above).
