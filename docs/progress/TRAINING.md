@@ -186,6 +186,7 @@ Umair's side continues at R-105.
 | R-143 | 2026-11-28 | Viewer load / frame times on the fixed viewer, seven scans (E5, desktop) | 3070 | 04:55 → 05:12 | 3 of 7 loaded: best model 2.2 s, scans #7 / #8 from R2 6.1 / 7.6 s; median frame 5.0 ms, worst 15 ms; 4 linked bundles never loaded | Kept (3 scans); 4 not measured |
 | R-144 | 2026-11-28 | OD-10 under `--auto`: R-136 from `init` with the photometric PatchMatch (`auto3`), same split | 3070 | 05:26 → 06:13 (eval 06:24); init 7.5 vs 17.5, train 35.8 vs 32.9, 44.1 vs 51.2 min | aligned 25.11 vs R-136 25.33 (same 62 frames) | Inconclusive (OD-10: -7 min, -0.22 dB) |
 | R-145 | 2026-11-28 | scan_009: `--auto` with ALIKED matching (`auto4`), R-128's split | 3070 | 06:24 → 07:56 (eval 08:02); run_v8 73.2 (sfm 20.5, sensor 20.7), 91.5 min wall | **25.68 vs R-128 24.46 / R-133 24.47 / R-135 23.07 (61 common)**; blank wall 28.66; 134 - 140 s 22.05 | Kept (best scan_009 model, automatic) |
+| R-146 | 2026-11-28 | newRoomAttemptSadness: `--auto` with ALIKED matching (`auto5`), R-136's split, + tape | 3070 | running | running | running |
 
 ## Runs
 
@@ -3865,3 +3866,21 @@ igs.txt`):
   best hand-made model on the same 61 frames, +2.6 dB over R-135; best on the blank wall and on the 134 - 140 s stretch
   that broke every earlier run), with no hand choice, in 91.5 min. Weaker after 140 s. SfM 16.5 min slower than SIFT.
   Room height still not trustworthy. ALIKED for the sensor route (or for all recordings): OD-17, Tayyab.
+
+### R-146 · 2026-11-28 · newRoomAttemptSadness (textured, tape room): `--auto` with ALIKED matching (`auto5`)
+
+- **Who / machine:** Tayyab (agent; Tayyab: "we need to test it on a featurefull recording too") · RTX 3070 PC
+- **Branch / commit:** `feature/auto-pipeline` (no code change: `--sfm_args "--feature aliked"`)
+- **Dataset:** `dataset/newRoomAttemptSadness`, raw video; nothing reused
+- **Command(s):** `dataset/day_r146.sh`: `GPU_EVERY=120 bash scripts/run_full.sh dataset/newRoomAttemptSadness auto5 --
+  --auto --sfm_args "--feature aliked" --split dataset/newRoomAttemptSadness/offpath_test_auto1.txt` (log `r146.log`;
+  the same keyframe selection as R-136, window 7, so R-136's mapped split applies), then `eval_align.py` and
+  `tape_check.py`
+- **Goal:** OD-17: R-145 showed ALIKED far better than SIFT on the featureless scan_009 (25.68 vs 23.07). Does it hold
+  or hurt on a textured room? Against R-136 (SIFT, same everything else): aligned 25.33 on the same 62 frames, tape
+  -1.86 %, SfM 28.4 min, 106.1 min in all. Started while Tayyab views scans in the web viewer (the training stage may
+  slow the viewer).
+- **Start → end:** (filled in when it ends)
+- **Errors during the run:** (filled in as they happen)
+- **Result:** (filled in when it ends)
+- **Verdict:** (filled in when it ends)
