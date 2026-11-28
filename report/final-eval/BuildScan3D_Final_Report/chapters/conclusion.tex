@@ -10,15 +10,16 @@ ARCore's path lies 0.14 to 0.25\,m from the SfM cameras on textured rooms and tr
 (R-141). (2) Priors anchored to the SfM points, planar regions, a blur model and flat Gaussians give sharper, flatter
 models (v9, PGSR-lite). (3) On featureless walls the phone's sensors carry the camera path where the images cannot:
 the gyroscope for rotation, the accelerometer and the room height for scale, point tracks through the video and
-long-range image pairs for the loops (24.25\,dB on held-out frames, R-128 / R-133). (4) Every pretrained network must
+long-range image pairs for the loops (24.25\,dB on held-out frames by hand, R-128 / R-133; 25.68\,dB automatically
+with learned ALIKED features, R-145). (4) Every pretrained network must
 allow commercial use: Depth Anything~3 BASE (Apache~2.0) replaced Metric3D at the same quality (D-098, R-133).
 
 \paragraph{What we built and measured.} The capture app, the upload server, the reconstruction pipeline and its
 automatic mode (Chapter~\ref{ch:iteration2}), and the web viewer; the measured results are in
 Chapter~\ref{ch:evaluation}. Met: NFR4 (compression, 92\,\%) and NFR6 (accuracy: 0.19\,\% mean error with v3, room length $-1.2$ to $-1.5$\,\% with v9, $-1.86$\,\% automatic). Not met:
-NFR1 (28.9 instead of 30\,FPS), NFR3 (72 to 104 minutes on an RTX~3070 instead of 15 on an RTX~4090); not measured:
+NFR1 (28.9 instead of 30\,FPS), NFR3 (72 to 106 minutes on an RTX~3070 instead of 15 on an RTX~4090); not measured:
 NFR2 and NFR5 on a phone.
 
-\paragraph{Limits.} Semantics are scored only on the room they were tuned on; the automatic sensor chain is below the
-hand-built one on the featureless recording; the room layout needs a reconstructed floor; processing time is far from
+\paragraph{Limits.} Semantics are scored only on the room they were tuned on; the room layout needs a reconstructed
+floor (its height on the featureless recording is not trustworthy); processing time is far from
 the proposal's target; the system has been tested on a handful of rooms recorded by the team.

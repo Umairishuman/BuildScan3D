@@ -21,14 +21,15 @@ recipe from the recording itself.
 \paragraph{Status at the end of FYP-1.} The whole chain works from the command line on the development PC
 (RTX~3070): on the main test room the automatic pipeline gives 25.33\,dB held-out PSNR (aligned) and a room length
 1.86\,\% short of the tape, in 106 minutes with no hand-set option (R-136); the web files are 92\,\% smaller than the
-trained model at a render difference of 36\,dB (R-139). On a featureless recording the sensor chain reached 24.25\,dB
-by hand (R-133); the automatic version is 1.4\,dB lower (R-135). The upload server still runs the older recipe.
+trained model at a render difference of 36\,dB (R-139). On a featureless recording the automatic pipeline with
+ALIKED matching reached 25.68\,dB, above the best hand-built model (24.46\,dB on the same frames, R-145). The upload
+server still runs the older recipe.
 
 \paragraph{Risks.} Processing time (72 to 106 minutes on an RTX~3070 against the 15-minute target on an RTX~4090);
 semantics scored only on the room they were tuned on; room layout on recordings that never show the floor; testing on
 a handful of rooms recorded by the team.
 
 \paragraph{FYP-2 plan.} The server and the phone run the automatic pipeline end to end; processing time; semantics
-evaluated on new rooms; the sensor chain made as good automatically as by hand; user acceptance test with the
+evaluated on new rooms; room height on recordings that never show the floor; user acceptance test with the
 construction stakeholder.
 % TODO(team): align with the Remaining FYP Plan chapter.

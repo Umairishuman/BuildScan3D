@@ -16,7 +16,8 @@ video to the web viewer output without hand-set options.
 
 On the main test room the model reaches 25.16\,dB PSNR on 79 held-out off-path frames; tape-measured lengths agreed
 within 0.19\,\% on average with an earlier model (v3), and the v9 recipe makes the room 1.2 to 1.5\,\% short. On a featureless recording, where normal SfM placed 87 of 5{,}629 frames, the sensor chain
-reached 24.25\,dB on held-out frames using only commercially usable networks. The automatic pipeline processed a
-textured bedroom end to end in 104 minutes on an RTX~3070; on the featureless recording it chose the sensor chain by
-itself but scored 1.4\,dB below the hand-built chain. On the main test room the automatic pipeline gave 25.33\,dB
-(aligned) on held-out frames and a room length 1.86\,\% short of the tape, in 106 minutes with no hand-set option.
+reached 24.25\,dB on held-out frames using only commercially usable networks when assembled by hand; the automatic
+pipeline, choosing the sensor chain by itself and matching with learned ALIKED features, reached 25.68\,dB on the
+same frames (best hand-built 24.46\,dB). On the main test room the automatic pipeline gave 25.35\,dB (aligned) on
+held-out frames against 25.51\,dB for the hand-set recipe, and a room length 1.86\,\% short of the tape, in 106
+minutes on an RTX~3070 with no hand-set option.

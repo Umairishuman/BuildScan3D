@@ -38,7 +38,11 @@ scan\_009 (featureless) & 894 & 26\,\% & 727$^g$ & 1.33 / 3.68 \\
 \smallskip
 \footnotesize $^g$ placed by the sensor-assisted chain; its units are metric only approximately.
 \end{table}
-% TODO(team): E1 second half - visual-only COLMAP without ARCore pairs vs with them (track completion, ATE).
+The second half of the exit-gate comparison is SfM with and without the ARCore-guided image pairs, on the same
+keyframes (R-142). Both versions placed the same frames: all 1005 on the main room, 409 of 894 on scan\_009, in every
+15-second stretch of the walk. On the main room the two solutions differ by 0.23\,m (median) along the walk. With image
+retrieval in place, ARCore's contribution is therefore the metric scale and gravity of the model, not more frames
+tracked.
 
 \section{Reconstruction Quality}
 \begin{table}[htbp]
@@ -54,7 +58,7 @@ v9 end to end & 79 & 25.16$^a$ & 0.8247 & P\&S 4.16 \\
 v9, faster training & 79 & 25.14$^a$ & 0.8251 & R-062 \\
 v9, faster training + photometric init & 79 & 25.16$^a$ & 0.8240 & R-063 \\
 Automatic pipeline (\texttt{--auto}) & 62$^b$ & 24.61$^a$ (25.33 aligned) & 0.8222 (0.8350) & R-136 \\
-% TODO(agent): v9 end to end with eval_align on the rebuilt frames (same tool as R-136), after R-143.
+Automatic, photometric initialisation & 62$^b$ & 24.50$^a$ (25.11 aligned) & 0.8233 (0.8335) & R-144 \\
 \bottomrule
 \end{tabular}
 
@@ -82,6 +86,7 @@ Sensor chain with scale-drift correction & 22.67 & & R-094 / R-096 \\
 Same, Depth Anything 3 priors with confidence cut-off$^c$ & 24.25 & & R-133 \\
 Automatic pipeline (\texttt{--auto}, sensor path chosen by itself) & 23.07$^d$ & & R-135 \\
 Same + track directions in the rotation solve (rejected) & 21.81$^h$ & & R-140 \\
+\textbf{Automatic pipeline with ALIKED features} & \textbf{25.68}$^d$ & & R-145 \\
 \bottomrule
 \end{tabular}
 
@@ -90,11 +95,15 @@ Same + track directions in the rotation solve (rejected) & 21.81$^h$ & & R-140 \
 $^d$ on the 61 frames it shares with R-128 (R-128: 24.46 on the same 61). $^h$ on the 56 frames shared by R-140,
 R-135, R-128 and R-133 (23.03, 24.33 and 24.41 on the same 56).
 \end{table}
-The automatic run reaches the sensor-assisted chain without a hand choice (SfM placed 41\,\% of the keyframes; after
-the chain 81\,\%), but its cameras are worse than the hand-built chain's, by 1.4\,dB overall and 3\,dB on the blank
-wall (R-135). Its room layout also failed (no floor is reconstructed in this recording); see
-Section~\ref{sec:eval-layout}.
-% TODO(Tayyab): R-135 diagnosis (why sensor_path.py < the hand chain) if done before the deadline.
+The first automatic run reached the sensor-assisted chain without a hand choice (SfM placed 41\,\% of the keyframes;
+after the chain 81\,\%), but its cameras were worse than the hand-built chain's, by 1.4\,dB overall and 3\,dB on the
+blank wall (R-135). Its camera positions drifted apart from the hand-built ones from 45\,s on, and its loop closure had
+half the image-pair directions: the hand-built chain had been matched with learned ALIKED features, the automatic one
+with SIFT. With ALIKED matching the automatic pipeline placed 78\,\% of the keyframes in SfM alone and became the best
+scan\_009 model of the project: 25.68\,dB against 24.46\,dB for the best hand-built model on the same 61 frames,
+28.66\,dB on the blank wall and 22.05\,dB on the 134--140\,s stretch that every earlier run failed (R-145). SfM with
+ALIKED is slower (20.5 against 3.9 minutes). The room layout of this recording is still not trustworthy
+(Section~\ref{sec:eval-layout}).
 
 \section{The Automatic Pipeline}
 \begin{table}[htbp]
@@ -133,9 +142,10 @@ R-136, main room, \texttt{--auto} & 240 & 28.4 & 1.9 & 17.5 & 32.9 & 86.0 & 20.1
 \footnotesize $^e$ SfM plus the sensor-assisted camera chain. $^f$ sum of the stage times; the run was paused
 twice. Empty cells: not recorded for that run.
 \end{table}
-NFR3 (a 60-second video in 15 minutes on an RTX~4090) is not met and was not measured on a 4090. Known savings not yet
-in the automatic recipe: the photometric initialisation (20.1 $\rightarrow$ 7.5\,min at equal quality, R-063, open
-decision OD-10).
+NFR3 (a 60-second video in 15 minutes on an RTX~4090) is not met and was not measured on a 4090. A known saving not yet
+in the automatic recipe: the photometric initialisation, 17.5 $\rightarrow$ 7.5\,min inside the automatic pipeline
+(7.1\,min net, as training took 2.9\,min longer) at $-0.22$\,dB on the same held-out frames (R-144; R-063 on the older
+recipe: 20.1 $\rightarrow$ 7.5\,min at equal quality); open decision OD-10.
 
 \section{Metric Accuracy}
 \label{sec:eval-accuracy}
@@ -168,7 +178,10 @@ not yet been checked by a person, so precision and recall on unseen rooms (E3) a
 with a worst frame of 195\,ms before the fix and 1{,}174 frames with a worst frame of 15\,ms after it (desktop Chrome on
 the RTX~3070 PC; scan~\#8: 290 $\rightarrow$ 20\,ms). NFR5 ($\geq$\,30\,FPS in a mid-range phone browser) is not
 measured on a phone.
-% TODO(agent): load time and frame time for 3 - 4 bundles. TODO(Zaid): phone measurement (E5).
+With the fix, the best model (0.6 million Gaussians) loaded in 2.2\,s from the local server and scans \#7 and \#8 in 6.1
+and 7.6\,s from the online bucket; idle, dragging and hovering ran at the headless browser's 5\,ms frame pacing with
+no frame above 15\,ms and no long main-thread task (R-143, desktop).
+% TODO(Zaid): phone measurement (E5).
 \paragraph{Compression.} The web bundle stores every Gaussian of the model as \texttt{.spz} (quantised positions,
 opacity, colour, scale, rotation and third-degree spherical harmonics, gzip). Decoding the bundle and rendering it from
 the same cameras as the uncompressed model gives the loss from compression alone (Table~\ref{tab:eval-spz}, R-139):
