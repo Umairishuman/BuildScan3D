@@ -417,12 +417,13 @@ for n in pick:
                 cv2.putText(B_, f_["id"], (p_[0] + 8, p_[1] + 5), 0, 0.55, (0, 0, 0), 4)
                 cv2.putText(B_, f_["id"], (p_[0] + 8, p_[1] + 5), 0, 0.55, (255, 255, 255), 1)
     tiles.append(np.hstack([A_, B_]))
-h_ = max(t.shape[0] for t in tiles)
-tiles = [cv2.copyMakeBorder(t, 0, h_ - t.shape[0], 0, 0, cv2.BORDER_CONSTANT) for t in tiles]
-rows = [np.hstack(tiles[i:i + 4]) for i in range(0, len(tiles) - 3, 4)]
-wmax = max(r.shape[1] for r in rows)
-rows = [cv2.copyMakeBorder(r, 0, 0, 0, wmax - r.shape[1], cv2.BORDER_CONSTANT) for r in rows]
-cv2.imwrite(os.path.join(args.out, "views_semantic.jpg"), np.vstack(rows), [cv2.IMWRITE_JPEG_QUALITY, 85])
+if len(tiles) >= 4:                                          # no 2D frames (sem2d_empty.py, SEMANTICS=0): no views picture
+    h_ = max(t.shape[0] for t in tiles)
+    tiles = [cv2.copyMakeBorder(t, 0, h_ - t.shape[0], 0, 0, cv2.BORDER_CONSTANT) for t in tiles]
+    rows = [np.hstack(tiles[i:i + 4]) for i in range(0, len(tiles) - 3, 4)]
+    wmax = max(r.shape[1] for r in rows)
+    rows = [cv2.copyMakeBorder(r, 0, 0, 0, wmax - r.shape[1], cv2.BORDER_CONSTANT) for r in rows]
+    cv2.imwrite(os.path.join(args.out, "views_semantic.jpg"), np.vstack(rows), [cv2.IMWRITE_JPEG_QUALITY, 85])
 # plan with fixtures
 m = (o > 0.5) & (P[:, 1] > fy + 0.1) & (P[:, 1] < (cy_ if has_ceil else fy + 2.4) - 0.1)
 xz = P[m][:, [0, 2]]; lo = np.percentile(xz, 0.5, 0) - 0.5; hi = np.percentile(xz, 99.5, 0) + 0.5

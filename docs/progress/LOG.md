@@ -1135,4 +1135,10 @@ plan updated (detect path holes; hole-aware loop checks).
   list updated for `--auto` (for Umair). Temporary viewer worktree removed (links first).
 - Next: Tayyab: push `fix/viewer-perf` and `feature/auto-pipeline`, PRs; answer OD-10, OD-16, OD-17, OD-18, OD-19;
   look at `scan_009_057ed3beb4fc_auto4` (R-145) and `newRoomAttemptSadness_auto1` (R-136) in the viewer.
+- Day 2026-11-28 (Tayyab): viewer server started for Tayyab (R-145 vs R-128 / R-133, R-136, R-134 links), stopped at
+  his request. R-146 (ALIKED on the textured tape room, OD-17) started 12:45, paused 13:02 in SfM at his request.
+  `run_full.sh` `SEMANTICS=0` (Tayyab: "skip the semantic labelling for now"): no fixture detection (sem2d / verify /
+  sem3d2), `sem2d_empty.py` writes an empty detections file, sem3d labels the structure from the layout; tested on
+  R-136's model into the scratchpad (floor 29.82 m2, ceiling 2.838 m, 5 walls, web bundle 12.2 MB). `semantic3d.py`:
+  the views picture is skipped when there are fewer than 4 frames (it crashed with none).
 

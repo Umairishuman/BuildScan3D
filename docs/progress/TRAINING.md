@@ -186,7 +186,7 @@ Umair's side continues at R-105.
 | R-143 | 2026-11-28 | Viewer load / frame times on the fixed viewer, seven scans (E5, desktop) | 3070 | 04:55 → 05:12 | 3 of 7 loaded: best model 2.2 s, scans #7 / #8 from R2 6.1 / 7.6 s; median frame 5.0 ms, worst 15 ms; 4 linked bundles never loaded | Kept (3 scans); 4 not measured |
 | R-144 | 2026-11-28 | OD-10 under `--auto`: R-136 from `init` with the photometric PatchMatch (`auto3`), same split | 3070 | 05:26 → 06:13 (eval 06:24); init 7.5 vs 17.5, train 35.8 vs 32.9, 44.1 vs 51.2 min | aligned 25.11 vs R-136 25.33 (same 62 frames) | Inconclusive (OD-10: -7 min, -0.22 dB) |
 | R-145 | 2026-11-28 | scan_009: `--auto` with ALIKED matching (`auto4`), R-128's split | 3070 | 06:24 → 07:56 (eval 08:02); run_v8 73.2 (sfm 20.5, sensor 20.7), 91.5 min wall | **25.68 vs R-128 24.46 / R-133 24.47 / R-135 23.07 (61 common)**; blank wall 28.66; 134 - 140 s 22.05 | Kept (best scan_009 model, automatic) |
-| R-146 | 2026-11-28 | newRoomAttemptSadness: `--auto` with ALIKED matching (`auto5`), R-136's split, + tape | 3070 | running | running | running |
+| R-146 | 2026-11-28 | newRoomAttemptSadness: `--auto` with ALIKED matching (`auto5`), R-136's split, + tape | 3070 | 12:45 → paused 13:02 in SfM (Tayyab) | not finished: resume `--from sfm` with `SEMANTICS=0` | running (paused) |
 
 ## Runs
 
@@ -3881,6 +3881,12 @@ igs.txt`):
   -1.86 %, SfM 28.4 min, 106.1 min in all. Started while Tayyab views scans in the web viewer (the training stage may
   slow the viewer).
 - **Start → end:** (filled in when it ends)
-- **Errors during the run:** (filled in as they happen)
+- **Errors during the run:**
+  - 12:45 started; select 2.6 min (window 7, as R-136). **13:02 paused by the agent at Tayyab's request** ("pause the
+    current training"), during SfM's ALIKED feature extraction (still running after ~15 min; on scan_009 R-145 the whole
+    ALIKED SfM took 20.5 min; the web viewer was using the GPU too). The chain and all its processes (COLMAP, run_v8,
+    run_full, tee) stopped by PID; GPU idle after. Resume with `--from sfm` (the extraction restarts; the partial
+    `database.db` is removed by `sfm_colmap.py`). Tayyab also asked to skip the semantic labelling for now: the resume
+    uses `SEMANTICS=0` (no fixture detection, walls / floor / ceiling still labelled).
 - **Result:** (filled in when it ends)
 - **Verdict:** (filled in when it ends)

@@ -19,6 +19,7 @@
 #   sem3d2                                   semantic3d.py again with verdicts (bs-ns)
 #   mesh meshlabels web                      mesh.py, mesh_labels.py, export_web.py (bs-ns; Node for .spz)
 #   plan                                     plan_export.py: plan.json / .svg / .dxf in layout/ (CPU, #12)
+# SEMANTICS=0 skips the fixture detection (sem2d / verify / sem3d2); walls / floor / ceiling are still labelled.
 # Every GPU_EVERY seconds (default 30) a status line shows GPU use, memory, temperature, power and, while training,
 # the step and time left (training itself writes only to train.log); also saved to gpu.csv. GPU_EVERY=0 turns it off.
 # A run that dies in training continues with: --from train (geo_splatfacto checkpoints every 2500 steps; see R-023
@@ -117,10 +118,21 @@ if [[ -f "$S/frames.json" ]]; then
   NF=$(sys -c "import json,sys; print(len(json.load(open(sys.argv[1]))['frames']))" "$S/frames.json" 2>/dev/null || echo 0)
   [[ "$NF" =~ ^[0-9]+$ && $NF -gt 600 ]] && SEM_EVERY=$(( (NF + 299) / 300 ))
 fi
-stage sem2d      sem "$HERE/semantic2d.py" --work "$S" --every "$SEM_EVERY" --box_thr 0.28 --tiles 640 --out semantic2d_v10
-stage sem3d      ns  "$HERE/semantic3d.py" --ply "$M/splat.ply" --work "$S" --layout "$M/layout/layout.json" --out "$M/semantic_v10" --sem2d semantic2d_v10 --floor_win 0.06
-stage verify     sem "$HERE/verify_fixtures.py" --work "$S" --sem2d semantic2d_v10 --semantic "$M/semantic_v10"
-stage sem3d2     ns  "$HERE/semantic3d.py" --ply "$M/splat.ply" --work "$S" --layout "$M/layout/layout.json" --out "$M/semantic_v10" --sem2d semantic2d_v10 --verdicts "$M/semantic_v10/verdicts.json" --floor_win 0.06
+# SEMANTICS=0 (Tayyab, 2026-11-28): no fixture detection. sem2d writes an empty detections file instead (sem2d_empty.py),
+# sem3d labels walls / floor / ceiling / openings from the layout only, verify and sem3d2 are skipped (~15 min saved);
+# mesh labels, the web bundle and the plan still run.
+SEM2D=semantic2d_v10
+if [[ "${SEMANTICS:-1}" == 0 ]]; then
+  SEM2D=semantic2d_none
+  stage sem2d    sys "$HERE/sem2d_empty.py" --work "$S" --out "$SEM2D"
+else
+  stage sem2d    sem "$HERE/semantic2d.py" --work "$S" --every "$SEM_EVERY" --box_thr 0.28 --tiles 640 --out "$SEM2D"
+fi
+stage sem3d      ns  "$HERE/semantic3d.py" --ply "$M/splat.ply" --work "$S" --layout "$M/layout/layout.json" --out "$M/semantic_v10" --sem2d "$SEM2D" --floor_win 0.06
+if [[ "${SEMANTICS:-1}" != 0 ]]; then
+  stage verify   sem "$HERE/verify_fixtures.py" --work "$S" --sem2d "$SEM2D" --semantic "$M/semantic_v10"
+  stage sem3d2   ns  "$HERE/semantic3d.py" --ply "$M/splat.ply" --work "$S" --layout "$M/layout/layout.json" --out "$M/semantic_v10" --sem2d "$SEM2D" --verdicts "$M/semantic_v10/verdicts.json" --floor_win 0.06
+fi
 DEPTH=(); [[ " ${V8_ARGS[*]} " == *" --pgsr "* || " ${V8_ARGS[*]} " == *" --auto "* ]] && DEPTH=(--depth unbiased)   # --auto implies --pgsr
 stage mesh       ns  "$HERE/mesh.py" --ply "$M/splat.ply" --work "$S" --out "$M/mesh" "${DEPTH[@]}"
 stage meshlabels ns  "$HERE/mesh_labels.py" --mesh "$M/mesh/mesh.ply" --ply "$M/splat.ply" --semantic "$M/semantic_v10" --layout "$M/layout/layout.json" --clean 0.01 --clean_ceiling 0.04 --glb 400000
