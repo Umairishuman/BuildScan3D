@@ -1141,4 +1141,19 @@ plan updated (detect path holes; hole-aware loop checks).
   sem3d2), `sem2d_empty.py` writes an empty detections file, sem3d labels the structure from the layout; tested on
   R-136's model into the scratchpad (floor 29.82 m2, ceiling 2.838 m, 5 walls, web bundle 12.2 MB). `semantic3d.py`:
   the views picture is skipped when there are fewer than 4 frames (it crashed with none).
+- Afternoon 2026-11-28 (Tayyab): **R-146 resumed** 14:53 from SfM with `SEMANTICS=0` (Tayyab: "ok resume").
+  Tayyab asked for a usability pass on the web viewer and the app and an information security framework for the
+  pipeline and apps: **branch `feature/ux-security`** (worktree `../FYP-ux`, from `fix/viewer-perf`, so R-146's code
+  stayed untouched), 7 commits: viewer load progress, error card with retry, measuring prompt by step, Esc and
+  shortcuts M L T R I F ?, Controls panel, phone layout, focus / reduced motion / contrast; CSP and security headers;
+  the sign-in page's false "256-bit encrypted" / "SOC 2 compliant" badges replaced; app 48 dp buttons, labelled
+  record button with a 1 s double-tap guard, actionable messages, TalkBack fixes, network security config
+  (GitHub HTTPS-only); `vggt_poses.py` `weights_only=True`; v0.3.9 changelog line (`test_changelog` passes).
+  New [docs/SECURITY.md](../SECURITY.md) and [docs/HCI.md](../HCI.md) (on that branch); **D-100**, **OD-20** (server
+  has no authentication: findings S1 – S8 for Umair). Checks: tsc, eslint (1 known warning), `next build`; headless
+  Chrome (software rendering, GPU busy) on scan #7 from R2 at 1440 x 900 and 390 x 844: CSP enforced, no violations
+  or errors. Python tests all pass with `PYTHONUTF8=1` (without it four `test_run_times.py` tests fail on the Windows
+  console encoding only). App not compiled yet (3.5 GB RAM free during R-146).
+- Next: Tayyab: push `fix/viewer-perf`, `feature/ux-security`, `feature/auto-pipeline`; look at the viewer changes in
+  his browser; OD-20 for Umair on Monday.
 

@@ -902,6 +902,32 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 - **By:** Muhammad Tayyab (design proposed 2026-11-26, "ok continue and keep working over this night", 2026-11-27).
 - **Status:** Active.
 
+## D-100 · 2026-11-28 · Information security framework and usability review for the apps and the pipeline
+
+- **Decision:** the project follows the security framework in [docs/SECURITY.md](../SECURITY.md) (assets, nine
+  principles, data flow and trust boundaries, STRIDE threats, controls with their status, a PR checklist, a findings
+  log) and the usability principles in [docs/HCI.md](../HCI.md) (Nielsen's heuristics, WCAG 2.2 AA, Material touch
+  targets). First pass done on branch `feature/ux-security`: web viewer (load progress, recoverable errors, keyboard
+  shortcuts + Controls panel, Esc, phone layout, focus / reduced motion / contrast; CSP and security headers; the
+  sign-in page's untrue "256-bit encrypted" / "SOC 2 compliant" badges replaced by a true note), app (48 dp touch
+  targets, labelled record button with a 1 s double-tap guard, actionable error messages, screen-reader fixes,
+  network security config with HTTPS-only GitHub updates), pipeline (`weights_only=True` for VGGT weights).
+- **Why:** Tayyab (2026-11-28): "look into refining the web viewer and the mobile app in terms of usability, ensure
+  good HCI principles, also establish a decent framework of information security principles in our pipeline and
+  apps". The review found the server reachable by anyone on the LAN with no authentication, a configurable SSH target
+  and RunPod key behind an open `/config`, no web security headers, and false compliance claims on the sign-in page.
+- **Evidence:** docs/SECURITY.md §5 and §7 (findings with file / line), docs/HCI.md §2 – §3; web checks in
+  prototype/web-ui/STATUS.md (headless Chrome: policy enforced with no violation on three pages, phone layout).
+  Not tested with users, a screen reader or a real phone; the app changes were not compiled on this PC at the time
+  of writing.
+- **Rejected alternatives:** changing the upload server now (Umair's area, and he works on it from 2026-11-30: the
+  server items are findings S1 – S8 with proposed fixes, OD-20); real user accounts (W7, out of scope for the FYP
+  prototype); a strict nonce-based CSP (needs middleware and dynamic rendering of every page; the current policy
+  already blocks third-party scripts, framing and plugins).
+- **By:** Muhammad Tayyab (asked for the framework and the review, 2026-11-28); contents written by his agent; the
+  server controls are proposals for Umair (OD-20).
+- **Status:** Active.
+
 ## Open decisions (need the team; agents must not decide these)
 
 | # | Question | Context |
@@ -925,3 +951,4 @@ its status becomes **Superseded by D-xxx** and the new entry says what changed. 
 | OD-17 | ALIKED matches (`--sfm_args "--feature aliked"`) for sensor-route recordings, or for every recording? | R-145: scan_009 25.68 vs 23.07 with SIFT (R-135) and 24.46 best hand-made; SfM 20.5 vs 3.9 min; not tested on textured rooms; `--track_dirs` rejected (R-140) |
 | OD-18 | Which scan_009 model goes into the final demo? | R-145 (automatic, ALIKED, 25.68 on 61 common frames, bundle `scan_009_057ed3beb4fc_auto4`) is now above R-133 (24.47); its room height is not trustworthy |
 | OD-19 | Final report format and ownership of the chapters (LaTeX draft started in `report/final-eval/`, copy of the mid report) | FINAL_PLAN.md section 2 suggests owners by proposal workflow |
+| OD-20 | Upload-server security (docs/SECURITY.md S1 – S4, A8): shared upload token, `/config` only from the PC itself, name check on `/reprocess`, upload size limits? Real user accounts on the web (W7)? | Found 2026-11-28 (D-100): anyone on the same network can upload, cancel, reprocess and change the processing target / RunPod key. Umair's area; the token needs a field in the app's Server tab |
