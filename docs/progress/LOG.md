@@ -1124,3 +1124,15 @@ plan updated (detect path holes; hole-aware loop checks).
   `run_full.sh` (D-099), or `test_v9_stages_match_run_full_sh` fails (it did on this branch since 2026-11-27).
   `tests/test_changelog.py` fails on `master` too (not touched).
 - `run_times.py check`: a run restarted with `--from <stage>` compares its run_v8 line with the stages it ran (R-136).
+- Later the night (the agent session was suspended from ~05:00 to 12:00; the queued chains ran on their own):
+  **R-140** `--track_dirs` rejected (21.81 vs R-135 23.03 on 56 common frames); R-145 changed to ALIKED only before
+  it started. **R-142** (E1): visual-only and ARCore-guided SfM place the same frames. **R-143**: viewer loads 2.2 -
+  7.6 s, worst frame 15 ms (3 scans; 4 linked bundles did not load). v9_e2e reference rebuilt and evaluated: 25.44
+  aligned (unaligned 25.16 = October's); R-136 25.35 vs v9_e2e 25.51 on 49 common frames. **R-144** (OD-10):
+  photometric init -10 min init, -7.1 min net, -0.22 dB. **R-145: `--auto` with ALIKED matching = best scan_009 model,
+  25.68 vs 24.46 (best hand-made, 61 common frames)**, automatic.
+- `run_full.sh` exit status fixed (exited 1 after finished long runs; the server reads it). `server/pipeline.py` stage
+  list updated for `--auto` (for Umair). Temporary viewer worktree removed (links first).
+- Next: Tayyab: push `fix/viewer-perf` and `feature/auto-pipeline`, PRs; answer OD-10, OD-16, OD-17, OD-18, OD-19;
+  look at `scan_009_057ed3beb4fc_auto4` (R-145) and `newRoomAttemptSadness_auto1` (R-136) in the viewer.
+

@@ -16,12 +16,12 @@ code on `master`, the evaluation numbers, the report, the demo.
 |---|---|---|
 | Capture app | Works (v0.3.6), all recordings made with it | NFR1 not met (28.9 fps, R-031), NFR2 not measured on a phone (E9) |
 | Upload + server | FastAPI server works, runs the **v3** recipe; v9 option built (`BUILDSCAN_PIPELINE=v9`) | Server runs `run_full.sh -- --auto` (2.3); phone → model run (2.5, exit gate a). Umair's area |
-| Automatic pipeline | `--auto` on `feature/auto-pipeline` (unpushed): R-134 bedroom OK (105 min, 5 walls, 19 fixtures); R-135 scan_009 runs (71.9 min) but worse than the hand chain (23.07 vs 24.46 dB) and its layout fails; R-136 tape room running | Validation on the tape room (R-136); layout on floater-heavy models; merge to `master` |
-| Featureless (novelty) | Best hand-made model R-133 / R-128 (24.25 dB); DA3-BASE priors (Apache) | Why `sensor_path.py` is worse than the hand chain (R-135 verdict) |
+| Automatic pipeline | `--auto` on `feature/auto-pipeline` (unpushed): bedroom OK (R-134, 104 min); tape room 25.35 vs hand-set 25.51 dB, tape -1.86 % (R-136, 106 min); scan_009 with ALIKED 25.68, above every hand-made model (R-145, 91.5 min) | Merge to `master`; OD-16 / OD-17; scan_009 room height |
+| Featureless (novelty) | Best model now automatic: R-145 (ALIKED, 25.68 vs hand-made 24.46 on 61 frames); DA3-BASE priors (Apache) | Room height (no floor reconstructed) |
 | Semantics | v10, scored only on the room it was tuned on (15 / 17) | E3 on other rooms needs Umair's fixture sheets (#21) |
 | Mesh, layout, plan | Working; layout fails on scan_009 (7.28 m) | Floater-robust floor / ceiling |
-| Web viewer | Lag fixed on `fix/viewer-perf` (unpushed; worst frame 195 → 15 ms on the brick room) | Merge; LoD measured (Spark `lod`), E5 numbers |
-| Compression | `.spz` in use (~92 % smaller); Zaid's `.ksplat` branch unmerged | OD-1, quality of `.spz` vs `.ply` (5.4 / E6) |
+| Web viewer | Lag fixed on `fix/viewer-perf` (unpushed); loads 2.2 - 7.6 s, worst frame 15 ms (R-143, desktop) | Merge; local bundles and a phone not measured |
+| Compression | `.spz` 92.3 - 92.8 % smaller at 35.8 - 36.5 dB vs the `.ply` render (R-139); Zaid's `.ksplat` branch unmerged | OD-1 with `.ksplat` numbers |
 | Records / repo | Up to date on `feature/auto-pipeline` | 3 branches to push and merge (section 3) |
 | Report, UAT, poster, demo | **Not started** (only the mid report) | R1 – R7 |
 

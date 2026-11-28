@@ -783,14 +783,20 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       - [x] 2026-11-27 / 28: sensor path automated (`sensor_path.py`, `sensor` stage). Test bench: **R-134 bedroom**
         end to end, no hand choice, kept (104.0 min of stages; 5 walls, 19 fixtures); **R-135 scan_009** end to end
         in 71.9 min, sensor path chosen by the analyzer (41 → 81 % placed), but 23.07 vs the hand chain's 24.46 dB
-        (61 common frames) and layout 7.28 m: inconclusive. **R-136 newRoom** (tape room, kept): held-out 25.33 dB
-        aligned (62 frames), closed room 6.575 x 4.380 m, tape -1.86 %, 106.1 min; same-tool v9_e2e reference queued.
+        (61 common frames) and layout 7.28 m: inconclusive. **R-136 newRoom** (tape room, kept): aligned 25.35 vs v9_e2e 25.51 on the same 49 held-out frames, closed room
+        6.575 x 4.380 m, tape -1.86 %, 106.1 min.
       - [x] 2026-11-28: layout fallback for implausible floors / ceilings (R-137, `layout.py`): R-135 7.28 → 5.25 m (first pick 3.56, raised by D-072 on floater walls),
         textured rooms unchanged. R-138 queued: R-135's downstream again with it.
       - [x] 2026-11-28 **R-140 `--track_dirs`** (R-079's track-direction rot_sfm, left out of `sensor_path.py`):
         rejected, 21.81 vs R-135 23.03 on 56 common frames, blank wall 17.60 vs 22.21 (fewer cameras kept); opt-in only.
-      - [ ] **R-145 (queued): ALIKED matches** for the sensor route (the hand chain's pair directions came from ALIKED:
-        6,148 vs 2,799 - 3,031 with SIFT). If it closes the gap: OD-17 for Tayyab.
+      - [x] 2026-11-28 **R-145 ALIKED matches** (`--auto --sfm_args "--feature aliked"`): **25.68 vs the best hand-made
+        model 24.46 (R-128) / 24.47 (R-133) on 61 common held-out frames**, blank wall 28.66, 134 - 140 s 22.05 (every
+        earlier run failed there); SfM placed 78 % (SIFT 41 %); 91.5 min; SfM 20.5 vs 3.9 min. Kept: best scan_009 model,
+        automatic. OD-17 for Tayyab (ALIKED for the sensor route or for every recording).
+      - [x] 2026-11-28 R-144 photometric init inside `--auto` (OD-10): init 17.5 → 7.5 min (7.1 net), -0.22 dB on the
+        same 62 frames; inconclusive, Tayyab to decide.
+      - [x] 2026-11-28 `run_full.sh` exited 1 after finished long runs (GPU monitor + EXIT trap under `set -e`): fixed
+        (4beb0a3); the server reads that exit status.
       - [ ] Tayyab to decide: `--auto` as the recipe for new rooms / the server (after R-136); OD-10 in `--auto`.
     - [ ] Disk on the RTX 3070 PC: 1.9 GB free after R-130 (2026-11-25); candidates to slim (Tayyab's call): R-127
       (`work_v9plb*`, rejected), R-129 (`work_v9plk*`, not adopted), R-126 (`work_v9pla*`), R-123 (`work_v9plh*`),
@@ -859,8 +865,10 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
       (prototype/web-ui/STATUS.md §4).
 - [ ] Adaptive splat budget / level of detail (FR9, NFR5). [proposal v4] Spark 2.3.1 builds a LoD tree at load
       (`SplatMesh({lod: true})`, `SparkRenderer({enableLod})`): to measure on the brick room when the GPU is free.
-- [ ] **[new 2026-11-28] `.spz` quality against the `.ply`** (5.4 / E6, input to OD-1): `spz_quality.py` (decoder checked:
-      positions within 0.12 mm, rotations 0.9999998); R-139 queued on four bundles.
+- [x] **[new 2026-11-28] `.spz` quality against the `.ply`** (5.4 / E6, input to OD-1): done (R-139): 92.3 - 92.8 %
+      smaller, render difference 35.8 - 36.5 dB PSNR, SSIM 0.98 - 0.99 on four models.
+- [ ] Viewer times (E5, desktop): R-143 measured 3 scans (load 2.2 - 7.6 s, worst frame 15 ms); the 4 local bundles
+      did not load through junctions in the test worktree: repeat with copies. Phone not measured.
       Smaller `.spz` (fewer SH bands / opacity cut) only −13 – 18 % (measured 2026-11-26).
 - [ ] Web-UI step 8 (S9 empty and error states) and the known issues in `prototype/web-ui/STATUS.md` §6 (list view toggle,
       `globals.css` conflicts, stub buttons, every floor-plan room opens the same model, inert measurement types, missing thumbnails).
@@ -870,9 +878,9 @@ of semantics (2D stage 38 min since the v10 tile pass, was 8 min). Proposal NFR3
 - [ ] **Final report (due 2026-12-06, Tayyab)**: draft started 2026-11-28 in `report/final-eval/BuildScan3D_Final_Report/`
       (copy of the mid report source; new chapters Iteration 2 and Evaluation with `TODO(name)` markers; builds to
       123 pages). Plan to the deadline: [FINAL_PLAN.md](FINAL_PLAN.md).
-- [ ] E1 second half: visual-only COLMAP vs ARCore-assisted (needs a retrieval-only pair mode in `sfm_colmap.py`;
-      exhaustive is ~500k pairs). First half done: ARCore path vs our cameras, R-141 (median 0.14 - 0.25 m on textured
-      rooms, 26 % tracked on scan_009).
+- [x] E1 (2026-11-28): ARCore path vs our cameras (R-141: median 0.14 - 0.25 m on textured rooms, 26 % tracked on
+      scan_009); visual-only vs ARCore-guided SfM (R-142, `--pairs visual`): same frames placed on both rooms, newRoom
+      solutions 0.23 m apart. In the report draft.
 - [ ] User acceptance test with the construction stakeholder in semester 2. [proposal v4 §10]
 
 ## 8. Done
