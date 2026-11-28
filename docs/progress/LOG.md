@@ -1156,4 +1156,18 @@ plan updated (detect path holes; hole-aware loop checks).
   console encoding only). App not compiled yet (3.5 GB RAM free during R-146).
 - Next: Tayyab: push `fix/viewer-perf`, `feature/ux-security`, `feature/auto-pipeline`; look at the viewer changes in
   his browser; OD-20 for Umair on Monday.
+- Evening 2026-11-28 (Tayyab, agent: "after it ends you may continue"): **R-146 closed** (16:45, eval 16:54): ALIKED on
+  the textured tape room 25.24 vs SIFT R-136 25.33 aligned on the same 62 frames, SfM 52.6 vs 28.4 min (partly CPU
+  contention from the web-UI checks); inconclusive, OD-17 updated. Its layout was wrong (far wall dropped as `outside`
+  behind a free-standing face in the middle of the room). **R-147** (layout only, nine models): new rule in `layout.py`,
+  a face with cameras on both sides that stops below 75 % of the room height is no wall; R-146 → 6.553 x 4.374 m
+  closed, R-144 (also wrong before) → 6.582 x 4.367 m closed, five models identical, scan_009 two fewer walls (still
+  open). Not tested on an L-shaped room (scan #6 is not on this PC; its walls reach the ceiling, so the rule should
+  not touch them). App on `feature/ux-security` compiled (`bash ./gradlew assembleDebug`, JDK 17; the Android Studio
+  JDK 25 fails) and linted: 0 errors (docs/HCI.md §3). pytest 327 passed, 1 known (`test_changelog`, fixed on
+  `feature/ux-security`). `run_times.py check`: R-146 / R-147 pass; R-061 / R-101 / R-102 FAIL as before (their entries
+  are on Umair's `exp/colmap-cudss`, not on this PC).
+- Next: Tayyab: OD-17 (ALIKED only for weak-texture recordings?), push the three branches; Umair: run
+  `run_times.py check --training git:exp/colmap-cudss`; layout: the slanted wall at the tape room's near-end corner
+  (STATUS §7).
 
