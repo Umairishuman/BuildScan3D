@@ -176,16 +176,16 @@ Umair's side continues at R-105.
 | R-133 | 2026-11-26 | scan_009: R-132 with DA3's confidence cut-off 1.1 (81 unsure frames without prior) (`v9pdc`) | 3070 | ~21:16 → 22:30; prior 1.6, init 2.5, train 26.7, total 31.4 min | 24.25 (= R-128; R-132 23.78); 60 – 90 s 26.56 (best); 134 – 140 s 17.11; off-path views cleaner than R-128 | Kept (DA3 candidate); Tayyab to look; work paused |
 | R-134 | 2026-11-27 | roomAttemptSadness2: first `--auto` run, raw video → web bundle, no hand-set option (`auto1`, D-099) | 3070 | 03:10 → 23:21 in three parts (session end, 9 pm pause); run_v8 83.5, layout 5.0, sem2d 12.7, rest 2.8 min | end to end, exit 0; 1.43 M Gaussians, 5 walls, 19 fixtures, mesh 892 k triangles, bundle 33 MB; outline not closed, ceiling 3.00 m vs R-069 2.82 m | Kept (auto pipeline works on a textured room); Tayyab to look |
 | R-135 | 2026-11-27 | scan_009: `--auto` from the raw video, sensor-path stage, R-128's split (`auto1`) | 3070 | 23:21 → 00:33 (+ eval to 00:38); run_v8 56.4 (sensor path 17.6, train 27.2), after 15.4 min; 71.9 min video → web bundle | 23.07 vs R-128 24.46 / R-133 24.47 (61 frames); 60 – 90 s 22.21; 134 – 140 s 18.51 (= R-128); layout wrong (7.28 m, 2 walls), 0 fixtures | Inconclusive: chain runs end to end, cameras worse than the hand-made chain |
-| R-136 | 2026-11-28 | newRoomAttemptSadness: `--auto` from the raw video with the v9_e2e held-out split (`auto1`), + tape check | 3070 | 01:21 → 03:08 (eval 03:17); run_v8 86.0, after 20.1, 106.1 min of stages | held-out (62) 24.61 / aligned 25.33, SSIM 0.835; room 6.575 x 4.380 m closed, tape -1.86 %; 17 fixtures (unchecked) | Kept (auto pipeline matches the hand-set v9 on the tape room) |
+| R-136 | 2026-11-28 | newRoomAttemptSadness: `--auto` from the raw video with the v9_e2e held-out split (`auto1`), + tape check | 3070 | 01:21 → 03:08 (eval 03:17); run_v8 86.0, after 20.1, 106.1 min of stages | aligned 25.35 vs v9_e2e 25.51 on the same 49 held-out frames; room 6.575 x 4.380 m closed, tape -1.86 %; 17 fixtures (unchecked) | Kept (auto pipeline matches the hand-set v9 on the tape room) |
 | R-137 | 2026-11-28 | Layout fallback for implausible floors / ceilings (`layout.py`), five existing models, no training | 3070 | 01:30 → 01:50 (~20 min) | R-135 7.28 → 5.25 m (first pick 3.56, raised by the D-072 wall-top rule on floater walls), 2 → 9 walls; R-134 / R-069 / v9_e2e choices unchanged; R-069 3.015 m with today's code (stored 2.78 m older code) | Kept |
 | R-138 | 2026-11-28 | scan_009 R-135: layout → plan again with the R-137 fallback (`auto1`) | 3070 | 03:17:58 → 03:22:38 (4.7 min) | height 5.25 m (R-135 7.28; D-072 raises the 3.56 m pick on floater walls), 9 walls, 4 fixtures | Kept (bundle), height not trustworthy |
 | R-139 | 2026-11-28 | `.spz` vs `.ply` size and render quality on four bundles (`spz_quality.py`, E6) | 3070 | 03:22:38 → 03:24:00 (1.4 min) | 92.3 – 92.8 % smaller; PSNR vs the `.ply` render 35.8 – 36.5 dB (min 30.4), SSIM 0.983 – 0.990 | Kept (NFR4 with quality) |
 | R-140 | 2026-11-28 | scan_009: `--auto --track_dirs` (R-079 step in the sensor path), R-128's split (`auto2`) | 3070 | 03:24 → 04:29 (eval 04:35); run_v8 49.2 (sensor 16.6), 65.1 min wall | 21.81 vs R-135 23.03 / R-128 24.33 (56 common); blank wall 17.60 vs 22.21; 69 % placed (R-135 81 %) | Rejected (`--track_dirs` stays off) |
 | R-141 | 2026-11-28 | ARCore-only camera path vs our cameras on three rooms (E1 part, CPU) | 3070 | ~02:00, < 1 min | median 0.245 / 0.138 / 1.328; ARCore tracked 100 / 88 / 26 % of keyframes (newRoom / bedroom / scan_009) | Kept (report evidence) |
-| R-142 | 2026-11-28 | E1: visual-only SfM vs ARCore-guided on the same keyframes, newRoom + scan_009 (SfM only) | 3070 | running (queued after R-140) | running | running |
-| R-143 | 2026-11-28 | Viewer load / frame times on the fixed viewer, seven scans (E5, desktop) | 3070 | running (queued after R-142) | running | running |
-| R-144 | 2026-11-28 | OD-10 under `--auto`: R-136 from `init` with the photometric PatchMatch (`auto3`), same split | 3070 | running (queued after R-143) | running | running |
-| R-145 | 2026-11-28 | scan_009: `--auto` with ALIKED matching (`auto4`), R-128's split | 3070 | running (queued after R-144) | running | running |
+| R-142 | 2026-11-28 | E1: visual-only SfM vs ARCore-guided on the same keyframes, newRoom + scan_009 (SfM only) | 3070 | 04:35 → 04:55 (newRoom 16.1, scan_009 3.6 min) | same frames placed (100 % / 45.7 %); newRoom cameras 0.23 m apart (median) | Kept (report E1) |
+| R-143 | 2026-11-28 | Viewer load / frame times on the fixed viewer, seven scans (E5, desktop) | 3070 | 04:55 → 05:12 | 3 of 7 loaded: best model 2.2 s, scans #7 / #8 from R2 6.1 / 7.6 s; median frame 5.0 ms, worst 15 ms; 4 linked bundles never loaded | Kept (3 scans); 4 not measured |
+| R-144 | 2026-11-28 | OD-10 under `--auto`: R-136 from `init` with the photometric PatchMatch (`auto3`), same split | 3070 | 05:26 → 06:13 (eval 06:24); init 7.5 vs 17.5, train 35.8 vs 32.9, 44.1 vs 51.2 min | aligned 25.11 vs R-136 25.33 (same 62 frames) | Inconclusive (OD-10: -7 min, -0.22 dB) |
+| R-145 | 2026-11-28 | scan_009: `--auto` with ALIKED matching (`auto4`), R-128's split | 3070 | 06:24 → 07:56 (eval 08:02); run_v8 73.2 (sfm 20.5, sensor 20.7), 91.5 min wall | **25.68 vs R-128 24.46 / R-133 24.47 / R-135 23.07 (61 common)**; blank wall 28.66; 134 - 140 s 22.05 | Kept (best scan_009 model, automatic) |
 
 ## Runs
 
@@ -3567,8 +3567,8 @@ igs.txt`):
   - 03:17 the reference evaluation (`eval_align.py` on v9_e2e) failed: `can't open/read file … work_v9e2e_sfm\images    frame_00424.jpg`: v9_e2e's undistorted images (and its keyframes) were deleted in the 2026-11-26 disk clean-up. The
     79 held-out frames were rebuilt from the video (sequential read and JPEG step as `select_sharp.py`, OpenCV undistort
     with the run's own OPENCV camera into its pinhole camera, 1900 x 1067); the reference evaluation reruns after R-143
-    (`dataset/night_r136ref.sh`, one GPU job at a time). Check: its unaligned score must come back near the 25.16
-    measured on 2026-10-26.
+    (`dataset/night_r136ref.sh`, one GPU job at a time), done 05:26: unaligned 25.16 / SSIM 0.8249, the same as the
+    25.16 / 0.8247 measured on 2026-10-26: the rebuilt frames are right.
   - `tape_check.py`'s summary line (mean 0.84 %, max 1.90 %) mixes R-136's room length with the six `manual` rows of
     `tape.csv`, which hold values measured in the v3 viewer (2026-10-11), not in this model: only the room length is
     R-136's.
@@ -3581,9 +3581,11 @@ igs.txt`):
   -1.24 %). 17 fixtures (5 door, 3 power socket, 3 ceiling light, 2 light switch, window, tube light, lamp, doorway;
   unchecked), 43 rejected. Mesh 1.84 M triangles (1.95 M before clean-up, 548 frames). Web bundle
   `prototype/web-ui/public/scans/newRoomAttemptSadness_auto1/` 20 MB.
+- **Reference (same tool, 05:26):** v9_e2e on its 79 held-out frames: PSNR 25.16 → aligned **25.44**, SSIM 0.8295
+  (`work_v9e2e_sfm/eval_v9e2e.csv`). On the 49 held-out frames both runs have exactly: **v9_e2e 25.51, R-136 25.35**
+  (-0.16 dB); all 79 paired with their mapped frame: 25.44 vs 25.28.
 - **Verdict:** kept: on the room with ground truth the automatic pipeline gives a closed room within 1.9 % of the tape
-  and held-out quality near the hand-set v9 (24.61 vs 25.16 dB unaligned, different frame lists; same-tool aligned
-  comparison after R-143), in 106 min of stages with no hand choice. Fixtures to be checked by a person.
+  and held-out quality within 0.16 dB of the hand-set v9 on the same 49 frames (25.35 vs 25.51 aligned), in 106 min of stages with no hand choice. Fixtures to be checked by a person.
 
 ### R-137 · 2026-11-28 · layout fallback for implausible floors / ceilings, tested on five models (layout only, no training)
 
@@ -3758,10 +3760,24 @@ igs.txt`):
   `sparse_predensify` / R-135's `sparse_sfm` (ARCore-guided, same keyframes)
 - **Goal:** COMPLETION_PLAN E1 / final-1 exit gate (d): what the ARCore guidance adds to SfM (frames placed per 15 s,
   camera disagreement, SfM time). ARCore-only vs our cameras is R-141.
-- **Start → end:** (filled in when it ends)
-- **Errors during the run:** (filled in as they happen)
-- **Result:** (filled in when it ends)
-- **Verdict:** (filled in when it ends)
+- **Start → end:** 2026-11-28 04:34:56 → 04:54:40 (newRoom SfM 966 s = 16.1 min, scan_009 214 s = 3.6 min)
+- **Errors during the run:** none. (The script's own `cmd //c mklink /J` would have failed: Git Bash rewrites `/J`; the two image
+  junctions were made beforehand with PowerShell at ~02:00, so the script skipped that line.)
+- **Result:** 
+
+  | Room | Keyframes | Placed visual-only | Placed ARCore-guided | Camera disagreement (Sim3 fit) |
+  |---|---|---|---|---|
+  | newRoomAttemptSadness | 1005 | 1005 (100 %) | 1005 (100 %) | median 0.23 m, p90 0.28 m (R-136's scale 0.6585); a few single frames 3.7 - 11 m apart |
+  | scan_009 | 894 | 409 (45.7 %) | 409 (45.7 %) | median 2.30, p90 4.38 raw units, scale 0.557 between them |
+
+  The ARCore pairs (temporal + 20 ARCore-pose neighbours + 20 retrieval) against visual-only (temporal + 20 retrieval):
+  same frames placed in every 15 s window on both rooms (scan_009: 30 - 60 s and 105 - 120 s empty in both). On newRoom
+  the two solutions differ by 0.07 - 0.31 m per 15 s (a smooth bend, which one is closer to the truth is not known);
+  on scan_009 the two partial models disagree strongly (both are wrong in the weak parts: R-135 / R-145). Visual-only
+  SfM on newRoom took 16.1 min (extract + match + map); the ARCore-guided `sfm` stage of R-136 took 28.43 min including
+  undistort and export (not the same span; the map phases were not timed separately here).
+- **Verdict:** kept as report evidence (E1): with retrieval pairs, the ARCore-guided pairs add no placed frames on these two
+  recordings; ARCore's value in the pipeline is metric scale and gravity (D-014, R-141), not track completion.
 
 ### R-143 · 2026-11-28 · Web viewer load time and frame times on the fixed viewer, seven scans (E5, desktop)
 
@@ -3777,10 +3793,24 @@ igs.txt`):
   is stopped at the end (`r143_stop.ps1`)
 - **Goal:** COMPLETION_PLAN E5 (desktop part): load time and frame times of the viewer that will be merged, on the
   scans of the report. NFR5 asks for a mid-range phone browser: not measured here.
-- **Start → end:** (filled in when it ends)
-- **Errors during the run:** (filled in as they happen)
-- **Result:** (filled in when it ends)
-- **Verdict:** (filled in when it ends)
+- **Start → end:** 2026-11-28 04:54:57 → 05:12:21 (server up 04:55:05, stopped 05:12:21 by `r143_stop.ps1`: node PID 35472)
+- **Errors during the run:** the four bundles served from the main checkout through junctions (R-134, R-136, R-138, R-069) never
+  finished loading (`loaded=false in 240 s`); the server log shows no error. Probable cause, not checked: `next start`
+  does not serve files through a junction that points outside the project (the build refused such links, see the
+  build at 02:05). The best model (`newroom`, a real folder in the worktree) and the two R2 scans loaded.
+- **Result:** 
+
+  | Scan | Load | Idle / drag / hover frames | Median frame | Worst frame | Long tasks |
+  |---|---|---|---|---|---|
+  | best model (`newroom`, R-023, 605,481 Gaussians) | 2.2 s (local) | 799 / 1,203 / 800 | 5.0 ms | 5 ms | 0 |
+  | scan #7 (brick, R2) | 6.1 s (download from R2) | 799 / 1,200 / 800 | 5.0 ms | 10 ms | 0 |
+  | scan #8 (R2) | 7.6 s (download from R2) | 800 / 1,166 / 801 | 5.0 ms | 15 ms | 0 |
+
+  Headless Chrome, 1600 x 900, RTX 3070 (ANGLE D3D11), viewer from `fix/viewer-perf`. 5.0 ms = the frame pacing of
+  headless Chrome (200 frames per second), so the GPU was not the limit. No context loss. Screenshots in
+  `dataset/r143_viewer/`.
+- **Verdict:** kept for the three scans measured (desktop E5: loads in 2 - 8 s, no frame above 15 ms); the four local
+  bundles not measured (to repeat with the bundles copied, not linked). NFR5 on a phone still not measured.
 
 ### R-144 · 2026-11-28 · OD-10 under `--auto`: R-136 from `init` with the photometric PatchMatch (`auto3`)
 
@@ -3794,10 +3824,14 @@ igs.txt`):
 - **Goal:** evidence for OD-10 inside the automatic recipe: R-063 measured the photometric init at 7.5 vs 20.1 min with
   equal quality on the old recipe; here R-136's init took 17.5 min. Same frames, same SfM, same priors: init time,
   training time and held-out PSNR / SSIM against R-136 (24.61 / aligned 25.33). Model only (no layout / semantics).
-- **Start → end:** (filled in when it ends)
-- **Errors during the run:** (filled in as they happen)
-- **Result:** (filled in when it ends)
-- **Verdict:** (filled in when it ends)
+- **Start → end:** 2026-11-28 05:26:03 → 06:13:24 (copy 3.2 min, run_v8 from init 44.1 min), evaluation to 06:24:25
+- **Errors during the run:** none
+- **Result:** `timing.json`: **init 7.54 min (R-136 17.53)**, train 35.78 (R-136 32.85), ply 0.8 = 44.1 min from init (R-136
+  51.2). Held-out, same 62 frames: PSNR 24.50 → aligned **25.11**, SSIM 0.8335 (R-136 24.61 → 25.33, 0.8350); 26 of 62
+  frames better than R-136. On the 49 frames shared with v9_e2e: R-144 25.13, R-136 25.35, v9_e2e 25.51.
+- **Verdict:** inconclusive: the photometric init saves 10.0 min of init (7.1 min net, training +2.9) at -0.22 dB aligned
+  on the same frames; one run each, run-to-run spread on this room not measured (scan_009: per-stretch +-0.9 dB, R-088).
+  Input to OD-10 (Tayyab).
 
 ### R-145 · 2026-11-28 · scan_009: `--auto` with ALIKED matching (`auto4`)
 
@@ -3811,7 +3845,23 @@ igs.txt`):
   from ALIKED matches (R-046 / R-048: 6,148 directions, 2,189 loop pairs); with SIFT the automatic chain had 3,031 / 926
   (R-135) and 2,799 / 863 (R-140, `--track_dirs` does not add to that cache). Does ALIKED give the loop solve the pairs? (Planned with `--track_dirs` too; dropped at 04:35 after R-140 rejected
   it, before the run started: the chain was stopped while waiting and restarted.)
-- **Start → end:** (filled in when it ends)
-- **Errors during the run:** (filled in as they happen)
-- **Result:** (filled in when it ends)
-- **Verdict:** (filled in when it ends)
+- **Start → end:** 2026-11-28 06:24:36 → 07:56:03 (run_full.sh, exit 0: the first long run with the fixed exit status),
+  evaluation to 08:02:32. run_v8 73.2 min (`timing.json`): select 1.44, **sfm 20.45** (ALIKED; SIFT in R-135 3.92),
+  analyze 0.01, sensor 20.74 (gyro bias 3.04, rot_sfm 3.72, prior BA 2.56, video tracks 3.29, mid export 2.99, scale
+  drift 2.97, loop 1.92), densify 1.05, export 0.01, prior 1.48, init 1.9 + 0.23, train 25.36, ply 0.53; then layout
+  0.1, sem2d 13.9, sem3d 0.1, verify 0.2, sem3d2 0.1, mesh 0.9, meshlabels 2.6, web 0.1, plan 0.0 (91.5 min wall)
+- **Errors during the run:** none (exit 0 everywhere)
+- **Result:** SfM with ALIKED placed **78 % of the keyframes** (R-135 SIFT 41 %); the analyzer still chose the sensor path
+  (holes); after it 74 % placed; densify +206 frames. Loop solve: **3,943 pair directions, 1,099 loop pairs** (R-135
+  3,031 / 926; hand chain 6,148 / 2,189). Model 387,444 Gaussians. Held-out: all 69 frames in the model; PSNR 21.07 →
+  aligned 25.10, SSIM 0.912, correction median 1.21 deg. **On the 61 frames shared with R-135, R-128 and R-133
+  (aligned): R-145 25.68, R-135 23.07, R-128 24.46, R-133 24.47**; 0 - 30 s 26.90 / 26.52 / 27.39 / 27.43; 30 - 60 s
+  25.58 / 22.01 / 24.92 / 24.03; **60 - 90 s (blank wall) 28.66 / 22.21 / 25.16 / 26.56**; 90 - 134 s 26.87 / 28.95 /
+  28.50 / 29.18 (2 frames); **134 - 140 s 22.05 / 18.51 / 18.50 / 17.29**; 140 s + 23.25 / 22.95 / 25.23 / 25.09. On the
+  63 frames shared with R-128: 25.46 vs 24.25. Layout: floor found (plausible), ceiling 4.27 m after D-072's wall-top
+  rule (first pick 3.24 m, floaters warning), 10 walls, not closed; 14 fixtures. Bundle 16 MB
+  (`scan_009_057ed3beb4fc_auto4`).
+- **Verdict:** kept: **the automatic pipeline with ALIKED matching is the best scan_009 model so far** (+1.2 dB over the
+  best hand-made model on the same 61 frames, +2.6 dB over R-135; best on the blank wall and on the 134 - 140 s stretch
+  that broke every earlier run), with no hand choice, in 91.5 min. Weaker after 140 s. SfM 16.5 min slower than SIFT.
+  Room height still not trustworthy. ALIKED for the sensor route (or for all recordings): OD-17, Tayyab.
