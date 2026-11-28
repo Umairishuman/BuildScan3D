@@ -233,7 +233,7 @@ pipeline step, with done-when, dependencies, priority (Must / Should / Could), t
       (OD-20); the app's token field (A8) with S1; privacy rules PR1 / PR2 (consent to record and to publish) in the
       capture protocol; `npm audit` / `pip-audit` as an informational CI step (C3).
 - [ ] **[new 2026-11-28] Push `feature/ux-security` and open its PR** (web viewer usability + security headers, app
-      usability + network security config, docs/SECURITY.md, docs/HCI.md; 7 commits on `fix/viewer-perf`, so merge
+      usability + network security config, docs/SECURITY.md, docs/HCI.md; 6 commits on `fix/viewer-perf`, so merge
       that one first). App part not compiled on the 3070 PC yet (to do after R-146; CI compiles on push).
 - [ ] **[new 2026-11-19] Merge `origin/master` into the Step 4 work (OD-12).** `origin/master` has 43 commits that
       `feature/step4-layout` does not (Tayyab's PR #7: fast pipeline, `tape_check.py`, server v9 runner, layout ceiling

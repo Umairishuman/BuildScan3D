@@ -1144,7 +1144,7 @@ plan updated (detect path holes; hole-aware loop checks).
 - Afternoon 2026-11-28 (Tayyab): **R-146 resumed** 14:53 from SfM with `SEMANTICS=0` (Tayyab: "ok resume").
   Tayyab asked for a usability pass on the web viewer and the app and an information security framework for the
   pipeline and apps: **branch `feature/ux-security`** (worktree `../FYP-ux`, from `fix/viewer-perf`, so R-146's code
-  stayed untouched), 7 commits: viewer load progress, error card with retry, measuring prompt by step, Esc and
+  stayed untouched), 6 commits: viewer load progress, error card with retry, measuring prompt by step, Esc and
   shortcuts M L T R I F ?, Controls panel, phone layout, focus / reduced motion / contrast; CSP and security headers;
   the sign-in page's false "256-bit encrypted" / "SOC 2 compliant" badges replaced; app 48 dp buttons, labelled
   record button with a 1 s double-tap guard, actionable messages, TalkBack fixes, network security config
